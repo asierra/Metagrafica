@@ -10,7 +10,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 46
+#define MAX_KEYS 47
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -88,6 +88,7 @@ struct {
                      {"TALIGN", YATRIB, AT_TALIGN},
                      {"THEIGHT", YATRIB, AT_THEIGHT},
                      {"TICKS", YTICKS, GI_NULL},
+                     {"TSIZE", YATRIB, AT_THEIGHT},
                      {"TSTYLE", YATRIB, AT_TSTYLE},
                      {"WW", YWW, GI_NULL},
                      {"XYDT", YXYDT, GI_NULL},
