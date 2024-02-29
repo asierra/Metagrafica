@@ -10,7 +10,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 47
+#define MAX_KEYS 46
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -82,7 +82,6 @@ struct {
                      {"PG", YOP, GI_POLYGON},
                      {"PL", YOP, GI_POLYLINE},
                      {"PWST", YPVST, GI_NULL},
-                     {"RPPL", YOP2, GI_NULL},
                      {"RPST", YOP, GI_NULL},
                      {"SP", YOP, GI_SPLINE},
                      {"TALIGN", YATRIB, AT_TALIGN},
@@ -169,7 +168,7 @@ string Parser::parseString() {
   else
     logprintf("Error: Se esperaba una cadena %d\n", i);
 
-  dbprintf("String %s\n", s.c_str());
+  //printf("parseando String %s\n", s.c_str());
   return s;
 }
 
@@ -588,7 +587,13 @@ GraphicsItemList Parser::parsePrimitives() {
         setBegin(cadena);
         yylex();  
         ff = get_font_face_from_string(&yylval.s[1]);
-        at->set(type, ff);
+        if (ff!=FN_NOFACE)
+          at->set(type, ff);
+        else {
+          ff = FN_DEFAULT;
+          delete at;
+          break;
+        }
       } else {
         float f = parseFloat();
         at->set(type, (int)f);

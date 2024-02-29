@@ -41,7 +41,7 @@ void StructurePath::draw(Display &g) {
     g.save();
     g.structure(structure->getName());
     g.restore();
-    g.popMatrix();
+    g.popMatrix(MTST);
     g.popMatrix();
   }
 }

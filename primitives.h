@@ -94,6 +94,7 @@ class GraphicsItem {
 public:
 
   GraphicsItem(GraphicsItemType t) : type(t) { }
+  virtual ~GraphicsItem()=default;
   
   int getType() const { return type; }
   

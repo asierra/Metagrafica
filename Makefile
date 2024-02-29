@@ -14,7 +14,7 @@ SRCS = EPSDisplay.cpp main.cpp structure.cpp matrix.cpp primitives.cpp \
 OBJS = EPSDisplay.o main.o structure.o matrix.o primitives.o \
 	lexmg.o text.o text_parser.o Parser.o 
 
-all: mg
+all: mg mg.1
 
 mg.1: mg.1.md
 	pandoc mg.1.md -s -t man -o mg.1

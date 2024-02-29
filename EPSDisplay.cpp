@@ -612,28 +612,42 @@ void EPSDisplay::structure(std::string name) {
     fprintf(file, "%s\n", name.c_str());
   else {
     dsstack.push(dspstate);
+    Matrix prevmtst = mtst;
     strct->draw(*this);
     dspstate = dsstack.top();
     dsstack.pop();
+    mtst = prevmtst;
   }
 }
 
 void EPSDisplay::pushMatrix(PredefinedMatrix pdmt) {
   if (pdmt == MTST) {
+    //mt *= mtst;
+    mtstack.push(mtst);
     mt *= mtst;
-    mtstack.push(mt);
   }
 }
 void EPSDisplay::pushMatrix(Matrix &m) {
   //	printf("pushing\n");
-  mt *= m;
+  //mt *= m;
   // mt.print();
   mtstack.push(mt);
+  mt *= m;
 }
 
 void EPSDisplay::popMatrix() {
   //	printf("poping\n");
-  mtstack.pop();
+  //mtstack.pop();
   mt = mtstack.top();
+  mtstack.pop();
+  // mt.print();
+}
+
+
+void EPSDisplay::popMatrix(PredefinedMatrix pdmt) {
+  //	printf("poping\n");
+  if (pdmt == MTST) 
+    mtst = mtstack.top();
+  mtstack.pop();
   // mt.print();
 }

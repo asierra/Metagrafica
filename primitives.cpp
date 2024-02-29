@@ -123,6 +123,8 @@ void Transform::draw(Display &g) {
     case OPMID:
       g.init_matrix(predefmat);
       break;
+    case OPMMT:
+      break;
   }
 }
 

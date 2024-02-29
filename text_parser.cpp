@@ -275,7 +275,7 @@ void textflush()
 GraphicsItem* parse_text(string input_utf8, FontFace ff)
 {
   FontFace font_face = ff;
-  bool tex_mode_on = false;
+  //bool tex_mode_on = false;
   text = nullptr;
   text_line = nullptr;
   text_state = TextState();
@@ -348,10 +348,10 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
         textflush();
         tspush();
         text_state.font_face = FN_TEX_CMMI;
-        tex_mode_on = true;
+        //tex_mode_on = true;
       } else {
         textflush();
-        tex_mode_on = false;
+        //tex_mode_on = false;
         tspop();
       }
       break;
