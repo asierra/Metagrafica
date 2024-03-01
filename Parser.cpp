@@ -24,26 +24,6 @@ extern int dblevel;
 
 FILE *logout = 0;
 
-
-void dbprintf(const char *f, ...) {
-  va_list p;
-
-  if (dblevel & DBPARSER)
-    printf(f, p);
-}
-
-void logprintf(char const *f, ...) {
-  va_list p;
-
-  if (logout == NULL)
-    logout = stderr;
-
-  //   fprintf(logout, f, p);
-
-  if (logout != stderr)
-    fprintf(stderr, f, p);
-}
-
 struct {
   const char *k;
   int g, t;
@@ -150,7 +130,7 @@ int busca_key(char *key) {
         //	    opm |= (dfm & 0xff);
         yylval.i = (int)(opm - 1);
         yylvalaux.i = (int)(dfm - 1);
-        dbprintf("MATRIXX %d %d ", yylval.i, yylvalaux.i);
+        //dbprintf("MATRIXX %d %d ", yylval.i, yylvalaux.i);
         return YOPMAT;
       }
     }
@@ -166,7 +146,7 @@ string Parser::parseString() {
   if (i == YIDENTIFIER)
     s = yylval.s;
   else
-    logprintf("Error: Se esperaba una cadena %d\n", i);
+    fprintf(stderr, "Error: Se esperaba una cadena %d\n", i);
 
   //printf("parseando String %s\n", s.c_str());
   return s;
@@ -177,7 +157,7 @@ float Parser::parseFloat() {
 
   if (lastyylex == NUM)
     return yylval.f;
-  logprintf("Error: Se esperaba un número %d\n", lastyylex);
+  fprintf(stderr, "Error: Se esperaba un número %d\n", lastyylex);
   return 0;
 }
 
@@ -251,7 +231,7 @@ Transform *Parser::parseMatrix(int mo) {
   case OPMID:
     break;
   }
-  dbprintf("OPMATRIX %g %g ", z.x, z.y);
+  //dbprintf("OPMATRIX %g %g ", z.x, z.y);
   return t;
 }
 
@@ -420,12 +400,12 @@ GraphicsItemList Parser::parsePrimitives() {
   wmx = wmy = 0;
   wdx = wdy = 1;
 
-  dbprintf("Depth %d\n", depth);
+  //dbprintf("Depth %d\n", depth);
   while (1) {
     lastyylex = yylex();
 
     if (lastyylex == 0 || lastyylex == YCLST) {
-      dbprintf("Endwillon %d ", lastyylex);
+      //dbprintf("Endwillon %d ", lastyylex);
       break;
     }
 
@@ -435,7 +415,7 @@ GraphicsItemList Parser::parsePrimitives() {
       wdx = parseFloat() - wmx;
       wmy = parseFloat();
       wdy = parseFloat() - wmy;
-      dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
+      //dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
       break;
     case YOP: {
       int primtype = yylval.i;
@@ -488,52 +468,69 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YLNST: {
       if (st) {
-        StructureLine *sr = new StructureLine();
-        point llp, rup;
+        float shift = 1;
         float sc = parseFloat();
-        if (sc < 0) {
-          sc = -sc;
-          sr->setBothSides(true);
-        }
-        sr->setScale(sc, sc);
+        int n = 1;
+        bool bothsides = (sc < 0);
+        sc = fabs(sc);
         if (yylex()==NUM) {
-          float shift = 1 - yylval.f;
-          sr->setShift(shift);
-          yylex(); // consume the separator
+          shift = 1 - yylval.f;
+          if (yylex()==NUM) {
+            n = (int)yylval.f;
+            yylex(); // consume the separator
+          }
         } 
-        llp = parsePoint();
-        rup = parsePoint();
+        point llp = parsePoint();
+        point rup = parsePoint();
+        for (int i=1; i<=n; i++) {
+        StructureLine *sr = new StructureLine();
+        sr->setScale(sc, sc);
+        sr->setBothSides(bothsides);
+        sr->setShift(shift);
         sr->setPoints(llp, rup);
         sr->setStructure(st);
         prlist.push_back(sr);
+        if (i < n) {
+          mtpp.transform(llp.x, llp.y);
+          mtpp.transform(rup.x, rup.y);
+        }
+        }
       } else {
         fprintf(stderr, "Error: no hay Structure marcada.\n");
       }
     } break;
     case YARCST: {
       if (st) {
-        StructureArc *sr = new StructureArc();
         float sc = parseFloat();
         float r = parseFloat();
         float da = parseFloat();
         float ai = parseFloat();
+        float shift = 1;
+        int n = 1;
         float af = ai + da;
+        bool bothsides = (sc < 0);
+        sc = fabs(sc);
         if (yylex()==NUM) {
-          float shift = 1 - yylval.f;
-          sr->setShift(shift);
-          yylex(); // consume the separator
+          shift = 1 - yylval.f;
+          if (yylex()==NUM) {
+            n = (int)yylval.f;
+            yylex(); // consume the separator
+          }
         } 
         point p = parsePoint();
-        if (sc < 0) {
-          sc = -sc;
-          sr->setBothSides(true);
-        }
+        for (int i=1; i<=n; i++) {
+        StructureArc *sr = new StructureArc();
         sr->setScale(sc, sc);
+        sr->setBothSides(bothsides);
+        sr->setShift(shift);
         sr->setRadius(r / wdy);
         sr->setAngles(ai, af);
         sr->setPoint(p);
         sr->setStructure(st);
         prlist.push_back(sr);
+        if (i < n)
+          mtpp.transform(p.x, p.y);
+        }
       } else {
         fprintf(stderr, "Error: no hay Structure marcada.\n");
       }
@@ -561,7 +558,6 @@ GraphicsItemList Parser::parsePrimitives() {
       Structure *strct = Structure::getStructure(name);
       if (!strct) {
         fprintf(stderr, "Error: identificador invalido [%s]\n", name.c_str());
-        logprintf("Error: identificador invalido [%s]\n", name.c_str());
       } else {
         // fprintf(stderr, "creando Structurepath %s\n", name.c_str());
         StructurePath *sr = new StructurePath();
@@ -703,7 +699,7 @@ GraphicsItemList Parser::parsePrimitives() {
   wmy = pwmy;
   wdx = pwdx;
   wdy = pwdy;
-  dbprintf("End Depth %d\n", depth);
+  //dbprintf("End Depth %d\n", depth);
   return prlist;
 }
 
@@ -711,6 +707,6 @@ MetaGrafica *Parser::parse() {
   mg = new MetaGrafica();
   mg->setName("root");
   mg->setGraphicsItems(parsePrimitives());
-  logprintf("Parseo terminado\n");
+  //logprintf("Parseo terminado\n");
   return mg;
 }

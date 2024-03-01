@@ -6,7 +6,6 @@
 #include <string.h>
 
 extern int busca_key(char *);
-extern void logprintf(__const char *__restrict __format, ...);
 
 #define MAX_INCLUDE_DEPTH 10
 YY_BUFFER_STATE include_stack[MAX_INCLUDE_DEPTH];
@@ -20,7 +19,6 @@ void openFile(const char* name) {
      char incname[256];
      
      strcpy(incname, name);
-//     logprintf("Incluyendo [%s]\n", incname );
      if (strchr(incname,'.')==NULL) 
 	strcat(incname,".mg");	     
 	
@@ -109,11 +107,10 @@ INPUT		  BEGIN(incl);
 <incl>[ \t]*      /* eat the whitespace */
 <incl>[^ \t\n\r]+   { /* got the include file name */
 	 	    printf("Include [%s]\n", yytext);
-             char *incname = strdup(yytext);
-	     logprintf("IIIIncluyendo [%s]\n", incname );	     
+             char *incname = strdup(yytext);     
              if ( include_stack_ptr >= MAX_INCLUDE_DEPTH )
                  {
-                 logprintf("Inclusiones anidadas demasiado profundas\n" );
+                 fprintf(stderr, "Inclusiones anidadas demasiado profundas\n" );
                  exit( 1 );
                  }
 	     else {
@@ -129,7 +126,7 @@ INPUT		  BEGIN(incl);
              yyin = fopen( incname, "r" );
 		
 	     if ( ! yyin ){                 
-                 logprintf("Archivo no encontrado %s\n", incname);
+                 fprintf("File not found %s\n", incname);
 		 free(incname);
                  exit( 1 );
              }

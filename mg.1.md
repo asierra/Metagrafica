@@ -135,11 +135,11 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 `PWST x1 y1 x2 y2`
 :  Port window structure. Insert the marker exactly in the rectangle defined by the two points.
 
-`LNST sc [shift]: x1 y1 x2 y2`
-:  Draw a line and put the marker of scale *sc* at the end of the second point. The structure is rotated acording to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges.
+`LNST sc [shift [n]]: x1 y1 x2 y2`
+:  Draw a line and put the marker of scale *sc* at the end of the second point. The structure is rotated acording to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating everytime the points with the PP matrix.
 
-`ARCST sc r dq q0 [shift]: x y`
-:  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges.
+`ARCST sc r dq q0 [shift [n]]: x y`
+:  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating everytime the center with the PP matrix.
 
 ## Controls
  

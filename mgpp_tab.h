@@ -4,7 +4,6 @@ typedef union {
   int i;
 } YYSTYPE;
 #define YOP 258
-#define YOP2 259
 #define YGSTATE 260
 #define YOPS 261
 #define YDEF 262
