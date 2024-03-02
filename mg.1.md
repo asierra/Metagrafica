@@ -65,19 +65,19 @@ The graphics state manages properties that are used when the graphics is printed
 :   Gray level for filling, between 0 for black to 100 for white. A negative number indicates to draw the contour with the current line style. 
 
 `FCOLOR s`
-:   Color for filling, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white. A preceding *-* indicates to draw the contour with the current line style. 
+:   Color for filling, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white. A preceding **-** indicates to draw the contour with the current line style. 
 
 `LGRAY n`
 :   Gray level for lines, 0 for black to 100 for white.    
 
 `LCOLOR s`
-:   Color for filling, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white.
-
-`TSIZE n`
-:   Text size in units of typographic points.
+:   Color for paths, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white.
 
 `TALIGN n`
 :  To align the text, with 0 to left (default), 1 to center, 2 to right.
+
+`TSIZE n`
+:   Text size in units of typographic points.
 
 `TSTYLE style`
 :  Set the style for text with one or more of these keywords, in lower case: roman, sanserif, courier, bold or italic.

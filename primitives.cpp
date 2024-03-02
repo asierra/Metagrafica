@@ -79,6 +79,7 @@ void Dot::draw(Display &g) {
 void Attribute::draw(Display &g) {
   switch (type) {
   case AT_LCOLOR:
+    g.setLineColor(value);
     break;
   case AT_LSTYLE:
     g.setLineStyle(value);
@@ -87,12 +88,13 @@ void Attribute::draw(Display &g) {
     g.setLineWidth(value);
     break;
   case AT_LGRAY:
-    g.setLineGray(value);
+    g.setLineGray(value/100.0);
     break;
   case AT_FGRAY:
-    g.setFillGray(value);
+    g.setFillGray(value/100.0);
     break;
   case AT_FCOLOR:
+    g.setFillColor(value);
     break;
   case AT_FPATRN:
     g.setFillPattern(value);

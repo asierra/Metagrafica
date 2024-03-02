@@ -1,5 +1,5 @@
 #include "text.h"
-
+#include <algorithm>
 #include <stack>
 using std::stack;
 
@@ -166,6 +166,7 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face) {
 FontFace get_font_face_from_string(string s) {
   string out;
   FontFace font_face = FN_DEFAULT;
+  std::transform(s.begin(), s.end(), s.begin(), ::tolower);
   if (s.find("roman") != std::string::npos)
     out += 'r';
   if (s.find("sanserif")!=std::string::npos || s.find("helvetic")!=std::string::npos)

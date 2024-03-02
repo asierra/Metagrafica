@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "mgpp_tab.h"
 #include "text_parser.h"
+#include <algorithm>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,8 +73,7 @@ struct {
                      {"WW", YWW, GI_NULL},
                      {"XYDT", YXYDT, GI_NULL},
                      {"XYPP", YGSTATE, GS_PLUMEPOSITION},
-                     {"XYTXT", YOBSOLETE, GI_NULL}
-};
+                     {"XYTXT", YOBSOLETE, GI_NULL}};
 
 const char *opmat[] = {
     "TL", /* Traslada */
@@ -130,13 +130,49 @@ int busca_key(char *key) {
         //	    opm |= (dfm & 0xff);
         yylval.i = (int)(opm - 1);
         yylvalaux.i = (int)(dfm - 1);
-        //dbprintf("MATRIXX %d %d ", yylval.i, yylvalaux.i);
+        // dbprintf("MATRIXX %d %d ", yylval.i, yylvalaux.i);
         return YOPMAT;
       }
     }
   }
   yylval.s = key;
   return YIDENTIFIER;
+}
+
+map<string, int> map_color = {
+    {"black", 0},
+    {"blue", 0xff},
+    {"brown", 0xa52a2a},
+    {"cyan", 0xffff},
+    {"green", 0xff00},
+    {"magenta", 0xff00ff},
+    {"orange", 0xcc3232},
+    {"red", 0xff0000},
+    {"white", 0xffffff},
+    {"yellow", 0xffff00},
+};
+
+int get_color_from_string(string colorstr) {
+  const string HEXDIGIT = "0123456789abcdf";
+  int col = 0;
+  bool outline=false;
+
+  if (colorstr[0]=='-') {
+    colorstr.erase(0, 1);
+    outline = true;
+  }
+  std::transform(colorstr.begin(), colorstr.end(), colorstr.begin(), ::tolower);
+  if (map_color.find(colorstr) != map_color.end()) {
+    col = map_color[colorstr];
+  } else if (colorstr.find_first_not_of(HEXDIGIT)==string::npos) {
+    col = stoi(colorstr, 0, 16);
+  } else {
+    fprintf(stderr, "Error: Unrecognized color <%s>\n", colorstr.c_str());
+  }
+  //printf("color %x\n", col);
+  if (outline)
+    col = -col;
+  return col;
 }
 
 string Parser::parseString() {
@@ -148,7 +184,7 @@ string Parser::parseString() {
   else
     fprintf(stderr, "Error: Se esperaba una cadena %d\n", i);
 
-  //printf("parseando String %s\n", s.c_str());
+  // printf("parseando String %s\n", s.c_str());
   return s;
 }
 
@@ -231,7 +267,7 @@ Transform *Parser::parseMatrix(int mo) {
   case OPMID:
     break;
   }
-  //dbprintf("OPMATRIX %g %g ", z.x, z.y);
+  // dbprintf("OPMATRIX %g %g ", z.x, z.y);
   return t;
 }
 
@@ -287,7 +323,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   case GI_DOT:
     if (yylex() == NUM) {
       is_using_dot = true;
-      float r = yylval.f/2.0;
+      float r = yylval.f / 2.0;
       Dot *d = new Dot();
       d->setRadius(r);
       d->setPath(parsePoints());
@@ -315,7 +351,7 @@ Parser::Parser(string f) {
 
   printf("Opening %s\n", filename.c_str());
   yyin = fopen(filename.c_str(), "r");
-  if (yyin==NULL) {
+  if (yyin == NULL) {
     fprintf(stderr, "Error: File not found %s\n", filename.c_str());
     exit(1);
   }
@@ -376,7 +412,8 @@ Path Parser::parsePoints() {
     if (listmap.find(&yylval.s[1]) != listmap.end()) {
       l = listmap[&yylval.s[1]];
     } else
-      fprintf(stderr, "Error: identificador de lista inv�lido [%s]\n", yylval.s);
+      fprintf(stderr, "Error: identificador de lista inv�lido [%s]\n",
+              yylval.s);
   }
   return l;
 }
@@ -400,12 +437,12 @@ GraphicsItemList Parser::parsePrimitives() {
   wmx = wmy = 0;
   wdx = wdy = 1;
 
-  //dbprintf("Depth %d\n", depth);
+  // dbprintf("Depth %d\n", depth);
   while (1) {
     lastyylex = yylex();
 
     if (lastyylex == 0 || lastyylex == YCLST) {
-      //dbprintf("Endwillon %d ", lastyylex);
+      // dbprintf("Endwillon %d ", lastyylex);
       break;
     }
 
@@ -415,7 +452,7 @@ GraphicsItemList Parser::parsePrimitives() {
       wdx = parseFloat() - wmx;
       wmy = parseFloat();
       wdy = parseFloat() - wmy;
-      //dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
+      // dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
       break;
     case YOP: {
       int primtype = yylval.i;
@@ -473,30 +510,30 @@ GraphicsItemList Parser::parsePrimitives() {
         int n = 1;
         bool bothsides = (sc < 0);
         sc = fabs(sc);
-        if (yylex()==NUM) {
+        if (yylex() == NUM) {
           shift = 1 - yylval.f;
-          if (yylex()==NUM) {
+          if (yylex() == NUM) {
             n = (int)yylval.f;
             yylex(); // consume the separator
           }
-        } 
+        }
         point llp = parsePoint();
         point rup = parsePoint();
-        for (int i=1; i<=n; i++) {
-        StructureLine *sr = new StructureLine();
-        sr->setScale(sc, sc);
-        sr->setBothSides(bothsides);
-        sr->setShift(shift);
-        sr->setPoints(llp, rup);
-        sr->setStructure(st);
-        prlist.push_back(sr);
-        if (i < n) {
-          mtpp.transform(llp.x, llp.y);
-          mtpp.transform(rup.x, rup.y);
-        }
+        for (int i = 1; i <= n; i++) {
+          StructureLine *sr = new StructureLine();
+          sr->setScale(sc, sc);
+          sr->setBothSides(bothsides);
+          sr->setShift(shift);
+          sr->setPoints(llp, rup);
+          sr->setStructure(st);
+          prlist.push_back(sr);
+          if (i < n) {
+            mtpp.transform(llp.x, llp.y);
+            mtpp.transform(rup.x, rup.y);
+          }
         }
       } else {
-        fprintf(stderr, "Error: no hay Structure marcada.\n");
+        fprintf(stderr, "Error: there is no marked structure.\n");
       }
     } break;
     case YARCST: {
@@ -510,29 +547,29 @@ GraphicsItemList Parser::parsePrimitives() {
         float af = ai + da;
         bool bothsides = (sc < 0);
         sc = fabs(sc);
-        if (yylex()==NUM) {
+        if (yylex() == NUM) {
           shift = 1 - yylval.f;
-          if (yylex()==NUM) {
+          if (yylex() == NUM) {
             n = (int)yylval.f;
             yylex(); // consume the separator
           }
-        } 
+        }
         point p = parsePoint();
-        for (int i=1; i<=n; i++) {
-        StructureArc *sr = new StructureArc();
-        sr->setScale(sc, sc);
-        sr->setBothSides(bothsides);
-        sr->setShift(shift);
-        sr->setRadius(r / wdy);
-        sr->setAngles(ai, af);
-        sr->setPoint(p);
-        sr->setStructure(st);
-        prlist.push_back(sr);
-        if (i < n)
-          mtpp.transform(p.x, p.y);
+        for (int i = 1; i <= n; i++) {
+          StructureArc *sr = new StructureArc();
+          sr->setScale(sc, sc);
+          sr->setBothSides(bothsides);
+          sr->setShift(shift);
+          sr->setRadius(r / wdy);
+          sr->setAngles(ai, af);
+          sr->setPoint(p);
+          sr->setStructure(st);
+          prlist.push_back(sr);
+          if (i < n)
+            mtpp.transform(p.x, p.y);
         }
       } else {
-        fprintf(stderr, "Error: no hay Structure marcada.\n");
+        fprintf(stderr, "Error: there is no marked structure.\n");
       }
     } break;
     case YMKST: {
@@ -575,15 +612,20 @@ GraphicsItemList Parser::parsePrimitives() {
     case YATRIB: {
       AttributeType type = (AttributeType)yylval.i;
       Attribute *at = new Attribute();
-      if (type==AT_TALIGN)
+      if (type == AT_TALIGN)
         is_using_textalign = true;
-      if (type==AT_FPATRN)
+      if (type == AT_FPATRN)
         is_using_hatcher = true;
-      if (type==AT_TSTYLE) {
+      if (type == AT_LCOLOR || type == AT_FCOLOR) {
         setBegin(cadena);
-        yylex();  
+        yylex();
+        int col = get_color_from_string(&yylval.s[1]);
+        at->set(type, col);
+      } else if (type == AT_TSTYLE) {
+        setBegin(cadena);
+        yylex();
         ff = get_font_face_from_string(&yylval.s[1]);
-        if (ff!=FN_NOFACE)
+        if (ff != FN_NOFACE)
           at->set(type, ff);
         else {
           ff = FN_DEFAULT;
@@ -609,13 +651,15 @@ GraphicsItemList Parser::parsePrimitives() {
     } break;
     case YXYDT: {
       pp = parsePoint();
-      //pp.x = (parseFloat() - wmx) / wdx;
-      //pp.y = (parseFloat() - wmy) / wdy;
+      // pp.x = (parseFloat() - wmx) / wdx;
+      // pp.y = (parseFloat() - wmy) / wdy;
       GraphicsState *gs = new GraphicsState();
       gs->setPosition(pp);
-      prlist.push_back(gs); }
-    case YDT: { 
-      if (lastyylex==YDT) { // ojo, dt debe actualizar la posición de algún modo
+      prlist.push_back(gs);
+    }
+    case YDT: {
+      if (lastyylex ==
+          YDT) { // ojo, dt debe actualizar la posición de algún modo
         mtpp.transform(pp.x, pp.y);
       }
       setBegin(cadena);
@@ -681,8 +725,7 @@ GraphicsItemList Parser::parsePrimitives() {
       }
       pl->setPath(l);
       prlist.push_back(pl);
-      }
-      break;
+    } break;
     case YOBSOLETE:
       printf("Aviso: Comando obsoleto <>, usar el comando actual.\n");
       break;
@@ -699,7 +742,7 @@ GraphicsItemList Parser::parsePrimitives() {
   wmy = pwmy;
   wdx = pwdx;
   wdy = pwdy;
-  //dbprintf("End Depth %d\n", depth);
+  // dbprintf("End Depth %d\n", depth);
   return prlist;
 }
 
@@ -707,6 +750,6 @@ MetaGrafica *Parser::parse() {
   mg = new MetaGrafica();
   mg->setName("root");
   mg->setGraphicsItems(parsePrimitives());
-  //logprintf("Parseo terminado\n");
+  // logprintf("Parseo terminado\n");
   return mg;
 }

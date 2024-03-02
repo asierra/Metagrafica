@@ -34,11 +34,12 @@ class EPSDisplay: public Display {
    void restore();
    ///
    void setLineStyle(int);
-   ///
    void setLineWidth(float);
-   ///
-   void setFillGray(float fg);
    void useFillPattern();
+   void setColor(int lc);
+   void setLineColor(int lc);
+   void setGray(float fg);
+
    ///
    void setOpenPath(bool op);
    

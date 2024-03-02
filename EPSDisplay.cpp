@@ -353,7 +353,12 @@ void EPSDisplay::rect(float x1, float y1, float x2, float y2) {
   } else 
     adjust_limits(x1,y1,x2,y2);
   if (isFilled()) {
-    if (dspstate.fillpattern == 0)
+    save();
+    if (dspstate.fillcolor > 0)
+      setColor(dspstate.fillcolor);
+    else if (dspstate.fillgray > 0)
+      setGray(dspstate.fillgray);
+    if (dspstate.fillpattern==0)
       fprintf(file, "%f %f %f %f rectfill\n", x1, y1, x2 - x1, y2 - y1);
     else {
       fprintf(file,
@@ -362,10 +367,9 @@ void EPSDisplay::rect(float x1, float y1, float x2, float y2) {
       if (dspstate.outlinefill)
         fprintf(file, "stroke\n");
     }
+    restore();
   } 
   if (!dspstate.fill || dspstate.outlinefill) {
-    if (dspstate.fill && dspstate.linegray!=dspstate.fillgray)
-      fprintf(file, " %g setgray\n", dspstate.linegray / 100);
     fprintf(file, "%f %f %f %f rectstroke\n", x1, y1, x2 - x1, y2 - y1);
   }
 }
@@ -388,7 +392,6 @@ void EPSDisplay::text(string s) {
     s.insert(pos, "\\");
     pos += 2;
   }
-
   if (dspstate.text_align == 1)
     fprintf(file, "(%s) cshow\n", s.c_str());
   else if (dspstate.text_align == 2)
@@ -513,14 +516,18 @@ void EPSDisplay::stroke() {
   if (dspstate.openpath)
     return;
   if (dspstate.fill) {
+    save();
+    if (dspstate.fillcolor > 0)
+      setColor(dspstate.fillcolor);
+    else if (dspstate.fillgray > 0)
+      setGray(dspstate.fillgray);
     if (dspstate.fillpattern == 0)
       fprintf(file, "closepath fill\n");
     else 
       useFillPattern();
+    restore();
   }
   if (!dspstate.fill || dspstate.outlinefill) {
-    if (dspstate.fill && dspstate.linegray!=dspstate.fillgray)
-      fprintf(file, " %g setgray\n", dspstate.linegray / 100);
     fprintf(file, "stroke\n");
   }
 }
@@ -561,14 +568,32 @@ void EPSDisplay::setLineStyle(int l) {
   }
 }
 
-void EPSDisplay::setFillGray(float fg) {
-  Display::setFillGray(fg);
-  fprintf(file, " %g setgray\n", dspstate.fillgray / 100);
-}
-
 void EPSDisplay::setLineWidth(float l) {
   fprintf(file, "%f setlinewidth\n", l * 0.2);
 }
+
+void int2rgb(int c, float &r, float &g, float &b) {
+  b = (c & 0xff)/255;
+  g = ((c>>8) & 0xff)/255;
+  r = ((c>>16) & 0xff)/255;
+  //printf("color %x %g %g %g\n", c, r, g, b);
+}
+
+void EPSDisplay::setColor(int fc) {
+  float r, g, b;
+  int2rgb(fc, r, g, b);
+  fprintf(file, "%g %g %g setrgbcolor\n", r, g, b);
+}
+
+void EPSDisplay::setLineColor(int lc) {
+  Display::setLineColor(lc);
+  setColor(dspstate.linecolor);
+}
+
+void EPSDisplay::setGray(float fg) {
+  fprintf(file, "%g setgray\n", fg);
+}
+
 
 /* Transformaciones */
 

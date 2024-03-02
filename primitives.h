@@ -81,6 +81,7 @@ struct point {
   float x, y;
 };
 
+
 using Path = std::list<point>;
 
 // Abstract output device

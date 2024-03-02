@@ -38,6 +38,8 @@ struct DisplayState {
     text_align = 0;
     fillgray = 0.0;
     linegray = 0;
+    linecolor = 0;
+    fillcolor = 0;
   };
   
   // path under creation?
@@ -46,6 +48,7 @@ struct DisplayState {
   int line_style;
   int line_width;
   float linegray;
+  int linecolor;
 
   float fontSize;
   FontFace fontFace;
@@ -57,6 +60,7 @@ struct DisplayState {
   int fillpattern;
   bool outlinefill;
   float fillgray;
+  int fillcolor;
 };
 
 /** 
@@ -122,16 +126,22 @@ public:
   
   virtual void setLineStyle(int ls) { dspstate.line_style = ls; }
   virtual void setLineWidth(float lw)=0;
-   void setLineGray(float lg) { dspstate.linegray = lg; }
+  void setLineGray(float lg) { dspstate.linegray = lg; }
+  virtual void setLineColor(int lc) { dspstate.linecolor = lc; }
 
   virtual void setFillPattern(int fp) {
     dspstate.outlinefill = (fp < 0) ? true : false;
     dspstate.fillpattern = abs(fp);
   }
   
-  virtual void setFillGray(float fg) { 
+  void setFillGray(float fg) { 
     dspstate.outlinefill = (fg < 0) ? true : false;
-    dspstate.fillgray = abs(fg); 
+    dspstate.fillgray = fabs(fg);
+  }
+
+  void setFillColor(int fc) { 
+    dspstate.outlinefill = (fc < 0);
+    dspstate.fillcolor = abs(fc); 
   }
 
   virtual void text(string)=0;

@@ -3,6 +3,7 @@
         "iostream": "cpp"
     },
     "files.exclude": {
-        "**/*.o": true
+        "**/*.o": true,
+        "**/*.1": true
     },
 }
