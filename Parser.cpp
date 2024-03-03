@@ -169,7 +169,7 @@ int get_color_from_string(string colorstr) {
   } else {
     fprintf(stderr, "Error: Unrecognized color <%s>\n", colorstr.c_str());
   }
-  //printf("color %x\n", col);
+  printf("color %s %x\n", colorstr.c_str(), col);
   if (outline)
     col = -col;
   return col;

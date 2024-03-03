@@ -130,18 +130,20 @@ public:
   virtual void setLineColor(int lc) { dspstate.linecolor = lc; }
 
   virtual void setFillPattern(int fp) {
-    dspstate.outlinefill = (fp < 0) ? true : false;
+    dspstate.outlinefill = (fp < 0);
     dspstate.fillpattern = abs(fp);
   }
   
   void setFillGray(float fg) { 
-    dspstate.outlinefill = (fg < 0) ? true : false;
+    dspstate.outlinefill = (fg < 0);
     dspstate.fillgray = fabs(fg);
+    dspstate.fillcolor = 0;
   }
 
   void setFillColor(int fc) { 
     dspstate.outlinefill = (fc < 0);
-    dspstate.fillcolor = abs(fc); 
+    dspstate.fillcolor = abs(fc);
+    dspstate.fillgray = 0.0;
   }
 
   virtual void text(string)=0;

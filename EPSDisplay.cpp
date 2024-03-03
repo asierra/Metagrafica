@@ -356,7 +356,7 @@ void EPSDisplay::rect(float x1, float y1, float x2, float y2) {
     save();
     if (dspstate.fillcolor > 0)
       setColor(dspstate.fillcolor);
-    else if (dspstate.fillgray > 0)
+    else 
       setGray(dspstate.fillgray);
     if (dspstate.fillpattern==0)
       fprintf(file, "%f %f %f %f rectfill\n", x1, y1, x2 - x1, y2 - y1);
@@ -519,7 +519,7 @@ void EPSDisplay::stroke() {
     save();
     if (dspstate.fillcolor > 0)
       setColor(dspstate.fillcolor);
-    else if (dspstate.fillgray > 0)
+    else 
       setGray(dspstate.fillgray);
     if (dspstate.fillpattern == 0)
       fprintf(file, "closepath fill\n");
@@ -573,10 +573,10 @@ void EPSDisplay::setLineWidth(float l) {
 }
 
 void int2rgb(int c, float &r, float &g, float &b) {
-  b = (c & 0xff)/255;
-  g = ((c>>8) & 0xff)/255;
-  r = ((c>>16) & 0xff)/255;
-  //printf("color %x %g %g %g\n", c, r, g, b);
+  b = (c & 0xff)/255.0;
+  g = ((c>>8) & 0xff)/255.0;
+  r = ((c>>16) & 0xff)/255.0;
+  printf("color %x %g %g %g\n", c, r, g, b);
 }
 
 void EPSDisplay::setColor(int fc) {
