@@ -92,27 +92,27 @@ static const char *ps_hatchers = R"(
 } def
 
 /hatch45 { 5 dict begin
-  /y2 exch def /x2 exch def /y1 exch def /x1 exch def /wgap exch def
-  y2 y1 sub /dy exch def
-  x1 dy sub /x3 exch def
+  /yu exch def /xr exch def /yl exch def /xl exch def /gap exch def
+  yu /y1 exch def
+  xl /x2 exch def
   gsave
   clip
   newpath
-  {
-    x3 wgap add
-    /x3 exch def
-    x3 x2 gt {exit} if
-    x3 dy add x2 gt
-    { x2 x3 sub /dy exch def }
-    if
-    x3 x1 lt
-    { x1 x3 sub y1 add /y3 exch def
-      x3 dy add x1 sub /dx exch def
-      x1 y3 moveto
-      dx dx rlineto
-    }
-    { x3 y1 moveto dy dy rlineto }
-    ifelse
+  {   y1 yl gt
+      {	  y1 gap sub /y1 exch def
+	  xl /x1 exch def
+	  y1 yl le
+	  {   yl y1 sub x1 add /x1 exch def
+	      yl /y1 exch def
+	  } if
+      }{  yl /y1 exch def
+          x1 gap add /x1 exch def
+      } ifelse
+      x1 xr gt {exit} if
+      x2 gap add xr lt { x2 gap add /x2 exch def }{ xr /x2 exch def } ifelse
+      x2 x1 sub y1 add /y2 exch def
+      x1 y1 moveto
+      x2 y2 lineto
   } loop
   stroke
   grestore
@@ -137,31 +137,34 @@ static const char *ps_hatchers = R"(
 } def
 
 /hatch135 { 5 dict begin
-  /y2 exch def /x2 exch def /y1 exch def /x1 exch def /wgap exch def
-  y1 y2 sub /dy exch def
-  x1 dy add /x3 exch def
+  /yu exch def /xr exch def /yl exch def /xl exch def /gap exch def
+  yl /y1 exch def
+  xl /x2 exch def
   gsave
   clip
   newpath
-  {
-    x3 wgap add
-    /x3 exch def
-    x3 x2 gt {exit} if
-    x3 dy sub x2 gt
-    { x3 x2 sub /dy exch def }
-    if
-    x3 x1 lt
-    { x3 dy sub x1 sub /dx exch def
-      y1 dx add /y3 exch def
-      x1 y3 moveto
-      dx dx neg rlineto }
-    { x3 y2 moveto dy neg dy rlineto }
-    ifelse
+  {   y1 yu lt
+      {	  y1 gap add /y1 exch def
+	  xl /x1 exch def
+	  y1 yu ge
+	  {   y1 yu sub x1 add /x1 exch def
+	      yu /y1 exch def
+	  } if
+      }{  yu /y1 exch def
+          x1 gap add /x1 exch def
+      } ifelse
+      x1 xr gt {exit} if
+      x2 gap add xr lt { x2 gap add /x2 exch def }{ xr /x2 exch def } ifelse
+      x1 x2 sub y1 add /y2 exch def
+      x1 y1 moveto
+      x2 y2 lineto
   } loop
   stroke
   grestore
   end
 } def
+
+
 )";
 
 static const char *ps_reencode = R"(
