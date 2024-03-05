@@ -379,7 +379,7 @@ void EPSDisplay::rect(float x1, float y1, float x2, float y2) {
 
 void EPSDisplay::useFillPattern() {
   int angle = (int)(((dspstate.fillpattern - 1) * 45) % 180);
-  float wgap = 4 / (1 + (dspstate.fillpattern-1)/3);
+  float wgap = 4/(1 + (dspstate.fillpattern-1)/4);
   fprintf(file, "%f %f %f %f %f hatch%d\n", wgap, xmin, ymin, xmax, ymax, angle);
 }
 
@@ -579,7 +579,7 @@ void int2rgb(int c, float &r, float &g, float &b) {
   b = (c & 0xff)/255.0;
   g = ((c>>8) & 0xff)/255.0;
   r = ((c>>16) & 0xff)/255.0;
-  printf("color %x %g %g %g\n", c, r, g, b);
+  //printf("color %x %g %g %g\n", c, r, g, b);
 }
 
 void EPSDisplay::setColor(int fc) {
