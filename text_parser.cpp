@@ -7,7 +7,7 @@ using std::stack;
 extern bool is_using_reencode;
 extern bool is_using_fontcmmi;
 
-const string ALFABETIC = "abcdefghijklmnopqrstuvwxyz";
+const string ALFABETIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const string TOKENLIM = "{}^$_/\\ ";
 const string DIGIT = "1234567890";
 

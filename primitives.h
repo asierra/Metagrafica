@@ -67,12 +67,10 @@ enum GraphicsStateType {
 enum PredefinedMatrix {
   MTLC, // Local
   MTST, // Structura
-  MTRS, // Repite estructura
   MTPP, // Posicion de pluma
-  MTMR, // Marcador
-  MTMK, // 
+  MTPT, // Path
+  MTMK,
 };
-
 
 /// Vectorial pixel
 struct point {

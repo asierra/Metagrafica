@@ -44,7 +44,7 @@ struct {
                      {"FILL", YGSTATE, GS_FILL},
                      {"FPATRN", YATRIB, AT_FPATRN},
                      {"GNNUM", YRPNUM, GI_NULL},
-                     {"GNPT", YLISTA, GI_NULL},
+                     {"GNPATH", YLISTA, GI_NULL},
                      {"INPUT", YOPS, GI_NULL},
                      {"INTXT", YOBSOLETE, GI_NULL},
                      {"LCOLOR", YATRIB, AT_LCOLOR},
@@ -86,9 +86,8 @@ const char *opmat[] = {
 // Matrices definidas
 const char *dfmat[] = {"LC", // Local
                        "ST", // Structure
-                       "RS", // Repite Structure
                        "PP", // Columnas texto podria ser posición de pluma
-                       "MR", // Marcador
+                       "PT", // Path
                        "MK"};
 
 unsigned search_mat(char *key, const char *tabmat[]) {
@@ -272,8 +271,7 @@ Transform *Parser::parseMatrix(int mo) {
 }
 
 GraphicsItem *Parser::parsePrimitive(int type) {
-  GraphicsItem *p = nullptr;
-  Polyline *pl = nullptr;
+  GraphicsItemWithPath *pl = nullptr;
 
   switch (type) {
   case GI_SPLINE:
@@ -281,12 +279,9 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   case GI_POLYGON:
   case GI_POLYLINE:
     pl = new Polyline((GraphicsItemType)type);
-    p = pl;
     break;
   case GI_RECTANGLE: {
-    Rectangle *rr = new Rectangle();
-    rr->setPath(parsePoints());
-    p = rr;
+    pl = new Rectangle();
   } break;
   case GI_ELLIPSE:
   case GI_CIRCLE: {
@@ -304,8 +299,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
         else
           e->setAngles(r[2], r[1] + r[2]);
       }
-      e->setPath(parsePoints());
-      p = e;
+      pl = e;
     } else if (type == GI_ELLIPSE && k > 1) {
       is_using_ellipse = true;
       Arc *e = new Arc();
@@ -315,8 +309,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
           r[3] = 0;
         e->setAngles(r[2], r[3]);
       }
-      e->setPath(parsePoints());
-      p = e;
+      pl = e;
     }
     break;
   }
@@ -326,15 +319,14 @@ GraphicsItem *Parser::parsePrimitive(int type) {
       float r = yylval.f / 2.0;
       Dot *d = new Dot();
       d->setRadius(r);
-      d->setPath(parsePoints());
-      p = d;
+      pl = d;
     }
     break;
   }
   if (pl)
     pl->setPath(parsePoints());
 
-  return p;
+  return pl;
 }
 
 Parser::Parser(string f) {
@@ -398,7 +390,6 @@ Path Parser::parsePoints() {
   Path l;
   float x, y;
   point z;
-  int k = 0;
 
   while ((lastyylex = yylex()) == NUM) {
     x = yylval.f;
@@ -406,11 +397,12 @@ Path Parser::parsePoints() {
     z.x = (x - wmx) / wdx;
     z.y = (y - wmy) / wdy;
     l.push_back(z);
-    k++;
   }
-  if (k == 0 && lastyylex == IDLISTA) {
+  if (l.size()== 0 && lastyylex==IDLISTA) {
     if (listmap.find(&yylval.s[1]) != listmap.end()) {
       l = listmap[&yylval.s[1]];
+      printf("identificador de lista [%s] %ld\n",
+              &yylval.s[1], l.size());
     } else
       fprintf(stderr, "Error: identificador de lista inv�lido [%s]\n",
               yylval.s);
@@ -422,7 +414,7 @@ GraphicsItemList Parser::parsePrimitives() {
   GraphicsItemList prlist;
   Structure *st = NULL;
   static int depth = 0;
-  Matrix mtst, mtmk, mtpp;
+  Matrix mtst, mtpt, mtpp;
   float pwmx, pwmy, pwdx, pwdy;
   FontFace ff = FN_DEFAULT;
   int n;
@@ -440,6 +432,11 @@ GraphicsItemList Parser::parsePrimitives() {
   // dbprintf("Depth %d\n", depth);
   while (1) {
     lastyylex = yylex();
+    if (lastyylex==IDLISTA) {
+      printf("idlista %s\n", &yylval.s[1]);
+      listmap[&yylval.s[1]] = parsePoints();
+      continue;
+    }
 
     if (lastyylex == 0 || lastyylex == YCLST) {
       // dbprintf("Endwillon %d ", lastyylex);
@@ -468,6 +465,8 @@ GraphicsItemList Parser::parsePrimitives() {
       PredefinedMatrix pmat = (PredefinedMatrix)yylvalaux.i;
       if (pmat == MTPP)
         oldParseMatrix(yylval.i, mtpp);
+      else if (pmat == MTPT)
+        oldParseMatrix(yylval.i, mtpt);
       else {
         Transform *t = parseMatrix(yylval.i);
         t->setPredefinedMatrix(pmat);
@@ -674,20 +673,23 @@ GraphicsItemList Parser::parsePrimitives() {
       float y = parseFloat();
       Path l;
       string name = parseString();
-      if (listmap.find(name) != listmap.end())
-        l = listmap[name];
-      else
-        listmap[name] = l;
+      //if (listmap.find(name)!=listmap.end()) ojo
+        //l = listmap[name];
+      //else
+        //listmap[name] = l;
       point z;
       x = (x - wmx) / wdx;
       y = (y - wmy) / wdy;
       for (int i = 0; i < n; i++) {
         z.x = x;
         z.y = y;
+        printf("%g %g\n", x, y);
         l.push_back(z);
         // mtdr.transforma(x, y);
+        mtpt.transform(x, y);
       }
-      // printf("Lista %d %g %g {%s} %d\n", n, x, y, name.c_str(), l.size());
+      listmap[name] = l;
+      printf("Lista %d %g %g {%s} %lu %lu\n", n, x, y, name.c_str(), l.size(),  listmap[name].size());
       break;
     }
     case YRPNUM: {

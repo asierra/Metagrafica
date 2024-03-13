@@ -1,4 +1,5 @@
-CXX = g++
+#CXX = g++
+CXX = clang++-14
 CXXFLAGS = -g -std=c++14
 LIBS = -lm -Wmultichar
 LDFLAGS = -g -Wpedantic

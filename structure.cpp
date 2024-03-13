@@ -33,11 +33,11 @@ void StructurePath::draw(Display &g) {
     mtpt.translate(p.x, p.y);
 
     // Hacer este ajuste solo una vez en el primer nivel o no hacerlo
-    if (g.getRatio() > 1.0) {
+    /*if (g.getRatio() > 1.0) { // ojo
       mtpt.scale(1.0, 1/g.getRatio());
     } else if (g.getRatio() < 1.0) {
       mtpt.scale(g.getRatio(), 1.0);
-    }
+    }*/
     g.pushMatrix(mtpt);
     g.pushMatrix(MTST);
     g.save();
