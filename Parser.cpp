@@ -398,14 +398,15 @@ Path Parser::parsePoints() {
     z.y = (y - wmy) / wdy;
     l.push_back(z);
   }
-  if (l.size()== 0 && lastyylex==IDLISTA) {
+  if (l.size()==0 && lastyylex==IDLISTA) {
     if (listmap.find(&yylval.s[1]) != listmap.end()) {
       l = listmap[&yylval.s[1]];
-      printf("identificador de lista [%s] %ld\n",
-              &yylval.s[1], l.size());
-    } else
-      fprintf(stderr, "Error: identificador de lista inv�lido [%s]\n",
-              yylval.s);
+      //printf("identificador de lista [%s] %ld %lu\n",
+      //        &yylval.s[1], l.size(), listmap.size());
+    } else {
+      fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
+              &yylval.s[1], listmap.size());
+    }
   }
   return l;
 }
@@ -432,9 +433,11 @@ GraphicsItemList Parser::parsePrimitives() {
   // dbprintf("Depth %d\n", depth);
   while (1) {
     lastyylex = yylex();
+
     if (lastyylex==IDLISTA) {
-      printf("idlista %s\n", &yylval.s[1]);
-      listmap[&yylval.s[1]] = parsePoints();
+      string name = &yylval.s[1];
+      listmap[name] = parsePoints();
+      //printf("idlista [%s] %lu\n", name.c_str(), listmap.size());
       continue;
     }
 
@@ -683,13 +686,13 @@ GraphicsItemList Parser::parsePrimitives() {
       for (int i = 0; i < n; i++) {
         z.x = x;
         z.y = y;
-        printf("%g %g\n", x, y);
         l.push_back(z);
         // mtdr.transforma(x, y);
         mtpt.transform(x, y);
       }
       listmap[name] = l;
-      printf("Lista %d %g %g {%s} %lu %lu\n", n, x, y, name.c_str(), l.size(),  listmap[name].size());
+      //printf("Lista %d %g %g {%s} %lu %lu\n", n, x, y, name.c_str(), l.size(),  
+      //  listmap[name].size());
       break;
     }
     case YRPNUM: {

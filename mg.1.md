@@ -114,6 +114,9 @@ The suffix *MT* can be replaced by the following supported matrices:
                   	
 `PP`
 :  Applied for the current point (plume position). 
+            	
+`PT`
+:  Applied for path generation. 
  
  
 ## Structures
@@ -167,6 +170,9 @@ The generators produce repetitive primitives.
 
 `GNNUM i0 inc n decimals`
 :  Generates a series of *n* numbers and position each one at the current point using the PP matrix, using an initial number *i0*, increment *inc*, number of numbers *n* and number of *decimals*.
+
+`GNPATH n x y`
+:  Generates a path with *n* points with an initial point *x y* using the path matrix PT.
 
 `TICKS n x y`
 :  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector *x y*.
