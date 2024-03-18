@@ -9,7 +9,7 @@ extern bool is_using_fontcmmi;
 
 const string ALFABETIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const string TOKENLIM = "{}^$_/\\ ";
-const string DIGIT = "1234567890";
+const string DIGIT = "0123456789";
 
 
 // Standar symbol font codes
