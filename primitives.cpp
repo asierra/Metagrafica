@@ -139,7 +139,7 @@ void GraphicsState::draw(Display &g) {
     case GS_OPENPATH:
       g.setOpenPath(true);
       break;
-    case GS_CLOSEPATH:
+    case GS_CLOSEPATH: // Ojo, debería de cerrar el path
       g.setOpenPath(false);
       break;
   case GS_FILL:

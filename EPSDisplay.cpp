@@ -40,6 +40,7 @@ static const char *ps_dot = R"(
   /y exch def
   /x exch def
   gsave
+  [] 0 setdash
   1 setlinecap
   rad setlinewidth
   newpath x y moveto 0 0 rlineto stroke
