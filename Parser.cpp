@@ -477,21 +477,21 @@ GraphicsItemList Parser::parsePrimitives() {
       }
       break;
     }
-    /* ojo
     case YDPST: {
       string name = parseString();
       Structure *strct = Structure::getStructure(name);
       if (!strct) {
         fprintf(stderr, "Error: Structure no definida <%s>\n", name.c_str());
         break;
-      } // ojo
-      StructureUser *sr = new StructureUser();
+      } 
+      StructurePath *sr = new StructurePath();
       sr->setStructure(strct);
-      //sr->setArrow(true);
-      //sr->setMatrix(mtst);
+      Path pt;
+      pt.push_back(pp);
+      sr->setPath(pt);
       prlist.push_back(sr);
       break;
-    }*/
+    }
     case YOPST: {
       string name = parseString();
       Structure *strct = Structure::getStructure(name);
