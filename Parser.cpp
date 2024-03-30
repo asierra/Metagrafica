@@ -181,18 +181,17 @@ string Parser::parseString() {
   if (i == YIDENTIFIER)
     s = yylval.s;
   else
-    fprintf(stderr, "Error: Se esperaba una cadena %d\n", i);
+    fprintf(stderr, "Error: A string was expected, not %d\n", i);
 
-  // printf("parseando String %s\n", s.c_str());
   return s;
 }
 
 float Parser::parseFloat() {
   lastyylex = yylex();
 
-  if (lastyylex == NUM)
+  if (lastyylex==NUM)
     return yylval.f;
-  fprintf(stderr, "Error: Se esperaba un número %d\n", lastyylex);
+  fprintf(stderr, "Error: A number was expected %d\n", lastyylex);
   return 0;
 }
 
@@ -202,7 +201,7 @@ void Parser::parseDef(int def) {
   switch (def) {
   case 'D':
     x = parseFloat();
-    y = parseFloat();
+    y = parseFloat(); // ojo a veces no detecta error de no numero
     mg->setDimension(x, y);
     break;
   case 'P':

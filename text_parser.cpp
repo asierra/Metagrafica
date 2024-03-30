@@ -122,6 +122,8 @@ string UTF8toISO8859_1(const char * in)
     return out;
 }
 
+string font_style_codes="beigrsct$";
+
 FontFace change_font_face(unsigned char code_font_face, FontFace font_face) {
   switch (code_font_face) {
   case 'b':
@@ -156,7 +158,7 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face) {
     break;
   default:
     fprintf(stderr, "Warning: font face style unknown <%c>.\n", code_font_face);
-    font_face = FN_DEFAULT;
+    font_face = FN_NOFACE;
     break;
   }
   return font_face;
@@ -275,8 +277,11 @@ void textflush()
 
 GraphicsItem* parse_text(string input_utf8, FontFace ff)
 {
+  if (input_utf8.size()==0) {
+    fprintf(stderr, "Error: void text.\n");
+    return nullptr;
+  }
   FontFace font_face = ff;
-  //bool tex_mode_on = false;
   text = nullptr;
   text_line = nullptr;
   text_state = TextState();
@@ -284,12 +289,10 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
   string input = UTF8toISO8859_1(input_utf8.c_str());
   for (char & c : input) 
     if (c < 0) {
-      //printf("no mames\n");
       is_using_reencode = true;
       break;
     }
   int v_end, it=0, iend = input.size();
- 
   while (it < iend) {
     unsigned char c = input[it];
     switch(c) {
@@ -356,11 +359,16 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
         tspop();
       }
       break;
-    case '/':
-      font_face = change_font_face(input[++it], text_state.font_face);
-      if (font_face != text_state.font_face) {
-        textflush();
-        text_state.font_face = font_face;
+    case '/': {
+      std::size_t found = font_style_codes.find(input[it+1]);
+      if (found!=std::string::npos) {
+        font_face = change_font_face(input[++it], text_state.font_face);
+        if (font_face != text_state.font_face) {
+          textflush();
+          text_state.font_face = font_face;
+        } 
+      } else 
+        accum.push_back(c);
       }
       break;
     case '\\': 
@@ -400,5 +408,5 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
   } else {
     //printf("simple texto %s\n", text->getText().c_str());
     return text;
-    }
+  }
 }
