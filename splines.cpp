@@ -10,24 +10,45 @@ graphics. Display in PostScript. Author:  Alejandro Aguilar Sierra, UNAM
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 
-#include "primitives.h"
+#include "splines.h"
+#include <stdio.h>
 
-Path spline(Path controlpoints, float tension, int intervals) {
+Path splines(Path cp, float tension, int intervals) {
   Path outpath;
-  float a, b, c, d;
 
-  int n = controlpoints.size();
-  for (int i = 1; i < n; i++) {
-    for (int j = 0; j < intervals; j++) {
-      point p;
+  // Must be at least 4 control points
+  if (cp.size() < 4)
+    return outpath;
 
+  // Polynomial coefficients
+  point a, b, c, d;
+
+  int n = cp.size();
+  Path::iterator cpit = cp.begin();
+  printf("splines %d\n", n);
+  for (int i = 0; i < n-3; i++) {
+    Path::iterator it = cpit;
+    point p0, p1, p2, p3;
+    p0 = *it++;
+    p1 = *it++;
+    p2 = *it++;
+    p3 = *it++;
+    a = p1;
+    b = tension*(p2 - p0);
+    c = 3*(p2 - p1) - tension*(p3 - p1) - 2*tension*(p2 - p0);
+    d = -2*(p2 - p1) + tension*(p3 - p1) + tension*(p2 - p0);
+    for (int j = 0; j <= intervals; j++) {
+      float u = (float)j/intervals;
+      point p = a + u*(b + c*u + d*u*u);
       outpath.push_back(p);
     }
+    printf("segmento %d\n", i);
+    cpit++;
   }
   return outpath;
 }
 
-Path spline_to_bezier(Path controlpoints, float tension) {
+Path splines_to_bezier(Path controlpoints, float tension) {
   Path outpath;
 
   return outpath;

@@ -76,7 +76,28 @@ enum PredefinedMatrix {
 struct point {
   point() { x =0; y = 0; }
   point(float x1, float y1) { x = x1; y = y1; }
+  point (const point&p) { x = p.x; y = p.y; }
   float x, y;
+  friend point operator*(point p, const double& f) {
+    p.x *= f;
+    p.y *= f;
+    return p;
+  }
+  friend point operator*(const double& f, point p) {
+    p.x *= f;
+    p.y *= f;
+    return p;
+  }
+  friend point operator+(point p1, const point& p2) {
+    p1.x += p2.x;
+    p1.y += p2.y;
+    return p1;
+  }
+  friend point operator-(point p1, const point& p2) {
+    p1.x -= p2.x;
+    p1.y -= p2.y;
+    return p1;
+  }
 };
 
 

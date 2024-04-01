@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "mgpp_tab.h"
 #include "text_parser.h"
+#include "splines.h"
 #include <algorithm>
 #include <signal.h>
 #include <stdio.h>
@@ -273,7 +274,13 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   GraphicsItemWithPath *pl = nullptr;
 
   switch (type) {
-  case GI_SPLINE:
+  case GI_SPLINE: {
+    Path controlpoints = parsePoints();
+    pl = new Polyline((GraphicsItemType)type);
+    pl->setPath(splines(controlpoints, 0.9, 4));
+    return pl;
+  }
+  return pl;
   case GI_BEZIER:
   case GI_POLYGON:
   case GI_POLYLINE:
