@@ -10,10 +10,10 @@ PREFIX = /usr/local
 MANPREFIX ?= ${PREFIX}/share/man
 
 SRCS = EPSDisplay.cpp main.cpp structure.cpp matrix.cpp primitives.cpp \
-	lexmg.cpp text.cpp text_parser.cpp Parser.cpp 
+	lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp
 
 OBJS = EPSDisplay.o main.o structure.o matrix.o primitives.o \
-	lexmg.o text.o text_parser.o Parser.o 
+	lexmg.o text.o text_parser.o Parser.o splines.o
 
 all: mg mg.1
 
