@@ -277,7 +277,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   case GI_SPLINE: {
     Path controlpoints = parsePoints();
     pl = new Polyline((GraphicsItemType)type);
-    pl->setPath(splines(controlpoints, 0.9, 4));
+    pl->setPath(splines(controlpoints, 0.1, 4));
     return pl;
   }
   return pl;
