@@ -197,6 +197,7 @@ float Parser::parseFloat() {
 }
 
 void Parser::parseDef(int def) {
+  int n;
   float x, y;
 
   switch (def) {
@@ -208,6 +209,13 @@ void Parser::parseDef(int def) {
   case 'P':
     x = parseFloat();
     mg->setFontSize(x);
+    break;
+  case 'S':  // 0 convert to Bezier, 1 conic spline, > 1 number of new points per segment CR Sp
+    n = (int)parseFloat();
+    if (n==0)
+      is_spline_to_bezier = true;
+    else if (n > 1)
+      spline_nodes_per_segment = n;
     break;
   default:
     fprintf(stderr, "Undefined definition %d %c\n", def, def);
@@ -266,7 +274,6 @@ Transform *Parser::parseMatrix(int mo) {
   case OPMID:
     break;
   }
-  // dbprintf("OPMATRIX %g %g ", z.x, z.y);
   return t;
 }
 
@@ -276,8 +283,14 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   switch (type) {
   case GI_SPLINE: {
     Path controlpoints = parsePoints();
-    pl = new Polyline((GraphicsItemType)type);
-    pl->setPath(splines(controlpoints, 0.1, 4));
+    if (is_spline_to_bezier) {
+      printf("Converting spline to Bezier.\n");
+      pl = new Polyline(GI_BEZIER);
+      pl->setPath(splines_to_bezier(controlpoints));
+    } else {
+      pl = new Polyline((GraphicsItemType)type);
+      pl->setPath(splines(controlpoints, spline_nodes_per_segment));
+    }
     return pl;
   }
   return pl;
@@ -425,6 +438,9 @@ GraphicsItemList Parser::parsePrimitives() {
   float pwmx, pwmy, pwdx, pwdy;
   FontFace ff = FN_DEFAULT;
   int n;
+
+  is_spline_to_bezier = false;
+  spline_nodes_per_segment = 4;
 
   depth++;
 
@@ -594,7 +610,7 @@ GraphicsItemList Parser::parsePrimitives() {
         sr->setPoints(llp, rup);
         prlist.push_back(sr);
       } else {
-        fprintf(stderr, "Error: no hay Structure marcada.\n");
+        fprintf(stderr, "Error: no marked structure.\n");
       }
       break;
     }
@@ -602,14 +618,11 @@ GraphicsItemList Parser::parsePrimitives() {
       string name = yylval.s;
       Structure *strct = Structure::getStructure(name);
       if (!strct) {
-        fprintf(stderr, "Error: identificador invalido [%s]\n", name.c_str());
+        fprintf(stderr, "Error: invalid identifief [%s]\n", name.c_str());
       } else {
-        // fprintf(stderr, "creando Structurepath %s\n", name.c_str());
         StructurePath *sr = new StructurePath();
         sr->setStructure(strct);
         sr->setPath(parsePoints());
-        // sr->setMatrix(mtst);
-        // s->setMatrix(mtst);
         prlist.push_back(sr);
       }
       break;

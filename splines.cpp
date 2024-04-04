@@ -18,41 +18,42 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #include <stdio.h>
 #include <math.h>
 
-double distance(point a, point b)
+float distance(point a, point b)
 { 
-  float x = a.x - b.x;
-  float y = a.y - b.y;
+  float dx = a.x - b.x;
+  float dy = a.y - b.y;
 
-  return sqrt(x*x + y*y);
+  return (dx*dx + dy*dy);
 }
 
-void get_uniform_coefficients(point p0, point p1, point p2, point p3, float tension, 
-  point &a, point &b, point &c, point &d) 
+void get_spline_coefficients(point p0, point p1, point p2, point p3,
+  float alpha,
+  point &c0, point &c1, point &c2, point &c3) 
 {
-  a = p1;
-  b = tension*(p2 - p0);
-  c = 3*(p2 - p1) - tension*(p3 - p1) - 2*tension*(p2 - p0);
-  d = -2*(p2 - p1) + tension*(p3 - p1) + tension*(p2 - p0);
+  float dt0 = powf(distance(p0, p1), alpha);
+  float dt1 = powf(distance(p1, p2), alpha);
+  float dt2 = powf(distance(p2, p3), alpha);
+
+  // safety check for repeated points
+  if (dt1 < 1e-4f)    dt1 = 1.0f;
+  if (dt0 < 1e-4f)    dt0 = dt1;
+  if (dt2 < 1e-4f)    dt2 = dt1;
+
+  // compute tangents when parameterized in [t1,t2]
+  point t1 = (p1 - p0) / dt0 - (p2 - p0) / (dt0 + dt1) + (p2 - p1) / dt1;
+  point t2 = (p2 - p1) / dt1 - (p3 - p1) / (dt1 + dt2) + (p3 - p2) / dt2;
+ 
+  // rescale tangents for parametrization in [0,1]
+  t1 *= dt1;
+  t2 *= dt1;
+  c0 = p1;
+  c1 = t1;
+  c2 = -3*p1 + 3*p2 - 2*t1 - t2;
+  c3 = 2*p1 - 2*p2 + t1 + t2;
 }
 
 
-void get_centripetal_coefficients(point p0, point p1, point p2, point p3, float tension, float alpha,
-  point &a, point &b, point &c, point &d) 
-{
-  float t01 = pow(distance(p0, p1), alpha);
-  float t12 = pow(distance(p1, p2), alpha);
-  float t23 = pow(distance(p2, p3), alpha);
-
-  point m1 = (1.0 - tension) * (p2 - p1 + t12 * ((p1 - p0)* (1.0/t01) - (p2 - p0)* (1.0/(t01 + t12))));
-  point m2 = (1.0 - tension) * (p2 - p1 + t12 * ((p3 - p2)* (1.0/t23) - (p3 - p1)* (1.0/(t12 + t23))));
-  d = 2.0 * (p1 - p2) + m1 + m2;
-  c = -3.0 * (p1 - p2) - m1 - m1 - m2;
-  b = m1;
-  a = p1;
-}
-
-
-Path splines(Path cp, float tension, int intervals) {
+Path splines(Path cp, int intervals) {
   Path outpath;
 
   // Must be at least 4 control points
@@ -60,8 +61,8 @@ Path splines(Path cp, float tension, int intervals) {
     return outpath;
 
   // Polynomial coefficients
-  point a, b, c, d;
-  float alpha = 0.5;
+  point c0, c1, c2, c3;
+  float alpha = 0.5;  // Centripetal parametrization
 
   int n = cp.size();
   Path::iterator cpit = cp.begin();
@@ -73,29 +74,28 @@ Path splines(Path cp, float tension, int intervals) {
     p1 = *it++;
     p2 = *it++;
     p3 = *it++;
-    //get_uniform_coefficients(p0, p1, p2, p3, tension, a, b, c, d);
-    get_centripetal_coefficients(p0, p1, p2, p3, tension, alpha, a, b, c, d);
-    printf("punto p1 %g %g\n", p1.x, p1.y);
+    get_spline_coefficients(p0, p1, p2, p3, alpha, c0, c1, c2, c3);
+    //printf("punto p1 %g %g p2 %g %g\n", p1.x, p1.y, p2.x, p2.y);
     for (int j = 0; j <= intervals; j++) {
       double u = (double)j/intervals;
-      point p = a + u*(b + c*u + d*u*u);
+      point p = c0 + u*(c1 + u*(c2 + c3*u));
       outpath.push_back(p);
     }
-    printf("segmento %d\n", i);
     cpit++;
   }
   return outpath;
 }
 
-Path splines_to_bezier(Path controlpoints, float tension) {
+Path splines_to_bezier(Path cp) {
   Path outpath;
 
   // Must be at least 4 control points
   if (cp.size() < 4)
     return outpath;
 
-
   int n = cp.size();
+  point q0, q1, q2, q3;
+  float conversion_factor=10;
   Path::iterator cpit = cp.begin();
   for (int i = 0; i < n-3; i++) {
     Path::iterator it = cpit;
@@ -104,14 +104,16 @@ Path splines_to_bezier(Path controlpoints, float tension) {
     p1 = *it++;
     p2 = *it++;
     p3 = *it++;
-    point q0, q1, q2, q3;
 
-    q0 = p3 + 6*(p0 - p1);
-    q1 = p0;
-    q2 = p3;
-    q3 = p0 + 6*(p3 - p1);
-    outpath.push_back(p);
+    q0 = p1;
+    q1 = p1 + (p2 - p0)/conversion_factor;
+    q2 = p2 - (p3 - p1)/conversion_factor;
+    q3 = p2;
+    outpath.push_back(q0);
+    outpath.push_back(q1);
+    outpath.push_back(q2);
     cpit++;
   }
+  outpath.push_back(q3);
   return outpath;
 }

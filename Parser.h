@@ -60,6 +60,8 @@ private:
   int lastyylex;
   string filename;
   string canfilename;
+  bool is_spline_to_bezier;
+  int spline_nodes_per_segment;
 };
 
 #endif

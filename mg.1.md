@@ -46,7 +46,11 @@ Every primitive is defined by its name, which usually is a short mnemonic, follo
 :  Black circles with radius *r* defined in typographic points centered in every point of the path.
   
 `BZ path`
-:  Bezier curve. Uses the path to define segments of a bezier curve. Every segment needs four points, the first and the last are in the curve and the second and third are the corresponding tangent local vectors to those points.
+:  Bezier curve. Uses the path to define a bezier curve. Every segment needs four control points, the first and the last are in the curve and the second and third are the corresponding tangent local vectors to those points.
+
+`SP path`
+: Spline curve. As with Bezier, each segment is defined by four control points, but every control
+point is in the curve, with the exception of the first and the last ones.
   
 ## Graphics state
 
@@ -144,17 +148,20 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 `ARCST sc r dq q0 [shift [n]]: x y`
 :  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating everytime the center with the PP matrix.
 
-## Controls
+## Optional Controls
  
 `$D dx dy`
 :  Dimensions of the display area in centimeters (by default 10 10).
 
-`WW Xmin Xmax Ymin Ymax`
-:  To define the user space limits, or *World Window*. Every user defined coordinates will be inside these limits and they correspond to the complete display area of the graphics (default 0 1 0 1). It is a good practice that *WW* uses the same aspect ratio than *$D*.
- 
 `$P n`
 :  To define the text size in typographic points (default 10). This can be changed inside the program with the attribute *TSIZE*.
 
+`$S n`
+:  Spline mode. n = 0, the control points are converted to Bezier control points and the curve becomes a Bezier curve. n = 1, the next splines will be conic splines (not supported yet). n > 1, n is the number of points for each segment of a Catmull Rom cubic centripetal spline. Note: PostScript only supports Bezier splines, so it is recommended to use n = 0 to optimize the necessary data for the curve.
+
+`WW Xmin Xmax Ymin Ymax`
+:  To define the user space limits, or *World Window*. Every user defined coordinates will be inside these limits and they correspond to the complete display area of the graphics (default 0 1 0 1). It is a good practice that *WW* uses the same aspect ratio than *$D*.
+ 
 `INPUT  name[.mg]`
 :  To include another mg file in the current graphics.
 
