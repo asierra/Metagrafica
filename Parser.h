@@ -53,7 +53,7 @@ private:
 
   /// Window
   float wmx, wmy, wdx, wdy;
-  point pp;
+  //point pp;
   //StructureMap structure_map;
   map<string, Path> listmap;
   MetaGrafica *mg;

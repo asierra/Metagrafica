@@ -64,7 +64,7 @@ struct {
                      {"PG", YOP, GI_POLYGON},
                      {"PL", YOP, GI_POLYLINE},
                      {"PWST", YPVST, GI_NULL},
-                     {"RPST", YOP, GI_NULL},
+                     {"RPST", YRPST, GI_NULL},
                      {"SP", YOP, GI_SPLINE},
                      {"TALIGN", YATRIB, AT_TALIGN},
                      {"THEIGHT", YATRIB, AT_THEIGHT},
@@ -438,7 +438,7 @@ GraphicsItemList Parser::parsePrimitives() {
   float pwmx, pwmy, pwdx, pwdy;
   FontFace ff = FN_DEFAULT;
   int n;
-
+  point pp;
   is_spline_to_bezier = false;
   spline_nodes_per_segment = 4;
 
@@ -609,6 +609,24 @@ GraphicsItemList Parser::parsePrimitives() {
         rup = parsePoint();
         sr->setPoints(llp, rup);
         prlist.push_back(sr);
+      } else {
+        fprintf(stderr, "Error: no marked structure.\n");
+      }
+      break;
+    }
+    case YRPST: {
+      if (st) {
+        int n = (int)parseFloat();
+        for (int i = 1; i <= n; i++) {
+          StructurePath *sr = new StructurePath();
+          sr->setStructure(st);
+          Path pt;
+          pt.push_back(pp);
+          sr->setPath(pt);
+          prlist.push_back(sr);
+          //if (i < n)
+            mtpp.transform(pp.x, pp.y);
+        }
       } else {
         fprintf(stderr, "Error: no marked structure.\n");
       }

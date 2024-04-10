@@ -28,11 +28,12 @@ typedef union {
 #define YMKST 281
 #define YARCST 282
 #define YLNST 283
-#define YXYPP 284
-#define YRPNUM 285
-#define YTICKS 286
-#define YEXIT 287
-#define YOBSOLETE 288
+#define YRPST 284
+#define YXYPP 285
+#define YRPNUM 286
+#define YTICKS 287
+#define YEXIT 288
+#define YOBSOLETE 290
 
 extern YYSTYPE yylval;
 
