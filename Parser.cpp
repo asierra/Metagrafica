@@ -12,7 +12,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 46
+#define MAX_KEYS 47
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -34,6 +34,7 @@ struct {
                      {"BZ", YOP, GI_BEZIER},
                      {"CLPT", YGSTATE, GS_CLOSEPATH},
                      {"CLST", YCLST, GI_NULL},
+                     {"CTPT", YCONCATPATH, GI_NULL},
                      {"CR", YOP, GI_CIRCLE},
                      {"DOT", YOP, GI_DOT},
                      {"DPST", YDPST, GI_NULL},
@@ -420,8 +421,7 @@ Path Parser::parsePoints() {
   if (l.size()==0 && lastyylex==IDLISTA) {
     if (listmap.find(&yylval.s[1]) != listmap.end()) {
       l = listmap[&yylval.s[1]];
-      //printf("identificador de lista [%s] %ld %lu\n",
-      //        &yylval.s[1], l.size(), listmap.size());
+      printf("Path [%s] %zu\n", &yylval.s[1], l.size());
     } else {
       fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
               &yylval.s[1], listmap.size());
@@ -439,6 +439,9 @@ GraphicsItemList Parser::parsePrimitives() {
   FontFace ff = FN_DEFAULT;
   int n;
   point pp;
+  string ctpathname;
+  Path ctpath;
+  bool is_concatenatepath_active = false;
   is_spline_to_bezier = false;
   spline_nodes_per_segment = 4;
 
@@ -458,8 +461,16 @@ GraphicsItemList Parser::parsePrimitives() {
 
     if (lastyylex==IDLISTA) {
       string name = &yylval.s[1];
-      listmap[name] = parsePoints();
-      //printf("idlista [%s] %lu\n", name.c_str(), listmap.size());
+      if (is_concatenatepath_active) {
+        if (listmap.find(name)!=listmap.end()) {
+          Path path = listmap[name];
+          Path path2 = process_path(mtpt, pp, path);
+          concat_paths(ctpath, path2);
+          pp = ctpath.back();
+          printf("outpath %zu\n", ctpath.size());
+        }
+      } else
+        listmap[name] = parsePoints();
       continue;
     }
 
@@ -680,7 +691,12 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YGSTATE: {
       GraphicsState *gs = new GraphicsState();
-      if (yylval.i == GS_PLUMEPOSITION) {
+      if (yylval.i==GS_CLOSEPATH && is_concatenatepath_active) {
+        is_concatenatepath_active = false;
+        listmap[ctpathname] = ctpath;
+        //printf("ctpatout %zu\n", ctpath.size());
+        break;
+      } else if (yylval.i == GS_PLUMEPOSITION) {
         pp.x = (parseFloat() - wmx) / wdx;
         pp.y = (parseFloat() - wmy) / wdy;
         gs->setPosition(pp);
@@ -732,6 +748,13 @@ GraphicsItemList Parser::parsePrimitives() {
       //  listmap[name].size());
       break;
     }
+    case YCONCATPATH: {
+      is_concatenatepath_active = true;
+      ctpathname = parseString();
+      //ctpath = listmap[name];
+      //listmap[name] = ctpath;
+      }
+      break;
     case YRPNUM: {
       float x0 = parseFloat();
       float xinc = parseFloat();

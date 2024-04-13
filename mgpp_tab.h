@@ -33,6 +33,7 @@ typedef union {
 #define YRPNUM 286
 #define YTICKS 287
 #define YEXIT 288
+#define YCONCATPATH 289
 #define YOBSOLETE 290
 
 extern YYSTYPE yylval;

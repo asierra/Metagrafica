@@ -117,3 +117,32 @@ Path splines_to_bezier(Path cp) {
   outpath.push_back(q3);
   return outpath;
 }
+
+
+Path process_path(Matrix mtpt, point pp, Path path) {
+  Matrix mt;
+  Path newpath;
+
+  mt.translate(pp.x, pp.y);
+  mt *= mtpt;
+  for (const auto &op : path) {
+    point p = op;
+    mt.transform(p.x, p.y);
+    newpath.push_back(p);
+  }
+  return newpath;
+}
+
+void concat_paths(Path &path1, Path path2) {
+  printf("paths %zu %zu\n", path1.size(), path2.size());
+  path1.insert(path1.end(), path2.begin(), path2.end());
+  /*
+  point last_point = path1.back();
+  bool is_first=true;
+
+  for (const auto &p : path2) {
+    if (is_first && last_point==p)
+      continue;
+    path1.push_back(p);
+  }*/
+}

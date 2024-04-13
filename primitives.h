@@ -40,6 +40,7 @@ enum GraphicsItemType {
   GI_BEZIER,
   GI_TICKS,
   GI_DOT,
+  GI_CONCATENATEPATH
 };
 
 enum AttributeType {
@@ -111,6 +112,12 @@ struct point {
     p1.x -= p2.x;
     p1.y -= p2.y;
     return p1;
+  }
+  bool operator==(const point& p2) {
+   return (x==p2.x && y==p2.y);
+  }
+  bool operator!=(const point& p2) {
+    return (x!=p2.x || y!=p2.y);
   }
 };
 

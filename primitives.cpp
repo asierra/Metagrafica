@@ -31,6 +31,8 @@ void Polyline::draw(Display &g) {
       if (type==GI_BEZIER) {
         auto j = i;
         i++;
+        if (i==path.end())
+          break;
         auto k = i;
         i++;
         if (i==path.end())

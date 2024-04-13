@@ -8,6 +8,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 
 #include "primitives.h"
+#include <vector>
 
 /** 
    From a list of control points, creates a path using Catmull-Rom splines.
@@ -19,3 +20,7 @@ Path splines(Path controlpoints, int intervals);
    ready to be used in PostScript.
  */
 Path splines_to_bezier(Path controlpoints);
+
+Path process_path(Matrix matrix, point current_point, Path path);
+
+void concat_paths(Path &path1, Path path2);
