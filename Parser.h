@@ -53,6 +53,7 @@ private:
 
   /// Window
   float wmx, wmy, wdx, wdy;
+  Matrix mtpt;
   //point pp;
   //StructureMap structure_map;
   map<string, Path> listmap;

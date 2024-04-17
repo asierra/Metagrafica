@@ -420,7 +420,7 @@ Path Parser::parsePoints() {
   }
   if (l.size()==0 && lastyylex==IDLISTA) {
     if (listmap.find(&yylval.s[1]) != listmap.end()) {
-      l = listmap[&yylval.s[1]];
+      l = process_path(mtpt, listmap[&yylval.s[1]]);
       printf("Path [%s] %zu\n", &yylval.s[1], l.size());
     } else {
       fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
@@ -434,7 +434,7 @@ GraphicsItemList Parser::parsePrimitives() {
   GraphicsItemList prlist;
   Structure *st = NULL;
   static int depth = 0;
-  Matrix mtst, mtpt, mtpp;
+  Matrix mtst, mtpp;
   float pwmx, pwmy, pwdx, pwdy;
   FontFace ff = FN_DEFAULT;
   int n;
@@ -464,7 +464,7 @@ GraphicsItemList Parser::parsePrimitives() {
       if (is_concatenatepath_active) {
         if (listmap.find(name)!=listmap.end()) {
           Path path = listmap[name];
-          Path path2 = process_path(mtpt, pp, path);
+          Path path2 = process_path(mtpt, path);
           concat_paths(ctpath, path2);
           pp = ctpath.back();
           printf("outpath %zu\n", ctpath.size());

@@ -119,15 +119,12 @@ Path splines_to_bezier(Path cp) {
 }
 
 
-Path process_path(Matrix mtpt, point pp, Path path) {
-  Matrix mt;
+Path process_path(Matrix mtpt, Path path) {
   Path newpath;
 
-  mt.translate(pp.x, pp.y);
-  mt *= mtpt;
   for (const auto &op : path) {
     point p = op;
-    mt.transform(p.x, p.y);
+    mtpt.transform(p.x, p.y);
     newpath.push_back(p);
   }
   return newpath;
@@ -135,14 +132,8 @@ Path process_path(Matrix mtpt, point pp, Path path) {
 
 void concat_paths(Path &path1, Path path2) {
   printf("paths %zu %zu\n", path1.size(), path2.size());
-  path1.insert(path1.end(), path2.begin(), path2.end());
-  /*
-  point last_point = path1.back();
-  bool is_first=true;
-
-  for (const auto &p : path2) {
-    if (is_first && last_point==p)
-      continue;
-    path1.push_back(p);
-  }*/
+  if (path1.size()==0)
+    path1.insert(path1.end(), path2.begin(), path2.end());
+  else
+    path1.insert(path1.end(), std::next(path2.begin()), path2.end());
 }

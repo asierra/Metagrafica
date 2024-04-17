@@ -21,6 +21,6 @@ Path splines(Path controlpoints, int intervals);
  */
 Path splines_to_bezier(Path controlpoints);
 
-Path process_path(Matrix matrix, point current_point, Path path);
+Path process_path(Matrix matrix, Path path);
 
 void concat_paths(Path &path1, Path path2);
