@@ -34,8 +34,8 @@ struct {
                      {"BZ", YOP, GI_BEZIER},
                      {"CLPT", YGSTATE, GS_CLOSEPATH},
                      {"CLST", YCLST, GI_NULL},
-                     {"CTPT", YCONCATPATH, GI_NULL},
                      {"CR", YOP, GI_CIRCLE},
+                     {"CTPT", YCONCATPATH, GI_NULL},
                      {"DOT", YOP, GI_DOT},
                      {"DPST", YDPST, GI_NULL},
                      {"DT", YDT, GI_TEXT},
@@ -463,11 +463,10 @@ GraphicsItemList Parser::parsePrimitives() {
       string name = &yylval.s[1];
       if (is_concatenatepath_active) {
         if (listmap.find(name)!=listmap.end()) {
-          Path path = listmap[name];
-          Path path2 = process_path(mtpt, path);
-          concat_paths(ctpath, path2);
+          Path path = process_path(mtpt, listmap[name]);
+          concat_paths(ctpath, path);
           pp = ctpath.back();
-          printf("outpath %zu\n", ctpath.size());
+          //printf("outpath %zu\n", ctpath.size());
         }
       } else
         listmap[name] = parsePoints();
