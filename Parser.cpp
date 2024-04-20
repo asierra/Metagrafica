@@ -464,8 +464,8 @@ GraphicsItemList Parser::parsePrimitives() {
       if (is_concatenatepath_active) {
         if (listmap.find(name)!=listmap.end()) {
           Path path = process_path(mtpt, listmap[name]);
+          mtpt.print();
           concat_paths(ctpath, path);
-          pp = ctpath.back();
           //printf("outpath %zu\n", ctpath.size());
         }
       } else
@@ -693,7 +693,6 @@ GraphicsItemList Parser::parsePrimitives() {
       if (yylval.i==GS_CLOSEPATH && is_concatenatepath_active) {
         is_concatenatepath_active = false;
         listmap[ctpathname] = ctpath;
-        //printf("ctpatout %zu\n", ctpath.size());
         break;
       } else if (yylval.i == GS_PLUMEPOSITION) {
         pp.x = (parseFloat() - wmx) / wdx;
@@ -705,8 +704,6 @@ GraphicsItemList Parser::parsePrimitives() {
     } break;
     case YXYDT: {
       pp = parsePoint();
-      // pp.x = (parseFloat() - wmx) / wdx;
-      // pp.y = (parseFloat() - wmy) / wdy;
       GraphicsState *gs = new GraphicsState();
       gs->setPosition(pp);
       prlist.push_back(gs);
@@ -750,6 +747,7 @@ GraphicsItemList Parser::parsePrimitives() {
     case YCONCATPATH: {
       is_concatenatepath_active = true;
       ctpathname = parseString();
+      ctpath.clear();
       //ctpath = listmap[name];
       //listmap[name] = ctpath;
       }

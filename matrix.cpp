@@ -84,7 +84,7 @@ void Matrix::matmat(DataMatrix b) {
 }
 
 void Matrix::print() {
-  printf("%g %g %g\n", M[0][0], M[0][1], M[0][2]);
-  printf("%g %g %g\n", M[1][0], M[1][1], M[1][2]);
-  printf("%g %g %g\n", M[2][0], M[2][1], M[2][2]);
+  printf("%6g %6g %6g\n", M[0][0], M[0][1], M[0][2]);
+  printf("%6g %6g %6g\n", M[1][0], M[1][1], M[1][2]);
+  printf("%6g %6g %6g\n", M[2][0], M[2][1], M[2][2]);
 }
