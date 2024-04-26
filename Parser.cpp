@@ -12,7 +12,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 47
+#define MAX_KEYS 48
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -49,6 +49,7 @@ struct {
                      {"GNPATH", YLISTA, GI_NULL},
                      {"INPUT", YOPS, GI_NULL},
                      {"INTXT", YOBSOLETE, GI_NULL},
+                     {"INVPT", YINVPT, GI_NULL},
                      {"LCOLOR", YATRIB, AT_LCOLOR},
                      {"LGRAY", YATRIB, AT_LGRAY},
                      {"LNST", YLNST, GI_NULL},
@@ -744,6 +745,13 @@ GraphicsItemList Parser::parsePrimitives() {
       //  listmap[name].size());
       break;
     }
+    case YINVPT: {
+      string name = parseString();
+      Path l = parsePoints();
+      l.reverse();
+      listmap[name] = l;
+      break;
+    }
     case YCONCATPATH: {
       is_concatenatepath_active = true;
       ctpathname = parseString();
@@ -792,6 +800,7 @@ GraphicsItemList Parser::parsePrimitives() {
       printf("Aviso: Comando obsoleto <>, usar el comando actual.\n");
       break;
     case YEXIT:
+      printf("Cerrando parsing\n");
       return prlist;
       break;
     }
