@@ -12,7 +12,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 48
+#define MAX_KEYS 49
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -66,6 +66,7 @@ struct {
                      {"PG", YOP, GI_POLYGON},
                      {"PL", YOP, GI_POLYLINE},
                      {"PWST", YPVST, GI_NULL},
+                     {"RPPT", YRPPT, GI_NULL},
                      {"RPST", YRPST, GI_NULL},
                      {"SP", YOP, GI_SPLINE},
                      {"TALIGN", YATRIB, AT_TALIGN},
@@ -752,6 +753,18 @@ GraphicsItemList Parser::parsePrimitives() {
       listmap[name] = l;
       break;
     }
+    case YRPPT: 
+      if (is_concatenatepath_active) {
+        string name = parseString();
+        n = (int)parseFloat();
+        for (int i=0; i < n; i++) {
+          Path path = process_path(mtpt, listmap[name]);
+          concat_paths(ctpath, path);
+          if (i < n-1)
+            mtpt.translate(1., 0.);
+        }
+      }
+      break;
     case YCONCATPATH: {
       is_concatenatepath_active = true;
       ctpathname = parseString();
