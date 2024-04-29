@@ -18,7 +18,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #include <stdio.h>
 #include <math.h>
 
-float distance(point a, point b)
+float distancesq(point a, point b)
 { 
   float dx = a.x - b.x;
   float dy = a.y - b.y;
@@ -26,13 +26,19 @@ float distance(point a, point b)
   return (dx*dx + dy*dy);
 }
 
+float distancesq(point a, point b)
+{
+  return sqrt(distancesq(a,b));
+}
+
+
 void get_spline_coefficients(point p0, point p1, point p2, point p3,
   float alpha,
   point &c0, point &c1, point &c2, point &c3) 
 {
-  float dt0 = powf(distance(p0, p1), alpha);
-  float dt1 = powf(distance(p1, p2), alpha);
-  float dt2 = powf(distance(p2, p3), alpha);
+  float dt0 = powf(distancesq(p0, p1), alpha);
+  float dt1 = powf(distancesq(p1, p2), alpha);
+  float dt2 = powf(distancesq(p2, p3), alpha);
 
   // safety check for repeated points
   if (dt1 < 1e-4f)    dt1 = 1.0f;

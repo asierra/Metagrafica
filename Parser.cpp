@@ -769,6 +769,7 @@ GraphicsItemList Parser::parsePrimitives() {
       is_concatenatepath_active = true;
       ctpathname = parseString();
       ctpath.clear();
+      mtpt.initialize();
       //ctpath = listmap[name];
       //listmap[name] = ctpath;
       }
