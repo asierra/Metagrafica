@@ -26,7 +26,7 @@ float distancesq(point a, point b)
   return (dx*dx + dy*dy);
 }
 
-float distancesq(point a, point b)
+float distance(point a, point b)
 {
   return sqrt(distancesq(a,b));
 }
@@ -136,10 +136,29 @@ Path process_path(Matrix mtpt, Path path) {
   return newpath;
 }
 
-void concat_paths(Path &path1, Path path2) {
+void concat_paths(Path &path1, Path path2, Matrix mt) {
+  Matrix mttl;
   printf("paths %zu %zu\n", path1.size(), path2.size());
-  if (path1.size()==0)
-    path1.insert(path1.end(), path2.begin(), path2.end());
-  else
-    path1.insert(path1.end(), std::next(path2.begin()), path2.end());
+  if (path1.size()==0) {
+    Path path2m = process_path(mt, path2);
+    path1.insert(path1.end(), path2m.begin(), path2m.end());
+  } else {
+    point p1 = path1.back();
+    point p2b = path2.back(), p2f = path2.front();
+    mt.transform(p2b.x, p2b.y);
+    mt.transform(p2f.x, p2f.y);
+    float dx = p1.x;
+    float dfy = p1.y - p2f.y;
+    //printf("p2f %g p2b %g\n", p2f.x, p2b.x);
+    if (p2f.x > p2b.x) {
+      path2.reverse();
+      dx += p2f.x - p2b.x;
+      dfy = p1.y - p2b.y;
+    }
+    mttl.translate(dx, dfy);
+    mttl = mttl*mt;
+    Path path2m = process_path(mttl, path2);
+    //printf("point %g %g - %g %g %g\n", p1.x, p1.y, path2m.front().x, path2m.back().x, dfy);
+    path1.insert(path1.end(), std::next(path2m.begin()), path2m.end());
+  }
 }

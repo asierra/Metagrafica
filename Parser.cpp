@@ -465,9 +465,9 @@ GraphicsItemList Parser::parsePrimitives() {
       string name = &yylval.s[1];
       if (is_concatenatepath_active) {
         if (listmap.find(name)!=listmap.end()) {
-          Path path = process_path(mtpt, listmap[name]);
+          //Path path = process_path(mtpt, listmap[name]);
           mtpt.print();
-          concat_paths(ctpath, path);
+          concat_paths(ctpath, listmap[name], mtpt);
           //printf("outpath %zu\n", ctpath.size());
         }
       } else
@@ -758,10 +758,10 @@ GraphicsItemList Parser::parsePrimitives() {
         string name = parseString();
         n = (int)parseFloat();
         for (int i=0; i < n; i++) {
-          Path path = process_path(mtpt, listmap[name]);
-          concat_paths(ctpath, path);
-          if (i < n-1)
-            mtpt.translate(1., 0.);
+          //Path path = process_path(mtpt, listmap[name]);
+          concat_paths(ctpath, listmap[name], mtpt);
+          //if (i < n-1)
+          //  mtpt.translate(1., 0.);
         }
       }
       break;
@@ -770,8 +770,6 @@ GraphicsItemList Parser::parsePrimitives() {
       ctpathname = parseString();
       ctpath.clear();
       mtpt.initialize();
-      //ctpath = listmap[name];
-      //listmap[name] = ctpath;
       }
       break;
     case YRPNUM: {
