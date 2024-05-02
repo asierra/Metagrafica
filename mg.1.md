@@ -148,6 +148,33 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 `ARCST sc r dq q0 [shift [n]]: x y`
 :  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating everytime the center with the PP matrix.
 
+## Path manipulation
+
+It is possible to create directly a path with its name and the character **&**. 
+
+`&name path`
+:  Creates a new path with the name you defined.
+
+Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with *IDPT*. You can copy a path to another one, simply defining the new one with the old one: `&newpath &oldpath`.
+
+`CTPT name`
+:  After that command, you can transform and concatenate predefined paths and the result will be stored in the new path *&name*. The position is automatically updated. See examples below.
+
+`OPPT`
+:  This command creates a graphics state in with the paths are not closed, so you can join them in the same path, at PostScript level, otherwise incompatible primitives like lines and arcs.
+
+`CLPT`
+:  To close both CTPT and OPPT.
+
+`INVPT name`
+:  Invert the order of the points in the path named *&name*.
+
+`NORMPT name`
+:  Normalize the path named *&name* in a way that the lower left point is (0,0) and the upper right one is (1,1).
+
+`RPPT name n`
+:  To be used inside `CTPT`, repeats n times the path *&name*.
+
 ## Optional Controls
  
 `$D dx dy`
@@ -178,8 +205,8 @@ The generators produce repetitive primitives.
 `GNNUM i0 inc n decimals`
 :  Generates a series of *n* numbers and position each one at the current point using the PP matrix, using an initial number *i0*, increment *inc*, number of numbers *n* and number of *decimals*.
 
-`GNPATH n x y`
-:  Generates a path with *n* points with an initial point *x y* using the path matrix PT.
+`GNPATH n x y name`
+:  Generates the path *name* (a string you define) with *n* points with an initial point *x y* using the path matrix PT. Once created, the path can be used as *&name*.
 
 `TICKS n x y`
 :  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector *x y*.
@@ -226,6 +253,17 @@ A simple MG file with a corner, a circle and a message.
     CR 6 : 12 8 }
 
     XYDT 8 10 Hello World!
+
+An example using path manipulation. The new path *&curve* is created concatenating 3 full period sine curves and one half period sine curve, each with different scales.
+
+    CTPT curve
+    SCPT .2 1
+    RPPT sin2pi 3
+    SCPT .5 .5
+    &sinpi
+    CLPT
+
+    BZ &curve
 
 See more examples in the *examples* directory.
 

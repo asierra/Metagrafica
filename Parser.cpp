@@ -423,7 +423,7 @@ Path Parser::parsePoints() {
   if (l.size()==0 && lastyylex==IDLISTA) {
     if (listmap.find(&yylval.s[1]) != listmap.end()) {
       l = process_path(mtpt, listmap[&yylval.s[1]]);
-      printf("Path [%s] %zu\n", &yylval.s[1], l.size());
+      //printf("Path [%s] %zu\n", &yylval.s[1], l.size());
     } else {
       fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
               &yylval.s[1], listmap.size());
@@ -465,10 +465,7 @@ GraphicsItemList Parser::parsePrimitives() {
       string name = &yylval.s[1];
       if (is_concatenatepath_active) {
         if (listmap.find(name)!=listmap.end()) {
-          //Path path = process_path(mtpt, listmap[name]);
-          mtpt.print();
           concat_paths(ctpath, listmap[name], mtpt);
-          //printf("outpath %zu\n", ctpath.size());
         }
       } else
         listmap[name] = parsePoints();
@@ -727,10 +724,8 @@ GraphicsItemList Parser::parsePrimitives() {
       float y = parseFloat();
       Path l;
       string name = parseString();
-      //if (listmap.find(name)!=listmap.end()) ojo
-        //l = listmap[name];
-      //else
-        //listmap[name] = l;
+      if (listmap.find(name)!=listmap.end())
+        printf("Warning: the path %s already exists.\n", name.c_str());
       point z;
       x = (x - wmx) / wdx;
       y = (y - wmy) / wdy;
@@ -738,12 +733,9 @@ GraphicsItemList Parser::parsePrimitives() {
         z.x = x;
         z.y = y;
         l.push_back(z);
-        // mtdr.transforma(x, y);
         mtpt.transform(x, y);
       }
       listmap[name] = l;
-      //printf("Lista %d %g %g {%s} %lu %lu\n", n, x, y, name.c_str(), l.size(),  
-      //  listmap[name].size());
       break;
     }
     case YINVPT: {

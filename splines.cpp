@@ -72,7 +72,7 @@ Path splines(Path cp, int intervals) {
 
   int n = cp.size();
   Path::iterator cpit = cp.begin();
-  printf("splines %d\n", n);
+  printf("spline new points %d\n", n*intervals);
   for (int i = 0; i < n-3; i++) {
     Path::iterator it = cpit;
     point p0, p1, p2, p3;
@@ -138,7 +138,7 @@ Path process_path(Matrix mtpt, Path path) {
 
 void concat_paths(Path &path1, Path path2, Matrix mt) {
   Matrix mttl;
-  printf("paths %zu %zu\n", path1.size(), path2.size());
+  //printf("paths %zu %zu\n", path1.size(), path2.size());
   if (path1.size()==0) {
     Path path2m = process_path(mt, path2);
     path1.insert(path1.end(), path2m.begin(), path2m.end());
