@@ -43,7 +43,7 @@ private:
   float parseFloat();
   string parseString();
   void parseDef(int def);
-  Path parsePoints();
+  Path parsePath();
   GraphicsItemList parsePrimitives();
   void oldParseMatrix(int mo, Matrix &mt);
   Transform* parseMatrix(int mo);
@@ -63,6 +63,7 @@ private:
   string canfilename;
   bool is_spline_to_bezier;
   int spline_nodes_per_segment;
+  Path bufferpt;
 };
 
 #endif

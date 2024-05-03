@@ -28,7 +28,10 @@ ellipsedict /mtrx matrix put
           /savematrix mtrx currentmatrix def
           x y translate
           xrad yrad scale
-          0 0 1 startangle endangle arc
+          startangle endangle lt
+          { 0 0 1 startangle endangle arc }
+          { 0 0 1 startangle endangle arcn }
+          ifelse 
           savematrix setmatrix
           end
 } def
@@ -506,8 +509,10 @@ void EPSDisplay::arc(float x, float y, float w, float h, float startAng,
       fprintf(file, "%f %f %f %f %f arcn\n", x, y, w, sa, ea);
     else
       fprintf(file, "%f %f %f %f %f arc\n", x, y, w, sa, ea);
-  } else
+  } else {
+
     fprintf(file, "%g %g %g %g %g %g ellipse\n", x, y, w, h, sa, ea);
+  }
   stroke();
 }
 

@@ -12,7 +12,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 49
+#define MAX_KEYS 50
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -61,6 +61,7 @@ struct {
                      {"MKST", YMKST, GI_NULL},
                      {"MR", YOP, GI_NULL},
                      {"NOFILL", YGSTATE, GS_NOFILL},
+                     {"NORMPT", YNORMPT, GI_NULL},
                      {"OPPT", YGSTATE, GS_OPENPATH},
                      {"OPST", YOPST, GI_NULL},
                      {"PG", YOP, GI_POLYGON},
@@ -285,7 +286,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
 
   switch (type) {
   case GI_SPLINE: {
-    Path controlpoints = parsePoints();
+    Path controlpoints = parsePath();
     if (is_spline_to_bezier) {
       printf("Converting spline to Bezier.\n");
       pl = new Polyline(GI_BEZIER);
@@ -328,8 +329,9 @@ GraphicsItem *Parser::parsePrimitive(int type) {
       e->setRadius(r[0] / wdx, r[1] / wdy);
       if (k > 2) {
         if (k == 3)
-          r[3] = 0;
-        e->setAngles(r[2], r[3]);
+          e->setAngles(0.0, r[2]);
+        else
+          e->setAngles(r[3], r[2] + r[3]);
       }
       pl = e;
     }
@@ -346,7 +348,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
     break;
   }
   if (pl)
-    pl->setPath(parsePoints());
+    pl->setPath(parsePath());
 
   return pl;
 }
@@ -408,7 +410,7 @@ point Parser::parsePoint() {
   return z;
 }
 
-Path Parser::parsePoints() {
+Path Parser::parsePath() {
   Path l;
   float x, y;
   point z;
@@ -421,9 +423,14 @@ Path Parser::parsePoints() {
     l.push_back(z);
   }
   if (l.size()==0 && lastyylex==IDLISTA) {
-    if (listmap.find(&yylval.s[1]) != listmap.end()) {
+    string name = &yylval.s[1];
+    if (listmap.find(name) != listmap.end()) {
       l = process_path(mtpt, listmap[&yylval.s[1]]);
       //printf("Path [%s] %zu\n", &yylval.s[1], l.size());
+    } else if (name=="buffer") {
+      l.insert(l.end(), bufferpt.begin(), bufferpt.end());
+      //printf("buffer %zu\n", l.size());
+      bufferpt.clear();
     } else {
       fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
               &yylval.s[1], listmap.size());
@@ -468,7 +475,7 @@ GraphicsItemList Parser::parsePrimitives() {
           concat_paths(ctpath, listmap[name], mtpt);
         }
       } else
-        listmap[name] = parsePoints();
+        listmap[name] = parsePath();
       continue;
     }
 
@@ -649,7 +656,7 @@ GraphicsItemList Parser::parsePrimitives() {
       } else {
         StructurePath *sr = new StructurePath();
         sr->setStructure(strct);
-        sr->setPath(parsePoints());
+        sr->setPath(parsePath());
         prlist.push_back(sr);
       }
       break;
@@ -725,7 +732,7 @@ GraphicsItemList Parser::parsePrimitives() {
       Path l;
       string name = parseString();
       if (listmap.find(name)!=listmap.end())
-        printf("Warning: the path %s already exists.\n", name.c_str());
+        fprintf(stderr, "Warning: the path %s already exists.\n", name.c_str());
       point z;
       x = (x - wmx) / wdx;
       y = (y - wmy) / wdy;
@@ -740,23 +747,23 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YINVPT: {
       string name = parseString();
-      Path l = parsePoints();
+      Path l = parsePath();
       l.reverse();
       listmap[name] = l;
       break;
     }
-    case YRPPT: 
-      if (is_concatenatepath_active) {
-        string name = parseString();
-        n = (int)parseFloat();
-        for (int i=0; i < n; i++) {
-          //Path path = process_path(mtpt, listmap[name]);
+    case YRPPT: {
+      string name = parseString();
+      n = (int)parseFloat();
+      for (int i=0; i < n; i++) {
+        if (is_concatenatepath_active)
           concat_paths(ctpath, listmap[name], mtpt);
-          //if (i < n-1)
-          //  mtpt.translate(1., 0.);
+        else {
+          concat_paths(bufferpt, listmap[name], mtpt);
         }
-      }
+      };
       break;
+    }
     case YCONCATPATH: {
       is_concatenatepath_active = true;
       ctpathname = parseString();

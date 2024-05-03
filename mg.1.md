@@ -173,7 +173,7 @@ Once created, a path can be used in any primitive command, for instance `PL &nam
 :  Normalize the path named *&name* in a way that the lower left point is (0,0) and the upper right one is (1,1).
 
 `RPPT name n`
-:  To be used inside `CTPT`, repeats n times the path *&name*.
+:  Repeats n times the path *&name*. When used inside `CTPT`, automatically concats to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
 
 ## Optional Controls
  
