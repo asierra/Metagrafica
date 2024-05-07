@@ -37,6 +37,7 @@ typedef union {
 #define YINVPT 290
 #define YRPPT 291
 #define YNORMPT 292
+#define YPVPT 293
 #define YOBSOLETE 295
 
 extern YYSTYPE yylval;

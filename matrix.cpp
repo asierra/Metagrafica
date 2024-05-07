@@ -32,6 +32,12 @@ void Matrix::translate(float x, float y) {
   matmat(A);
 }
 
+void Matrix::to_rectangle(float x1, float y1, float x2, float y2) {
+  initialize();
+  translate(x1, y1);
+  scale(x2-x1, y2-y1);
+}
+
 void Matrix::rotate(float theta) {
   DataMatrix A;
   memcpy(A, MATIDEN, sizeof(Matrix));

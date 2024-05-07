@@ -155,7 +155,8 @@ It is possible to create directly a path with its name and the character **&**.
 `&name path`
 :  Creates a new path with the name you defined.
 
-Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with *IDPT*. You can copy a path to another one, simply defining the new one with the old one: `&newpath &oldpath`.
+Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with *IDPT*. You can copy a path to another one, simply defining the new one with the old one: 
+`&newpath &oldpath`.
 
 `CTPT name`
 :  After that command, you can transform and concatenate predefined paths and the result will be stored in the new path *&name*. The position is automatically updated. See examples below.
@@ -174,6 +175,9 @@ Once created, a path can be used in any primitive command, for instance `PL &nam
 
 `RPPT name n`
 :  Repeats n times the path *&name*. When used inside `CTPT`, automatically concats to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
+
+`PWPT name x1 y1 x2 y2`
+:  Port window path. Insert the path *name* exactly in the rectangle defined by the two points.
 
 ## Optional Controls
  

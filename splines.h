@@ -6,6 +6,8 @@ graphics. Display in PostScript. Author:  Alejandro Aguilar Sierra, UNAM
     Version:  2024
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
+#if !defined(__SPLINES_H)
+#define __SPLINES_H
 
 #include "primitives.h"
 #include <vector>
@@ -24,3 +26,7 @@ Path splines_to_bezier(Path controlpoints);
 Path process_path(Matrix matrix, Path path);
 
 void concat_paths(Path &path1, Path path2, Matrix mt);
+
+void normalize_path(Path& path);
+
+#endif

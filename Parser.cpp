@@ -12,7 +12,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 50
+#define MAX_KEYS 51
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -66,6 +66,7 @@ struct {
                      {"OPST", YOPST, GI_NULL},
                      {"PG", YOP, GI_POLYGON},
                      {"PL", YOP, GI_POLYLINE},
+                     {"PWPT", YPVPT, GI_NULL},
                      {"PWST", YPVST, GI_NULL},
                      {"RPPT", YRPPT, GI_NULL},
                      {"RPST", YRPST, GI_NULL},
@@ -710,19 +711,18 @@ GraphicsItemList Parser::parsePrimitives() {
     } break;
     case YXYDT: {
       pp = parsePoint();
+    }
+    case YDT: {
       GraphicsState *gs = new GraphicsState();
       gs->setPosition(pp);
       prlist.push_back(gs);
-    }
-    case YDT: {
-      if (lastyylex ==
-          YDT) { // ojo, dt debe actualizar la posición de algún modo
-        mtpp.transform(pp.x, pp.y);
-      }
       setBegin(cadena);
       yylex();
       GraphicsItem *t = parse_text(&yylval.s[1], ff);
       prlist.push_back(t);
+      if (lastyylex==YDT) { // ojo, dt debe actualizar la posición de algún modo
+        mtpp.transform(pp.x, pp.y);
+      }
       break;
     }
     case YLISTA: {
@@ -762,6 +762,27 @@ GraphicsItemList Parser::parsePrimitives() {
           concat_paths(bufferpt, listmap[name], mtpt);
         }
       };
+      break;
+    }
+    case YNORMPT: {
+      string name = parseString();
+      if (listmap.find(name)!=listmap.end()) {
+        normalize_path(listmap[name]);
+      } else
+        fprintf(stderr, "Error NORMPT: the path %s was not found.\n", name.c_str());
+      break;
+    }
+    case YPVPT: {
+      string name = parseString();
+      point llp, rup;
+      llp = parsePoint();
+      rup = parsePoint();
+      if (listmap.find(name)!=listmap.end()) {
+        Matrix mtpr;
+        mtpr.to_rectangle(llp.x, llp.y, rup.x, rup.y);
+        bufferpt = process_path(mtpr, listmap[name]);
+      } else
+        fprintf(stderr, "Error PWPT: the path %s was not found.\n", name.c_str());
       break;
     }
     case YCONCATPATH: {

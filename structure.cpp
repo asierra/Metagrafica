@@ -56,11 +56,8 @@ void StructurePath::draw(Display &g) {
 
 void StructureRectangle::draw(Display &g) {
   Matrix mtrc;
-  float dx = rup.x - llp.x;
-  float dy = rup.y - llp.y;
   g.save();
-  mtrc.translate(llp.x, llp.y);
-  mtrc.scale(dx, dy);
+  mtrc.to_rectangle(llp.x, llp.y, rup.x, rup.y);
   g.pushMatrix(mtrc);
   g.structure(structure->getName());
   g.popMatrix();

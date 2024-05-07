@@ -51,6 +51,8 @@ public:
 
   void set(DataMatrix m);
 
+  void to_rectangle(float x1, float y1, float x2, float y2);
+  
   //void getAfinData();
   void matmat(DataMatrix b);
 

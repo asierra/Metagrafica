@@ -136,6 +136,40 @@ Path process_path(Matrix mtpt, Path path) {
   return newpath;
 }
 
+void compute_maxmins_path(Path path, point &mn, point &mx) {
+  point min(1e10, 1e10), max(-1e10, -1e10);
+
+  for (const auto &p : path) {
+    if (p.x < min.x)
+      min.x = p.x;
+    if (p.x > max.x)
+      max.x = p.x;
+    if (p.y < min.y)
+      min.y = p.y;
+    if (p.y > max.y)
+      max.y = p.y;
+  }
+  mn = min;
+  mx = max;
+}
+
+void normalize_path(Path& path) {
+  point min, max;
+  compute_maxmins_path(path, min, max);
+  printf("minmaxs %g %g  %g %g\n", min.x, min.y, max.x, max.y);
+  Matrix mt;
+
+  mt.scale(1/(max.x - min.x), 1/(max.y - min.y));
+  mt.translate(-min.x, -min.y);
+
+  for (auto &p : path) {
+    mt.transform(p.x, p.y);
+  }
+
+  compute_maxmins_path(path, min, max);
+  printf("minmaxs2 %g %g  %g %g\n", min.x, min.y, max.x, max.y);
+}
+
 void concat_paths(Path &path1, Path path2, Matrix mt) {
   Matrix mttl;
   //printf("paths %zu %zu\n", path1.size(), path2.size());
