@@ -53,6 +53,8 @@ public:
 
   void to_rectangle(float x1, float y1, float x2, float y2);
   
+  bool has_translation() { return (fabs(M[0][2]) > 0.01 && fabs(M[1][2]) > 0.01); }
+
   //void getAfinData();
   void matmat(DataMatrix b);
 

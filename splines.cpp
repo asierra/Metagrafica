@@ -170,14 +170,13 @@ void normalize_path(Path& path) {
   printf("minmaxs2 %g %g  %g %g\n", min.x, min.y, max.x, max.y);
 }
 
-void concat_paths(Path &path1, Path path2, Matrix mt) {
+void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
   Matrix mttl;
-  printf("concat paths %zu %zu\n", path1.size(), path2.size());
+  //printf("concat paths %zu %zu\n", path1.size(), path2.size());
   if (path1.size()==0) {
     Path path2m = process_path(mt, path2);
     point p2b = path2m.back(), p2f = path2m.front();
-    mt.transform(p2b.x, p2b.y);
-    mt.transform(p2f.x, p2f.y);
+    //printf("extremos %g %g - %g %g\n", p2f.x, p2f.y, p2b.x, p2b.y);
     if (p2f.x > p2b.x) 
       path2m.reverse();
     path1.insert(path1.end(), path2m.begin(), path2m.end());
@@ -194,7 +193,8 @@ void concat_paths(Path &path1, Path path2, Matrix mt) {
       dx += p2f.x - p2b.x;
       dfy = p1.y - p2b.y;
     }
-    mttl.translate(dx, dfy);
+    if (use_translation) 
+      mttl.translate(dx, dfy);
     mttl = mttl*mt;
     Path path2m = process_path(mttl, path2);
     //printf("point %g %g - %g %g %g\n", p1.x, p1.y, path2m.front().x, path2m.back().x, dfy);

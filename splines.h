@@ -25,7 +25,7 @@ Path splines_to_bezier(Path controlpoints);
 
 Path process_path(Matrix matrix, Path path);
 
-void concat_paths(Path &path1, Path path2, Matrix mt);
+void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation=true);
 
 void normalize_path(Path& path);
 

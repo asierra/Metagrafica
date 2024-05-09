@@ -350,7 +350,6 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   }
   if (pl) {
     pl->setPath(parsePath());
-    printf("Nuevo %d con %zu puntos\n", type, pl->getPath().size());
   }
   return pl;
 }
@@ -782,9 +781,10 @@ GraphicsItemList Parser::parsePrimitives() {
       if (listmap.find(name)!=listmap.end()) {
         Matrix mtpr;
         mtpr.to_rectangle(llp.x, llp.y, rup.x, rup.y);
-        bufferpt = process_path(mtpr, listmap[name]);
         if (is_concatenatepath_active)
-          concat_paths(ctpath, bufferpt, mtpt);
+          concat_paths(ctpath, listmap[name], mtpr, false);
+        else
+          bufferpt = process_path(mtpr, listmap[name]);
         printf("PWPT %s\n", name.c_str());
       } else
         fprintf(stderr, "Error PWPT: the path %s was not found.\n", name.c_str());
