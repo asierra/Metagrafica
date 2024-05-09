@@ -348,9 +348,10 @@ GraphicsItem *Parser::parsePrimitive(int type) {
     }
     break;
   }
-  if (pl)
+  if (pl) {
     pl->setPath(parsePath());
-
+    printf("Nuevo %d con %zu puntos\n", type, pl->getPath().size());
+  }
   return pl;
 }
 
@@ -430,7 +431,7 @@ Path Parser::parsePath() {
       //printf("Path [%s] %zu\n", &yylval.s[1], l.size());
     } else if (name=="buffer") {
       l.insert(l.end(), bufferpt.begin(), bufferpt.end());
-      //printf("buffer %zu\n", l.size());
+      printf("buffer %zu\n", l.size());
       bufferpt.clear();
     } else {
       fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
@@ -700,6 +701,7 @@ GraphicsItemList Parser::parsePrimitives() {
       if (yylval.i==GS_CLOSEPATH && is_concatenatepath_active) {
         is_concatenatepath_active = false;
         listmap[ctpathname] = ctpath;
+        printf("New path %s size %zu\n", ctpathname.c_str(), listmap[ctpathname].size());
         break;
       } else if (yylval.i == GS_PLUMEPOSITION) {
         pp.x = (parseFloat() - wmx) / wdx;
@@ -781,6 +783,9 @@ GraphicsItemList Parser::parsePrimitives() {
         Matrix mtpr;
         mtpr.to_rectangle(llp.x, llp.y, rup.x, rup.y);
         bufferpt = process_path(mtpr, listmap[name]);
+        if (is_concatenatepath_active)
+          concat_paths(ctpath, bufferpt, mtpt);
+        printf("PWPT %s\n", name.c_str());
       } else
         fprintf(stderr, "Error PWPT: the path %s was not found.\n", name.c_str());
       break;
@@ -790,8 +795,8 @@ GraphicsItemList Parser::parsePrimitives() {
       ctpathname = parseString();
       ctpath.clear();
       mtpt.initialize();
-      }
       break;
+    }
     case YRPNUM: {
       float x0 = parseFloat();
       float xinc = parseFloat();

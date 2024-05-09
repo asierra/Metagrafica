@@ -153,6 +153,7 @@ class GraphicsItemWithPath: public GraphicsItem {
 public:
   GraphicsItemWithPath(GraphicsItemType t) : GraphicsItem(t) { }
   void setPath(Path p) { path = p; }
+  Path getPath() { return path; }
 protected:
   Path path;
 };

@@ -172,9 +172,14 @@ void normalize_path(Path& path) {
 
 void concat_paths(Path &path1, Path path2, Matrix mt) {
   Matrix mttl;
-  //printf("paths %zu %zu\n", path1.size(), path2.size());
+  printf("concat paths %zu %zu\n", path1.size(), path2.size());
   if (path1.size()==0) {
     Path path2m = process_path(mt, path2);
+    point p2b = path2m.back(), p2f = path2m.front();
+    mt.transform(p2b.x, p2b.y);
+    mt.transform(p2f.x, p2f.y);
+    if (p2f.x > p2b.x) 
+      path2m.reverse();
     path1.insert(path1.end(), path2m.begin(), path2m.end());
   } else {
     point p1 = path1.back();
