@@ -9,12 +9,15 @@ mg -  Metagrafica, a descriptive language to create high quality technical and s
 
 # SYNOPSIS
 
-**mg** [**-h**] *filename.mg*
+**mg** [**-h**|**-v**] *filename.mg*
 
 # GENERAL OPTIONS
 
 **-h**, **--help**
 :   Display this friendly help message.
+
+**-v**
+:   Display the current version.
 
 # DESCRIPTION
  
