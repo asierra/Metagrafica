@@ -156,7 +156,6 @@ void compute_maxmins_path(Path path, point &mn, point &mx) {
 void normalize_path(Path& path) {
   point min, max;
   compute_maxmins_path(path, min, max);
-  printf("minmaxs %g %g  %g %g\n", min.x, min.y, max.x, max.y);
   Matrix mt;
 
   mt.scale(1/(max.x - min.x), 1/(max.y - min.y));
@@ -167,7 +166,6 @@ void normalize_path(Path& path) {
   }
 
   compute_maxmins_path(path, min, max);
-  printf("minmaxs2 %g %g  %g %g\n", min.x, min.y, max.x, max.y);
 }
 
 void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {

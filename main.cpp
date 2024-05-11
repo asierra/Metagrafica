@@ -25,10 +25,13 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "-h")) { 
       printf("Please consult the man page \"man mg\"\n");
       return 0;
+    } else if (!strcmp(argv[1], "-v")) { 
+      printf("Metagrafica version %s\n", MG_VERSION);
+      return 0;
     } else
       inname = argv[1];
   } else {
-    fprintf(stderr, "Usanza:  mg [-h] <archivo.mg>\n");
+    fprintf(stderr, "Usanza:  mg [-h|-v] <archivo.mg>\n");
     exit(1);
   }
 

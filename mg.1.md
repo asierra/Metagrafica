@@ -4,7 +4,7 @@
 
 # NAME
 
-mg -  Metagrafica Descriptive language to produce high quality graphics.
+mg -  Metagrafica, a descriptive language to create high quality technical and scientific graphics.
 
 
 # SYNOPSIS
@@ -18,20 +18,20 @@ mg -  Metagrafica Descriptive language to produce high quality graphics.
 
 # DESCRIPTION
  
-MetaGrafica **mg** is a descriptive language to create 2D vector graphics of publication quality as Encapsulated PostScript. Being vectorial, the basic element is not a pixel but a *point*, defined by a pair of coordinates x, y. A series of points creates a *path*, with which we can build polygons, curves and text, which we call *graphics primitives*. You can assign atributes to the primitives, like color and line width, and also geometric transformations, like rotations and scale. With a set of primitives you can build higher level structures, which are also controlled with linear transformations.
+MetaGrafica, the command **mg**, is a descriptive language to create 2D vector graphics of publication quality as Encapsulated PostScript. Being vectorial, the basic element is not a pixel but a *point*, defined by a pair of coordinates x, y. A series of points creates a *path*, with which we can build polygons, curves and text, which we call *graphics primitives*. You can assign atributes to the primitives, like color and line width, and also geometric transformations, like rotations and scale. With a set of primitives you can build higher level structures, which are also controlled with linear transformations.
 
 The output area is defined in centimeters and is by default 10x10 but you can change it using the directive $D.
 The _object space_ is the reference system defined by the user with the command WW, being 0 to 1 in both horizontal and vertical directions the default. If you want to change the defaults, you must use both $D and WW at the begining of the program. 
 
 ## Graphics primitives
 
-Every primitive is defined by its name, which usually is a short mnemonic, followed by numeric arguments. In the following list we describe them with name, syntaxis and abrief explanation. A path is defined by a series of points separated by blank spaces and ending with a closing }. A typographic point is 1/72 inch. 
+Every primitive is defined by its name, which usually is a short mnemonic, followed by numeric arguments. In the following list we describe them with name, syntaxis and abrief explanation. A *path* is defined by a series of points x1 y1 x2 y2 ... xn yn separated by blank spaces and ending with a closing }. A typographic point is 1/72 inch. 
  
 `PL path`
 :  Polyline. Join all points of the path with straight lines.
  
 `CR r [dq [q0]] : path`
-:  Circles or arcs. Draws circles or arcs of `r` radius, optional `dq` wide (in degrees) and optional initial angle `q0`, centered in every point of the path. By default, `dq` is 360 and `q0` is 0.
+:  Circles or arcs. Draws circles or arcs of radius `r`, optional `dq` wide (in degrees) and optional initial angle `q0`, centered in every point of the path. By default, `dq` is 360 and `q0` is 0.
  
 `EL rx ry [dq[ q0]] : path`
 :  Ellipses. Like **CR** but with horizontal *rx*  and vertical *ry* radius.
@@ -49,8 +49,7 @@ Every primitive is defined by its name, which usually is a short mnemonic, follo
 :  Bezier curve. Uses the path to define a bezier curve. Every segment needs four control points, the first and the last are in the curve and the second and third are the corresponding tangent local vectors to those points.
 
 `SP path`
-: Spline curve. As with Bezier, each segment is defined by four control points, but every control
-point is in the curve, with the exception of the first and the last ones.
+: Catmull-Rom Spline curve. As with Bezier, each segment is defined by four control points, but every control point is in the curve, with the exception of the first and the last ones.
   
 ## Graphics state
 
@@ -84,7 +83,7 @@ The graphics state manages properties that are used when the graphics is printed
 :   Text size in units of typographic points.
 
 `TSTYLE style`
-:  Set the style for text with one or more of these keywords, in lower case: roman, sanserif, courier, bold or italic.
+:  Set the style for text with one or more of these keywords, in lower case: roman (by default), sanserif, courier, bold or italic.
 
 `FILL`
 :  To fill all the next closed paths; no efect over the previous ones.
@@ -156,6 +155,7 @@ It is possible to create directly a path with its name and the character **&**.
 :  Creates a new path with the name you defined.
 
 Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with *IDPT*. You can copy a path to another one, simply defining the new one with the old one: 
+
 `&newpath &oldpath`.
 
 `CTPT name`
@@ -171,13 +171,13 @@ Once created, a path can be used in any primitive command, for instance `PL &nam
 :  Invert the order of the points in the path named *&name*.
 
 `NORMPT name`
-:  Normalize the path named *&name* in a way that the lower left point is (0,0) and the upper right one is (1,1).
+:  Normalize the path named *&name* in a way that it is enclosed between the points (0,0) and (1,1), the unitary square.
 
 `RPPT name n`
 :  Repeats n times the path *&name*. When used inside `CTPT`, automatically concats to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
 
 `PWPT name x1 y1 x2 y2`
-:  Port window path. Insert the path *name* exactly in the rectangle defined by the two points.
+:  Port window path. Insert the path *name* exactly in the rectangle defined by the two points. In order to work, the path must be normalized (inside the unitary square).
 
 ## Optional Controls
  
@@ -207,7 +207,7 @@ Comments
 The generators produce repetitive primitives.
 
 `GNNUM i0 inc n decimals`
-:  Generates a series of *n* numbers and position each one at the current point using the PP matrix, using an initial number *i0*, increment *inc*, number of numbers *n* and number of *decimals*.
+:  Generates a series of *n* numbers and position each one at the current point using the PP matrix, using an initial number *i0*, increment *inc*, number of numbers *n* and number of *decimals*, with the current text style.
 
 `GNPATH n x y name`
 :  Generates the path *name* (a string you define) with *n* points with an initial point *x y* using the path matrix PT. Once created, the path can be used as *&name*.
@@ -239,9 +239,6 @@ _
 /e
 /i
 :  emphasized or italics.
-
-//
-: Slant bar.
  
 \\_symbol_
 :  LaTeX symbols like Greek and math, par example \\alpha, \\infty.
@@ -258,8 +255,9 @@ A simple MG file with a corner, a circle and a message.
 
     XYDT 8 10 Hello World!
 
-An example using path manipulation. The new path *&curve* is created concatenating 3 full period sine curves and one half period sine curve, each with different scales.
+An example using path manipulation. The new path *&curve* is created concatenating 3 full period sine curves and one half period sine curve (defined in the file *bzsinepaths.mg*), each with different scales.
 
+    INPUT bzsinepaths
     CTPT curve
     SCPT .2 1
     RPPT sin2pi 3

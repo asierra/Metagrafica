@@ -11,6 +11,8 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #if !defined(__MG_H)
 #define __MG_H
 
+#define MG_VERSION  "2024.37-beta"
+
 #include "text.h"
 
 using GraphicsItemList = std::list<GraphicsItem*>;
