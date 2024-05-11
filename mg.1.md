@@ -13,7 +13,7 @@ mg -  Metagrafica, a descriptive language to create high quality technical and s
 
 # GENERAL OPTIONS
 
-**-h**, **--help**
+**-h**
 :   Display this friendly help message.
 
 **-v**
@@ -21,14 +21,14 @@ mg -  Metagrafica, a descriptive language to create high quality technical and s
 
 # DESCRIPTION
  
-MetaGrafica, the command **mg**, is a descriptive language to create 2D vector graphics of publication quality as Encapsulated PostScript. Being vectorial, the basic element is not a pixel but a *point*, defined by a pair of coordinates x, y. A series of points creates a *path*, with which we can build polygons, curves and text, which we call *graphics primitives*. You can assign atributes to the primitives, like color and line width, and also geometric transformations, like rotations and scale. With a set of primitives you can build higher level structures, which are also controlled with linear transformations.
+MetaGrafica, the command **mg**, is a descriptive language to create 2D vector graphics of publication quality as Encapsulated PostScript. Being vectorial, the basic element is not a pixel but a *point*, defined by a pair of coordinates x, y. A series of points creates a *path*, with which we can build polygons, curves and text, which we call *graphics primitives*. You can assign attributes to the primitives, like color and line width, and also geometric transformations, like rotations and scale. With a set of primitives you can build higher level structures, which are also controlled with linear transformations.
 
 The output area is defined in centimeters and is by default 10x10 but you can change it using the directive $D.
-The _object space_ is the reference system defined by the user with the command WW, being 0 to 1 in both horizontal and vertical directions the default. If you want to change the defaults, you must use both $D and WW at the begining of the program. 
+The _object space_ is the reference system defined by the user with the command WW, being 0 to 1 in both horizontal and vertical directions the default. If you want to change the defaults, you must use both $D and WW at the beginning of the program. 
 
 ## Graphics primitives
 
-Every primitive is defined by its name, which usually is a short mnemonic, followed by numeric arguments. In the following list we describe them with name, syntaxis and abrief explanation. A *path* is defined by a series of points x1 y1 x2 y2 ... xn yn separated by blank spaces and ending with a closing }. A typographic point is 1/72 inch. 
+Every primitive is defined by its name, which usually is a short mnemonic, followed by numeric arguments. In the following list we describe them with name, syntax and a brief explanation. A *path* is defined by a series of points x1 y1 x2 y2 ... xn yn separated by blank spaces and ending with a closing }. A typographic point is 1/72 inch. 
  
 `PL path`
 :  Polyline. Join all points of the path with straight lines.
@@ -89,14 +89,14 @@ The graphics state manages properties that are used when the graphics is printed
 :  Set the style for text with one or more of these keywords, in lower case: roman (by default), sanserif, courier, bold or italic.
 
 `FILL`
-:  To fill all the next closed paths; no efect over the previous ones.
+:  To fill all the next closed paths; no effect over the previous ones.
 
 `NOFILL`
 :  To stop filling the next closed paths. 
 
 ## Linear transformations
 
-Internally we use 3D homogeneus coordinate matrices to join every linear transformation in a single matrix by matrix product. The two letters prefix is the operation and the two letters suffix is the corresponding matrix. We support the following user defined transformations:
+Internally we use 3D homogeneous coordinate matrices to join every linear transformation in a single matrix by matrix product. The two letters prefix is the operation and the two letters suffix is the corresponding matrix. We support the following user defined transformations:
 
 `RTMT theta`
 :  Rotate by *theta* degrees.
@@ -145,10 +145,10 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 :  Port window structure. Insert the marker exactly in the rectangle defined by the two points.
 
 `LNST sc [shift [n]]: x1 y1 x2 y2`
-:  Draw a line and put the marker of scale *sc* at the end of the second point. The structure is rotated acording to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating everytime the points with the PP matrix.
+:  Draw a line and put the marker of scale *sc* at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix.
 
 `ARCST sc r dq q0 [shift [n]]: x y`
-:  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating everytime the center with the PP matrix.
+:  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating every time the center with the PP matrix.
 
 ## Path manipulation
 
@@ -159,7 +159,7 @@ It is possible to create directly a path with its name and the character **&**.
 
 Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with *IDPT*. You can copy a path to another one, simply defining the new one with the old one: 
 
-`&newpath &oldpath`.
+`&newpath &oldpath`
 
 `CTPT name`
 :  After that command, you can transform and concatenate predefined paths and the result will be stored in the new path *&name*. The position is automatically updated. See examples below.
@@ -177,7 +177,7 @@ Once created, a path can be used in any primitive command, for instance `PL &nam
 :  Normalize the path named *&name* in a way that it is enclosed between the points (0,0) and (1,1), the unitary square.
 
 `RPPT name n`
-:  Repeats n times the path *&name*. When used inside `CTPT`, automatically concats to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
+:  Repeats n times the path *&name*. When used inside `CTPT`, automatically concatenates to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
 
 `PWPT name x1 y1 x2 y2`
 :  Port window path. Insert the path *name* exactly in the rectangle defined by the two points. In order to work, the path must be normalized (inside the unitary square).
@@ -228,7 +228,7 @@ Special commands to display text. We use standard PostScript fonts and an option
 `XYDT x y text`
 :  To display a string of text at the position x y.
  
-Inside the string you can insert some commands to get some text efects and control the reach of those effects with *{* and *}*.
+Inside the string you can insert some commands to get some text effects and control the reach of those effects with *{* and *}*.
 
 ^
 :  superindex.
