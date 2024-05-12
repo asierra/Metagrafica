@@ -157,7 +157,7 @@ It is possible to create directly a path with its name and the character **&**.
 `&name path`
 :  Creates a new path with the name you defined.
 
-Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with *IDPT*. You can copy a path to another one, simply defining the new one with the old one: 
+Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with `IDPT`. You can copy a path to another one, simply defining the new one with the old one: 
 
 `&newpath &oldpath`
 
@@ -210,13 +210,13 @@ Comments
 The generators produce repetitive primitives.
 
 `GNNUM i0 inc n decimals`
-:  Generates a series of *n* numbers and position each one at the current point using the PP matrix, using an initial number *i0*, increment *inc*, number of numbers *n* and number of *decimals*, with the current text style.
+:  Generates a series of `n` numbers and position each one at the current point using the PP matrix, using an initial number `i0`, increment `inc`, number of numbers `n` and number of `decimals`, with the current text style.
 
 `GNPATH n x y name`
-:  Generates the path *name* (a string you define) with *n* points with an initial point *x y* using the path matrix PT. Once created, the path can be used as `&name`.
+:  Generates the path `name` (a string you define) with `n` points with an initial point `x y` using the path matrix PT. Once created, the path can be used as `&name`.
 
 `TICKS n x y`
-:  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector *x y*.
+:  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector `x y`.
 
 ## Text
 
