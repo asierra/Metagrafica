@@ -37,16 +37,16 @@ Every primitive is defined by its name, which usually is a short mnemonic, follo
 :  Circles or arcs. Draws circles or arcs of radius `r`, optional `dq` wide (in degrees) and optional initial angle `q0`, centered in every point of the path. By default, `dq` is 360 and `q0` is 0.
  
 `EL rx ry [dq[ q0]] : path`
-:  Ellipses. Like **CR** but with horizontal *rx*  and vertical *ry* radius.
+:  Ellipses. Like `CR` but with horizontal `rx`  and vertical `ry` radius.
 
 `BR path` 
 :  Polyrectangle. A bar defined by a couple of points, one for the left lower corner and the other for the upper right corner. The path must have an even number of points. 
  
 `PG path`
-:  Filled polygon. Like **PL** but its interior will be filled with a color or pattern. 
+:  Filled polygon. Like `PL` but its interior will be filled with a color or pattern. 
 
 `DOT r path`
-:  Black circles with radius *r* defined in typographic points centered in every point of the path.
+:  Black circles with radius `r` defined in typographic points centered in every point of the path.
   
 `BZ path`
 :  Bezier curve. Uses the path to define a bezier curve. Every segment needs four control points, the first and the last are in the curve and the second and third are the corresponding tangent local vectors to those points.
@@ -71,13 +71,13 @@ The graphics state manages properties that are used when the graphics is printed
 :   Gray level for filling, between 0 for black to 100 for white. A negative number indicates to draw the contour with the current line style. 
 
 `FCOLOR s`
-:   Color for filling, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white. A preceding **-** indicates to draw the contour with the current line style. 
+:   Color for filling, as a string which can be the color name or six letters HTML RGB color code, like `000000` for black and `FFFFFF` for white. A preceding `-` indicates to draw the contour with the current line style. 
 
 `LGRAY n`
 :   Gray level for lines, 0 for black to 100 for white.    
 
 `LCOLOR s`
-:   Color for paths, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white.
+:   Color for paths, as a string which can be the color name or six letters HTML RGB color code, like `000000` for black and `FFFFFF` for white.
 
 `TALIGN n`
 :  Align the text, with 0 to the left (default), 1 to center, 2 to the right.
@@ -99,13 +99,13 @@ The graphics state manages properties that are used when the graphics is printed
 Internally we use 3D homogeneous coordinate matrices to join every linear transformation in a single matrix by matrix product. The two letters prefix is the operation and the two letters suffix is the corresponding matrix. We support the following user defined transformations:
 
 `RTMT theta`
-:  Rotate by *theta* degrees.
+:  Rotate by `theta` degrees.
 
 `SCMT sx sy`
-:  Scale by *sx* in the X axis and *sy* in the Y axis.
+:  Scale by `sx` in the X axis and `sy` in the Y axis.
 
 `TLMT tx ty`
-:  Translate to the point *tx ty*.
+:  Translate to the point `tx ty`.
 
 `IDMT`
 :  Initialize the matrix with the identity. 
@@ -135,20 +135,20 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 `CLST`
 :  To close the previously opened structure.
 
-`<Name of the structure> path`
-:  The named structure will be reproduced at all points of the path, using the ST matrix for rotation and scale.
+`name path`
+:  The structure named `name` will be reproduced at all points of the path, using the ST matrix for rotation and scale.
 
 `MKST name`
-:  To assign a structure of this *name* as the _marker_ for the following operations.
+:  To assign a structure of this `name` as the _marker_ for the following operations.
 
 `PWST x1 y1 x2 y2`
 :  Port window structure. Insert the marker exactly in the rectangle defined by the two points.
 
 `LNST sc [shift [n]]: x1 y1 x2 y2`
-:  Draw a line and put the marker of scale *sc* at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix.
+:  Draw a line and put the marker of scale `sc` at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix.
 
 `ARCST sc r dq q0 [shift [n]]: x y`
-:  Draw an arc of radius *r*, wide *dq* and initial angle *q0* and put the marker of scale *sc* at the end of the arc, centered at the point *x y*. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating every time the center with the PP matrix.
+:  Draw an arc of radius `r`, wide `dq` and initial angle `q0` and put the marker of scale `sc` at the end of the arc, centered at the point `x y`. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating every time the center with the PP matrix.
 
 ## Path manipulation
 
