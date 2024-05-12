@@ -1,18 +1,19 @@
-% mg(1)
-% Alejandro Aguilar Sierra <algsierra@gmail.com>
-% 2024
+---
+title: mg
+section: 1
+footer: mg 2024.37-beta
+date: 2024
+author: Alejandro Aguilar Sierra <algsierra@gmail.com>
+---
 
 # NAME
-
 mg -  Metagrafica, a descriptive language to create high quality technical and scientific graphics.
 
 
 # SYNOPSIS
-
 **mg** [**-h**|**-v**] *filename.mg*
 
 # GENERAL OPTIONS
-
 **-h**
 :   Display this friendly help message.
 
@@ -20,7 +21,6 @@ mg -  Metagrafica, a descriptive language to create high quality technical and s
 :   Display the current version.
 
 # DESCRIPTION
- 
 MetaGrafica, the command **mg**, is a descriptive language to create 2D vector graphics of publication quality as Encapsulated PostScript. Being vectorial, the basic element is not a pixel but a *point*, defined by a pair of coordinates x, y. A series of points creates a *path*, with which we can build polygons, curves and text, which we call *graphics primitives*. You can assign attributes to the primitives, like color and line width, and also geometric transformations, like rotations and scale. With a set of primitives you can build higher level structures, which are also controlled with linear transformations.
 
 The output area is defined in centimeters and is by default 10x10 but you can change it using the directive $D.
@@ -56,7 +56,7 @@ Every primitive is defined by its name, which usually is a short mnemonic, follo
   
 ## Graphics state
 
-The graphics state manages properties that are used when the graphics is printed or displayed. The first type are attributes and the second are geometric transformations. The attributes has an integer number as argument. Every command that starts with the character L is for lines, F for filling and T for text.
+The graphics state manages properties that are used when the graphics is printed or displayed. The first type are attributes and the second are geometric transformations. Each attribute has an integer number as argument. Every command that starts with the character L is for lines, with F for filling and with T for text.
 
 `LPATRN n`
 :  Line patterns like points and dashes. There is a number of predefined patterns.
@@ -80,7 +80,7 @@ The graphics state manages properties that are used when the graphics is printed
 :   Color for paths, as a string which can be the color name or six letters HTML RGB color code, like 000000 for black and FFFFFF for white.
 
 `TALIGN n`
-:  To align the text, with 0 to left (default), 1 to center, 2 to right.
+:  Align the text, with 0 to the left (default), 1 to center, 2 to the right.
 
 `TSIZE n`
 :   Text size in units of typographic points.
@@ -119,10 +119,10 @@ The suffix *MT* can be replaced by the following supported matrices:
 :  Applied for structures.
                   	
 `PP`
-:  Applied for the current point (plume position). 
+:  For the current point (plume position). 
             	
 `PT`
-:  Applied for path generation. 
+:  For paths and path generation. 
  
  
 ## Structures
@@ -133,7 +133,7 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 :  To create a structure you need to open a new one and set its name. Every command inside an open structure will be part of the structure.
 
 `CLST`
-:  To close the previusly opened structure.
+:  To close the previously opened structure.
 
 `<Name of the structure> path`
 :  The named structure will be reproduced at all points of the path, using the ST matrix for rotation and scale.
@@ -162,7 +162,7 @@ Once created, a path can be used in any primitive command, for instance `PL &nam
 `&newpath &oldpath`
 
 `CTPT name`
-:  After that command, you can transform and concatenate predefined paths and the result will be stored in the new path *&name*. The position is automatically updated. See examples below.
+:  After that command, you can transform and concatenate predefined paths and the result will be stored in the new path `&name`. The position is automatically updated. See examples below.
 
 `OPPT`
 :  This command creates a graphics state in with the paths are not closed, so you can join them in the same path, at PostScript level, otherwise incompatible primitives like lines and arcs.
@@ -171,13 +171,13 @@ Once created, a path can be used in any primitive command, for instance `PL &nam
 :  To close both CTPT and OPPT.
 
 `INVPT name`
-:  Invert the order of the points in the path named *&name*.
+:  Invert the order of the points in the path named `&name`.
 
 `NORMPT name`
-:  Normalize the path named *&name* in a way that it is enclosed between the points (0,0) and (1,1), the unitary square.
+:  Normalize the path named `&name` in a way that it is enclosed between the points (0,0) and (1,1), the unitary square.
 
 `RPPT name n`
-:  Repeats n times the path *&name*. When used inside `CTPT`, automatically concatenates to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
+:  Repeats n times the path `&name`. When used inside `CTPT`, automatically concatenates to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
 
 `PWPT name x1 y1 x2 y2`
 :  Port window path. Insert the path *name* exactly in the rectangle defined by the two points. In order to work, the path must be normalized (inside the unitary square).
@@ -213,20 +213,20 @@ The generators produce repetitive primitives.
 :  Generates a series of *n* numbers and position each one at the current point using the PP matrix, using an initial number *i0*, increment *inc*, number of numbers *n* and number of *decimals*, with the current text style.
 
 `GNPATH n x y name`
-:  Generates the path *name* (a string you define) with *n* points with an initial point *x y* using the path matrix PT. Once created, the path can be used as *&name*.
+:  Generates the path *name* (a string you define) with *n* points with an initial point *x y* using the path matrix PT. Once created, the path can be used as `&name`.
 
 `TICKS n x y`
 :  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector *x y*.
 
 ## Text
 
-Special commands to display text. We use standard PostScript fonts and an optional embeded LaTeX font for Greek and symbols.
+Special commands to display text. We use standard PostScript fonts and an optional embedded LaTeX font for Greek and symbols.
 
 `DT text`
 :  To display a string of text at the current position, which is updated with the PP matrix every time this command is used.
 
 `XYDT x y text`
-:  To display a string of text at the position x y.
+:  To display a string of text at the position `x y`.
  
 Inside the string you can insert some commands to get some text effects and control the reach of those effects with *{* and *}*.
 
@@ -242,6 +242,9 @@ _
 /e
 /i
 :  emphasized or italics.
+
+/r
+: Times new roman (default).
  
 \\_symbol_
 :  LaTeX symbols like Greek and math, par example \\alpha, \\infty.
@@ -258,7 +261,7 @@ A simple MG file with a corner, a circle and a message.
 
     XYDT 8 10 Hello World!
 
-An example using path manipulation. The new path *&curve* is created concatenating 3 full period sine curves and one half period sine curve (defined in the file *bzsinepaths.mg*), each with different scales.
+An example using path manipulation. The new path `&curve` is created concatenating 3 full period sine curves and one half period sine curve (defined in the file *bzsinepaths.mg*), each with different scales.
 
     INPUT bzsinepaths
     CTPT curve
