@@ -33,6 +33,8 @@
 mg
 mg.1
 .DS_Store
+*.pdf
+*.eps
 *~
 
 

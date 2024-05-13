@@ -20,6 +20,9 @@ all: mg mg.1
 mg.1: mg.1.md
 	pandoc mg.1.md -s -t man -o mg.1
 
+mg.1.pdf: mg.1.md
+	pandoc mg.1.md -s -t pdf -o mg.1.pdf
+
 lexmg.cpp: mgpp.l
 	flex mgpp.l
 
