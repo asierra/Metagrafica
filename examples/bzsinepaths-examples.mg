@@ -3,8 +3,6 @@
 % Author: Alejandro Aguilar Sierra, algsierra@gmail.com
 % Version 1.0, April 2024
 
-$P 9
-
 INPUT bzsinepaths
 
 % Computed sine points to test curves
@@ -49,15 +47,15 @@ BZ &cos2pi
 TLPT 1.6 0
 BZ &sin2pi
 
-LWIDTH 0
-IDPP
-XYPP 0 .25
-TLPP 0 .25
-TICKS 3 1 0
+%LWIDTH 0
+%IDPP
+%XYPP 0 .25
+%TLPP 0 .25
+%TICKS 3 1 0
 
-LCOLOR blue
-XYPP 0 .45
-TICKS 3 1 0
+%LCOLOR blue
+%XYPP 0 .45
+%TICKS 3 1 0
 
 % With CTPT and the same PT matrix you can concatenate 
 % curves in a new larger one. Not much is automated yet,
@@ -72,7 +70,6 @@ SCPT .5 .5
 CLPT
 
 LCOLOR red
-
 SCST .3 .2
 CRSINEPI2 .58 .75 }
 

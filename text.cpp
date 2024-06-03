@@ -424,7 +424,7 @@ void TextLine::draw(Display &g) {
     TextState ts = text->getState();
     //printf("text <%s> state %s\n", text->getText().c_str(), ts.str().c_str());
     if (ts.script != 0) {
-      vdesp = (ts.script < 0) ? -g.getFontSize() * 0.14 : g.getFontSize() * 0.25;
+      vdesp = (ts.script < 0) ? -g.getFontSize() * 0.14 : g.getFontSize() * 0.56;
       g.rmoveto(0, vdesp);
     }
     text->draw(g);

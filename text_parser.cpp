@@ -390,7 +390,9 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
         }
         it = v_end-1;
       }
-      break; 
+      break;
+    case '-': // Best - in Latin1
+      is_using_reencode = true;
     default:
       accum.push_back(c);
     }

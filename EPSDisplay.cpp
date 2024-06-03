@@ -129,11 +129,11 @@ static const char *ps_hatchers = R"(
   clip
   newpath
   {
-    y1 wgap add
-    /y1 exch def
     y1 y2 gt {exit} if
     x1 y1 moveto
     x2 y1 lineto
+    y1 wgap add
+    /y1 exch def
   } loop
   stroke
   grestore
