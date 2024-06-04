@@ -94,7 +94,7 @@ const char *dfmat[] = {"LC", // Local
                        "ST", // Structure
                        "PP", // Columnas texto podria ser posición de pluma
                        "PT", // Path
-                       "MK"};
+                       "RS"}; // Repeat structure
 
 unsigned search_mat(char *key, const char *tabmat[]) {
   int i;
@@ -444,7 +444,7 @@ GraphicsItemList Parser::parsePrimitives() {
   GraphicsItemList prlist;
   Structure *st = NULL;
   static int depth = 0;
-  Matrix mtst, mtpp;
+  Matrix mtst, mtpp, mtrs;
   float pwmx, pwmy, pwdx, pwdy;
   FontFace ff = FN_DEFAULT;
   int n;
@@ -509,6 +509,8 @@ GraphicsItemList Parser::parsePrimitives() {
         oldParseMatrix(yylval.i, mtpp);
       else if (pmat == MTPT)
         oldParseMatrix(yylval.i, mtpt);
+      else if (pmat == MTRS)
+        oldParseMatrix(yylval.i, mtrs);
       else {
         Transform *t = parseMatrix(yylval.i);
         t->setPredefinedMatrix(pmat);
@@ -643,6 +645,11 @@ GraphicsItemList Parser::parsePrimitives() {
           prlist.push_back(sr);
           //if (i < n)
             mtpp.transform(pp.x, pp.y);
+          if (!mtrs.is_identity()) {
+            Transform *t = parseMatrix(yylval.i);
+            t->setPredefinedMatrix(pmat);
+            prlist.push_back(t);
+          }
         }
       } else {
         fprintf(stderr, "Error: no marked structure.\n");

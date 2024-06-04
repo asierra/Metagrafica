@@ -77,6 +77,13 @@ Matrix Matrix::operator*=(Matrix B) {
   return *this;
 }
 
+/*
+bool Matrix::operator==(Matrix B) {
+  int result = memcmp(M, B, sizeof(M));
+  return (result==0);
+}
+*/
+
 void Matrix::matmat(DataMatrix b) {
   DataMatrix a;
 
@@ -93,4 +100,9 @@ void Matrix::print() {
   printf("%6g %6g %6g\n", M[0][0], M[0][1], M[0][2]);
   printf("%6g %6g %6g\n", M[1][0], M[1][1], M[1][2]);
   printf("%6g %6g %6g\n", M[2][0], M[2][1], M[2][2]);
+}
+
+bool Matrix::is_identity() {
+  int result = memcmp(M, MATIDEN, sizeof(M));
+  return (result==0);
 }

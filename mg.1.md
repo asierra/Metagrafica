@@ -123,6 +123,9 @@ The suffix *MT* can be replaced by the following supported matrices:
             	
 `PT`
 :  For paths and path generation. 
+
+`RS`
+:  For repeating structures. 
  
  
 ## Structures
@@ -143,6 +146,9 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 
 `PWST x1 y1 x2 y2`
 :  Port window structure. Insert the marker exactly in the rectangle defined by the two points.
+
+`RPST n`
+:  Repeat n times the marked structure, applying each time the PP matrix to update the position and the RS matrix to transform the structure.
 
 `LNST sc [shift [n]]: x1 y1 x2 y2`
 :  Draw a line and put the marker of scale `sc` at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix.
