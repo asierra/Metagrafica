@@ -234,6 +234,8 @@ public:
   void setPoint(point p) { tl = p; }
 
   void setRotation(float r) { rt = r; }
+
+  void setMatrix(Matrix m) { mt = m; }
   
 private:
   MatrixOperation op;
@@ -242,6 +244,7 @@ private:
     point tl;
     point sc;
     float rt;
+    Matrix mt;
   };
 };
 

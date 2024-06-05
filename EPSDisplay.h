@@ -51,11 +51,13 @@ class EPSDisplay: public Display {
   ///
   void structure(std::string);
   ///
-  void translate(float x, float y, PredefinedMatrix mt=MTLC);
+  void translate(float x, float y, PredefinedMatrix pdmt=MTLC);
   ///
-  void scale(float x, float y, PredefinedMatrix mt=MTLC);
+  void scale(float x, float y, PredefinedMatrix pdmt=MTLC);
   ///
-  void rotate(float angle, PredefinedMatrix mt=MTLC);
+  void rotate(float angle, PredefinedMatrix pdmt=MTLC);
+  ///
+  void compose(Matrix mt, PredefinedMatrix pdmt=MTLC);
   ///
   void init_matrix(PredefinedMatrix mt=MTLC);
 

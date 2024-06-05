@@ -22,6 +22,7 @@ enum MatrixOperation {
   OPMRT, // Rote
   OPMSC, // Scale
   OPMMT, // Define
+  OPMCP, // Compose
   OPMID, // Identity
 };
 

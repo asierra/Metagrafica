@@ -636,19 +636,26 @@ GraphicsItemList Parser::parsePrimitives() {
     case YRPST: {
       if (st) {
         int n = (int)parseFloat();
+        StructurePath *sr = new StructurePath();
+        sr->setStructure(st);
+        Path pt;
         for (int i = 1; i <= n; i++) {
-          StructurePath *sr = new StructurePath();
-          sr->setStructure(st);
-          Path pt;
           pt.push_back(pp);
-          sr->setPath(pt);
-          prlist.push_back(sr);
-          //if (i < n)
-            mtpp.transform(pp.x, pp.y);
+          mtpp.transform(pp.x, pp.y);
           if (!mtrs.is_identity()) {
-            Transform *t = parseMatrix(yylval.i);
-            t->setPredefinedMatrix(pmat);
+            sr->setPath(pt);
+            prlist.push_back(sr);
+            Transform *t = new Transform();
+            t->setOperation(OPMCP);
+            t->setMatrix(mtrs);
+            t->setPredefinedMatrix(MTST);
             prlist.push_back(t);
+            sr = new StructurePath();
+            sr->setStructure(st);
+            pt.clear();
+          } else if (i==n) {
+            sr->setPath(pt);
+            prlist.push_back(sr);
           }
         }
       } else {

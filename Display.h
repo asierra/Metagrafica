@@ -106,11 +106,13 @@ public:
 
   virtual void stroke()=0;
 
-  virtual void translate(float x, float y, PredefinedMatrix mt=MTLC)=0;
+  virtual void translate(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
 
-  virtual void scale(float x, float y, PredefinedMatrix mt=MTLC)=0;
+  virtual void scale(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
   
-  virtual void rotate(float angle, PredefinedMatrix mt=MTLC)=0;
+  virtual void rotate(float angle, PredefinedMatrix pdmt=MTLC)=0;
+
+  virtual void compose(Matrix mt, PredefinedMatrix pdmt=MTLC)=0;
   
   virtual void init_matrix(PredefinedMatrix mt=MTLC)=0;
 

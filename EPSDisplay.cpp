@@ -627,11 +627,19 @@ void EPSDisplay::rotate(float angle, PredefinedMatrix pdmt) {
     mtst.rotate(angle);
 }
 
+void EPSDisplay::compose(Matrix mt, PredefinedMatrix pdmt) {
+  if (pdmt == MTST)
+    mtst *= mt;
+}
+
 void EPSDisplay::init_matrix(PredefinedMatrix pdmt) {
   if (pdmt == MTLC)
     fprintf(file, "defaultmatrix\n");
-  else if (pdmt == MTST)
+  else if (pdmt == MTST) {
+    fprintf(file, "init matrix\n");
     mtst.initialize();
+    mtst.print();
+  }
 }
 
 void EPSDisplay::structureDefBegin(std::string name) {
