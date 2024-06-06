@@ -82,11 +82,12 @@ struct {
                      {"XYTXT", YOBSOLETE, GI_NULL}};
 
 const char *opmat[] = {
-    "TL", /* Traslada */
-    "RT", /* Rota */
-    "SC", /* Escala */
+    "TL", /* Traslate */
+    "RT", /* Rotate */
+    "SC", /* Scale */
     "MT", /* Define */
-    "ID", /* Identica */
+    "ID", /* Identity */
+    "CP", /* Compose */
 };
 
 // Matrices definidas
@@ -242,6 +243,7 @@ void Parser::oldParseMatrix(int mo, Matrix &mt) {
   case OPMRT:
     x = parseFloat();
     mt.rotate(x);
+    //printf("rota %g\n", x);
     break;
   case OPMSC:
     x = parseFloat();
@@ -277,6 +279,7 @@ Transform *Parser::parseMatrix(int mo) {
     t->setPoint(z);
     break;
   case OPMID:
+    //printf("nuevo opmid\n");
     break;
   }
   return t;

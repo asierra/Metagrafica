@@ -22,8 +22,8 @@ enum MatrixOperation {
   OPMRT, // Rote
   OPMSC, // Scale
   OPMMT, // Define
-  OPMCP, // Compose
   OPMID, // Identity
+  OPMCP, // Compose
 };
 
 using DataMatrix = float[3][3];
