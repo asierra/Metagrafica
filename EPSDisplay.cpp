@@ -669,6 +669,13 @@ void EPSDisplay::pushMatrix(PredefinedMatrix pdmt) {
     mt *= mtst;
   }
 }
+
+void EPSDisplay::saveMatrix(PredefinedMatrix pdmt) {
+  if (pdmt == MTST) {
+    mtstack.push(mtst);
+  }
+}
+
 void EPSDisplay::pushMatrix(Matrix &m) {
   //	printf("pushing\n");
   //mt *= m;

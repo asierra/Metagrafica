@@ -62,6 +62,8 @@ enum GraphicsStateType {
   GS_FILL,
   GS_NOFILL,
   GS_PLUMEPOSITION,
+  GS_SAVE,
+  GS_RESTORE,
 };
 
 /// Predefined Matrices
@@ -255,6 +257,9 @@ private:
 class GraphicsState : public GraphicsItem {
 public:
   GraphicsState() : GraphicsItem(GI_STATE) { }
+  GraphicsState(GraphicsStateType gs) : GraphicsItem(GI_STATE) {
+    gstype = gs;
+  }
 
   void draw(Display &);
 

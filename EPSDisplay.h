@@ -63,6 +63,7 @@ class EPSDisplay: public Display {
 
   void pushMatrix(Matrix &);
   void pushMatrix(PredefinedMatrix);
+  void saveMatrix(PredefinedMatrix);
   void popMatrix();
   void popMatrix(PredefinedMatrix);
 

@@ -153,5 +153,13 @@ void GraphicsState::draw(Display &g) {
   case GS_NOFILL:
     g.setFilled(false);
     break;
+  case GS_SAVE:
+    g.saveMatrix(MTST);
+    //printf("save\n");
+    break;
+  case GS_RESTORE:
+    g.popMatrix(MTST);
+    //printf("restore\n");
+    break;
   }
 }

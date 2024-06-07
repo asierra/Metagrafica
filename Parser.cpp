@@ -646,6 +646,10 @@ GraphicsItemList Parser::parsePrimitives() {
           pt.push_back(pp);
           mtpp.transform(pp.x, pp.y);
           if (!mtrs.is_identity()) {
+            if (i==1) {
+              GraphicsState *gs = new GraphicsState(GS_SAVE);
+              prlist.push_back(gs);
+            }
             sr->setPath(pt);
             prlist.push_back(sr);
             Transform *t = new Transform();
@@ -656,6 +660,10 @@ GraphicsItemList Parser::parsePrimitives() {
             sr = new StructurePath();
             sr->setStructure(st);
             pt.clear();
+            if (i==n) {
+              GraphicsState *gs = new GraphicsState(GS_RESTORE);
+              prlist.push_back(gs);
+            }
           } else if (i==n) {
             sr->setPath(pt);
             prlist.push_back(sr);

@@ -162,6 +162,7 @@ public:
   virtual void restore() = 0;
   virtual void pushMatrix(Matrix &) = 0;
   virtual void pushMatrix(PredefinedMatrix) = 0;
+  virtual void saveMatrix(PredefinedMatrix) = 0;
   virtual void popMatrix() = 0;
   virtual void popMatrix(PredefinedMatrix) = 0;
 
