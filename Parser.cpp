@@ -455,6 +455,7 @@ GraphicsItemList Parser::parsePrimitives() {
   string ctpathname;
   Path ctpath;
   bool is_concatenatepath_active = false;
+  bool using_mtlc = false;
   is_spline_to_bezier = false;
   spline_nodes_per_segment = 4;
 
@@ -519,6 +520,7 @@ GraphicsItemList Parser::parsePrimitives() {
         t->setPredefinedMatrix(pmat);
         prlist.push_back(t);
       }
+      using_mtlc = (pmat == MTLC);
       break;
     }
     case YDPST: {
@@ -739,9 +741,11 @@ GraphicsItemList Parser::parsePrimitives() {
       pp = parsePoint();
     }
     case YDT: {
-      GraphicsState *gs = new GraphicsState();
-      gs->setPosition(pp);
-      prlist.push_back(gs);
+      if (!using_mtlc) {
+        GraphicsState *gs = new GraphicsState();
+        gs->setPosition(pp);
+        prlist.push_back(gs);
+      }
       setBegin(cadena);
       yylex();
       GraphicsItem *t = parse_text(&yylval.s[1], ff);
