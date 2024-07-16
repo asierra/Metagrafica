@@ -199,3 +199,50 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
     path1.insert(path1.end(), std::next(path2m.begin()), path2m.end());
   }
 }
+
+void get_bezier_tangents(point p0, point p1, point p2, point p3)
+{
+  float alpha = 0.5;
+  float d1 = powf(distancesq(p0, p1), alpha);
+  float d2 = powf(distancesq(p1, p2), alpha);
+  float d3 = powf(distancesq(p2, p3), alpha);
+
+  // compute tangents when parameterized in [t1,t2]
+  point m = d1*d1*p2 - d2*d2*p0 + (2*d1*d1 + 3*d1*d2 + d2*d2)*p1;
+  d = 3*d1*(d1+d2);
+  point t1 = m/d;
+
+  point n = d3*d3*p1 - d2*d2*p3 + (2*d3*d3 + 3*d3*d2 + d2*d2)*p2;
+  d = 3*d3*(d3+d2)
+  point t2 = n/d;
+}
+
+Path path_to_bezier(Path cp) {
+  Path outpath;
+
+  // Must be at least 4 control points
+  if (cp.size() < 4)
+    return outpath;
+
+  int n = cp.size();
+
+  // Add points to both extremes
+  // ...
+
+  point p0, p1, p2, p3;
+  Path::iterator cpit = cp.begin();
+  for (int i = 0; i < n-3; i++) {
+    Path::iterator it = cpit;
+    p0 = *it++;
+    p1 = *it++;
+    p2 = *it++;
+    p3 = *it++;
+    get_bezier_tangents(p0, p1, p2, p3, t1, t2);
+    outpath.push_back(p1);
+    outpath.push_back(t1);
+    outpath.push_back(t2);
+    cpit++;
+  }
+  outpath.push_back(p2);
+  return outpath;
+}
