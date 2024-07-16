@@ -33,7 +33,7 @@ void normalize_path(Path& path);
   From four control points, compute the corresponding bezier tangent vectors for
   points p1 and p2 and so, create a bezier segment.
  */
-void get_bezier_tangents(point p0, point p1, point p2, point p3);
+void get_bezier_tangents(point p0, point p1, point p2, point p3, point &t1, point &t2);
 
 /** 
    From a path of control points, creates a set of Bezier control points, 

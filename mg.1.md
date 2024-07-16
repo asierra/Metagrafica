@@ -221,9 +221,8 @@ The generators produce repetitive primitives.
 `GNPATH n x y name`
 :  Generates the path `name` (a string you define) with `n` points with an initial point `x y` using the path matrix PT. Once created, the path can be used as `&name`.
 
-`GNPATHBZ path name`
-`GNPATHSP path name`
-:  Using points in a path complete either a set of bezier segments or spline and stores it in the path `&name`.
+`GNBZPATH name path`
+:  Using points in a path to complete a set of bezier segments and stores it in the path `&name`.
 
 `TICKS n x y`
 :  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector `x y`.

@@ -200,9 +200,9 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
   }
 }
 
-void get_bezier_tangents(point p0, point p1, point p2, point p3)
+void get_bezier_tangents(point p0, point p1, point p2, point p3, point &t1, point &t2)
 {
-  float alpha = 0.5;
+  float d, alpha = 0.5;
   float d1 = powf(distancesq(p0, p1), alpha);
   float d2 = powf(distancesq(p1, p2), alpha);
   float d3 = powf(distancesq(p2, p3), alpha);
@@ -210,11 +210,11 @@ void get_bezier_tangents(point p0, point p1, point p2, point p3)
   // compute tangents when parameterized in [t1,t2]
   point m = d1*d1*p2 - d2*d2*p0 + (2*d1*d1 + 3*d1*d2 + d2*d2)*p1;
   d = 3*d1*(d1+d2);
-  point t1 = m/d;
+  t1 = m/d;
 
   point n = d3*d3*p1 - d2*d2*p3 + (2*d3*d3 + 3*d3*d2 + d2*d2)*p2;
-  d = 3*d3*(d3+d2)
-  point t2 = n/d;
+  d = 3*d3*(d3+d2);
+  t2 = n/d;
 }
 
 Path path_to_bezier(Path cp) {
@@ -230,6 +230,7 @@ Path path_to_bezier(Path cp) {
   // ...
 
   point p0, p1, p2, p3;
+  point t1, t2;
   Path::iterator cpit = cp.begin();
   for (int i = 0; i < n-3; i++) {
     Path::iterator it = cpit;

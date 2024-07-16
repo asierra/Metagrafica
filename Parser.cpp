@@ -12,7 +12,7 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 51
+#define MAX_KEYS 52
 YYSTYPE yylval;
 YYSTYPE yylvalaux;
 
@@ -45,6 +45,7 @@ struct {
                      {"FGRAY", YATRIB, AT_FGRAY},
                      {"FILL", YGSTATE, GS_FILL},
                      {"FPATRN", YATRIB, AT_FPATRN},
+                     {"GNBZPATH", YGNBZ, GI_NULL},
                      {"GNNUM", YRPNUM, GI_NULL},
                      {"GNPATH", YLISTA, GI_NULL},
                      {"INPUT", YOPS, GI_NULL},
@@ -780,6 +781,13 @@ GraphicsItemList Parser::parsePrimitives() {
       Path l = parsePath();
       l.reverse();
       listmap[name] = l;
+      break;
+    }
+    case YGNBZ: {
+      string name = parseString();
+      Path l = parsePath();
+      Path bzp = path_to_bezier(l);
+      listmap[name] = bzp;
       break;
     }
     case YRPPT: {
