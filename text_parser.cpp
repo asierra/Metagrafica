@@ -329,7 +329,7 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
         if (v_end == string::npos) // Last word in string
           v_end = iend;
         if (it >= v_end){
-          //printf("puto %d %d %c\n", it, v_end, input[it]);
+          //printf("punto %d %d %c\n", it, v_end, input[it]);
                   break;}
         accum = input.substr(it, v_end - it);
       }

@@ -55,6 +55,8 @@ class EPSDisplay: public Display {
   ///
   void scale(float x, float y, PredefinedMatrix pdmt=MTLC);
   ///
+  void shear(float x, float y, PredefinedMatrix pdmt=MTLC);
+  ///
   void rotate(float angle, PredefinedMatrix pdmt=MTLC);
   ///
   void compose(Matrix mt, PredefinedMatrix pdmt=MTLC);

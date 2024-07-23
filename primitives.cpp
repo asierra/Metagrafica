@@ -121,6 +121,9 @@ void Transform::draw(Display &g) {
     case OPMSC:
       g.scale(sc.x, sc.y, predefmat);
       break;
+    case OPMSH:
+      g.shear(sc.x, sc.y, predefmat);
+      break;
     case OPMRT:
       g.rotate(rt, predefmat);
       break;

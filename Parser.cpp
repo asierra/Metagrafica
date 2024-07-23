@@ -86,6 +86,7 @@ const char *opmat[] = {
     "TL", /* Traslate */
     "RT", /* Rotate */
     "SC", /* Scale */
+    "SH", /* Shear */
     "MT", /* Define */
     "ID", /* Identity */
     "CP", /* Compose */
@@ -274,6 +275,7 @@ Transform *Parser::parseMatrix(int mo) {
     z.x = parseFloat();
     t->setRotation(z.x);
     break;
+  case OPMSH:
   case OPMSC:
     z.x = parseFloat();
     z.y = parseFloat();

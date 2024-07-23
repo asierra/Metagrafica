@@ -620,6 +620,17 @@ void EPSDisplay::scale(float x, float y, PredefinedMatrix pdmt) {
     mtst.scale(x, y);
 }
 
+void EPSDisplay::shear(float x, float y, PredefinedMatrix pdmt) {
+  if (pdmt == MTLC)
+    //fprintf(file, "%f %f scale\n", x, y);
+    fprintf(stderr, "Error PS no tiene shear\n");
+  else if (pdmt == MTST) {
+    //printf("shereando %g %g\n", x, y);
+    mtst.shear(x, y);
+    //mtst.print();
+  }
+}
+
 void EPSDisplay::rotate(float angle, PredefinedMatrix pdmt) {
   if (pdmt == MTLC)
     fprintf(file, "%f rotate\n", angle);

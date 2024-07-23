@@ -109,6 +109,8 @@ public:
   virtual void translate(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
 
   virtual void scale(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
+
+  virtual void shear(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
   
   virtual void rotate(float angle, PredefinedMatrix pdmt=MTLC)=0;
 

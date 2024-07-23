@@ -21,6 +21,7 @@ enum MatrixOperation {
   OPMTL, // Translate
   OPMRT, // Rote
   OPMSC, // Scale
+  OPMSH, // Shear
   OPMMT, // Define
   OPMID, // Identity
   OPMCP, // Compose
@@ -43,6 +44,8 @@ public:
   void initialize();
 
   void scale(float, float);
+
+  void shear(float, float);
 
   void translate(float, float);
 

@@ -24,6 +24,14 @@ void Matrix::scale(float x, float y) {
   matmat(A);
 }
 
+void Matrix::shear(float x, float y) {
+  DataMatrix A;
+  memcpy(A, MATIDEN, sizeof(Matrix));
+  A[0][1] = x;
+  A[1][0] = y;
+  matmat(A);
+}
+
 void Matrix::translate(float x, float y) {
   DataMatrix A;
   memcpy(A, MATIDEN, sizeof(Matrix));
