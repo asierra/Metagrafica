@@ -82,29 +82,38 @@ struct {
                      {"XYPP", YGSTATE, GS_PLUMEPOSITION},
                      {"XYTXT", YOBSOLETE, GI_NULL}};
 
-const char *opmat[] = {
-    "TL", /* Traslate */
-    "RT", /* Rotate */
-    "SC", /* Scale */
-    "SH", /* Shear */
-    "MT", /* Define */
-    "ID", /* Identity */
-    "CP", /* Compose */
+
+//const char *opmat[] = {
+map<string, MatrixOperation> map_opmat = {
+    {"TL", OPMTL}, /* Traslate */
+    {"RT", OPMRT}, /* Rotate */
+    {"SC", OPMSC}, /* Scale */
+    {"SH", OPMSH}, /* Shear */
+    {"MT", OPMMT}, /* Define */
+    {"ID", OPMID}, /* Identity */
+    {"CP", OPMCP} /* Compose */
 };
 
 // Matrices definidas
-const char *dfmat[] = {"LC", // Local
-                       "ST", // Structure
-                       "PP", // Columnas texto podria ser posición de pluma
-                       "PT", // Path
-                       "RS"}; // Repeat structure
+//const char *dfmat[] = {
+map<string, PredefinedMatrix> map_dfmat = {
+  {"LC", MTLC}, // Local
+  {"ST", MTST}, // Structure
+  {"PP", MTPP}, // Columnas texto podria ser posición de pluma
+  {"PT", MTPT}, // Path
+  {"RS", MTRS}
+}; // Repeat structure
 
-unsigned search_mat(char *key, const char *tabmat[]) {
-  int i;
-  for (i = 0; i < 5; i++)
-    if (!strncmp(tabmat[i], key, 2))
-      break;
-  return (i < 5) ? i + 1 : 0;
+bool search_mat(string key, int &opm, int &dfm) {
+  //printf("key %s %s %s ", key.c_str(), key.substr(0,2).c_str(), key.substr(2,3).c_str());
+  if (map_opmat.find(key.substr(0,2)) != map_opmat.end() && 
+      map_dfmat.find(key.substr(2,3)) != map_dfmat.end()) {
+    opm = map_opmat[key.substr(0,2)];
+    dfm = map_dfmat[key.substr(2,3)];
+
+    return true;
+  }
+  return false;
 }
 
 int search_key(char *key) {
@@ -130,17 +139,12 @@ int busca_key(char *key) {
   // raise(SIGINT);
   // printf("no es reservada %s\n", key);
   if (strlen(key) == 4) {
-    unsigned opm = search_mat(key, opmat);
-    if (opm > 0) {
-      unsigned dfm = search_mat(&key[2], dfmat);
-      if (dfm > 0) {
-        //	    opm <<= 8;
-        //	    opm |= (dfm & 0xff);
-        yylval.i = (int)(opm - 1);
-        yylvalaux.i = (int)(dfm - 1);
-        // dbprintf("MATRIXX %d %d ", yylval.i, yylvalaux.i);
-        return YOPMAT;
-      }
+    int opm, dfm;
+    if (search_mat(key, opm, dfm)) {
+      yylval.i = (int)(opm);
+      yylvalaux.i = (int)(dfm);
+      //printf("MATRIXX %d %d\n", yylval.i, yylvalaux.i);
+      return YOPMAT;
     }
   }
   yylval.s = key;
