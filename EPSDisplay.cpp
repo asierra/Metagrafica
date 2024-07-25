@@ -61,7 +61,7 @@ static const char *ps_simpletextalign = R"(
 
 /rshow
 { /mystring exch def
-  mystring stringwidth neg 0 rmoveto
+  mystring stringwidth pop neg 0 rmoveto
   mystring show
 } def 
 )";
