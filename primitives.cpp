@@ -99,6 +99,8 @@ void Attribute::draw(Display &g) {
     g.setFillColor(value);
     break;
   case AT_FPATRN:
+    if (value > g.max_fillpattern)
+      value = value % (g.max_fillpattern+1);
     g.setFillPattern(value);
     break;
   case AT_THEIGHT:

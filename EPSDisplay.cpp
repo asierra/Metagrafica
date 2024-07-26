@@ -269,6 +269,7 @@ static const char *ps_reencode = R"(
 EPSDisplay::EPSDisplay(string f) {
   dvx = 10;
   dvy = 10;
+  max_fillpattern = 10;
   filename = f;
   relfontsize = 1.0;
 }

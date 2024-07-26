@@ -72,6 +72,7 @@ public:
     dvx = 10;
     dvy = 10;
     ratio = 1;
+    max_fillpattern = 10;
   }
 
   virtual void start()=0;
@@ -173,6 +174,9 @@ protected:
 
   // Dimensions of the vision port in cms
   float dvx, dvy;
+
+  // Physical limitations for patterns
+  int max_fillpattern;
 
   /// Graphics state
   DisplayState dspstate;
