@@ -169,14 +169,15 @@ public:
   virtual void popMatrix() = 0;
   virtual void popMatrix(PredefinedMatrix) = 0;
 
+  // Physical limitations for patterns
+  int max_fillpattern;
+  
 protected:
   /// Output Device properties
 
   // Dimensions of the vision port in cms
   float dvx, dvy;
 
-  // Physical limitations for patterns
-  int max_fillpattern;
 
   /// Graphics state
   DisplayState dspstate;
