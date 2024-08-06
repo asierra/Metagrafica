@@ -42,3 +42,18 @@ uninstall:
 
 clean: 
 	rm -f *.o *~ mg mg.1
+# DO NOT DELETE
+
+EPSDisplay.o: EPSDisplay.h Display.h primitives.h
+EPSDisplay.o: matrix.h text.h font_cmmi.h mg.h
+lexmg.o: mgpp_tab.h
+main.o: mg.h text.h primitives.h matrix.h EPSDisplay.h Parser.h
+matrix.o: matrix.h 
+Parser.o: Parser.h mg.h text.h primitives.h matrix.h
+Parser.o: mgpp_tab.h text_parser.h splines.h
+primitives.o: primitives.h matrix.h Display.h text.h
+splines.o: splines.h primitives.h matrix.h
+structure.o: mg.h text.h
+structure.o: primitives.h matrix.h Display.h
+text.o: text.h primitives.h matrix.h Display.h
+text_parser.o: text.h primitives.h matrix.h
