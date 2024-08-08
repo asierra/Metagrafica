@@ -84,6 +84,9 @@ map<string, unsigned char> map_tex_cmmi = {
   {"Omega", 172}, {"hbar", 199}
 };
 
+string math_functions[] = {
+  "cos", "cot", "csc", "sec", "sin", "tan"
+};
 
 string UTF8toISO8859_1(const char * in)
 {
@@ -194,14 +197,6 @@ unsigned char get_symbol_code(string symbol_name, FontFace &font_face)
 {
   unsigned char symbol_code;
    
-  /*if (map_symbol.find(symbol_name) != map_symbol.end()) {  
-    symbol_code = map_symbol[symbol_name];
-    font_face = FN_SYMBOL;
-  } else if (map_tex_cmmi.find(symbol_name) != map_tex_cmmi.end()) {  
-    symbol_code = map_tex_cmmi[symbol_name];
-    font_face = FN_TEX_CMMI;
-    is_using_fontcmmi = true;
-  }*/
   if (map_tex_cmmi.find(symbol_name) != map_tex_cmmi.end()) {  
     symbol_code = map_tex_cmmi[symbol_name];
     font_face = FN_TEX_CMMI;
@@ -210,7 +205,7 @@ unsigned char get_symbol_code(string symbol_name, FontFace &font_face)
     symbol_code = map_symbol[symbol_name];
     font_face = FN_SYMBOL;
   } else {
-    fprintf(stderr, "Warning: symbol name unknown %s\n", symbol_name.c_str());
+    //fprintf(stderr, "Warning: symbol name unknown %s\n", symbol_name.c_str());
     symbol_code = 0;
     font_face = FN_DEFAULT;
   }
@@ -274,6 +269,28 @@ void textflush()
   }
 }
 
+void add_symbol(unsigned char symbol_code, FontFace font_face)
+{
+  if (symbol_code > 0) {
+    tspush();
+    text_state.font_face = font_face;
+    accum.push_back(symbol_code);
+    textflush();
+    tspop();
+  } else {
+    fprintf(stderr, "Error: Unrecognized code <%x>.\n", symbol_code);
+  }
+}
+
+void add_word(string word, FontFace font_face)
+{
+  tspush();
+  text_state.font_face = font_face;
+  for(char& c : word) 
+    accum.push_back(c);
+  textflush();
+  tspop();
+}
 
 GraphicsItem* parse_text(string input_utf8, FontFace ff)
 {
@@ -347,6 +364,12 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
         tspop();
         //printf("cerrando\n");
         break;
+    case '<':
+        add_symbol(0x3C, FN_TEX_CMMI);
+        break;
+    case '>':
+        add_symbol(0x3E, FN_TEX_CMMI);
+        break;
     case '$':
       if (text_state.font_face!=FN_TEX_CMMI) {
         textflush();
@@ -379,14 +402,14 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
       if (v_end > it && v_end <= iend) {
         string variable = input.substr(it, v_end - it);
         unsigned char code = get_symbol_code(variable, font_face);
-        if (code > 0) {
-          tspush();
-          text_state.font_face = font_face;
-          accum.push_back(code);
-          textflush();
-          tspop();
-        } else {
-          fprintf(stderr, "Error: Unrecognized variable <%s>.\n", variable.c_str());
+        if (code > 0)
+          add_symbol(code, font_face);
+        else {
+          string *f = std::find(math_functions, math_functions+6, variable);
+          if (f!=math_functions+6)
+            add_word(variable,  FN_SERIF);
+          else
+            fprintf(stderr, "Warning: symbol name unknown %s\n", variable.c_str());
         }
         it = v_end-1;
       }
