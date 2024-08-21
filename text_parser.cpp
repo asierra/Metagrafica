@@ -88,6 +88,10 @@ string math_functions[] = {
   "cos", "cot", "csc", "sec", "sin", "tan"
 };
 
+string math_structs[] = {
+  "frac", "int", "prod", "sum"
+};
+
 string UTF8toISO8859_1(const char * in)
 {
     std::string out;

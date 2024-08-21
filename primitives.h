@@ -81,6 +81,21 @@ struct point {
   point(float x1, float y1) { x = x1; y = y1; }
   point (const point&p) { x = p.x; y = p.y; }
   float x, y;
+
+  float distancesq(point a)
+  { 
+    float dx = a.x - x;
+    float dy = a.y - y;
+    return (dx*dx + dy*dy);
+  }
+  float distance(point a)
+  {
+    return sqrt(distancesq(a));
+  }
+  float length()
+  {
+    return sqrt(x*x + y*y);
+  }
   point operator*(const double& f) {
     point p = *this;
     p.x *= f;

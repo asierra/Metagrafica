@@ -150,8 +150,8 @@ A _structure_ allows to associate primitives, attributes and matrices to create 
 `RPST n`
 :  Repeat n times the marked structure, applying each time the PP matrix to update the position and the RS matrix to transform the structure.
 
-`LNST sc [shift [n]]: x1 y1 x2 y2`
-:  Draw a line and put the marker of scale `sc` at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix.
+`LNST sc [shift [n [d]]]: x1 y1 x2 y2`
+:  Draw a line and put the marker of scale `sc` at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix. A fourth optional parameter indicates the size of a gap of size d in the middle of the line to insert a label.
 
 `ARCST sc r dq q0 [shift [n]]: x y`
 :  Draw an arc of radius `r`, wide `dq` and initial angle `q0` and put the marker of scale `sc` at the end of the arc, centered at the point `x y`. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating every time the center with the PP matrix.

@@ -101,7 +101,16 @@ void StructureLine::draw_side(Display &g, bool side) {
 }
 
 void StructureLine::draw(Display &g) {
-  g.line(llp.x, llp.y, rup.x, rup.y);
+  if (gap > 0) {
+    point mm = (rup - llp)/2;
+    float d = 1-gap/2;
+    point lm = llp + d*mm;
+    point rm = rup - d*mm;
+    //printf("gap %g %g %g %g\n", mm.x, mm.y, gap, d);
+    g.line(llp.x, llp.y, lm.x, lm.y);
+    g.line(rm.x, rm.y, rup.x, rup.y);
+  } else
+    g.line(llp.x, llp.y, rup.x, rup.y);
   draw_side(g, true);
   if (both_sides) 
     draw_side(g, false);

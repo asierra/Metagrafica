@@ -437,7 +437,6 @@ Path Parser::parsePath() {
     string name = &yylval.s[1];
     if (listmap.find(name) != listmap.end()) {
       l = process_path(mtpt, listmap[&yylval.s[1]]);
-      //printf("Path [%s] %zu\n", &yylval.s[1], l.size());
     } else if (name=="buffer") {
       l.insert(l.end(), bufferpt.begin(), bufferpt.end());
       printf("buffer %zu\n", l.size());
@@ -560,6 +559,7 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YLNST: {
       if (st) {
+        float gap = 0;
         float shift = 1;
         float sc = parseFloat();
         int n = 1;
@@ -569,7 +569,10 @@ GraphicsItemList Parser::parsePrimitives() {
           shift = 1 - yylval.f;
           if (yylex() == NUM) {
             n = (int)yylval.f;
-            yylex(); // consume the separator
+            if (yylex() == NUM) {
+              gap = yylval.f;
+              yylex(); // consume the separator
+            }
           }
         }
         point llp = parsePoint();
@@ -579,6 +582,7 @@ GraphicsItemList Parser::parsePrimitives() {
           sr->setScale(sc, sc);
           sr->setBothSides(bothsides);
           sr->setShift(shift);
+          sr->setGap(gap);
           sr->setPoints(llp, rup);
           sr->setStructure(st);
           prlist.push_back(sr);
@@ -764,15 +768,16 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YLISTA: {
       int n = (int)parseFloat();
-      float x = parseFloat();
-      float y = parseFloat();
+      float xx = parseFloat();
+      float yy = parseFloat();
       Path l;
       string name = parseString();
-      if (listmap.find(name)!=listmap.end())
+      if (listmap.find(name)!=listmap.end()) {
         fprintf(stderr, "Warning: the path %s already exists.\n", name.c_str());
+      }
       point z;
-      x = (x - wmx) / wdx;
-      y = (y - wmy) / wdy;
+      float x = (xx - wmx) / wdx;
+      float y = (yy - wmy) / wdy;
       for (int i = 0; i < n; i++) {
         z.x = x;
         z.y = y;

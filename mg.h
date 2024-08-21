@@ -109,10 +109,11 @@ private:
 */
 class StructureLine : public StructureUser {
 public:
-  StructureLine() { both_sides = false; shift = 1; }
+  StructureLine() { both_sides = false; shift = 1; gap = 0; }
   void setScale(float sx, float sy) { scale.x = sx; scale.y = sy; }
   void setPoints(point q1, point q2) {  llp = q1; rup = q2; }
   void setShift(float p) {  shift = p; }
+  void setGap(float p) {  gap = p; }
   void setBothSides(bool both=true) { both_sides = both; }
   void draw(Display &);
 private:
@@ -120,6 +121,7 @@ private:
   point scale;
   point llp, rup;
   float shift;
+  float gap;
   bool both_sides;
 };
 

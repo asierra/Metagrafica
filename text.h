@@ -135,4 +135,23 @@ private:
 };
 
 
+/** 
+   A text struct uses one or more text lines to show a fraction, sum, product, etc.
+ *
+class TextStruct : public GraphicsItem {public:
+  TextStruct() : GraphicsItem(GI_TEXTSTRUCT) { }
+  
+  void draw(Display &)=0;
+    
+  void addTextLine(TextLine *t) { textlines.push_back(t); }
+
+  size_t length(); 
+
+  float width();
+
+private:
+  std::list<TextLine*> textlines;
+};
+*/
+
 #endif
