@@ -6,7 +6,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
      Author:  Alejandro Aguilar Sierra, UNAM
     Version:  2024
-Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
+Antecedents: 2011, 1999 C++ STL; 1991 C; Original: 1988 Pascal and Assembler.
 */
 #if !defined(__MG_H)
 #define __MG_H
