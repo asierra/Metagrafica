@@ -156,7 +156,9 @@ map<string, int> map_color = {
     {"blue", 0xff},
     {"brown", 0xa52a2a},
     {"cyan", 0xffff},
+    {"gray", 0x808080},
     {"green", 0xff00},
+    {"lightgray", 0xd3d3d3},
     {"magenta", 0xff00ff},
     {"orange", 0xcc3232},
     {"red", 0xff0000},
@@ -738,6 +740,7 @@ GraphicsItemList Parser::parsePrimitives() {
       if (yylval.i==GS_CLOSEPATH && is_concatenatepath_active) {
         is_concatenatepath_active = false;
         listmap[ctpathname] = ctpath;
+        mtpt.initialize();
         printf("New path %s size %zu\n", ctpathname.c_str(), listmap[ctpathname].size());
         break;
       } else if (yylval.i == GS_PLUMEPOSITION) {

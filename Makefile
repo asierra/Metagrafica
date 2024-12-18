@@ -23,6 +23,10 @@ mg.1: mg.1.md
 mg.1.pdf: mg.1.md
 	pandoc mg.1.md -s -t pdf -o mg.1.pdf
 
+version.h: 
+	git log -1 --pretty=format:'#define MG_VERSION "%h - %cd"' > $@
+	echo "\n" >> $@
+
 lexmg.cpp: mgpp.l
 	flex mgpp.l
 
@@ -47,7 +51,7 @@ clean:
 EPSDisplay.o: EPSDisplay.h Display.h primitives.h
 EPSDisplay.o: matrix.h text.h font_cmmi.h mg.h
 lexmg.o: mgpp_tab.h
-main.o: mg.h text.h primitives.h matrix.h EPSDisplay.h Parser.h
+main.o: mg.h text.h primitives.h matrix.h EPSDisplay.h Parser.h version.h
 matrix.o: matrix.h 
 Parser.o: Parser.h mg.h text.h primitives.h matrix.h
 Parser.o: mgpp_tab.h text_parser.h splines.h
