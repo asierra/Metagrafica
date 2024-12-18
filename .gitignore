@@ -37,4 +37,6 @@ mg.1
 *.eps
 *~
 
+# This is generated locally
+version.h
 
