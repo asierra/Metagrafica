@@ -17,6 +17,8 @@ using std::string;
 #include<map>
 using std::map;
 
+#include <vector>
+#include <memory>
 #include "primitives.h"
 
 // Font properties, bit code:: sanserif = 04, weight = 02, slant = 01
@@ -124,14 +126,14 @@ public:
   
   void draw(Display &);
     
-  void addText(Text *t) { textline.push_back(t); }
+  void addText(std::unique_ptr<Text> t) { textline.push_back(std::move(t)); }
 
-  size_t length() { return distance(textline.begin(), textline.end()); } 
+  size_t length() { return textline.size(); } 
 
   float width();
 
 private:
-  std::list<Text*> textline;
+  std::vector<std::unique_ptr<Text>> textline;
 };
 
 

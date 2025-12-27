@@ -15,6 +15,8 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 
 #include "splines.h"
+#include <algorithm>
+#include <iterator>
 #include <stdio.h>
 #include <math.h>
 
@@ -176,7 +178,7 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
     point p2b = path2m.back(), p2f = path2m.front();
     //printf("extremos %g %g - %g %g\n", p2f.x, p2f.y, p2b.x, p2b.y);
     if (p2f.x > p2b.x) 
-      path2m.reverse();
+      std::reverse(path2m.begin(), path2m.end());
     path1.insert(path1.end(), path2m.begin(), path2m.end());
   } else {
     point p1 = path1.back();
@@ -187,7 +189,7 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
     float dfy = p1.y - p2f.y;
     //printf("p2f %g p2b %g\n", p2f.x, p2b.x);
     if (p2f.x > p2b.x) {
-      path2.reverse();
+      std::reverse(path2.begin(), path2.end());
       dx += p2f.x - p2b.x;
       dfy = p1.y - p2b.y;
     }

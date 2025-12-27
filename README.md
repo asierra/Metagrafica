@@ -1,6 +1,11 @@
-# metagrafica
+# MetaGráfica
 
-For English, see below.
+![C++ Standard](https://img.shields.io/badge/C%2B%2B-14-blue.svg)
+![License](https://img.shields.io/badge/License-GPL%203.0-green.svg)
+
+[English](#english) | [Español](#español)
+
+## Español
 
 MetaGráfica es un lenguaje gráfico vectorial 2D de construcción
 descriptiva. La versión original de finales de los 1980s controlaba
@@ -40,12 +45,31 @@ Esta versión deberá ser compilada con el estándar 2014 de C++,
 con las recomendaciones del [C++ Ortodoxo]
 (https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b).
 
-----
+### Uso
+
+```bash
+make
+./mg examples/primitives.mg
+```
+
+---
+
+## English
+
 MetaGráfica is a 2D descriptive vector graphics language. The original version from late 1980s directly controlled an HP laser printer at a time when there were no good graphics applications with output of the quality required for a scientific publication. In the 2002 version, it was migrated to the C++ language, taking advantage of object oriented programming and the STL. With that version the output was exclusively Encapsulated PostScript and for text we used the Latin1 or ISO 8859-1 coding that included all the special characters used in Spanish and Western Europe languages; the mathematical and Greek symbols were achieved using the standard symbol font. That version was used for Luis de la Peña's Quantum Mechanics textbooks. PostScript stagnated in those years, falling short of the Unicode revolution, but it is still supported by most graphical applications and is trivial to convert to modern PDF. This version still generates only EPS and, if necessary, embedes a TeX font for Greek, mathematical and physical symbols.
 
 The elementary data type is the point, defined by a pair of coordinates (x, y) in a two-dimensional Cartesian space. The basic data structure is the path, formed by a series of points, with which any graphic object can be defined such as curves, polygons, etc. Specific characteristics such as line width or color are defined by attributes. It handles a limited version of LaTeX-style mathematical text, which allows you to write Greek symbols, super and subscripts and other physical symbols. Its strength is the definition of structures, which allow combining different graphic primitives with linear transformations in homogeneous coordinates, to generate more complex graphics, without the need to use another programming language. It is important to clarify that Metagrafica is not intended to be a programming language, it is very specific and limited to the generation of high quality technical figures.
 
 This version must be compiled with the C++ 2014 standard, following the recommendations of [Orthodox C++] (https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b).
 
-License: GPL 3.0
+### Usage
+
+```bash
+make
+./mg examples/primitives.mg
+```
+
+## License
+
+GPL 3.0
 Copyright (c) 2024 Alejandro Aguilar Sierra (algsierra@gmail.com)

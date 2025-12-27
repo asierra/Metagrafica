@@ -6,6 +6,16 @@
 
 std::map<std::string, Structure*> Structure::structure_map;
 
+void Structure::cleanup() {
+  for (auto it = structure_map.begin(); it != structure_map.end(); ) {
+    // No borramos "root" porque main posee su unique_ptr
+    if (it->first != "root") {
+      delete it->second;
+    }
+    it = structure_map.erase(it);
+  }
+}
+
 
  void Structure::define_in_device(Display &g) {
   for (auto it : structure_map) {

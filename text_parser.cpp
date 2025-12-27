@@ -1,5 +1,6 @@
 #include "text.h"
 #include <algorithm>
+#include <memory>
 #include <stack>
 using std::stack;
 
@@ -222,8 +223,8 @@ unsigned char get_symbol_code(string symbol_name, FontFace &font_face)
 string accum;
 TextState text_state;
 stack<TextState> tstack;
-Text *text;
-TextLine *text_line;
+std::unique_ptr<Text> text;
+std::unique_ptr<TextLine> text_line;
 
 
 void tspush() 
@@ -244,10 +245,10 @@ void textflush()
 {
   if (accum.size() > 0) {
     if (text==nullptr) {
-      text = new Text();
+      text = std::make_unique<Text>();
     } 
     if (text_line==nullptr)
-      text_line = new TextLine();
+      text_line = std::make_unique<TextLine>();
 
     if ((text->length() > 0) && (text->getState()==text_state)) {
       text->addText(accum);
@@ -256,8 +257,8 @@ void textflush()
     }
     else {
       if (text->length() > 0) {
-        text_line->addText(text);
-        text = new Text();
+        text_line->addText(std::move(text));
+        text = std::make_unique<Text>();
       }
       text->setState(text_state);
       text->setText(accum);
@@ -267,7 +268,7 @@ void textflush()
     accum = "";
   } else {
     if (text && text->length() > 0) {
-      text_line->addText(text);
+      text_line->addText(std::move(text));
       text = nullptr;
     }
   }
@@ -296,7 +297,7 @@ void add_word(string word, FontFace font_face)
   tspop();
 }
 
-GraphicsItem* parse_text(string input_utf8, FontFace ff)
+std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
 {
   if (input_utf8.size()==0) {
     fprintf(stderr, "Error: void text.\n");
@@ -430,12 +431,12 @@ GraphicsItem* parse_text(string input_utf8, FontFace ff)
   
   if (text_line->length() > 1) {
     textflush();
-    return text_line;
+    return std::move(text_line);
   } else if (text_line->length()==1 && text) {
-    text_line->addText(text);
-    return text_line;
+    text_line->addText(std::move(text));
+    return std::move(text_line);
   } else {
     //printf("simple texto %s\n", text->getText().c_str());
-    return text;
+    return std::move(text);
   }
 }

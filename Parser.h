@@ -12,6 +12,9 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #define __PARSER_H
 
 #include "mg.h"
+#include "MGLexer.h"
+#include <memory>
+#include <fstream>
 
 #include <string.h>
 
@@ -31,7 +34,7 @@ public:
   ///
   ~Parser();
   ///
-  MetaGrafica *parse();
+  std::unique_ptr<MetaGrafica> parse();
   ///
   string getName() { return filename; }
   ///
@@ -46,10 +49,18 @@ private:
   Path parsePath();
   GraphicsItemList parsePrimitives();
   void oldParseMatrix(int mo, Matrix &mt);
-  Transform* parseMatrix(int mo);
-  GraphicsItem *parsePrimitive(int);
+  std::unique_ptr<Transform> parseMatrix(int mo);
+  std::unique_ptr<GraphicsItem> parsePrimitive(int);
   Path parseRectangle();
   point parsePoint();
+
+  // Helper methods to modularize parsePrimitives
+  void parseMatrixOp(int token, GraphicsItemList &prlist, Matrix &mtpp, Matrix &mtpt, Matrix &mtrs, bool &using_mtlc);
+  void parseStructureOp(int token, GraphicsItemList &prlist, Structure* &st, Matrix &mtpp, Matrix &mtrs, point &pp);
+  void parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpath, Matrix &mtpt);
+  void parseAttribute(int token, GraphicsItemList &prlist, FontFace &ff);
+  void parseGraphicsState(int token, GraphicsItemList &prlist, bool &is_concat, string &ctname, Path &ctpath, point &pp);
+  void parseTextOp(int token, GraphicsItemList &prlist, point &pp, Matrix &mtpp, FontFace &ff);
 
   /// Window
   float wmx, wmy, wdx, wdy;
@@ -64,6 +75,9 @@ private:
   bool is_spline_to_bezier;
   int spline_nodes_per_segment;
   Path bufferpt;
+  int currentDepth;
+  std::unique_ptr<MGLexer> lexer;
+  std::unique_ptr<std::ifstream> pInfile;
 };
 
 #endif

@@ -11,7 +11,8 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #if !defined(__PRIMITIVES_H)
 #define __PRIMITIVES_H
 
-#include <list>
+#include <memory>
+#include <vector>
 
 #include "matrix.h"
 
@@ -139,7 +140,9 @@ struct point {
 };
 
 
-using Path = std::list<point>;
+class GraphicsItem;
+using Path = std::vector<point>;
+using GraphicsItemList = std::vector<std::unique_ptr<GraphicsItem>>;
 
 // Abstract output device
 class Display;

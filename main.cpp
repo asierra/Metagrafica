@@ -12,11 +12,8 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 
 #include <cerrno>
 #include <cstdio>
-#include <map>
-using std::map;
 
 #include "Parser.h"
-
 
 int main(int argc, char **argv) {
   string inname;
@@ -36,11 +33,13 @@ int main(int argc, char **argv) {
   }
 
   Parser parser(inname);
-  MetaGrafica *mg = parser.parse();
+  std::unique_ptr<MetaGrafica> mg(parser.parse());
 
   string outname = parser.getCanonicalName() + ".eps";
   EPSDisplay g(outname);
   mg->draw(g);
+
+  Structure::cleanup();
 
   return 0;
 }

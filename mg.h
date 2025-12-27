@@ -14,9 +14,6 @@ Antecedents: 2011, 1999 C++ STL; 1991 C; Original: 1988 Pascal and Assembler.
 #include "version.h"
 #include "text.h"
 
-using GraphicsItemList = std::list<GraphicsItem*>;
-
-
 /** 
     A structure is defined by a name and a list of Display items. 
  */
@@ -50,7 +47,7 @@ public:
 
   static void define_in_device(Display &g);
   
-  void setGraphicsItems(GraphicsItemList p) { prlist = p; }
+  void setGraphicsItems(GraphicsItemList p) { prlist = std::move(p); }
  
   bool isDefinedInDevice() { return defined_in_device; }
   
@@ -68,6 +65,8 @@ protected:
 private:
   /// Contains all defined structures
   static map<string, Structure*> structure_map;
+public:
+  static void cleanup();
 };
 
 

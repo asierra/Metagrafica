@@ -3,7 +3,6 @@
 #include "text_parser.h"
 #include "splines.h"
 #include <algorithm>
-#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -12,144 +11,16 @@ extern bool is_using_ellipse;
 extern bool is_using_hatcher;
 extern bool is_using_textalign;
 
-#define MAX_KEYS 52
-YYSTYPE yylval;
-YYSTYPE yylvalaux;
+// Macros de compatibilidad para MGLexer
+#define yylval lexer->yylval
+#define yylvalaux lexer->yylvalaux
+#define yylex lexer->yylex
+#define setBegin lexer->setBegin
 
-#define BEGIN yy_start = 1 + 2 *
 #define cadena 4
-extern void setBegin(int c);
-
-extern FILE *yyin, *yyout;
-extern int yylex();
-extern int dblevel;
 
 FILE *logout = 0;
 
-struct {
-  const char *k;
-  int g, t;
-} tabla[MAX_KEYS] = {{"ARCST", YARCST, GI_NULL},
-                     {"BR", YOP, GI_RECTANGLE},
-                     {"BZ", YOP, GI_BEZIER},
-                     {"CLPT", YGSTATE, GS_CLOSEPATH},
-                     {"CLST", YCLST, GI_NULL},
-                     {"CR", YOP, GI_CIRCLE},
-                     {"CTPT", YCONCATPATH, GI_NULL},
-                     {"DOT", YOP, GI_DOT},
-                     {"DPST", YDPST, GI_NULL},
-                     {"DT", YDT, GI_TEXT},
-                     {"EL", YOP, GI_ELLIPSE},
-                     {"EXIT", YEXIT, GI_NULL},
-                     {"FCOLOR", YATRIB, AT_FCOLOR},
-                     {"FGRAY", YATRIB, AT_FGRAY},
-                     {"FILL", YGSTATE, GS_FILL},
-                     {"FPATRN", YATRIB, AT_FPATRN},
-                     {"GNBZPATH", YGNBZ, GI_NULL},
-                     {"GNNUM", YRPNUM, GI_NULL},
-                     {"GNPATH", YLISTA, GI_NULL},
-                     {"INPUT", YOPS, GI_NULL},
-                     {"INTXT", YOBSOLETE, GI_NULL},
-                     {"INVPT", YINVPT, GI_NULL},
-                     {"LCOLOR", YATRIB, AT_LCOLOR},
-                     {"LGRAY", YATRIB, AT_LGRAY},
-                     {"LNST", YLNST, GI_NULL},
-                     {"LPATRN", YATRIB, AT_LSTYLE},
-                     {"LSTYLE", YATRIB, AT_LWIDTH},
-                     {"LWIDTH", YATRIB, AT_LWIDTH},
-                     {"MAXDEEP", YDEF, GI_NULL},
-                     {"MKMR", YOPS, GI_NULL},
-                     {"MKST", YMKST, GI_NULL},
-                     {"MR", YOP, GI_NULL},
-                     {"NOFILL", YGSTATE, GS_NOFILL},
-                     {"NORMPT", YNORMPT, GI_NULL},
-                     {"OPPT", YGSTATE, GS_OPENPATH},
-                     {"OPST", YOPST, GI_NULL},
-                     {"PG", YOP, GI_POLYGON},
-                     {"PL", YOP, GI_POLYLINE},
-                     {"PWPT", YPVPT, GI_NULL},
-                     {"PWST", YPVST, GI_NULL},
-                     {"RPPT", YRPPT, GI_NULL},
-                     {"RPST", YRPST, GI_NULL},
-                     {"SP", YOP, GI_SPLINE},
-                     {"TALIGN", YATRIB, AT_TALIGN},
-                     {"THEIGHT", YATRIB, AT_THEIGHT},
-                     {"TICKS", YTICKS, GI_NULL},
-                     {"TSIZE", YATRIB, AT_THEIGHT},
-                     {"TSTYLE", YATRIB, AT_TSTYLE},
-                     {"WW", YWW, GI_NULL},
-                     {"XYDT", YXYDT, GI_NULL},
-                     {"XYPP", YGSTATE, GS_PLUMEPOSITION},
-                     {"XYTXT", YOBSOLETE, GI_NULL}};
-
-
-//const char *opmat[] = {
-map<string, MatrixOperation> map_opmat = {
-    {"TL", OPMTL}, /* Traslate */
-    {"RT", OPMRT}, /* Rotate */
-    {"SC", OPMSC}, /* Scale */
-    {"SH", OPMSH}, /* Shear */
-    {"MT", OPMMT}, /* Define */
-    {"ID", OPMID}, /* Identity */
-    {"CP", OPMCP} /* Compose */
-};
-
-// Matrices definidas
-//const char *dfmat[] = {
-map<string, PredefinedMatrix> map_dfmat = {
-  {"LC", MTLC}, // Local
-  {"ST", MTST}, // Structure
-  {"PP", MTPP}, // Columnas texto podria ser posición de pluma
-  {"PT", MTPT}, // Path
-  {"RS", MTRS}
-}; // Repeat structure
-
-bool search_mat(string key, int &opm, int &dfm) {
-  //printf("key %s %s %s ", key.c_str(), key.substr(0,2).c_str(), key.substr(2,3).c_str());
-  if (map_opmat.find(key.substr(0,2)) != map_opmat.end() && 
-      map_dfmat.find(key.substr(2,3)) != map_dfmat.end()) {
-    opm = map_opmat[key.substr(0,2)];
-    dfm = map_dfmat[key.substr(2,3)];
-
-    return true;
-  }
-  return false;
-}
-
-int search_key(char *key) {
-  int m, k, l = 0, r = MAX_KEYS - 1;
-  while (l < r) {
-    m = (l + r) / 2;
-    k = strcmp(tabla[m].k, key);
-    if (k == 0)
-      return m + 1;
-    else if (k < 0)
-      l = m + 1;
-    else
-      r = m;
-  }
-  return 0;
-}
-
-int busca_key(char *key) {
-  if (int idx = search_key(key)) {
-    yylval.i = tabla[idx - 1].t;
-    return tabla[idx - 1].g;
-  }
-  // raise(SIGINT);
-  // printf("no es reservada %s\n", key);
-  if (strlen(key) == 4) {
-    int opm, dfm;
-    if (search_mat(key, opm, dfm)) {
-      yylval.i = (int)(opm);
-      yylvalaux.i = (int)(dfm);
-      //printf("MATRIXX %d %d\n", yylval.i, yylvalaux.i);
-      return YOPMAT;
-    }
-  }
-  yylval.s = key;
-  return YIDENTIFIER;
-}
 
 map<string, int> map_color = {
     {"black", 0},
@@ -193,10 +64,12 @@ string Parser::parseString() {
   string s;
   int i = yylex();
 
-  if (i == YIDENTIFIER)
+  if (i == YIDENTIFIER) {
     s = yylval.s;
-  else
+    free(yylval.s); // Liberar memoria asignada por strdup en el lexer
+  } else {
     fprintf(stderr, "Error: A string was expected, not %d\n", i);
+  }
 
   return s;
 }
@@ -264,9 +137,9 @@ void Parser::oldParseMatrix(int mo, Matrix &mt) {
   }
 }
 
-Transform *Parser::parseMatrix(int mo) {
+std::unique_ptr<Transform> Parser::parseMatrix(int mo) {
   point z;
-  Transform *t = new Transform();
+  auto t = std::make_unique<Transform>();
   t->setOperation((MatrixOperation)mo);
 
   switch (mo) {
@@ -294,18 +167,18 @@ Transform *Parser::parseMatrix(int mo) {
   return t;
 }
 
-GraphicsItem *Parser::parsePrimitive(int type) {
-  GraphicsItemWithPath *pl = nullptr;
+std::unique_ptr<GraphicsItem> Parser::parsePrimitive(int type) {
+  std::unique_ptr<GraphicsItemWithPath> pl = nullptr;
 
   switch (type) {
   case GI_SPLINE: {
     Path controlpoints = parsePath();
     if (is_spline_to_bezier) {
       printf("Converting spline to Bezier.\n");
-      pl = new Polyline(GI_BEZIER);
+      pl = std::make_unique<Polyline>(GI_BEZIER);
       pl->setPath(splines_to_bezier(controlpoints));
     } else {
-      pl = new Polyline((GraphicsItemType)type);
+      pl = std::make_unique<Polyline>((GraphicsItemType)type);
       pl->setPath(splines(controlpoints, spline_nodes_per_segment));
     }
     return pl;
@@ -314,10 +187,10 @@ GraphicsItem *Parser::parsePrimitive(int type) {
   case GI_BEZIER:
   case GI_POLYGON:
   case GI_POLYLINE:
-    pl = new Polyline((GraphicsItemType)type);
+    pl = std::make_unique<Polyline>((GraphicsItemType)type);
     break;
   case GI_RECTANGLE: {
-    pl = new Rectangle();
+    pl = std::make_unique<Rectangle>();
   } break;
   case GI_ELLIPSE:
   case GI_CIRCLE: {
@@ -327,7 +200,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
       r[k++] = yylval.f;
     }
     if (type == GI_CIRCLE && k > 0) {
-      Arc *e = new Arc();
+      auto e = std::make_unique<Arc>();
       e->setRadius(r[0] / wdy, r[0] / wdy);
       if (k > 1) {
         if (k == 2)
@@ -335,10 +208,10 @@ GraphicsItem *Parser::parsePrimitive(int type) {
         else
           e->setAngles(r[2], r[1] + r[2]);
       }
-      pl = e;
+      pl = std::move(e);
     } else if (type == GI_ELLIPSE && k > 1) {
       is_using_ellipse = true;
-      Arc *e = new Arc();
+      auto e = std::make_unique<Arc>();
       e->setRadius(r[0] / wdx, r[1] / wdy);
       if (k > 2) {
         if (k == 3)
@@ -346,7 +219,7 @@ GraphicsItem *Parser::parsePrimitive(int type) {
         else
           e->setAngles(r[3], r[2] + r[3]);
       }
-      pl = e;
+      pl = std::move(e);
     }
     break;
   }
@@ -354,9 +227,9 @@ GraphicsItem *Parser::parsePrimitive(int type) {
     if (yylex() == NUM) {
       is_using_dot = true;
       float r = yylval.f / 2.0;
-      Dot *d = new Dot();
+      auto d = std::make_unique<Dot>();
       d->setRadius(r);
-      pl = d;
+      pl = std::move(d);
     }
     break;
   }
@@ -379,16 +252,20 @@ Parser::Parser(string f) {
   canfilename = filename.substr(0, n);
 
   printf("Opening %s\n", filename.c_str());
-  yyin = fopen(filename.c_str(), "r");
-  if (yyin == NULL) {
+  pInfile = std::make_unique<std::ifstream>(filename);
+  if (!pInfile->is_open()) {
     fprintf(stderr, "Error: File not found %s\n", filename.c_str());
     exit(1);
   }
+  lexer = std::make_unique<MGLexer>(pInfile.get());
+  
   wmx = wmy = 0;
   wdx = wdy = 1;
+  currentDepth = 0;
+  mg = nullptr;
 }
 
-Parser::~Parser() { fclose(yyin); }
+Parser::~Parser() { }
 
 void Parser::setLogFile(FILE *f) { logout = f; }
 
@@ -437,100 +314,40 @@ Path Parser::parsePath() {
   }
   if (l.size()==0 && lastyylex==IDLISTA) {
     string name = &yylval.s[1];
+    char* original_s = yylval.s; // Guardar puntero para liberar
     if (listmap.find(name) != listmap.end()) {
-      l = process_path(mtpt, listmap[&yylval.s[1]]);
+      l = process_path(mtpt, listmap[name]);
     } else if (name=="buffer") {
       l.insert(l.end(), bufferpt.begin(), bufferpt.end());
       printf("buffer %zu\n", l.size());
       bufferpt.clear();
     } else {
       fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
-              &yylval.s[1], listmap.size());
+              name.c_str(), listmap.size());
     }
+    free(original_s);
   }
   return l;
 }
 
-GraphicsItemList Parser::parsePrimitives() {
-  GraphicsItemList prlist;
-  Structure *st = NULL;
-  static int depth = 0;
-  Matrix mtst, mtpp, mtrs;
-  float pwmx, pwmy, pwdx, pwdy;
-  FontFace ff = FN_DEFAULT;
-  int n;
-  point pp;
-  string ctpathname;
-  Path ctpath;
-  bool is_concatenatepath_active = false;
-  bool using_mtlc = false;
-  is_spline_to_bezier = false;
-  spline_nodes_per_segment = 4;
+void Parser::parseMatrixOp(int token, GraphicsItemList &prlist, Matrix &mtpp, Matrix &mtpt, Matrix &mtrs, bool &using_mtlc) {
+  PredefinedMatrix pmat = (PredefinedMatrix)yylvalaux.i;
+  if (pmat == MTPP)
+    oldParseMatrix(yylval.i, mtpp);
+  else if (pmat == MTPT)
+    oldParseMatrix(yylval.i, mtpt);
+  else if (pmat == MTRS)
+    oldParseMatrix(yylval.i, mtrs);
+  else {
+    std::unique_ptr<Transform> t = parseMatrix(yylval.i);
+    t->setPredefinedMatrix(pmat);
+    prlist.push_back(std::move(t));
+  }
+  using_mtlc = (pmat == MTLC);
+}
 
-  depth++;
-
-  // Push window
-  pwmx = wmx;
-  pwmy = wmy;
-  pwdx = wdx;
-  pwdy = wdy;
-  wmx = wmy = 0;
-  wdx = wdy = 1;
-
-  // dbprintf("Depth %d\n", depth);
-  while (1) {
-    lastyylex = yylex();
-
-    if (lastyylex==IDLISTA) {
-      string name = &yylval.s[1];
-      if (is_concatenatepath_active) {
-        if (listmap.find(name)!=listmap.end()) {
-          concat_paths(ctpath, listmap[name], mtpt);
-        }
-      } else
-        listmap[name] = parsePath();
-      continue;
-    }
-
-    if (lastyylex == 0 || lastyylex == YCLST) {
-      // dbprintf("Endwillon %d ", lastyylex);
-      break;
-    }
-
-    switch (lastyylex) {
-    case YWW:
-      wmx = parseFloat();
-      wdx = parseFloat() - wmx;
-      wmy = parseFloat();
-      wdy = parseFloat() - wmy;
-      // dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
-      break;
-    case YOP: {
-      int primtype = yylval.i;
-      do {
-        GraphicsItem *p = parsePrimitive(primtype);
-        if (p != NULL) {
-          prlist.push_back(p);
-        }
-      } while (lastyylex == YSEP);
-      break;
-    }
-    case YOPMAT: {
-      PredefinedMatrix pmat = (PredefinedMatrix)yylvalaux.i;
-      if (pmat == MTPP)
-        oldParseMatrix(yylval.i, mtpp);
-      else if (pmat == MTPT)
-        oldParseMatrix(yylval.i, mtpt);
-      else if (pmat == MTRS)
-        oldParseMatrix(yylval.i, mtrs);
-      else {
-        Transform *t = parseMatrix(yylval.i);
-        t->setPredefinedMatrix(pmat);
-        prlist.push_back(t);
-      }
-      using_mtlc = (pmat == MTLC);
-      break;
-    }
+void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &st, Matrix &mtpp, Matrix &mtrs, point &pp) {
+  switch (token) {
     case YDPST: {
       string name = parseString();
       Structure *strct = Structure::getStructure(name);
@@ -538,12 +355,12 @@ GraphicsItemList Parser::parsePrimitives() {
         fprintf(stderr, "Error: Structure no definida <%s>\n", name.c_str());
         break;
       } 
-      StructurePath *sr = new StructurePath();
+      auto sr = std::make_unique<StructurePath>();
       sr->setStructure(strct);
       Path pt;
       pt.push_back(pp);
       sr->setPath(pt);
-      prlist.push_back(sr);
+      prlist.push_back(std::move(sr));
       break;
     }
     case YOPST: {
@@ -555,8 +372,7 @@ GraphicsItemList Parser::parsePrimitives() {
       GraphicsItemList p = parsePrimitives();
       st = new Structure();
       st->setName(name);
-      st->setGraphicsItems(p);
-      // prlist.push_back(st);
+      st->setGraphicsItems(std::move(p));
       break;
     }
     case YLNST: {
@@ -580,14 +396,14 @@ GraphicsItemList Parser::parsePrimitives() {
         point llp = parsePoint();
         point rup = parsePoint();
         for (int i = 1; i <= n; i++) {
-          StructureLine *sr = new StructureLine();
+          auto sr = std::make_unique<StructureLine>();
           sr->setScale(sc, sc);
           sr->setBothSides(bothsides);
           sr->setShift(shift);
           sr->setGap(gap);
           sr->setPoints(llp, rup);
           sr->setStructure(st);
-          prlist.push_back(sr);
+          prlist.push_back(std::move(sr));
           if (i < n) {
             mtpp.transform(llp.x, llp.y);
             mtpp.transform(rup.x, rup.y);
@@ -617,7 +433,7 @@ GraphicsItemList Parser::parsePrimitives() {
         }
         point p = parsePoint();
         for (int i = 1; i <= n; i++) {
-          StructureArc *sr = new StructureArc();
+          auto sr = std::make_unique<StructureArc>();
           sr->setScale(sc, sc);
           sr->setBothSides(bothsides);
           sr->setShift(shift);
@@ -625,7 +441,7 @@ GraphicsItemList Parser::parsePrimitives() {
           sr->setAngles(ai, af);
           sr->setPoint(p);
           sr->setStructure(st);
-          prlist.push_back(sr);
+          prlist.push_back(std::move(sr));
           if (i < n)
             mtpp.transform(p.x, p.y);
         }
@@ -639,13 +455,13 @@ GraphicsItemList Parser::parsePrimitives() {
     } break;
     case YPVST: {
       if (st) {
-        StructureRectangle *sr = new StructureRectangle();
+        auto sr = std::make_unique<StructureRectangle>();
         sr->setStructure(st);
         point llp, rup;
         llp = parsePoint();
         rup = parsePoint();
         sr->setPoints(llp, rup);
-        prlist.push_back(sr);
+        prlist.push_back(std::move(sr));
       } else {
         fprintf(stderr, "Error: no marked structure.\n");
       }
@@ -654,7 +470,7 @@ GraphicsItemList Parser::parsePrimitives() {
     case YRPST: {
       if (st) {
         int n = (int)parseFloat();
-        StructurePath *sr = new StructurePath();
+        auto sr = std::make_unique<StructurePath>();
         sr->setStructure(st);
         Path pt;
         for (int i = 1; i <= n; i++) {
@@ -662,26 +478,26 @@ GraphicsItemList Parser::parsePrimitives() {
           mtpp.transform(pp.x, pp.y);
           if (!mtrs.is_identity()) {
             if (i==1) {
-              GraphicsState *gs = new GraphicsState(GS_SAVE);
-              prlist.push_back(gs);
+              auto gs = std::make_unique<GraphicsState>(GS_SAVE);
+              prlist.push_back(std::move(gs));
             }
             sr->setPath(pt);
-            prlist.push_back(sr);
-            Transform *t = new Transform();
+            prlist.push_back(std::move(sr));
+            auto t = std::make_unique<Transform>();
             t->setOperation(OPMCP);
             t->setMatrix(mtrs);
             t->setPredefinedMatrix(MTST);
-            prlist.push_back(t);
-            sr = new StructurePath();
+            prlist.push_back(std::move(t));
+            sr = std::make_unique<StructurePath>();
             sr->setStructure(st);
             pt.clear();
             if (i==n) {
-              GraphicsState *gs = new GraphicsState(GS_RESTORE);
-              prlist.push_back(gs);
+              auto gs = std::make_unique<GraphicsState>(GS_RESTORE);
+              prlist.push_back(std::move(gs));
             }
           } else if (i==n) {
             sr->setPath(pt);
-            prlist.push_back(sr);
+            prlist.push_back(std::move(sr));
           }
         }
       } else {
@@ -691,84 +507,23 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YIDENTIFIER: {
       string name = yylval.s;
+      free(yylval.s);
       Structure *strct = Structure::getStructure(name);
       if (!strct) {
         fprintf(stderr, "Error: invalid identifief [%s]\n", name.c_str());
       } else {
-        StructurePath *sr = new StructurePath();
+        auto sr = std::make_unique<StructurePath>();
         sr->setStructure(strct);
         sr->setPath(parsePath());
-        prlist.push_back(sr);
+        prlist.push_back(std::move(sr));
       }
       break;
     }
-    case YDEF:
-      parseDef(yylval.i);
-      break;
-    case YATRIB: {
-      AttributeType type = (AttributeType)yylval.i;
-      Attribute *at = new Attribute();
-      if (type == AT_TALIGN)
-        is_using_textalign = true;
-      if (type == AT_FPATRN)
-        is_using_hatcher = true;
-      if (type == AT_LCOLOR || type == AT_FCOLOR) {
-        setBegin(cadena);
-        yylex();
-        int col = get_color_from_string(&yylval.s[1]);
-        at->set(type, col);
-      } else if (type == AT_TSTYLE) {
-        setBegin(cadena);
-        yylex();
-        ff = get_font_face_from_string(&yylval.s[1]);
-        if (ff != FN_NOFACE)
-          at->set(type, ff);
-        else {
-          ff = FN_DEFAULT;
-          delete at;
-          break;
-        }
-      } else {
-        float f = parseFloat();
-        at->set(type, (int)f);
-      }
-      prlist.push_back(at);
-      break;
-    }
-    case YGSTATE: {
-      GraphicsState *gs = new GraphicsState();
-      if (yylval.i==GS_CLOSEPATH && is_concatenatepath_active) {
-        is_concatenatepath_active = false;
-        listmap[ctpathname] = ctpath;
-        mtpt.initialize();
-        printf("New path %s size %zu\n", ctpathname.c_str(), listmap[ctpathname].size());
-        break;
-      } else if (yylval.i == GS_PLUMEPOSITION) {
-        pp.x = (parseFloat() - wmx) / wdx;
-        pp.y = (parseFloat() - wmy) / wdy;
-        gs->setPosition(pp);
-      } else
-        gs->setGSType((GraphicsStateType)yylval.i);
-      prlist.push_back(gs);
-    } break;
-    case YXYDT: {
-      pp = parsePoint();
-    }
-    case YDT: {
-      if (!using_mtlc) {
-        GraphicsState *gs = new GraphicsState();
-        gs->setPosition(pp);
-        prlist.push_back(gs);
-      }
-      setBegin(cadena);
-      yylex();
-      GraphicsItem *t = parse_text(&yylval.s[1], ff);
-      prlist.push_back(t);
-      if (lastyylex==YDT) { // ojo, dt debe actualizar la posición de algún modo
-        mtpp.transform(pp.x, pp.y);
-      }
-      break;
-    }
+  }
+}
+
+void Parser::parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpath, Matrix &mtpt) {
+  switch (token) {
     case YLISTA: {
       int n = (int)parseFloat();
       float xx = parseFloat();
@@ -793,7 +548,7 @@ GraphicsItemList Parser::parsePrimitives() {
     case YINVPT: {
       string name = parseString();
       Path l = parsePath();
-      l.reverse();
+      std::reverse(l.begin(), l.end());
       listmap[name] = l;
       break;
     }
@@ -806,9 +561,9 @@ GraphicsItemList Parser::parsePrimitives() {
     }
     case YRPPT: {
       string name = parseString();
-      n = (int)parseFloat();
+      int n = (int)parseFloat();
       for (int i=0; i < n; i++) {
-        if (is_concatenatepath_active)
+        if (is_concat)
           concat_paths(ctpath, listmap[name], mtpt);
         else {
           concat_paths(bufferpt, listmap[name], mtpt);
@@ -832,7 +587,7 @@ GraphicsItemList Parser::parsePrimitives() {
       if (listmap.find(name)!=listmap.end()) {
         Matrix mtpr;
         mtpr.to_rectangle(llp.x, llp.y, rup.x, rup.y);
-        if (is_concatenatepath_active)
+        if (is_concat)
           concat_paths(ctpath, listmap[name], mtpr, false);
         else
           bufferpt = process_path(mtpr, listmap[name]);
@@ -842,48 +597,221 @@ GraphicsItemList Parser::parsePrimitives() {
       break;
     }
     case YCONCATPATH: {
-      is_concatenatepath_active = true;
-      ctpathname = parseString();
+      is_concat = true;
+      ctname = parseString();
       ctpath.clear();
       mtpt.initialize();
       break;
     }
-    case YRPNUM: {
-      float x0 = parseFloat();
-      float xinc = parseFloat();
-      n = (int)parseFloat();
-      int ndec = (int)parseFloat();
-      char fmt[8], str[80];
-      sprintf(fmt, "%%.%df", ndec);
-      for (int i = 0; i < n; i++) {
-        float x = x0 + i * xinc;
-        GraphicsState *gs = new GraphicsState();
+  }
+}
+
+void Parser::parseAttribute(int token, GraphicsItemList &prlist, FontFace &ff) {
+  AttributeType type = (AttributeType)yylval.i;
+  auto at = std::make_unique<Attribute>();
+  if (type == AT_TALIGN)
+    is_using_textalign = true;
+  if (type == AT_FPATRN)
+    is_using_hatcher = true;
+  if (type == AT_LCOLOR || type == AT_FCOLOR) {
+    setBegin(cadena);
+    yylex();
+    int col = get_color_from_string(&yylval.s[1]);
+    free(yylval.s);
+    at->set(type, col);
+  } else if (type == AT_TSTYLE) {
+    setBegin(cadena);
+    yylex();
+    ff = get_font_face_from_string(&yylval.s[1]);
+    free(yylval.s);
+    if (ff != FN_NOFACE)
+      at->set(type, ff);
+    else {
+      ff = FN_DEFAULT;
+      return; // Don't add attribute
+    }
+  } else {
+    float f = parseFloat();
+    at->set(type, (int)f);
+  }
+  prlist.push_back(std::move(at));
+}
+
+void Parser::parseGraphicsState(int token, GraphicsItemList &prlist, bool &is_concat, string &ctname, Path &ctpath, point &pp) {
+  auto gs = std::make_unique<GraphicsState>();
+  if (yylval.i==GS_CLOSEPATH && is_concat) {
+    is_concat = false;
+    listmap[ctname] = ctpath;
+    mtpt.initialize();
+    printf("New path %s size %zu\n", ctname.c_str(), listmap[ctname].size());
+    return; // Don't add GS
+  } else if (yylval.i == GS_PLUMEPOSITION) {
+    pp.x = (parseFloat() - wmx) / wdx;
+    pp.y = (parseFloat() - wmy) / wdy;
+    gs->setPosition(pp);
+  } else
+    gs->setGSType((GraphicsStateType)yylval.i);
+  prlist.push_back(std::move(gs));
+}
+
+void Parser::parseTextOp(int token, GraphicsItemList &prlist, point &pp, Matrix &mtpp, FontFace &ff) {
+  if (token == YRPNUM) {
+    float x0 = parseFloat();
+    float xinc = parseFloat();
+    int n = (int)parseFloat();
+    int ndec = (int)parseFloat();
+    char fmt[8], str[80];
+    sprintf(fmt, "%%.%df", ndec);
+    for (int i = 0; i < n; i++) {
+      float x = x0 + i * xinc;
+      auto gs = std::make_unique<GraphicsState>();
+      gs->setPosition(pp);
+      prlist.push_back(std::move(gs));
+      mtpp.transform(pp.x, pp.y);
+      sprintf(str, fmt, x);
+      auto text = std::make_unique<Text>();
+      text->setText(str);
+      text->setFontFace(ff);
+      prlist.push_back(std::move(text));
+    }
+  } else if (token == YTICKS) {
+    point z;
+    int n = (int)parseFloat();
+    z.x = parseFloat() / wdx;
+    z.y = parseFloat() / wdy;
+    auto pl = std::make_unique<Polyline>(GI_TICKS);
+    Path l;
+    l.push_back(z);
+    for (int i = 0; i < n; i++) {
+      l.push_back(pp);
+      mtpp.transform(pp.x, pp.y);
+    }
+    pl->setPath(l);
+    prlist.push_back(std::move(pl));
+  }
+}
+
+GraphicsItemList Parser::parsePrimitives() {
+  GraphicsItemList prlist;
+  Structure *st = NULL;
+  Matrix mtst, mtpp, mtrs;
+  float pwmx, pwmy, pwdx, pwdy;
+  FontFace ff = FN_DEFAULT;
+  point pp;
+  string ctpathname;
+  Path ctpath;
+  bool is_concatenatepath_active = false;
+  bool using_mtlc = false;
+  is_spline_to_bezier = false;
+  spline_nodes_per_segment = 4;
+
+  currentDepth++;
+
+  // Push window
+  pwmx = wmx;
+  pwmy = wmy;
+  pwdx = wdx;
+  pwdy = wdy;
+  wmx = wmy = 0;
+  wdx = wdy = 1;
+
+  // dbprintf("Depth %d\n", depth);
+  while (1) {
+    lastyylex = yylex();
+
+    if (lastyylex==IDLISTA) {
+      string name = &yylval.s[1];
+      free(yylval.s);
+      if (is_concatenatepath_active) {
+        if (listmap.find(name)!=listmap.end()) {
+          concat_paths(ctpath, listmap[name], mtpt);
+        }
+      } else
+        listmap[name] = parsePath();
+      continue;
+    }
+
+    if (lastyylex == 0 || lastyylex == YCLST) {
+      // dbprintf("Endwillon %d ", lastyylex);
+      break;
+    }
+
+    switch (lastyylex) {
+    case YWW:
+      wmx = parseFloat();
+      wdx = parseFloat() - wmx;
+      wmy = parseFloat();
+      wdy = parseFloat() - wmy;
+      // dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
+      break;
+    case YOP: {
+      int primtype = yylval.i;
+      do {
+        std::unique_ptr<GraphicsItem> p = parsePrimitive(primtype);
+        if (p != NULL) {
+          prlist.push_back(std::move(p));
+        }
+      } while (lastyylex == YSEP);
+      break;
+    }
+    case YOPMAT: {
+      parseMatrixOp(lastyylex, prlist, mtpp, mtpt, mtrs, using_mtlc);
+      break;
+    }
+    case YDPST:
+    case YOPST:
+    case YLNST:
+    case YARCST:
+    case YMKST:
+    case YPVST:
+    case YRPST:
+    case YIDENTIFIER: {
+      parseStructureOp(lastyylex, prlist, st, mtpp, mtrs, pp);
+      break;
+    }
+    case YDEF:
+      parseDef(yylval.i);
+      break;
+    case YATRIB: {
+      parseAttribute(lastyylex, prlist, ff);
+      break;
+    }
+    case YGSTATE: {
+      parseGraphicsState(lastyylex, prlist, is_concatenatepath_active, ctpathname, ctpath, pp);
+    } break;
+    case YXYDT: {
+      pp = parsePoint();
+    }
+    case YDT: {
+      if (!using_mtlc) {
+        auto gs = std::make_unique<GraphicsState>();
         gs->setPosition(pp);
-        prlist.push_back(gs);
+        prlist.push_back(std::move(gs));
+      }
+      setBegin(cadena);
+      yylex();
+      std::unique_ptr<GraphicsItem> t = parse_text(&yylval.s[1], ff);
+      free(yylval.s);
+      prlist.push_back(std::move(t));
+      if (lastyylex==YDT) { // ojo, dt debe actualizar la posición de algún modo
         mtpp.transform(pp.x, pp.y);
-        sprintf(str, fmt, x);
-        Text *text = new Text();
-        text->setText(str);
-        text->setFontFace(ff);
-        prlist.push_back(text);
       }
       break;
     }
-    case YTICKS: {
-      point z;
-      n = (int)parseFloat();
-      z.x = parseFloat() / wdx;
-      z.y = parseFloat() / wdy;
-      Polyline *pl = new Polyline(GI_TICKS);
-      Path l;
-      l.push_back(z);
-      for (int i = 0; i < n; i++) {
-        l.push_back(pp);
-        mtpp.transform(pp.x, pp.y);
-      }
-      pl->setPath(l);
-      prlist.push_back(pl);
-    } break;
+    case YLISTA:
+    case YINVPT:
+    case YGNBZ:
+    case YRPPT:
+    case YNORMPT:
+    case YPVPT:
+    case YCONCATPATH: {
+      parsePathOp(lastyylex, is_concatenatepath_active, ctpathname, ctpath, mtpt);
+      break;
+    }
+    case YRPNUM:
+    case YTICKS:
+      parseTextOp(lastyylex, prlist, pp, mtpp, ff);
+      break;
     case YOBSOLETE:
       printf("Aviso: Comando obsoleto <>, usar el comando actual.\n");
       break;
@@ -894,7 +822,7 @@ GraphicsItemList Parser::parsePrimitives() {
     }
   }
 
-  depth--;
+  currentDepth--;
 
   // Pop window
   wmx = pwmx;
@@ -905,10 +833,12 @@ GraphicsItemList Parser::parsePrimitives() {
   return prlist;
 }
 
-MetaGrafica *Parser::parse() {
-  mg = new MetaGrafica();
+std::unique_ptr<MetaGrafica> Parser::parse() {
+  auto mg_ptr = std::make_unique<MetaGrafica>();
+  mg = mg_ptr.get();
   mg->setName("root");
   mg->setGraphicsItems(parsePrimitives());
+  mg = nullptr;
   // logprintf("Parseo terminado\n");
-  return mg;
+  return mg_ptr;
 }

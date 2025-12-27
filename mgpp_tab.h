@@ -1,46 +1,52 @@
+#ifndef MGPP_TAB_H
+#define MGPP_TAB_H
+
 typedef union {
   char *s;
   float f;
   int i;
 } YYSTYPE;
-#define YOP 258
-#define YGSTATE 260
-#define YOPS 261
-#define YDEF 262
-#define YFILL 263
-#define YOPMAT 264
-#define YATRIB 265
-#define YLISTA 266
-#define NUM 267
-#define YDT 268
-#define YXYDT 269
-#define YOPST 270
-#define YCLST 271
-#define YIDENTIFIER 272
-#define YTEXTO 273
-#define YINCLUYO 274
-#define IDLISTA 275
-#define YCLOSE 276
-#define YWW 277
-#define YDPST 278
-#define YSEP 279
-#define YPVST 280
-#define YMKST 281
-#define YARCST 282
-#define YLNST 283
-#define YRPST 284
-#define YXYPP 285
-#define YRPNUM 286
-#define YTICKS 287
-#define YEXIT 288
-#define YCONCATPATH 289
-#define YINVPT 290
-#define YRPPT 291
-#define YNORMPT 292
-#define YPVPT 293
-#define YGNBZ 294
-#define YOBSOLETE 295
 
-extern YYSTYPE yylval;
+enum Token {
+  YOP = 258,
+  YGSTATE = 260,
+  YOPS = 261,
+  YDEF = 262,
+  YFILL = 263,
+  YOPMAT = 264,
+  YATRIB = 265,
+  YLISTA = 266,
+  NUM = 267,
+  YDT = 268,
+  YXYDT = 269,
+  YOPST = 270,
+  YCLST = 271,
+  YIDENTIFIER = 272,
+  YTEXTO = 273,
+  YINCLUYO = 274,
+  IDLISTA = 275,
+  YCLOSE = 276,
+  YWW = 277,
+  YDPST = 278,
+  YSEP = 279,
+  YPVST = 280,
+  YMKST = 281,
+  YARCST = 282,
+  YLNST = 283,
+  YRPST = 284,
+  YXYPP = 285,
+  YRPNUM = 286,
+  YTICKS = 287,
+  YEXIT = 288,
+  YCONCATPATH = 289,
+  YINVPT = 290,
+  YRPPT = 291,
+  YNORMPT = 292,
+  YPVPT = 293,
+  YGNBZ = 294,
+  YOBSOLETE = 295
+};
 
 enum { DBBASIC = 1, DBPARSER = 2, DBMISC = 4 };
+
+#endif
