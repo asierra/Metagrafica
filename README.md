@@ -70,33 +70,33 @@ make
 ./mg examples/primitives.mg
 ```
 
-+### Quick Reference
-+
-+**Graphics Primitives**
-+
-+*   `PL x1 y1 ... }`: Polyline. Join all points of the path with straight lines.
-+*   `CR r [dq [q0]] : x1 y1 ... }`: Circles or arcs of radius `r`.
-+*   `BR x1 y1 x2 y2 }`: Rectangle defined by opposite corners.
-+*   `PG x1 y1 ... }`: Filled polygon.
-+*   `DOT r x1 y1 ... }`: Filled circles of radius `r`.
-+*   `BZ x1 y1 ... }`: Bezier curve.
-+*   `DT text`: Draw text at current position.
-+*   `XYDT x y text`: Draw text at position `x y`.
-+
-+### Examples
-+
-+A simple MG file with a corner, a circle and a message:
-+
-+```text
-+$D 12 8
-+WW 0 24 0 16
-+
-+PL 12 15  12 8  20 8 }
-+CR 6 : 12 8 }
-+
-+XYDT 8 10 Hello World!
-+```
-+
+### Quick Reference
+
+**Graphics Primitives**
+
+*   `PL x1 y1 ... }`: Polyline. Join all points of the path with straight lines.
+*   `CR r [dq [q0]] : x1 y1 ... }`: Circles or arcs of radius `r`.
+*   `BR x1 y1 x2 y2 }`: Rectangle defined by opposite corners.
+*   `PG x1 y1 ... }`: Filled polygon.
+*   `DOT r x1 y1 ... }`: Filled circles of radius `r`.
+*   `BZ x1 y1 ... }`: Bezier curve.
+*   `DT text`: Draw text at current position.
+*   `XYDT x y text`: Draw text at position `x y`.
+
+### Examples
+
+A simple MG file with a corner, a circle and a message:
+
+```text
+$D 12 8
+WW 0 24 0 16
+
+PL 12 15  12 8  20 8 }
+CR 6 : 12 8 }
+
+XYDT 8 10 Hello World!
+```
+
 ## License
 
 GPL 3.0
