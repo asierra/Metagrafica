@@ -1,10 +1,7 @@
 List of things still to do
 
 - Loops to draw and create structures
-
 - Passing parameters to OPST
-
 - Recursitivy
-
 - A new cleaner parser with better feedback to final users.
-
+- Interactive option, with JS and HTML5 canvas.

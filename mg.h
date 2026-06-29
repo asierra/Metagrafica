@@ -8,8 +8,8 @@ MetaGrafica:  Human descriptive language to generate publication quality
     Version:  2024
 Antecedents: 2011, 1999 C++ STL; 1991 C; Original: 1988 Pascal and Assembler.
 */
-#if !defined(__MG_H)
-#define __MG_H
+#if !defined(MG_H)
+#define MG_H
 
 #include "version.h"
 #include "text.h"
@@ -20,10 +20,11 @@ Antecedents: 2011, 1999 C++ STL; 1991 C; Original: 1988 Pascal and Assembler.
 class Structure {
 public:
   Structure() { times_used = 0; defined_in_device = false; }
+  virtual ~Structure() = default;
 
   void draw(Display &);
 
-  string getName() { return name; }
+  std::string getName() const { return name; }
 
   int setName(string n, const map<string, std::unique_ptr<Structure>>& smap) {
     if (smap.count(n)) return -1;
@@ -40,7 +41,8 @@ public:
 
   void setGraphicsItems(GraphicsItemList p) { prlist = std::move(p); }
  
-  bool isDefinedInDevice() { return defined_in_device; }
+  bool isDefinedInDevice() const { return defined_in_device; }
+
 
   void incUses() { times_used++; }
 
@@ -49,7 +51,7 @@ public:
   void setDefinedInDevice() { defined_in_device = true; }
 
 protected:
-  string name;
+  std::string name;
   unsigned times_used;
   bool defined_in_device;
   GraphicsItemList prlist;
@@ -62,13 +64,13 @@ protected:
  */
 class StructureUser : public GraphicsItem {
 public:
-  StructureUser() : GraphicsItem(GI_STRUCTURE_REF) { }
+  StructureUser() : GraphicsItem(GI_STRUCTURE_REF), structure(nullptr) { }
   
-  ~StructureUser() { structure->decUses(); }
+  ~StructureUser() { if (structure) structure->decUses(); }
 
-  void setStructure(Structure *s) { structure = s; structure->incUses(); }
+  void setStructure(Structure *s) { structure = s; if (structure) structure->incUses(); }
 
-  void draw(Display &)=0;
+  void draw(Display &) override = 0;
 protected:
   Structure* structure;
 };
@@ -81,7 +83,7 @@ class StructureRectangle : public StructureUser {
 public:
   void setPoints(point q1, point q2) {  llp = q1; rup = q2; }
 
-  void draw(Display &);
+  void draw(Display &) override;
 private:
   point llp, rup;
 };
@@ -99,7 +101,7 @@ public:
   void setShift(float p) {  shift = p; }
   void setGap(float p) {  gap = p; }
   void setBothSides(bool both=true) { both_sides = both; }
-  void draw(Display &);
+  void draw(Display &) override;
 private:
   void draw_side(Display &g, bool side);
   point scale;
@@ -123,7 +125,7 @@ public:
   void setPoint(point q1) {  pos = q1; }
   void setShift(float p) {  shift = p; }
   void setBothSides(bool both=true) { both_sides = both; }
-  void draw(Display &);
+  void draw(Display &) override;
 private:
   void draw_side(Display &g, bool side);
   point scale;
@@ -142,7 +144,7 @@ class StructurePath : public StructureUser {
 public:
   void setPath(Path p) {  path = p; }
 
-  void draw(Display &);
+  void draw(Display &) override;
 private:
   Path path;
 };
