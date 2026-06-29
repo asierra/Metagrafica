@@ -130,7 +130,6 @@ int dblevel=0;
 %option yylineno
 %option c++
 %option yyclass="MGLexer"
-%option outfile="lexmg.cpp"
 %option noyywrap
 %option noyymore
 %option noreject

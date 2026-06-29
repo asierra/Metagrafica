@@ -56,7 +56,7 @@ uninstall:
 	rm ${MANPREFIX}/man1/mg.1
 
 clean:
-	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1
+	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp
 # DO NOT DELETE
 
 $(OBJDIR)/EPSDisplay.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
