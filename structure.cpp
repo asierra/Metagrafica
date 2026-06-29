@@ -4,9 +4,9 @@
 #include "Display.h"
 
 
-void Structure::define_in_device(Display &g, map<string, Structure*>& smap) {
-  for (auto it : smap) {
-    Structure* st = it.second;
+void Structure::define_in_device(Display &g, const map<string, std::unique_ptr<Structure>>& smap) {
+  for (auto& it : smap) {
+    Structure* st = it.second.get();
     printf("Structure name %s\n", st->getName().c_str());
     if (st->times_used > 1 && !st->isDefinedInDevice()) {
       g.structureDefBegin(st->getName());
@@ -17,17 +17,10 @@ void Structure::define_in_device(Display &g, map<string, Structure*>& smap) {
   }
 }
 
-void MetaGrafica::cleanup() {
-  for (auto it = structure_map.begin(); it != structure_map.end(); ) {
-    if (it->second != this) {
-      delete it->second;
-    }
-    it = structure_map.erase(it);
-  }
-}
-
 MetaGrafica::~MetaGrafica() {
-  cleanup();
+  // Destroy StructureUsers in prlist before the map releases the Structures
+  // they reference, to avoid decUses() on freed memory.
+  prlist.clear();
 }
 
 void Structure::draw(Display &g) {

@@ -361,14 +361,16 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     }
     case YOPST: {
       string name = parseString();
-      Structure *strct = mg->getStructure(name);
-      if (strct) {
+      if (mg->getStructure(name)) {
         fprintf(stderr, "Error: ya existe la Structure %s.\n", name.c_str());
+        break;
       }
       GraphicsItemList p = parsePrimitives();
-      st = new Structure();
-      st->setName(name, mg->structure_map);
+      auto st_ptr = std::make_unique<Structure>();
+      st_ptr->setName(name, mg->structure_map);
+      st = st_ptr.get();
       st->setGraphicsItems(std::move(p));
+      mg->structure_map[name] = std::move(st_ptr);
       break;
     }
     case YLNST: {

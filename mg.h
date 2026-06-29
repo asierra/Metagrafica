@@ -25,22 +25,18 @@ public:
 
   string getName() { return name; }
 
-  int setName(string n, map<string, Structure*>& smap) {
-    if (smap.find(n) == smap.end()) {
-      name = n;
-      smap[name] = this;
-    } else {
-      return -1;
-    }
+  int setName(string n, const map<string, std::unique_ptr<Structure>>& smap) {
+    if (smap.count(n)) return -1;
+    name = n;
     return 0;
   }
 
-  static Structure* getStructure(string nombre, map<string, Structure*>& smap) {
+  static Structure* getStructure(string nombre, const map<string, std::unique_ptr<Structure>>& smap) {
     auto it = smap.find(nombre);
-    return (it != smap.end()) ? it->second : nullptr;
+    return (it != smap.end()) ? it->second.get() : nullptr;
   }
 
-  static void define_in_device(Display &g, map<string, Structure*>& smap);
+  static void define_in_device(Display &g, const map<string, std::unique_ptr<Structure>>& smap);
 
   void setGraphicsItems(GraphicsItemList p) { prlist = std::move(p); }
  
@@ -159,15 +155,13 @@ public:
 
   void draw(Display &);
 
-  map<string, Structure*> structure_map;
+  map<string, std::unique_ptr<Structure>> structure_map;
 
-  int setName(string n) { return Structure::setName(n, structure_map); }
+  int setName(string n) { name = n; return 0; }
 
   Structure* getStructure(string name) {
     return Structure::getStructure(name, structure_map);
   }
-
-  void cleanup();
 
   void setDimension(float x, float y) {
     dcmx = x;

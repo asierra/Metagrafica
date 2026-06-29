@@ -1,6 +1,6 @@
 /*
        File:  EPSDisplay.h
-              Implementation of graphics items like primitives, atributes and 
+              Implementation of graphics items like primitives, atributes and
               transformations in Encapsulated PostScript.
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
@@ -9,7 +9,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 #if !defined(__EPSDISPLAY_H)
-#define __EPSDISPLAY_H 
+#define __EPSDISPLAY_H
 
 #include <stdio.h>
 #include <stack>
@@ -19,78 +19,76 @@ using std::stack;
 #include "mgflags.h"
 
 class EPSDisplay: public Display {
-   
+
  public:
-   ///
-   EPSDisplay(string);
-   /// 
-   void start();
-   ///
-   void end();
-   /// 
-   void stroke();      
-   ///
-   void save();
-   ///
-   void restore();
-   ///
-   void setLineStyle(int);
-   void setLineWidth(float);
-   void useFillPattern();
-   void setColor(int lc);
-   void setLineColor(int lc);
-   void setGray(float fg);
+  EPSDisplay(string);
 
-   ///
-   void setOpenPath(bool op);
-   
-   void setLogFile(FILE *f) { logfile = f; }
-  ///
-  void structureDefBegin(std::string);
-  ///
-  void structureDefEnd();
-  ///
-  void structure(std::string);
-  ///
-  void translate(float x, float y, PredefinedMatrix pdmt=MTLC);
-  ///
-  void scale(float x, float y, PredefinedMatrix pdmt=MTLC);
-  ///
-  void shear(float x, float y, PredefinedMatrix pdmt=MTLC);
-  ///
-  void rotate(float angle, PredefinedMatrix pdmt=MTLC);
-  ///
-  void compose(Matrix mt, PredefinedMatrix pdmt=MTLC);
-  ///
-  void init_matrix(PredefinedMatrix mt=MTLC);
+  MGFlags flags;
 
-  void pushMatrix(Matrix &);
-  void pushMatrix(PredefinedMatrix);
-  void saveMatrix(PredefinedMatrix);
-  void popMatrix();
-  void popMatrix(PredefinedMatrix);
-
- protected: 
-  void moveto_nopath(float, float);
-  void moveto(float, float);
-  void rmoveto(float, float);
-  void lineto(float, float);
-  void rlineto(float, float);
-  void line(float, float, float, float);
-  void rline(float, float, float, float);
-  void rect(float, float, float, float);
-  void curveto(float, float, float, float, float, float);
-  void text(string);
-  void setFontSize(float p);
-  void setFontFace(FontFace face);
-  void arc(float x, float y, float rx,float ry, float startAng, float endAng);
-  void dot(float x, float y, float r);
-  void setRelFontSize(float rfz) {
-    if (rfz==relfontsize)
-    return;
-    relfontsize = rfz; 
-    dspstate.fontFace = FN_NOFACE; 
+  ~EPSDisplay() {
+    if (file) { fflush(file); fclose(file); file = nullptr; }
   }
+
+  void start() override;
+  void end() override;
+  void stroke() override;
+  void save() override;
+  void restore() override;
+
+  void setLineStyle(int) override;
+  void setLineWidth(float) override;
+  void setLineColor(int lc) override;
+  void setOpenPath(bool op) override;
+
+  void setLogFile(FILE *f) { logfile = f; }
+
+  void structureDefBegin(std::string) override;
+  void structureDefEnd() override;
+  void structure(std::string) override;
+
+  void translate(float x, float y, PredefinedMatrix pdmt=MTLC) override;
+  void scale(float x, float y, PredefinedMatrix pdmt=MTLC) override;
+  void shear(float x, float y, PredefinedMatrix pdmt=MTLC) override;
+  void rotate(float angle, PredefinedMatrix pdmt=MTLC) override;
+  void compose(Matrix mt, PredefinedMatrix pdmt=MTLC) override;
+  void init_matrix(PredefinedMatrix mt=MTLC) override;
+
+  void pushMatrix(Matrix &) override;
+  void pushMatrix(PredefinedMatrix) override;
+  void saveMatrix(PredefinedMatrix) override;
+  void popMatrix() override;
+  void popMatrix(PredefinedMatrix) override;
+
+  void setMGContext(MetaGrafica* mg) override { mg_context = mg; }
+
+  // EPSDisplay-specific
+  void useFillPattern();
+  void setColor(int lc);
+  void setGray(float fg);
+
+ protected:
+  void moveto_nopath(float, float) override;
+  void moveto(float, float) override;
+  void rmoveto(float, float) override;
+  void lineto(float, float) override;
+  void rlineto(float, float) override;
+  void line(float, float, float, float) override;
+  void rect(float, float, float, float) override;
+  void curveto(float, float, float, float, float, float) override;
+  void text(string) override;
+  void setFontSize(float p) override;
+  void setFontFace(FontFace face) override;
+  void arc(float x, float y, float rx, float ry, float startAng, float endAng) override;
+  void dot(float x, float y, float r) override;
+  void setRelFontSize(float rfz) override {
+    if (rfz==relfontsize)
+      return;
+    relfontsize = rfz;
+    dspstate.fontFace = FN_NOFACE;
+  }
+
+  // EPSDisplay-specific
+  void rline(float, float, float, float);
   void getTextSize(string s, float *w, float *h);
   void set_limits(float x1, float y1, float x2, float y2) {
     xmin = x1;
@@ -99,23 +97,11 @@ class EPSDisplay: public Display {
     ymax = y2;
   }
   void adjust_limits(float x1, float y1, float x2, float y2) {
-    if (x1 < xmin)
-      xmin = x1;
-    if (x2 > xmax)
-      xmax = x2;
-    if (y1 < ymin)
-      ymin = y1;
-    if (y2 > ymax)
-      ymax = y2;
+    if (x1 < xmin) xmin = x1;
+    if (x2 > xmax) xmax = x2;
+    if (y1 < ymin) ymin = y1;
+    if (y2 > ymax) ymax = y2;
   }
- public:
-  MGFlags flags;
-
-  ~EPSDisplay() {
-    if (file) { fflush(file); fclose(file); file = nullptr; }
-  }
-
-  void setMGContext(MetaGrafica* mg) override { mg_context = mg; }
 
  private:
   string filename;
