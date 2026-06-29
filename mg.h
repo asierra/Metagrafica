@@ -25,48 +25,38 @@ public:
 
   string getName() { return name; }
 
-  int setName(string n) { 
-    if (structure_map.find(n)==structure_map.end()) {
-      name = n; 
-      structure_map[name] = this; //.insert({name, this});
+  int setName(string n, map<string, Structure*>& smap) {
+    if (smap.find(n) == smap.end()) {
+      name = n;
+      smap[name] = this;
     } else {
-      // Error: The name already exists.
       return -1;
     }
     return 0;
   }
 
-  static Structure* getStructure(string nombre) { 
-    if (structure_map.find(nombre)==structure_map.end()) {
-      // Error: The structure named nombre doesn't exist.
-      return nullptr;
-    } else {
-      return structure_map[nombre];
-    }
+  static Structure* getStructure(string nombre, map<string, Structure*>& smap) {
+    auto it = smap.find(nombre);
+    return (it != smap.end()) ? it->second : nullptr;
   }
 
-  static void define_in_device(Display &g);
-  
+  static void define_in_device(Display &g, map<string, Structure*>& smap);
+
   void setGraphicsItems(GraphicsItemList p) { prlist = std::move(p); }
  
   bool isDefinedInDevice() { return defined_in_device; }
-  
+
   void incUses() { times_used++; }
-  
+
   void decUses() { times_used--; }
 
   void setDefinedInDevice() { defined_in_device = true; }
-  
+
 protected:
   string name;
   unsigned times_used;
   bool defined_in_device;
   GraphicsItemList prlist;
-private:
-  /// Contains all defined structures
-  static map<string, Structure*> structure_map;
-public:
-  static void cleanup();
 };
 
 
@@ -164,10 +154,20 @@ private:
 
 class MetaGrafica : public Structure {
 public:
-  ///
   MetaGrafica();
-  ///
+  ~MetaGrafica();
+
   void draw(Display &);
+
+  map<string, Structure*> structure_map;
+
+  int setName(string n) { return Structure::setName(n, structure_map); }
+
+  Structure* getStructure(string name) {
+    return Structure::getStructure(name, structure_map);
+  }
+
+  void cleanup();
 
   void setDimension(float x, float y) {
     dcmx = x;

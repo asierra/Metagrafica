@@ -5,8 +5,6 @@
 using std::stack;
 
 
-extern bool is_using_reencode;
-extern bool is_using_fontcmmi;
 
 const string ALFABETIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const string TOKENLIM = "{}^$_/\\ ";
@@ -132,7 +130,7 @@ string UTF8toISO8859_1(const char * in)
 
 string font_style_codes="beigrsct$";
 
-FontFace change_font_face(unsigned char code_font_face, FontFace font_face) {
+FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool& using_fontcmmi) {
   switch (code_font_face) {
   case 'b':
     if (font_face < FN_SYMBOL)                      // There is no bold for symbol
@@ -162,7 +160,7 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face) {
     break;
   case '$':
     font_face = FN_TEX_CMMI;
-    is_using_fontcmmi = true;
+    using_fontcmmi = true;
     break;
   default:
     fprintf(stderr, "Warning: font face style unknown <%c>.\n", code_font_face);
@@ -173,7 +171,7 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face) {
 }
 
 
-FontFace get_font_face_from_string(string s) {
+FontFace get_font_face_from_string(string s, bool& using_fontcmmi) {
   string out;
   FontFace font_face = FN_DEFAULT;
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -192,20 +190,20 @@ FontFace get_font_face_from_string(string s) {
     return FN_NOFACE;
   }
   for (auto &cff : out) {
-    font_face = change_font_face(cff, font_face);
+    font_face = change_font_face(cff, font_face, using_fontcmmi);
   }
   return font_face;
 }
 
 
-unsigned char get_symbol_code(string symbol_name, FontFace &font_face)
+unsigned char get_symbol_code(string symbol_name, FontFace &font_face, bool& using_fontcmmi)
 {
   unsigned char symbol_code;
-   
-  if (map_tex_cmmi.find(symbol_name) != map_tex_cmmi.end()) {  
+
+  if (map_tex_cmmi.find(symbol_name) != map_tex_cmmi.end()) {
     symbol_code = map_tex_cmmi[symbol_name];
     font_face = FN_TEX_CMMI;
-    is_using_fontcmmi = true;
+    using_fontcmmi = true;
   } else if (map_symbol.find(symbol_name) != map_symbol.end()) {  
     symbol_code = map_symbol[symbol_name];
     font_face = FN_SYMBOL;
@@ -297,7 +295,7 @@ void add_word(string word, FontFace font_face)
   tspop();
 }
 
-std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
+std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& using_reencode, bool& using_fontcmmi)
 {
   if (input_utf8.size()==0) {
     fprintf(stderr, "Error: void text.\n");
@@ -311,7 +309,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
   string input = UTF8toISO8859_1(input_utf8.c_str());
   for (char & c : input) 
     if (c < 0) {
-      is_using_reencode = true;
+      using_reencode = true;
       break;
     }
   int v_end, it=0, iend = input.size();
@@ -336,7 +334,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
           v_end = iend;
         if (v_end > it && v_end <= iend) {
           string variable = input.substr(it, v_end - it);
-          unsigned char code = get_symbol_code(variable, font_face);
+          unsigned char code = get_symbol_code(variable, font_face, using_fontcmmi);
           if (code > 0) {
             text_state.font_face = font_face;
             accum.push_back(code);
@@ -390,7 +388,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
     case '/': {
       std::size_t found = font_style_codes.find(input[it+1]);
       if (found!=std::string::npos) {
-        font_face = change_font_face(input[++it], text_state.font_face);
+        font_face = change_font_face(input[++it], text_state.font_face, using_fontcmmi);
         if (font_face != text_state.font_face) {
           textflush();
           text_state.font_face = font_face;
@@ -406,7 +404,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
         v_end = iend;
       if (v_end > it && v_end <= iend) {
         string variable = input.substr(it, v_end - it);
-        unsigned char code = get_symbol_code(variable, font_face);
+        unsigned char code = get_symbol_code(variable, font_face, using_fontcmmi);
         if (code > 0)
           add_symbol(code, font_face);
         else {
@@ -420,7 +418,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff)
       }
       break;
     case '-': // Best - in Latin1
-      is_using_reencode = true;
+      using_reencode = true;
     default:
       accum.push_back(c);
     }

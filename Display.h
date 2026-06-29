@@ -15,6 +15,8 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #include <string>
 using std::string;
 
+class MetaGrafica;
+
 constexpr float point_to_cm =  0.03527777777777;
 constexpr float cm_to_point = 28.34645669291339;
 
@@ -160,6 +162,8 @@ public:
 
   void setTextAlign(int a) { dspstate.text_align = a; }
   int getTextAlign() { return dspstate.text_align; }
+
+  virtual void setMGContext(MetaGrafica*) {}
 
   virtual void save() = 0;
   virtual void restore() = 0;

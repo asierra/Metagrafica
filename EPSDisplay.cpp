@@ -4,12 +4,6 @@
 #include <math.h>
 
 
-bool is_using_dot=false;
-bool is_using_ellipse=false;
-bool is_using_reencode=false;
-bool is_using_textalign=false;
-bool is_using_fontcmmi=false;
-bool is_using_hatcher=false;
 
 string ps_creator = R"(%%Creator: MetaGrafica v4.0 2023
 "%%CreationDate: DATE)";
@@ -275,23 +269,23 @@ EPSDisplay::EPSDisplay(string f) {
 }
 
 void EPSDisplay::start() {
-  dvx *= cm_to_point + 0.5;
-  dvy *= cm_to_point + 0.5;
+  dvx = dvx * cm_to_point + 0.5;
+  dvy = dvy * cm_to_point + 0.5;
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n", filename.c_str());
   fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n%%%%EndComments\n", (int)dvx,
           (int)dvy);
-  if (is_using_ellipse)
+  if (flags.using_ellipse)
     fprintf(file, "%s", ps_ellipse);
-  if (is_using_dot)
+  if (flags.using_dot)
     fprintf(file, "%s", ps_dot);
-  if (is_using_textalign)
+  if (flags.using_textalign)
     fprintf(file, "%s", ps_simpletextalign);
-  if (is_using_reencode)
+  if (flags.using_reencode)
     fprintf(file, "%s", ps_reencode);
-  if (is_using_hatcher)
+  if (flags.using_hatcher)
     fprintf(file, "%s", ps_hatchers);
-  if (is_using_fontcmmi) {
+  if (flags.using_fontcmmi) {
     fprintf(file, "%s", font_cmmi1.c_str());
     fprintf(file, "%s", font_cmmi2.c_str());
   }
@@ -304,8 +298,7 @@ void EPSDisplay::start() {
 
 void EPSDisplay::end() {
   fprintf(stderr, "Closing %s\n", filename.c_str());
-  fflush(file);
-  fclose(file);
+  if (file) { fflush(file); fclose(file); file = nullptr; }
 }
 
 void EPSDisplay::moveto_nopath(float x, float y) {
@@ -428,7 +421,7 @@ void EPSDisplay::setFontFace(FontFace face) {
 
   string font;
   string prefix = "/";
-  if (is_using_reencode)
+  if (flags.using_reencode)
     prefix += "ISO";
   switch (face) {
   default:
@@ -464,6 +457,7 @@ void EPSDisplay::setFontFace(FontFace face) {
     break;
   case FN_COURIER:
     font = prefix+"Courier";
+    break;
   case FN_COURIER_ITALIC:
     font = prefix+"Courier-Italic";
     break;
@@ -661,7 +655,11 @@ void EPSDisplay::structureDefBegin(std::string name) {
 void EPSDisplay::structureDefEnd() { fprintf(file, "} bind def\n"); }
 
 void EPSDisplay::structure(std::string name) {
-  Structure *strct = Structure::getStructure(name);
+  Structure *strct = mg_context ? mg_context->getStructure(name) : nullptr;
+  if (!strct) {
+    fprintf(stderr, "Error: estructura '%s' no definida\n", name.c_str());
+    return;
+  }
   if (strct->isDefinedInDevice())
     fprintf(file, "%s\n", name.c_str());
   else {

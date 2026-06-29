@@ -33,11 +33,11 @@ class Matrix {
 public:
   Matrix();
 
-  Matrix operator=(Matrix);
+  Matrix& operator=(const Matrix&);
 
-  Matrix operator*(Matrix);
+  Matrix operator*(const Matrix&);
 
-  Matrix operator*=(Matrix);
+  Matrix& operator*=(const Matrix&);
 
   //bool operator==(Matrix);
 
@@ -64,7 +64,7 @@ public:
   bool is_identity();
 
   //void getAfinData();
-  void matmat(DataMatrix b);
+  void matmat(const DataMatrix b);
 
   void print();
 

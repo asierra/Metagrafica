@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-extern bool is_using_dot;
-extern bool is_using_ellipse;
-extern bool is_using_hatcher;
-extern bool is_using_textalign;
 
 // Macros de compatibilidad para MGLexer
 #define yylval lexer->yylval
@@ -38,7 +34,7 @@ map<string, int> map_color = {
 };
 
 int get_color_from_string(string colorstr) {
-  const string HEXDIGIT = "0123456789abcdf";
+  const string HEXDIGIT = "0123456789abcdef";
   int col = 0;
   bool outline=false;
 
@@ -210,7 +206,7 @@ std::unique_ptr<GraphicsItem> Parser::parsePrimitive(int type) {
       }
       pl = std::move(e);
     } else if (type == GI_ELLIPSE && k > 1) {
-      is_using_ellipse = true;
+      flags.using_ellipse = true;
       auto e = std::make_unique<Arc>();
       e->setRadius(r[0] / wdx, r[1] / wdy);
       if (k > 2) {
@@ -225,7 +221,7 @@ std::unique_ptr<GraphicsItem> Parser::parsePrimitive(int type) {
   }
   case GI_DOT:
     if (yylex() == NUM) {
-      is_using_dot = true;
+      flags.using_dot = true;
       float r = yylval.f / 2.0;
       auto d = std::make_unique<Dot>();
       d->setRadius(r);
@@ -350,7 +346,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
   switch (token) {
     case YDPST: {
       string name = parseString();
-      Structure *strct = Structure::getStructure(name);
+      Structure *strct = mg->getStructure(name);
       if (!strct) {
         fprintf(stderr, "Error: Structure no definida <%s>\n", name.c_str());
         break;
@@ -365,13 +361,13 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     }
     case YOPST: {
       string name = parseString();
-      Structure *strct = Structure::getStructure(name);
+      Structure *strct = mg->getStructure(name);
       if (strct) {
         fprintf(stderr, "Error: ya existe la Structure %s.\n", name.c_str());
       }
       GraphicsItemList p = parsePrimitives();
       st = new Structure();
-      st->setName(name);
+      st->setName(name, mg->structure_map);
       st->setGraphicsItems(std::move(p));
       break;
     }
@@ -451,7 +447,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     } break;
     case YMKST: {
       string name = parseString();
-      st = Structure::getStructure(name);
+      st = mg->getStructure(name);
     } break;
     case YPVST: {
       if (st) {
@@ -508,7 +504,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     case YIDENTIFIER: {
       string name = yylval.s;
       free(yylval.s);
-      Structure *strct = Structure::getStructure(name);
+      Structure *strct = mg->getStructure(name);
       if (!strct) {
         fprintf(stderr, "Error: invalid identifief [%s]\n", name.c_str());
       } else {
@@ -610,9 +606,9 @@ void Parser::parseAttribute(int token, GraphicsItemList &prlist, FontFace &ff) {
   AttributeType type = (AttributeType)yylval.i;
   auto at = std::make_unique<Attribute>();
   if (type == AT_TALIGN)
-    is_using_textalign = true;
+    flags.using_textalign = true;
   if (type == AT_FPATRN)
-    is_using_hatcher = true;
+    flags.using_hatcher = true;
   if (type == AT_LCOLOR || type == AT_FCOLOR) {
     setBegin(cadena);
     yylex();
@@ -622,7 +618,7 @@ void Parser::parseAttribute(int token, GraphicsItemList &prlist, FontFace &ff) {
   } else if (type == AT_TSTYLE) {
     setBegin(cadena);
     yylex();
-    ff = get_font_face_from_string(&yylval.s[1]);
+    ff = get_font_face_from_string(&yylval.s[1], flags.using_fontcmmi);
     free(yylval.s);
     if (ff != FN_NOFACE)
       at->set(type, ff);
@@ -790,7 +786,7 @@ GraphicsItemList Parser::parsePrimitives() {
       }
       setBegin(cadena);
       yylex();
-      std::unique_ptr<GraphicsItem> t = parse_text(&yylval.s[1], ff);
+      std::unique_ptr<GraphicsItem> t = parse_text(&yylval.s[1], ff, flags.using_reencode, flags.using_fontcmmi);
       free(yylval.s);
       prlist.push_back(std::move(t));
       if (lastyylex==YDT) { // ojo, dt debe actualizar la posición de algún modo

@@ -13,6 +13,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 
 #include "mg.h"
 #include "MGLexer.h"
+#include "mgflags.h"
 #include <memory>
 #include <fstream>
 
@@ -33,14 +34,15 @@ public:
   Parser(string filename);
   ///
   ~Parser();
-  ///
   std::unique_ptr<MetaGrafica> parse();
-  ///
+
   string getName() { return filename; }
-  ///
+
   string getCanonicalName() { return canfilename; }
-  ///
+
   void setLogFile(FILE *);
+
+  MGFlags flags;
 
 private:
   float parseFloat();

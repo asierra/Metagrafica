@@ -37,9 +37,8 @@ int main(int argc, char **argv) {
 
   string outname = parser.getCanonicalName() + ".eps";
   EPSDisplay g(outname);
+  g.flags = parser.flags;
   mg->draw(g);
-
-  Structure::cleanup();
 
   return 0;
 }

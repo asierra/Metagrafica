@@ -4,21 +4,20 @@
 
 constexpr DataMatrix MATIDEN = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 
-Matrix::Matrix() { memcpy(M, MATIDEN, sizeof(Matrix)); }
+Matrix::Matrix() { memcpy(M, MATIDEN, sizeof(DataMatrix)); }
 
-Matrix Matrix::operator=(Matrix A) {
-  memcpy(M, A.M, sizeof(Matrix));
-
+Matrix& Matrix::operator=(const Matrix& A) {
+  memcpy(M, A.M, sizeof(DataMatrix));
   return *this;
 };
 
-void Matrix::initialize() { memcpy(M, MATIDEN, sizeof(Matrix)); }
+void Matrix::initialize() { memcpy(M, MATIDEN, sizeof(DataMatrix)); }
 
-void Matrix::set(DataMatrix m) { memcpy(M, m, sizeof(Matrix)); }
+void Matrix::set(DataMatrix m) { memcpy(M, m, sizeof(DataMatrix)); }
 
 void Matrix::scale(float x, float y) {
   DataMatrix A;
-  memcpy(A, MATIDEN, sizeof(Matrix));
+  memcpy(A, MATIDEN, sizeof(DataMatrix));
   A[0][0] = x;
   A[1][1] = y;
   matmat(A);
@@ -26,7 +25,7 @@ void Matrix::scale(float x, float y) {
 
 void Matrix::shear(float x, float y) {
   DataMatrix A;
-  memcpy(A, MATIDEN, sizeof(Matrix));
+  memcpy(A, MATIDEN, sizeof(DataMatrix));
   A[0][1] = x;
   A[1][0] = y;
   matmat(A);
@@ -34,7 +33,7 @@ void Matrix::shear(float x, float y) {
 
 void Matrix::translate(float x, float y) {
   DataMatrix A;
-  memcpy(A, MATIDEN, sizeof(Matrix));
+  memcpy(A, MATIDEN, sizeof(DataMatrix));
   A[0][2] = x;
   A[1][2] = y;
   matmat(A);
@@ -48,7 +47,7 @@ void Matrix::to_rectangle(float x1, float y1, float x2, float y2) {
 
 void Matrix::rotate(float theta) {
   DataMatrix A;
-  memcpy(A, MATIDEN, sizeof(Matrix));
+  memcpy(A, MATIDEN, sizeof(DataMatrix));
   theta *= deg2rad;
   float cs=cos(theta), sn=sin(theta);
 
@@ -73,14 +72,13 @@ void Matrix::transf2d(float &x, float &y) {
   y = M[1][0] * xp + M[1][1] * yp;
 }
 
-Matrix Matrix::operator*(Matrix B) {
+Matrix Matrix::operator*(const Matrix& B) {
   Matrix A(*this);
-
   A.matmat(B.M);
   return A;
 }
 
-Matrix Matrix::operator*=(Matrix B) {
+Matrix& Matrix::operator*=(const Matrix& B) {
   matmat(B.M);
   return *this;
 }
@@ -92,10 +90,10 @@ bool Matrix::operator==(Matrix B) {
 }
 */
 
-void Matrix::matmat(DataMatrix b) {
+void Matrix::matmat(const DataMatrix b) {
   DataMatrix a;
 
-  memcpy(a, M, sizeof(Matrix));
+  memcpy(a, M, sizeof(DataMatrix));
 
   for (int i = 0; i < 3; i++) {
     M[0][i] = a[0][0] * b[0][i] + a[0][1] * b[1][i] + a[0][2] * b[2][i];

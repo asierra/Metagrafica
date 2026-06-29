@@ -16,10 +16,10 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 
 // input a complex utf8 string
 // output a set of string chunks latin1 single char per character
-std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff);
+std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& using_reencode, bool& using_fontcmmi);
 
-FontFace change_font_face(unsigned char code_font_face, FontFace font_face);
+FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool& using_fontcmmi);
 
-FontFace get_font_face_from_string(string s);
+FontFace get_font_face_from_string(string s, bool& using_fontcmmi);
 
 #endif

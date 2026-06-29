@@ -16,6 +16,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 using std::stack;
 
 #include "Display.h"
+#include "mgflags.h"
 
 class EPSDisplay: public Display {
    
@@ -107,10 +108,20 @@ class EPSDisplay: public Display {
     if (y2 > ymax)
       ymax = y2;
   }
+ public:
+  MGFlags flags;
+
+  ~EPSDisplay() {
+    if (file) { fflush(file); fclose(file); file = nullptr; }
+  }
+
+  void setMGContext(MetaGrafica* mg) override { mg_context = mg; }
+
  private:
   string filename;
-  FILE *file;
-  FILE *logfile;
+  FILE *file = nullptr;
+  FILE *logfile = nullptr;
+  MetaGrafica* mg_context = nullptr;
   float xmin, xmax, ymin, ymax;
   float relfontsize;
 

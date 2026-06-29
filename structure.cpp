@@ -4,24 +4,10 @@
 #include "Display.h"
 
 
-std::map<std::string, Structure*> Structure::structure_map;
-
-void Structure::cleanup() {
-  for (auto it = structure_map.begin(); it != structure_map.end(); ) {
-    // No borramos "root" porque main posee su unique_ptr
-    if (it->first != "root") {
-      delete it->second;
-    }
-    it = structure_map.erase(it);
-  }
-}
-
-
- void Structure::define_in_device(Display &g) {
-  for (auto it : structure_map) {
+void Structure::define_in_device(Display &g, map<string, Structure*>& smap) {
+  for (auto it : smap) {
     Structure* st = it.second;
     printf("Structure name %s\n", st->getName().c_str());
-
     if (st->times_used > 1 && !st->isDefinedInDevice()) {
       g.structureDefBegin(st->getName());
       st->draw(g);
@@ -29,6 +15,19 @@ void Structure::cleanup() {
       st->setDefinedInDevice();
     }
   }
+}
+
+void MetaGrafica::cleanup() {
+  for (auto it = structure_map.begin(); it != structure_map.end(); ) {
+    if (it->second != this) {
+      delete it->second;
+    }
+    it = structure_map.erase(it);
+  }
+}
+
+MetaGrafica::~MetaGrafica() {
+  cleanup();
 }
 
 void Structure::draw(Display &g) {
@@ -151,7 +150,7 @@ void StructureArc::draw_side(Display &g, bool side) {
   if (g.getRatio() > 1.0) {
     stpos.x *= g.getRatio();
   } else if (g.getRatio() < 1.0) {
-    stpos.x *= g.getRatio();
+    stpos.y /= g.getRatio();
   }
   stpos.x += pos.x;
   stpos.y += pos.y;
@@ -186,6 +185,7 @@ MetaGrafica::MetaGrafica() : Structure() {
 }
 
 void MetaGrafica::draw(Display &g) {
+  g.setMGContext(this);
   if (dcmx > 0)
     g.setDimension(dcmx, dcmy);
   if (fontsize > 0)
