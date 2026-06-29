@@ -13,6 +13,9 @@ TLPP .3 0
 XYPP .05 .05
 RPST 3
 
+TALIGN 1
+XYDT .5 .94 Repeate Structure Test
+
 LCOLOR green
 XYPP .05 .37
 IDST
