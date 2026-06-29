@@ -17,6 +17,10 @@
 
 FILE *logout = 0;
 
+string Parser::location() const {
+  return filename + ":" + std::to_string(lexer->getLine()) + ": ";
+}
+
 
 map<string, int> map_color = {
     {"black", 0},
@@ -33,7 +37,7 @@ map<string, int> map_color = {
     {"yellow", 0xffff00},
 };
 
-int get_color_from_string(string colorstr) {
+int get_color_from_string(string colorstr, const string& loc = "") {
   const string HEXDIGIT = "0123456789abcdef";
   int col = 0;
   bool outline=false;
@@ -48,7 +52,7 @@ int get_color_from_string(string colorstr) {
   } else if (colorstr.find_first_not_of(HEXDIGIT)==string::npos) {
     col = stoi(colorstr, 0, 16);
   } else {
-    fprintf(stderr, "Error: Unrecognized color <%s>\n", colorstr.c_str());
+    fprintf(stderr, "%sError: Unrecognized color <%s>\n", loc.c_str(), colorstr.c_str());
   }
   //printf("color %s %x\n", colorstr.c_str(), col);
   if (outline)
@@ -64,7 +68,7 @@ string Parser::parseString() {
     s = yylval.s;
     free(yylval.s); // Liberar memoria asignada por strdup en el lexer
   } else {
-    fprintf(stderr, "Error: A string was expected, not %d\n", i);
+    fprintf(stderr, "%sError: A string was expected, not %d\n", location().c_str(), i);
   }
 
   return s;
@@ -75,7 +79,7 @@ float Parser::parseFloat() {
 
   if (lastyylex==NUM)
     return yylval.f;
-  fprintf(stderr, "Error: A number was expected %d\n", lastyylex);
+  fprintf(stderr, "%sError: A number was expected %d\n", location().c_str(), lastyylex);
   return 0;
 }
 
@@ -101,7 +105,7 @@ void Parser::parseDef(int def) {
       spline_nodes_per_segment = n;
     break;
   default:
-    fprintf(stderr, "Undefined definition %d %c\n", def, def);
+    fprintf(stderr, "%sError: Undefined definition %d %c\n", location().c_str(), def, def);
     break;
   }
 }
@@ -318,8 +322,8 @@ Path Parser::parsePath() {
       printf("buffer %zu\n", l.size());
       bufferpt.clear();
     } else {
-      fprintf(stderr, "Error: Invalid path identifier [%s] %lu\n",
-              name.c_str(), listmap.size());
+      fprintf(stderr, "%sError: Invalid path identifier [%s]\n",
+              location().c_str(), name.c_str());
     }
     free(original_s);
   }
@@ -348,9 +352,9 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
       string name = parseString();
       Structure *strct = mg->getStructure(name);
       if (!strct) {
-        fprintf(stderr, "Error: Structure no definida <%s>\n", name.c_str());
+        fprintf(stderr, "%sError: Structure no definida <%s>\n", location().c_str(), name.c_str());
         break;
-      } 
+      }
       auto sr = std::make_unique<StructurePath>();
       sr->setStructure(strct);
       Path pt;
@@ -362,7 +366,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     case YOPST: {
       string name = parseString();
       if (mg->getStructure(name)) {
-        fprintf(stderr, "Error: ya existe la Structure %s.\n", name.c_str());
+        fprintf(stderr, "%sError: ya existe la Structure %s.\n", location().c_str(), name.c_str());
         break;
       }
       GraphicsItemList p = parsePrimitives();
@@ -408,7 +412,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
           }
         }
       } else {
-        fprintf(stderr, "Error: there is no marked structure.\n");
+        fprintf(stderr, "%sError: there is no marked structure.\n", location().c_str());
       }
     } break;
     case YARCST: {
@@ -444,7 +448,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
             mtpp.transform(p.x, p.y);
         }
       } else {
-        fprintf(stderr, "Error: there is no marked structure.\n");
+        fprintf(stderr, "%sError: there is no marked structure.\n", location().c_str());
       }
     } break;
     case YMKST: {
@@ -461,7 +465,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
         sr->setPoints(llp, rup);
         prlist.push_back(std::move(sr));
       } else {
-        fprintf(stderr, "Error: no marked structure.\n");
+        fprintf(stderr, "%sError: no marked structure.\n", location().c_str());
       }
       break;
     }
@@ -499,7 +503,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
           }
         }
       } else {
-        fprintf(stderr, "Error: no marked structure.\n");
+        fprintf(stderr, "%sError: no marked structure.\n", location().c_str());
       }
       break;
     }
@@ -508,7 +512,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
       free(yylval.s);
       Structure *strct = mg->getStructure(name);
       if (!strct) {
-        fprintf(stderr, "Error: invalid identifief [%s]\n", name.c_str());
+        fprintf(stderr, "%sError: invalid identifier [%s]\n", location().c_str(), name.c_str());
       } else {
         auto sr = std::make_unique<StructurePath>();
         sr->setStructure(strct);
@@ -529,7 +533,7 @@ void Parser::parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpat
       Path l;
       string name = parseString();
       if (listmap.find(name)!=listmap.end()) {
-        fprintf(stderr, "Warning: the path %s already exists.\n", name.c_str());
+        fprintf(stderr, "%sWarning: the path %s already exists.\n", location().c_str(), name.c_str());
       }
       point z;
       float x = (xx - wmx) / wdx;
@@ -574,7 +578,7 @@ void Parser::parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpat
       if (listmap.find(name)!=listmap.end()) {
         normalize_path(listmap[name]);
       } else
-        fprintf(stderr, "Error NORMPT: the path %s was not found.\n", name.c_str());
+        fprintf(stderr, "%sError: NORMPT: the path %s was not found.\n", location().c_str(), name.c_str());
       break;
     }
     case YPVPT: {
@@ -591,7 +595,7 @@ void Parser::parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpat
           bufferpt = process_path(mtpr, listmap[name]);
         printf("PWPT %s\n", name.c_str());
       } else
-        fprintf(stderr, "Error PWPT: the path %s was not found.\n", name.c_str());
+        fprintf(stderr, "%sError: PWPT: the path %s was not found.\n", location().c_str(), name.c_str());
       break;
     }
     case YCONCATPATH: {
@@ -614,7 +618,7 @@ void Parser::parseAttribute(int token, GraphicsItemList &prlist, FontFace &ff) {
   if (type == AT_LCOLOR || type == AT_FCOLOR) {
     setBegin(cadena);
     yylex();
-    int col = get_color_from_string(&yylval.s[1]);
+    int col = get_color_from_string(&yylval.s[1], location());
     free(yylval.s);
     at->set(type, col);
   } else if (type == AT_TSTYLE) {

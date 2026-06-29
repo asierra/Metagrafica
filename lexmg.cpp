@@ -484,8 +484,8 @@ static const flex_int32_t yy_rule_can_match_eol[25] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "mgpp.l"
-#line 2 "mgpp.l"
+#line 1 "src/mgpp.l"
+#line 2 "src/mgpp.l"
 // Version en C++ del analizador lexico para MG.
 // Autor: Alejandro Aguilar Sierra, 1995-2023
 
@@ -751,7 +751,7 @@ YY_DECL
 		}
 
 	{
-#line 152 "mgpp.l"
+#line 152 "src/mgpp.l"
 
 
 #line 758 "lexmg.cpp"
@@ -823,12 +823,12 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 154 "mgpp.l"
+#line 154 "src/mgpp.l"
 BEGIN(incl);
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 156 "mgpp.l"
+#line 156 "src/mgpp.l"
 { 
                           dbprintf("Identifier: %s\n", yytext);
                           return busca_key(yytext);
@@ -836,7 +836,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 161 "mgpp.l"
+#line 161 "src/mgpp.l"
 {
 			  yylval.i = yytext[1];
 			  //printf("Control %s\n", yytext);
@@ -845,109 +845,109 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 168 "mgpp.l"
+#line 168 "src/mgpp.l"
 { yylval.s = strdup(yytext); return IDLISTA; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 172 "mgpp.l"
+#line 172 "src/mgpp.l"
 /* eat commentary */ dbprintf("Com %s\n", yytext);
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 173 "mgpp.l"
+#line 173 "src/mgpp.l"
 /* eat space */
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 174 "mgpp.l"
+#line 174 "src/mgpp.l"
 { yylval.f = atof(yytext);
                   dbprintf("Num [%s]\n", yytext);
 		  return NUM; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 178 "mgpp.l"
+#line 178 "src/mgpp.l"
 { return YSEP; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 180 "mgpp.l"
+#line 180 "src/mgpp.l"
 { return YCLOSE; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 182 "mgpp.l"
+#line 182 "src/mgpp.l"
 /* Do nothing */ dbprintf("Nada [%s]\n", yytext);
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 184 "mgpp.l"
+#line 184 "src/mgpp.l"
 { yylval.f = atof(yytext);
                          dbprintf("Lista Num [%s]\n", yytext);
                          return NUM; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 187 "mgpp.l"
+#line 187 "src/mgpp.l"
 return ';';
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 188 "mgpp.l"
+#line 188 "src/mgpp.l"
 return ':';
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 189 "mgpp.l"
+#line 189 "src/mgpp.l"
 /* eat commentary */
 	YY_BREAK
 case 15:
 /* rule 15 can match eol */
 YY_RULE_SETUP
-#line 190 "mgpp.l"
+#line 190 "src/mgpp.l"
 /* eat space */
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 191 "mgpp.l"
+#line 191 "src/mgpp.l"
 BEGIN(INITIAL);
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 193 "mgpp.l"
+#line 193 "src/mgpp.l"
 { yylval.f = atof(yytext); return NUM; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 194 "mgpp.l"
+#line 194 "src/mgpp.l"
 /* eat space */
 	YY_BREAK
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
-#line 195 "mgpp.l"
+#line 195 "src/mgpp.l"
 BEGIN(INITIAL);
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 196 "mgpp.l"
+#line 196 "src/mgpp.l"
 BEGIN(INITIAL);
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 198 "mgpp.l"
+#line 198 "src/mgpp.l"
 { BEGIN(INITIAL); yylval.s = strdup(yytext); dbprintf("Cadena %s\n", yytext); return YIDENTIFIER; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 200 "mgpp.l"
+#line 200 "src/mgpp.l"
 /* eat the whitespace */
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 201 "mgpp.l"
+#line 201 "src/mgpp.l"
 { /* got the include file name */
 	 	    printf("Include [%s]\n", yytext);
             openFile(yytext, this);
@@ -959,7 +959,7 @@ case YY_STATE_EOF(lista):
 case YY_STATE_EOF(linea):
 case YY_STATE_EOF(incl):
 case YY_STATE_EOF(cadena):
-#line 207 "mgpp.l"
+#line 207 "src/mgpp.l"
 {
              yypop_buffer_state();
              if ( !YY_CURRENT_BUFFER )
@@ -970,7 +970,7 @@ case YY_STATE_EOF(cadena):
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 214 "mgpp.l"
+#line 214 "src/mgpp.l"
 ECHO;
 	YY_BREAK
 #line 977 "lexmg.cpp"
@@ -1943,6 +1943,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 214 "mgpp.l"
+#line 214 "src/mgpp.l"
 
 

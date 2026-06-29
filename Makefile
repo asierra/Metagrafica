@@ -3,61 +3,73 @@ CXX = clang++
 CXXFLAGS = -g -std=c++14
 LIBS = -lm -Wmultichar
 LDFLAGS = -g -Wpedantic
-CPPFLAGS = -I. -fno-rtti -fno-exceptions -Wpedantic -Wall -O3
+CPPFLAGS = -I./include -fno-rtti -fno-exceptions -Wpedantic -Wall -O3
 
 SHELL = /bin/sh
 PREFIX = /usr/local
 MANPREFIX ?= ${PREFIX}/share/man
 
-SRCS = EPSDisplay.cpp main.cpp structure.cpp matrix.cpp primitives.cpp \
-	lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp
+SRCDIR = src
+INCDIR = include
+OBJDIR = obj
+BINDIR = bin
+MANDIR = man
 
-OBJS = EPSDisplay.o main.o structure.o matrix.o primitives.o \
-	lexmg.o text.o text_parser.o Parser.o splines.o
+SRCS = $(addprefix $(SRCDIR)/, EPSDisplay.cpp main.cpp structure.cpp matrix.cpp \
+	primitives.cpp lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp)
 
-all: mg mg.1
+OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 
-mg.1: mg.1.md
-	pandoc mg.1.md -s -t man -o mg.1
+all: $(BINDIR)/mg $(MANDIR)/mg.1
 
-mg.1.pdf: mg.1.md
-	pandoc mg.1.md -s -t pdf -o mg.1.pdf
+$(MANDIR)/mg.1: $(MANDIR)/mg.1.md
+	pandoc $< -s -t man -o $@
 
-version.h: 
+$(MANDIR)/mg.1.pdf: $(MANDIR)/mg.1.md
+	pandoc $< -s -t pdf -o $@
+
+$(INCDIR)/version.h:
 	git log -1 --pretty=format:'#define MG_VERSION "%h - %cd"' > $@
 	echo "\n" >> $@
 
-lexmg.cpp: mgpp.l
-	flex mgpp.l
+$(SRCDIR)/lexmg.cpp: $(SRCDIR)/mgpp.l
+	flex -o $@ $<
 
-%.o: %.cpp mg.h
-	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $<
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
+	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
-mg: $(OBJS) 
-	$(CXX) -o mg -g $(OBJS) $(LDFLAGS) $(LIBS)
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
 
-install: mg mg.1
-	install -m 755 mg $(PREFIX)/bin
-	install mg.1 ${MANPREFIX}/man1/
+$(BINDIR):
+	mkdir -p $(BINDIR)
+
+$(BINDIR)/mg: $(OBJS) | $(BINDIR)
+	$(CXX) -o $@ -g $(OBJS) $(LDFLAGS) $(LIBS)
+
+install: $(BINDIR)/mg $(MANDIR)/mg.1
+	install -m 755 $(BINDIR)/mg $(PREFIX)/bin
+	install $(MANDIR)/mg.1 ${MANPREFIX}/man1/
 
 uninstall:
 	rm $(PREFIX)/bin/mg
 	rm ${MANPREFIX}/man1/mg.1
 
-clean: 
-	rm -f *.o *~ mg mg.1
+clean:
+	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1
 # DO NOT DELETE
 
-EPSDisplay.o: EPSDisplay.h Display.h primitives.h
-EPSDisplay.o: matrix.h text.h font_cmmi.h mg.h
-lexmg.o: mgpp_tab.h
-main.o: mg.h text.h primitives.h matrix.h EPSDisplay.h Parser.h version.h
-matrix.o: matrix.h 
-Parser.o: Parser.h mg.h text.h primitives.h matrix.h
-Parser.o: mgpp_tab.h text_parser.h splines.h
-primitives.o: primitives.h matrix.h Display.h text.h
-splines.o: splines.h primitives.h matrix.h
-structure.o: mg.h text.h
-structure.o: primitives.h matrix.h Display.h
-text.o: text.h primitives.h matrix.h Display.h
-text_parser.o: text.h primitives.h matrix.h
+$(OBJDIR)/EPSDisplay.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
+$(OBJDIR)/EPSDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/font_cmmi.h $(INCDIR)/mg.h
+$(OBJDIR)/lexmg.o: $(INCDIR)/mgpp_tab.h
+$(OBJDIR)/main.o: $(INCDIR)/mg.h $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
+$(OBJDIR)/main.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Parser.h $(INCDIR)/version.h
+$(OBJDIR)/matrix.o: $(INCDIR)/matrix.h
+$(OBJDIR)/Parser.o: $(INCDIR)/Parser.h $(INCDIR)/mg.h $(INCDIR)/text.h $(INCDIR)/primitives.h
+$(OBJDIR)/Parser.o: $(INCDIR)/matrix.h $(INCDIR)/mgpp_tab.h $(INCDIR)/text_parser.h $(INCDIR)/splines.h
+$(OBJDIR)/primitives.o: $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/Display.h $(INCDIR)/text.h
+$(OBJDIR)/splines.o: $(INCDIR)/splines.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
+$(OBJDIR)/structure.o: $(INCDIR)/mg.h $(INCDIR)/text.h $(INCDIR)/primitives.h
+$(OBJDIR)/structure.o: $(INCDIR)/matrix.h $(INCDIR)/Display.h
+$(OBJDIR)/text.o: $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/Display.h
+$(OBJDIR)/text_parser.o: $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h

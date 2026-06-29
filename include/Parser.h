@@ -47,6 +47,7 @@ public:
 private:
   float parseFloat();
   string parseString();
+  string location() const;
   void parseDef(int def);
   Path parsePath();
   GraphicsItemList parsePrimitives();

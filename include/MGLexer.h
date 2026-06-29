@@ -33,6 +33,8 @@ public:
         include_streams.push_back(std::move(stream));
     }
 
+    int getLine() const { return lineno(); }
+
     YYSTYPE yylval;
     YYSTYPE yylvalaux;
 
