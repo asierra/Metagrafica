@@ -3,7 +3,7 @@ CXX = clang++
 CXXFLAGS = -g -std=c++14
 LIBS = -lm -Wmultichar
 LDFLAGS = -g -Wpedantic
-CPPFLAGS = -I./include -fno-rtti -fno-exceptions -Wpedantic -Wall -O3
+CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -O3
 
 SHELL = /bin/sh
 PREFIX = /usr/local
@@ -15,12 +15,16 @@ OBJDIR = obj
 BINDIR = bin
 MANDIR = man
 
-SRCS = $(addprefix $(SRCDIR)/, EPSDisplay.cpp main.cpp structure.cpp matrix.cpp \
+HARUDIR = third_party/libharu
+HARU_SRCS = $(wildcard $(HARUDIR)/src/*.c)
+HARU_OBJS = $(patsubst $(HARUDIR)/src/%.c, $(OBJDIR)/haru/%.o, $(HARU_SRCS))
+
+SRCS = $(addprefix $(SRCDIR)/, EPSDisplay.cpp PDFDisplay.cpp main.cpp structure.cpp matrix.cpp \
 	primitives.cpp lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp)
 
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 
-all: $(BINDIR)/mg $(MANDIR)/mg.1
+all: $(INCDIR)/version.h $(BINDIR)/mg $(MANDIR)/mg.1
 
 $(MANDIR)/mg.1: $(MANDIR)/mg.1.md
 	pandoc $< -s -t man -o $@
@@ -38,14 +42,20 @@ $(SRCDIR)/lexmg.cpp: $(SRCDIR)/mgpp.l
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
+$(OBJDIR)/haru/%.o: $(HARUDIR)/src/%.c | $(OBJDIR)/haru
+	$(CC) -c -O2 -I$(HARUDIR)/include $< -o $@
+
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
+
+$(OBJDIR)/haru:
+	mkdir -p $(OBJDIR)/haru
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-$(BINDIR)/mg: $(OBJS) | $(BINDIR)
-	$(CXX) -o $@ -g $(OBJS) $(LDFLAGS) $(LIBS)
+$(BINDIR)/mg: $(OBJS) $(HARU_OBJS) | $(BINDIR)
+	$(CXX) -o $@ -g $(OBJS) $(HARU_OBJS) $(LDFLAGS) $(LIBS) -lz
 
 install: $(BINDIR)/mg $(MANDIR)/mg.1
 	install -m 755 $(BINDIR)/mg $(PREFIX)/bin
