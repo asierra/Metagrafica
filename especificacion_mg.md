@@ -970,3 +970,75 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `MAXDEEP` | `max_depth` (reservado) | ◑ | §18 |
 | `INTXT` / `XYTXT` | — | ✗ | obsoletos, se eliminan |
 | `MKMR` / `MR` | — | ✗ | internos/obsoletos, revisar al traducir |
+
+## Propuesta para incorporar funcionalidad contemplada en versiones anteriores
+
+Analizando el artículo de 1991 y la presentación de 2024, es evidente que tenías ideas muy avanzadas para la época que tuvieron que ser archivadas o manejadas mediante "trucos" de estado global (como `TICKS` o `GNNUM`) debido a las limitaciones de los compiladores y la memoria de aquellos años.
+
+Aquí tienes las **funcionalidades "perdidas" de 1991 y 2024** y cómo propongo que las reintroduzcamos de forma nativa en tu nueva especificación V2 (`especificacion_mg.md`):
+
+### 1. Recursividad Geométrica Nativa (Fractales y Árboles)
+
+**En 1991:** Mencionaste explícitamente que "Una estructura puede contenerse a sí misma, permitiendo sorprendentes efectos" (como los fractales). En la V1 esto era frágil porque el estado de la pluma y las matrices era global.
+**En V2:** Como ahora tienes `struct Nombre(args) { }` y un ámbito léxico estricto, la recursividad es 100% segura.
+
+* **Lo que falta en la especificación:** Para que la recursividad no sea infinita, tu gramática en C++ necesita imperativamente un nodo condicional `if`.
+* **Propuesta para el EBNF:** Añadir `IfStmt ::= "if" Expression "{" Statement* "}" [ "else" "{" Statement* "}" ]`.
+
+```text
+struct Rama(longitud, grosor) {
+    if longitud < 1 { exit } % Condición de paro
+    
+    polyline(width=grosor) { 0 0  0 longitud }
+    
+    % Llamadas recursivas con transformación
+    transform(translate=0 longitud, rotate=30) {
+        Rama(longitud * 0.7, grosor * 0.7)
+    }
+}
+
+```
+
+### 2. Iteración de Transformaciones (Generadores Geométricos)
+
+**En 1991:** Tenías la matriz de iteración y el comando `RPST n` que "despliega n veces dicha estructura cada vez con una transformación diferente". Esto permitía dibujar caparazones, espirales o engranes sin calcular senos y cosenos a mano.
+**En V2:** Tienes `repeat(...)` en tu tabla de mapeo, pero vale la pena formalizarlo en el lenguaje explícitamente como el sucesor de `RPST`.
+
+* **Propuesta:** Definir `repeat` de manera que acepte un bloque `transform` acumulativo.
+
+```text
+% Dibuja 12 pétalos, rotando 30 grados y escalando en cada paso
+repeat(count=12, transform=rotate(30) scale(0.95)) {
+    Petalo(tamaño=5)
+}
+
+```
+
+Esto le dice al AST: en cada iteración, multiplica la matriz actual por la transformación dada, replicando la magia de la "matriz de iteración" original.
+
+### 3. Relleno Topológico Complejo (Flood Fill vs Even-Odd)
+
+**En 1991:** Definiste el comando `FL`, que "Rellena el área cerrada que contiene a cada punto de la lista". El relleno vectorial de áreas compuestas siempre es un dolor de cabeza matemático.
+**En V2:** Mencionas la creación de rutas compuestas `compound { }` (sustituyendo a `OPPT`/`CLPT`).
+
+* **Propuesta:** Debes especificar en la sección de atributos de `compound` la regla de relleno (Fill Rule). Agrega un atributo `fill_rule="even-odd"` o `fill_rule="non-zero"`. Esto te permitirá crear figuras con agujeros (como una dona o un texto hueco) fácilmente, delegando el trabajo sucio al intérprete PostScript y al nuevo SVGDisplay.
+
+### 4. Sustitución de los Generadores de 2024 (`TICKS`, `GNNUM`)
+
+**En 2024:** Para hacer un eje coordenado, el usuario debía apilar `TLPP`, luego llamar a `TICKS n x y` y cruzar los dedos para que la pluma estuviera en el lugar correcto. Era muy "ensamblador".
+**En V2:** La especificación de V2 sugiere usar `for` y `trail()`.
+
+* **Propuesta:** Mantén el concepto de `trail` de la especificación como un generador de puntos, pero combínalo con un iterador estilo `place`:
+
+```text
+% Sustituto exacto y legible del viejo comando TICKS
+path eje_x = { 0 0  100 0 }
+place(Tick, path=eje_x, step=10)
+
+```
+
+Esto toma el objeto `Tick`, recorre el `path` y lo dibuja cada 10 unidades, calculando la matriz normal automáticamente.
+
+### Conclusión sobre la Especificación
+
+Tu borrador `especificacion_mg.md` es excelente porque **elimina el estado implícito** (el mayor problema de MG antiguo) y lo hace todo explícito. Si agregas el control de flujo (`if / else`) para habilitar la recursividad de 1991 y defines claramente cómo `repeat` acumulará matrices, tendrás un lenguaje increíblemente potente, que mantendrá todo el poder de tu idea original de los 80, pero con la elegancia de un motor C++14 moderno.
