@@ -79,7 +79,7 @@ void Dot::draw(Display &g) {
 }
 
 void Attribute::draw(Display &g) {
-  switch (type) {
+  switch (atype) {
   case AT_LCOLOR:
     g.setLineColor(value);
     break;
@@ -121,10 +121,10 @@ void Transform::draw(Display &g) {
       g.translate(tl.x, tl.y, predefmat);
       break;
     case OPMSC:
-      g.scale(sc.x, sc.y, predefmat);
+      g.scale(tl.x, tl.y, predefmat);
       break;
     case OPMSH:
-      g.shear(sc.x, sc.y, predefmat);
+      g.shear(tl.x, tl.y, predefmat);
       break;
     case OPMRT:
       g.rotate(rt, predefmat);

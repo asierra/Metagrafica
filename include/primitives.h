@@ -230,11 +230,11 @@ public:
   
   void draw(Display &);
   
-  void set(AttributeType t, int v) { type = t; value = v; }
+  void set(AttributeType t, int v) { atype = t; value = v; }
 
 private:
   int value;
-  AttributeType type;
+  AttributeType atype;
 };
 
 class Transform : public GraphicsItem {
@@ -260,12 +260,9 @@ public:
 private:
   MatrixOperation op;
   PredefinedMatrix predefmat;
-  union {
-    point tl;
-    point sc;
-    float rt;
-    Matrix mt;
-  };
+  point tl;
+  float rt;
+  Matrix mt;
 };
 
 /** 

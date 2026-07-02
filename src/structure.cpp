@@ -7,7 +7,6 @@
 void Structure::define_in_device(Display &g, const map<string, std::unique_ptr<Structure>>& smap) {
   for (auto& it : smap) {
     Structure* st = it.second.get();
-    printf("Structure name %s\n", st->getName().c_str());
     if (st->times_used > 1 && !st->isDefinedInDevice()) {
       g.structureDefBegin(st->getName());
       st->draw(g);
@@ -175,6 +174,7 @@ MetaGrafica::MetaGrafica() : Structure() {
   maxDepth = 10;
   dcmx = 0;
   dcmy = 0;
+  fontsize = 0;
 }
 
 void MetaGrafica::draw(Display &g) {

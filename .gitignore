@@ -13,3 +13,4 @@ man/mg.1
 # Salida
 *.eps
 *.pdf
+*.svg

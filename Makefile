@@ -19,7 +19,7 @@ HARUDIR = third_party/libharu
 HARU_SRCS = $(wildcard $(HARUDIR)/src/*.c)
 HARU_OBJS = $(patsubst $(HARUDIR)/src/%.c, $(OBJDIR)/haru/%.o, $(HARU_SRCS))
 
-SRCS = $(addprefix $(SRCDIR)/, EPSDisplay.cpp PDFDisplay.cpp main.cpp structure.cpp matrix.cpp \
+SRCS = $(addprefix $(SRCDIR)/, EPSDisplay.cpp PDFDisplay.cpp SVGDisplay.cpp main.cpp structure.cpp matrix.cpp \
 	primitives.cpp lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp)
 
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))

@@ -42,6 +42,7 @@ struct DisplayState {
     linegray = 0;
     linecolor = 0;
     fillcolor = 0;
+	textgray = 0;
   };
   
   // path under creation?
