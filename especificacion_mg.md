@@ -19,6 +19,9 @@
 | Paths | Secuencias de pares `x y`; primitivas multi-punto aplican la operación en cada punto |
 | Transformaciones | Bloque `transform(translate=, rotate=, scale=, shear=) { }` (local), ver §11 |
 | Posición de pluma | `moveto(x,y)` fija el punto actual; `step(...)` define el avance entre elementos, ver §12 |
+| Condicionales | `if cond { } else { }` con comparadores y `and`/`or`, ver §6.1 |
+| Recursión | Las structs pueden autoinvocarse; paro con `if`, límite con `max_depth`, ver §8.1 |
+| Aspect ratio | Espacio isométrico por construcción: escala uniforme (*meet*) + margen; deformación solo con `stretch=true`, ver §3.1 |
 
 ---
 
@@ -44,6 +47,7 @@ Statement   ::= ConfigStmt
               | PathDef
               | StructDef
               | ForStmt
+              | IfStmt
               | WithStmt
               | TransformStmt
               | CompoundStmt
@@ -56,13 +60,14 @@ Statement   ::= ConfigStmt
               | Import
 
 ConfigStmt  ::= "display_size" NUMBER NUMBER
-              | "world_window" NUMBER NUMBER NUMBER NUMBER
+              | "world_window" NUMBER NUMBER NUMBER NUMBER (ID "=" ArgValue)*
 
 Assignment  ::= ID "=" Expression
 PathDef     ::= "path" ID "=" PathExpr
 
 StructDef   ::= "struct" ID "(" [ParamList] ")" "{" Statement* "}"
 ForStmt     ::= "for" ID "=" Expression "to" Expression ["step" Expression] "{" Statement* "}"
+IfStmt      ::= "if" Condition "{" Statement* "}" [ "else" "{" Statement* "}" ]
 WithStmt    ::= "with" "(" ArgList ")" "{" Statement* "}"
 Import      ::= "include" STRING
 
@@ -83,7 +88,8 @@ Placement   ::= "place" "(" ID [ "," ArgList ] ")" "{" Locus "}"
               | "fit"   "(" ID ")" "{" PointList "}"
 Locus       ::= PointList | "&" ID
 
-PathExpr    ::= "bezier"  "{" PointList "}"
+PathExpr    ::= "{" PointList "}"                % path literal
+              | "bezier"  "{" PointList "}"
               | "spline"  ["(" ArgList ")"] "{" PointList "}"
               | "smooth"  "{" PointList "}"
               | "trail"   "(" ArgList ")"
@@ -96,10 +102,19 @@ PathExpr    ::= "bezier"  "{" PointList "}"
 PrimName    ::= "polyline" | "polygon" | "circle" | "rectangle"
               | "arc" | "ellipse" | "dot" | "bezier"
 
-ParamList   ::= ID ("," ID)*
+ParamList   ::= Param ("," Param)*
+Param       ::= ID ["=" Expression]              % parámetros con default, p. ej. size=0.2
 ArgList     ::= Arg ("," Arg)*
-Arg         ::= Expression | ID "=" Expression   % posicionales primero, nombrados después
+Arg         ::= Expression | ID "=" ArgValue     % posicionales primero, nombrados después
+ArgValue    ::= Expression | STRING | Tuple | TransformList
+Tuple       ::= "(" Expression "," Expression ")"
+TransformList ::= TransformCall TransformCall*   % composición: rotate(30) scale(0.95)
+TransformCall ::= ("translate" | "rotate" | "scale" | "shear") "(" ExpressionList ")"
 PointList   ::= (Expression Expression)*
+
+Condition   ::= Comparison (("and" | "or") Comparison)*
+Comparison  ::= Expression RelOp Expression
+RelOp       ::= "<" | ">" | "<=" | ">=" | "==" | "!="
 
 Expression  ::= Term (("+" | "-") Term)*
 Term        ::= Factor (("*" | "/") Factor)*
@@ -118,6 +133,23 @@ world_window 0 24 0 16   % coordenadas de usuario: xmin xmax ymin ymax
 ```
 
 Las coordenadas en todos los comandos están en unidades de usuario (`world_window`). El compilador aplica la transformación a las unidades de salida.
+
+### 3.1 Aspect ratio: espacio isométrico por construcción
+
+V2 mapea la `world_window` al `display_size` con un **único factor de escala uniforme**, el mayor que hace caber la ventana completa en el canvas (semántica *meet* de `preserveAspectRatio` en SVG). Una unidad de usuario mide lo mismo en x que en y, **siempre**.
+
+- **Proporciones distintas** → la ventana se centra en el canvas y el sobrante queda como margen. El anclaje se controla con `align=` (`"center"` default; `"left"`, `"right"`, `"bottom"`, `"top"`, combinables como `"bottom-left"`).
+- **Deformación solo explícita** — `stretch=true` reproduce el estiramiento por eje de V1, para quien lo quiera deliberadamente:
+
+```text
+world_window 0 24 0 16                    % isométrico, centrado (default)
+world_window 0 24 0 16 align="bottom"     % isométrico, anclado abajo
+world_window 0 24 0 16 stretch=true       % estira por eje, como V1
+```
+
+**Consecuencia central del diseño.** Con el espacio isométrico, círculos, arcos, rotaciones, shear, structs y placements funcionan sin compensación alguna: la garantía de no-deformación es del sistema de coordenadas, no de cada primitiva. Desaparecen del motor los ajustes de V1 (radio de círculo normalizado solo con el eje y, structs colocadas a escala `min(dvx,dvy)`, anti-escalas por `ratio` en los placements), que eran compensaciones parciales de la normalización por eje al cuadrado unitario.
+
+*(V1: el parser normalizaba cada eje por separado a [0,1]² y el backend estiraba con `scale(dvx,dvy)`; el manual pedía como "buena práctica" que `WW` y `$D` tuvieran la misma proporción.)*
 
 ---
 
@@ -271,7 +303,7 @@ circle(r = r_base / n) { 0 0 }
 
 ---
 
-## 6. Loops
+## 6. Control de flujo
 
 ```text
 for i = 0 to 9 {
@@ -286,6 +318,20 @@ for angle = 0 to 360 step 45 {
 - Las variables del `for` son locales al bloque y restauran el valor previo al salir.
 - Loops anidados están soportados.
 - El `step` puede ser negativo para contar hacia atrás.
+
+### 6.1 if — condicionales
+
+```text
+if r > 2 {
+    circle(r=r) { 5 5 }
+} else {
+    dot(r=0.2)  { 5 5 }
+}
+```
+
+- Comparadores: `<`, `>`, `<=`, `>=`, `==`, `!=`; combinables con `and` / `or`.
+- El bloque tiene ámbito léxico, como `for` y `with`; la rama `else` es opcional.
+- Su uso principal es la condición de paro en structs recursivas (§8.1); también permite variantes de una struct según sus parámetros.
 
 ---
 
@@ -338,6 +384,28 @@ struct Flecha(lx, ly, size=0.2) {
 Flecha(3, 0)              % flecha horizontal
 Flecha(0, 2, size=0.3)    % flecha vertical más grande
 ```
+
+### 8.1 Recursión
+
+Una struct puede invocarse a sí misma, lo que habilita fractales, árboles y patrones autosimilares. Con parámetros propios y ámbito léxico la recursión es segura: cada invocación recibe sus argumentos y no depende de estado global. La condición de paro se expresa con `if` (§6.1):
+
+```text
+struct Rama(longitud, grosor) {
+    if longitud >= 1 {                    % condición de paro
+        polyline(width=grosor) { 0 0  0 longitud }
+        transform(translate=(0, longitud), rotate=30) {
+            Rama(longitud * 0.7, grosor * 0.7)
+        }
+        transform(translate=(0, longitud), rotate=-30) {
+            Rama(longitud * 0.7, grosor * 0.7)
+        }
+    }
+}
+
+Rama(5, 2)
+```
+
+Como red de seguridad, `max_depth n` (§18) limita la profundidad de expansión. Nótese que `exit` (§18) **no** sirve como condición de paro: detiene el parseo del archivo, no la expansión de una struct. *(V1: "una estructura puede contenerse a sí misma, permitiendo sorprendentes efectos" —artículo de 1991—, con `MAXDEEP n` como límite; era frágil porque la pluma y las matrices eran estado global.)*
 
 ---
 
@@ -406,6 +474,17 @@ compound(fill="cyan") {
 
 Las primitivas dentro del bloque no se cierran individualmente; sus extremos se unen en un solo path, que se rellena/traza según los atributos del `compound`. *(V1: `OPPT` … `CLPT`.)*
 
+**Regla de relleno (`fill_rule`).** Un path compuesto puede encerrar subregiones (una dona, texto hueco). El argumento `fill_rule` decide qué queda dentro: `"non-zero"` (default, cuenta orientaciones de los subpaths) o `"even-odd"` (alterna dentro/fuera en cada cruce). Ambas reglas son nativas de PostScript y SVG, así que el backend solo las declara — el trabajo topológico lo hace el intérprete de salida.
+
+```text
+compound(fill="orange", fill_rule="even-odd") {
+    circle(r=3)   { 5 5 }
+    circle(r=1.5) { 5 5 }    % agujero: una dona
+}
+```
+
+*(V1: el relleno topológico `FL` de 1991 —flood fill del área cerrada que contiene cada punto— se reemplaza por reglas de relleno vectoriales.)*
+
 ---
 
 ## 10. Placements — loops implícitos sobre locus geométricos
@@ -440,17 +519,22 @@ place(Tick, scale=0.2) { 0.1 0.2  0.3 0.5  0.7 0.8 }
 - `both_sides` — colocar también en el lado opuesto (default false).
 - `r`, `sweep`, `from` — radio, barrido angular total y ángulo inicial en grados. *(solo arco)*
 
+> ⚠️ **Abierto:** sobre un path, `place` instancia en cada punto del path. Falta definir el espaciado uniforme por longitud de arco (extender `gap=` a paths), útil para marcas cada *n* unidades a lo largo de una curva. Ver §19.
+
 **V1:** `LNST` (línea), `ARCST` (arco), `DPST` / `&name path` (path).
 
 ### 10.2 fit — ajustar una struct a un rectángulo
 
-No repite: transforma el sistema de coordenadas de la struct para que ocupe exactamente el rectángulo dado.
+No repite: transforma el sistema de coordenadas de la struct para que ocupe el rectángulo dado.
 
 ```text
-fit(Panel) { 0 0  10 8 }   % esquina inferior-izquierda, esquina superior-derecha
+fit(Panel) { 0 0  10 8 }                % escala uniforme, contenido centrado
+fit(Panel, stretch=true) { 0 0  10 8 }  % deforma para llenar el rectángulo exacto
 ```
 
-**V1:** `PWST` / `PVPT`.
+Por default preserva la proporción de la struct: escala uniforme al mayor tamaño que cabe en el rectángulo, con el contenido centrado (misma semántica *meet* de §3.1). Con `stretch=true` se deforma para ocupar el rectángulo exacto, que a veces es lo deseado.
+
+**V1:** `PWST` / `PVPT` (siempre deformaban al rectángulo).
 
 ### Cuadro comparativo V1 → V2
 
@@ -459,7 +543,7 @@ fit(Panel) { 0 0  10 8 }   % esquina inferior-izquierda, esquina superior-derech
 | `LNST sc [sh [n [gap]]] p1 p2` | `place(s, scale, shift, gap) { p1 p2 }` | Struct a lo largo de línea |
 | `ARCST sc r da ai [sh [n]] p` | `place(s, scale, r, sweep, from) { c }` | Struct a lo largo de arco |
 | `DPST name` / `&name path` | `place(s, scale) { &path }` | Struct a lo largo de path |
-| `PWST p1 p2` / `PVPT name p1 p2` | `fit(s) { p1 p2 }` | Struct ajustada a rectángulo |
+| `PWST p1 p2` / `PVPT name p1 p2` | `fit(s, stretch=true) { p1 p2 }` | Struct ajustada a rectángulo (V1 deformaba; el default V2 preserva proporción) |
 | `RPPT name n` | `path x = tile(&name, times=n)` | Repetir path (álgebra) |
 | `CTPT name` + ... `CLPT` | `path x = concat(...)` | Concatenar paths |
 
@@ -798,6 +882,8 @@ struct Detalle() {
 
 La ventana local rige hasta el final del bloque; al salir se recupera la ventana previa. Esto permite que una struct reutilizable trabaje en su propio rango de coordenadas cómodo, independiente de dónde se la coloque. *(V1: `WW` admite anidamiento; el parser apila y restaura la ventana.)*
 
+La ventana anidada se mapea **isométricamente** a su región, igual que la global (§3.1): declarar una ventana local nunca deforma el contenido de la struct. `stretch=true` y `align=` aplican igual que en la ventana global.
+
 > Relación con §11: la `world_window` remapea las coordenadas de usuario al cuadrado unitario interno; las transformaciones `transform` (§11) operan **después** de ese remapeo.
 
 ---
@@ -815,7 +901,12 @@ repeat(Hoja, count=8, transform=scale(0.85))
 
 - `count` — número de repeticiones (nombrado).
 - la posición avanza con el `step` activo (matriz de pluma, §12).
-- `transform=` — transformación acumulada sobre la struct: la instancia *k* recibe `transform` elevada a la *k* (composición sucesiva). Equivale a la matriz `MTRS` de V1.
+- `transform=` — transformación acumulada sobre la struct: la instancia *k* recibe `transform` elevada a la *k* (composición sucesiva). Equivale a la matriz `MTRS` de V1. Acepta una composición de llamadas — p. ej. `transform=rotate(30) scale(0.95)` — que se multiplica como una sola matriz antes de acumularse:
+
+```text
+% 12 pétalos, cada uno rotado 30° y al 95% del tamaño del anterior
+repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
+```
 
 *(V1: `RPST n`, con `MTPP` para la posición y `MTRS` para transformar la struct.)*
 
@@ -828,10 +919,10 @@ repeat(Hoja, count=8, transform=scale(0.85))
 ## 18. Controles del compilador y misceláneos
 
 - **Espacio y tamaño base** — `display_size`, `world_window` (§3) y `spline(mode=...)` (§9.1). *(V1: `$D`, `WW`, `$S`.)*
-- **Terminar el parseo** — `exit` detiene el procesamiento del archivo en ese punto; el resto se ignora. Útil para depurar. *(V1: `EXIT`.)*
+- **Terminar el parseo** — `exit` detiene el procesamiento del archivo en ese punto; el resto se ignora. Útil para depurar. Es un control de parse-time: **no** sirve como condición de paro de una recursión (para eso, `if`, §8.1). *(V1: `EXIT`.)*
 - **Salida implícita** — el nombre del archivo de salida se deriva del de entrada (`figura.mg` → `figura.eps`). El backend se selecciona por bandera de línea de comandos (p. ej. `-svg`, ver ROADMAP). *(V1: igual.)*
 - **Caracteres acentuados** — para usar caracteres no-ASCII (á, ñ, …) con las fuentes PostScript estándar, V2 activa automáticamente la recodificación del vector de codificación cuando el texto los contiene. *(V1: bandera interna `reencode`.)*
-- **Profundidad de recursión** *(reservado)* — `max_depth n` fijaría el límite de recursión para structs que se referencian a sí mismas (fractales). El motor reserva el campo pero aún no está cableado. *(V1: `MAXDEEP n`.)*
+- **Profundidad de recursión** — `max_depth n` fija el límite de expansión para structs recursivas (§8.1). Con la recursión ya especificada deja de ser un campo reservado: el motor debe aplicarlo, con un default razonable (p. ej. 32). *(V1: `MAXDEEP n`.)*
 
 ---
 
@@ -853,6 +944,12 @@ repeat(Hoja, count=8, transform=scale(0.85))
 | **Línea de puntos y flecha** | ✓ Resuelto | Definido en §4.10: `dash=` con nombres; arreglo explícito `dash=[…]` reservado para SVG |
 | **Output implícito** | ✓ Resuelto | Definido en §18: derivado del nombre de entrada; backend por bandera de CLI |
 | **Repetición de struct (RPST)** | ✓ Resuelto | Definido en §17: `repeat(...)` |
+| **Condicionales (`if`) y recursión de structs** | ✓ Resuelto | Definido en §6.1 (if, comparadores, `and`/`or`) y §8.1 (recursión con paro por `if`, límite `max_depth` §18) |
+| **Regla de relleno en `compound`** | ✓ Resuelto | Definido en §9.4: `fill_rule="non-zero"` (default) / `"even-odd"` |
+| **Aspect ratio / no-deformación** | ✓ Resuelto | Definido en §3.1: escala uniforme (*meet*) + margen con `align=`; `stretch=true` para deformar; `fit` preserva proporción por default (§10.2); ventanas anidadas isométricas (§16) |
+| **Texto bajo `transform`** | ⚠️ Abierto | Deseado: que el texto rote/escale con los `transform` activos (EPS lo permite). Falta definir si se transforma solo el punto de anclaje o también los glifos |
+| **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
+| **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
 | **Resolución geométrica (estilo MetaPost)** | ◇ Prospectivo | Describir relaciones en vez de calcular coordenadas: intersección de dos líneas, punto a una fracción de un path, punto medio. Convertiría "dibujar" en "describir"; es el siguiente salto de expresividad tras `axis`/`grid` |
 
 ---
@@ -885,6 +982,7 @@ ARCST ...  → place(..., r, sweep, from) { c }
 - Uso de `MKST` + matrices MTST (los parámetros se transforman en parámetros de struct)
 - `RPST n` con `SCST`/`TLST` (requiere modelado como `for` loop)
 - Texto con markup complejo (`TSTYLE`, `TXSI`, subíndices/superíndices)
+- Tamaños físicos bajo la política isométrica (§3.1): en V1 el radio de `CR` se medía en unidades del eje y, las structs colocadas escalaban a `min(dvx,dvy)` y `DOT` usaba puntos tipográficos. Si el archivo V1 tenía `WW` y `$D` con proporciones distintas, el traductor debe convertir estos valores para conservar el tamaño físico del original.
 
 ---
 
@@ -967,78 +1065,7 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `WW` | `world_window` (global y anidado) | ✓ | §3 / §16 |
 | `INPUT` | `include` | ✓ | §15 |
 | `EXIT` | `exit` | ✓ | §18 |
-| `MAXDEEP` | `max_depth` (reservado) | ◑ | §18 |
+| `MAXDEEP` | `max_depth` | ✓ | §18 / §8.1 |
 | `INTXT` / `XYTXT` | — | ✗ | obsoletos, se eliminan |
 | `MKMR` / `MR` | — | ✗ | internos/obsoletos, revisar al traducir |
 
-## Propuesta para incorporar funcionalidad contemplada en versiones anteriores
-
-Analizando el artículo de 1991 y la presentación de 2024, es evidente que tenías ideas muy avanzadas para la época que tuvieron que ser archivadas o manejadas mediante "trucos" de estado global (como `TICKS` o `GNNUM`) debido a las limitaciones de los compiladores y la memoria de aquellos años.
-
-Aquí tienes las **funcionalidades "perdidas" de 1991 y 2024** y cómo propongo que las reintroduzcamos de forma nativa en tu nueva especificación V2 (`especificacion_mg.md`):
-
-### 1. Recursividad Geométrica Nativa (Fractales y Árboles)
-
-**En 1991:** Mencionaste explícitamente que "Una estructura puede contenerse a sí misma, permitiendo sorprendentes efectos" (como los fractales). En la V1 esto era frágil porque el estado de la pluma y las matrices era global.
-**En V2:** Como ahora tienes `struct Nombre(args) { }` y un ámbito léxico estricto, la recursividad es 100% segura.
-
-* **Lo que falta en la especificación:** Para que la recursividad no sea infinita, tu gramática en C++ necesita imperativamente un nodo condicional `if`.
-* **Propuesta para el EBNF:** Añadir `IfStmt ::= "if" Expression "{" Statement* "}" [ "else" "{" Statement* "}" ]`.
-
-```text
-struct Rama(longitud, grosor) {
-    if longitud < 1 { exit } % Condición de paro
-    
-    polyline(width=grosor) { 0 0  0 longitud }
-    
-    % Llamadas recursivas con transformación
-    transform(translate=0 longitud, rotate=30) {
-        Rama(longitud * 0.7, grosor * 0.7)
-    }
-}
-
-```
-
-### 2. Iteración de Transformaciones (Generadores Geométricos)
-
-**En 1991:** Tenías la matriz de iteración y el comando `RPST n` que "despliega n veces dicha estructura cada vez con una transformación diferente". Esto permitía dibujar caparazones, espirales o engranes sin calcular senos y cosenos a mano.
-**En V2:** Tienes `repeat(...)` en tu tabla de mapeo, pero vale la pena formalizarlo en el lenguaje explícitamente como el sucesor de `RPST`.
-
-* **Propuesta:** Definir `repeat` de manera que acepte un bloque `transform` acumulativo.
-
-```text
-% Dibuja 12 pétalos, rotando 30 grados y escalando en cada paso
-repeat(count=12, transform=rotate(30) scale(0.95)) {
-    Petalo(tamaño=5)
-}
-
-```
-
-Esto le dice al AST: en cada iteración, multiplica la matriz actual por la transformación dada, replicando la magia de la "matriz de iteración" original.
-
-### 3. Relleno Topológico Complejo (Flood Fill vs Even-Odd)
-
-**En 1991:** Definiste el comando `FL`, que "Rellena el área cerrada que contiene a cada punto de la lista". El relleno vectorial de áreas compuestas siempre es un dolor de cabeza matemático.
-**En V2:** Mencionas la creación de rutas compuestas `compound { }` (sustituyendo a `OPPT`/`CLPT`).
-
-* **Propuesta:** Debes especificar en la sección de atributos de `compound` la regla de relleno (Fill Rule). Agrega un atributo `fill_rule="even-odd"` o `fill_rule="non-zero"`. Esto te permitirá crear figuras con agujeros (como una dona o un texto hueco) fácilmente, delegando el trabajo sucio al intérprete PostScript y al nuevo SVGDisplay.
-
-### 4. Sustitución de los Generadores de 2024 (`TICKS`, `GNNUM`)
-
-**En 2024:** Para hacer un eje coordenado, el usuario debía apilar `TLPP`, luego llamar a `TICKS n x y` y cruzar los dedos para que la pluma estuviera en el lugar correcto. Era muy "ensamblador".
-**En V2:** La especificación de V2 sugiere usar `for` y `trail()`.
-
-* **Propuesta:** Mantén el concepto de `trail` de la especificación como un generador de puntos, pero combínalo con un iterador estilo `place`:
-
-```text
-% Sustituto exacto y legible del viejo comando TICKS
-path eje_x = { 0 0  100 0 }
-place(Tick, path=eje_x, step=10)
-
-```
-
-Esto toma el objeto `Tick`, recorre el `path` y lo dibuja cada 10 unidades, calculando la matriz normal automáticamente.
-
-### Conclusión sobre la Especificación
-
-Tu borrador `especificacion_mg.md` es excelente porque **elimina el estado implícito** (el mayor problema de MG antiguo) y lo hace todo explícito. Si agregas el control de flujo (`if / else`) para habilitar la recursividad de 1991 y defines claramente cómo `repeat` acumulará matrices, tendrás un lenguaje increíblemente potente, que mantendrá todo el poder de tu idea original de los 80, pero con la elegancia de un motor C++14 moderno.
