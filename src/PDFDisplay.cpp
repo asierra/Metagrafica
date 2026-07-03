@@ -70,7 +70,7 @@ static void arc_bezier(HPDF_Page page,
 PDFDisplay::PDFDisplay(string f) : filename(f) {
   dvx = 10;
   dvy = 10;
-  max_fillpattern = 0;
+  max_fillpattern = 10;  // patrones de tramado vía clip+líneas (hatchCurrentPath)
 }
 
 void PDFDisplay::start() {
@@ -142,6 +142,63 @@ void PDFDisplay::prepareDraw() {
   applyStrokeColor();
 }
 
+/* Abre un GSave (una sola vez por path) cuando el relleno es con patrón. Debe
+   invocarse en PAGE_DESCRIPTION, antes de construir el path: libharu no permite
+   GSave en PATH_OBJECT y, a diferencia de PostScript, q/Q no preservan el path
+   actual, así que el recorte debe quedar contenido entre GSave/GRestore que
+   envuelven toda la construcción del path. */
+void PDFDisplay::ensurePatternGSave() {
+  if (dspstate.fill && dspstate.fillpattern > 0 && !clip_pending) {
+    HPDF_Page_GSave(page);
+    clip_pending = true;
+  }
+}
+
+/* Recorta al path actual y lo rellena con líneas de tramado. Asume el path ya
+   construido (PATH_OBJECT) y el GSave abierto por ensurePatternGSave().
+   Reproduce el enfoque del EPS (clip + líneas) porque libharu no expone
+   patrones de mosaico nativos. Usa el operador W (clip), que no consume el
+   path: W S dibuja el contorno y fija el recorte (outlinefill); W n solo
+   recorta. Las líneas cubren todo el bbox y el recorte las limita a la forma. */
+void PDFDisplay::hatchCurrentPath() {
+  HPDF_Page_ClosePath(page);
+  HPDF_Page_Clip(page);
+  if (dspstate.outlinefill)
+    HPDF_Page_Stroke(page);   // W S: contorno (color de línea) + recorte
+  else
+    HPDF_Page_EndPath(page);  // W n: solo recorte
+
+  // Las líneas de tramado son trazos: se pintan con el color de relleno.
+  if (dspstate.fillcolor > 0) {
+    float r, g, b;
+    int2rgb(dspstate.fillcolor, r, g, b);
+    HPDF_Page_SetRGBStroke(page, r, g, b);
+  } else {
+    HPDF_Page_SetGrayStroke(page, dspstate.fillgray);
+  }
+
+  FillPattern fp = patternFor(dspstate.fillpattern);
+  float cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
+  float ddx = xmax - xmin, ddy = ymax - ymin;
+  float D = sqrtf(ddx * ddx + ddy * ddy);  // diagonal: cubre el bbox a cualquier ángulo
+  if (D <= 0) D = 1;
+  for (const HatchLine &h : fp) {
+    if (h.gap <= 0) continue;
+    // Dirección visual de las líneas = 90 - ángulo, misma semántica que el
+    // prólogo hatch* del EPS (0=vertical, 90=horizontal, 45/135 diagonales).
+    float th = (90.0f - h.angle) * (float)M_PI / 180.0f;
+    float ux = cosf(th), uy = sinf(th);   // a lo largo de la línea
+    float px = -uy, py = ux;              // perpendicular: paso entre líneas
+    int N = (int)(D / (2 * h.gap)) + 1;
+    for (int k = -N; k <= N; k++) {
+      float ox = cx + k * h.gap * px, oy = cy + k * h.gap * py;
+      HPDF_Page_MoveTo(page, ox - (D / 2) * ux, oy - (D / 2) * uy);
+      HPDF_Page_LineTo(page, ox + (D / 2) * ux, oy + (D / 2) * uy);
+    }
+  }
+  HPDF_Page_Stroke(page);
+}
+
 /* ------------------------------------------------------------------ */
 /* Estado gráfico                                                       */
 /* ------------------------------------------------------------------ */
@@ -186,23 +243,29 @@ void PDFDisplay::moveto_nopath(float x, float y) {
 void PDFDisplay::moveto(float x, float y) {
   mt.transform(x, y);
   cur_x = x; cur_y = y;
+  if (!dspstate.openpath) set_limits(x, y, x, y);
+  else adjust_limits(x, y, x, y);
+  ensurePatternGSave();
   prepareDraw();
   HPDF_Page_MoveTo(page, x, y);
 }
 
 void PDFDisplay::rmoveto(float x, float y) {
   cur_x += x; cur_y += y;
+  adjust_limits(cur_x, cur_y, cur_x, cur_y);
   HPDF_Page_MoveTo(page, cur_x, cur_y);
 }
 
 void PDFDisplay::lineto(float x, float y) {
   mt.transform(x, y);
   cur_x = x; cur_y = y;
+  adjust_limits(x, y, x, y);
   HPDF_Page_LineTo(page, x, y);
 }
 
 void PDFDisplay::rlineto(float x, float y) {
   cur_x += x; cur_y += y;
+  adjust_limits(cur_x, cur_y, cur_x, cur_y);
   HPDF_Page_LineTo(page, cur_x, cur_y);
 }
 
@@ -212,6 +275,10 @@ void PDFDisplay::curveto(float x1, float y1, float x2, float y2,
   mt.transform(x2, y2);
   mt.transform(x3, y3);
   cur_x = x3; cur_y = y3;
+  // El bbox de la curva queda acotado por sus puntos de control.
+  adjust_limits(x1, y1, x1, y1);
+  adjust_limits(x2, y2, x2, y2);
+  adjust_limits(x3, y3, x3, y3);
   HPDF_Page_CurveTo(page, x1, y1, x2, y2, x3, y3);
 }
 
@@ -230,6 +297,11 @@ void PDFDisplay::stroke() {
   // En PDF fill y stroke son colores independientes: se usa FillStroke
   // en lugar del truco gsave/fill/grestore del driver EPS.
   if (dspstate.fill) {
+    if (dspstate.fillpattern > 0) {
+      hatchCurrentPath();
+      if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
+      return;
+    }
     HPDF_Page_ClosePath(page);
     if (dspstate.outlinefill)
       HPDF_Page_FillStroke(page);
@@ -242,7 +314,9 @@ void PDFDisplay::stroke() {
 
 void PDFDisplay::setOpenPath(bool op) {
   Display::setOpenPath(op);
-  if (!op)
+  if (op)
+    set_limits(1e10, 1e10, -1e10, -1e10);  // reinicia bbox del path (como EPS)
+  else
     stroke();
 }
 
@@ -253,9 +327,15 @@ void PDFDisplay::setOpenPath(bool op) {
 void PDFDisplay::rect(float x1, float y1, float x2, float y2) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
+  if (!dspstate.openpath) set_limits(x1, y1, x2, y2);
+  else adjust_limits(x1, y1, x2, y2);
+  ensurePatternGSave();
   prepareDraw();
   HPDF_Page_Rectangle(page, x1, y1, x2-x1, y2-y1);
-  if (dspstate.fill && dspstate.outlinefill)
+  if (dspstate.fill && dspstate.fillpattern > 0) {
+    hatchCurrentPath();
+    if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
+  } else if (dspstate.fill && dspstate.outlinefill)
     HPDF_Page_FillStroke(page);
   else if (dspstate.fill)
     HPDF_Page_Fill(page);
@@ -287,8 +367,12 @@ void PDFDisplay::arc(float x, float y, float w, float h,
     ea = sa + endAng;
   }
 
+  float aw = fabs(w), ah = fabs(h);
+  if (!dspstate.openpath) set_limits(x - aw, y - ah, x + aw, y + ah);
+  else adjust_limits(x - aw, y - ah, x + aw, y + ah);
+  ensurePatternGSave();
   prepareDraw();
-  arc_bezier(page, x, y, fabs(w), fabs(h), sa, ea);
+  arc_bezier(page, x, y, aw, ah, sa, ea);
   stroke();
 }
 

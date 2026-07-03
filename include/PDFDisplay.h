@@ -57,6 +57,14 @@ private:
   void applyStrokeColor();
   void prepareDraw();  // aplica colores antes de iniciar un path (PAGE_DESCRIPTION)
 
+  // Relleno con patrón de tramado. libharu exige GSave en PAGE_DESCRIPTION (no
+  // dentro de un path), así que se abre antes de construir el path y se cierra
+  // tras el recorte. ensurePatternGSave() lo abre una sola vez; hatchCurrentPath()
+  // recorta al path actual (operador W) y dibuja las líneas dentro del bbox.
+  void ensurePatternGSave();
+  void hatchCurrentPath();
+  bool clip_pending = false;
+
   string filename;
 
   HPDF_Doc  pdf  = nullptr;

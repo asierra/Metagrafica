@@ -201,10 +201,22 @@ base. La salida EPS **no debe cambiar**.
    en EPSDisplay), así que las figuras trasladadas con TLLC caían encima de las
    originales (en `primitives` el círculo/elipse/rect/polígono rellenos tapaban
    sus contornos negros). Ahora coincide con EPS.
-3. ⏭️ **SIGUIENTE — PDF**: reusa geometría de clip+líneas de EPS (`HPDF_Page_Clip`
-   + líneas del bbox); sube `max_fillpattern` de 0 a 10.
-4. (Opcional) ampliar el catálogo: rayado cruzado y punteado, aprovechando que
-   `HatchLine` ya lleva `dashes`/`ox,oy` y `FillPattern` admite varias familias.
+3. ✅ **HECHO — PDF**: `max_fillpattern` 0→10. Patrones vía clip+líneas (libharu
+   no expone patrones de mosaico): `ensurePatternGSave()` abre el GSave en
+   PAGE_DESCRIPTION antes del path (libharu prohíbe GSave en PATH_OBJECT y q/Q no
+   preservan el path); `hatchCurrentPath()` usa el operador `W` (no consume el
+   path): `W S` = contorno + recorte (outlinefill), `W n` = solo recorte, y luego
+   dibuja las líneas sobre el bbox (diagonal completa, centradas) que el recorte
+   trima a la forma. Bbox subido a la base en el Paso 1; PDF ahora llama
+   set_limits/adjust_limits en moveto/lineto/curveto/rect/arc y resetea en
+   setOpenPath. Verificado vs EPS (fill_styles, primitives): patrones, densidades,
+   outlinefill y recorte en curvas coinciden.
+   NOTA: `fig2-3.pdf` emite 30 errores libharu (INVALID_GMODE) — PREEXISTENTE
+   (mismo conteo antes de estos cambios, verificado con git stash), ajeno a
+   patrones; no usa FPATRN.
+4. ⏭️ **SIGUIENTE (opcional)** — ampliar el catálogo: rayado cruzado y punteado,
+   aprovechando que `HatchLine` ya lleva `dashes`/`ox,oy` y `FillPattern` admite
+   varias familias. Los tres backends ya consumen `patternFor()`.
 
 ---
 
