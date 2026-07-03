@@ -14,6 +14,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 #include <stack>
 #include <sstream>
 #include <string>
+#include <set>
 
 #include "Display.h"
 #include "mgflags.h"
@@ -68,6 +69,11 @@ class SVGDisplay: public Display {
   // Helpers internos para generar el estilo SVG basado en dspstate
   std::string getStyleAttributes();
   std::string escapeXML(const std::string& data);
+  // Color de relleno como hex de 6 dígitos (sin '#'), desde fillcolor/fillgray.
+  std::string fillColorHex();
+  // Garantiza que exista un <pattern> de tramado para el índice/color actual
+  // (lo emite en un <defs> la primera vez) y devuelve su id. "" si idx<=0.
+  std::string ensureHatchPattern(int idx);
 
   string filename;
   FILE *file = nullptr;
@@ -79,6 +85,7 @@ class SVGDisplay: public Display {
   std::ostringstream path_builder; // Búfer para acumular los comandos del path actual
   std::stack<int> group_stack;     // Rastrea cuántas etiquetas <g> abrir por cada save()
   int current_open_groups = 0;     // Etiquetas <g> abiertas en el entorno actual
+  std::set<std::string> emitted_patterns; // ids de <pattern> ya emitidos (dedup)
 };
 
 #endif

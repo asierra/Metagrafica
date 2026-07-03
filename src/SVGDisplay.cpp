@@ -21,7 +21,12 @@ std::string SVGDisplay::getStyleAttributes() {
     // Relleno: solo si el estado de dibujo tiene fill activo (igual que
     // EPSDisplay/PDFDisplay, que consultan dspstate.fill antes de rellenar).
     if (dspstate.fill) {
-        if (dspstate.fillcolor != 0) {
+        if (dspstate.fillpattern > 0) {
+            // Relleno con patrón de tramado: se referencia un <pattern> nativo
+            // (emitido perezosamente en <defs>) en vez de un color plano.
+            std::string id = ensureHatchPattern(dspstate.fillpattern);
+            style << "fill=\"url(#" << id << ")\" ";
+        } else if (dspstate.fillcolor != 0) {
             sprintf(colorBuf, "#%06X", dspstate.fillcolor);
             style << "fill=\"" << colorBuf << "\" ";
         } else {
@@ -58,6 +63,54 @@ std::string SVGDisplay::getStyleAttributes() {
     }
 
     return style.str();
+}
+
+// Color de relleno como 6 dígitos hex (sin '#'), desde fillcolor o fillgray.
+// Misma conversión que la rama sólida de getStyleAttributes().
+std::string SVGDisplay::fillColorHex() {
+    char buf[8];
+    if (dspstate.fillcolor != 0) {
+        sprintf(buf, "%06X", dspstate.fillcolor);
+    } else {
+        int g = (int)(dspstate.fillgray * 255.0);
+        sprintf(buf, "%02X%02X%02X", g, g, g);
+    }
+    return std::string(buf);
+}
+
+// Emite (una sola vez por combinación índice+color) un <pattern> de tramado y
+// devuelve su id, para referenciarlo con fill="url(#id)".
+//
+// Estrategia: el patrón se construye siempre con una línea HORIZONTAL repetida
+// verticalmente cada `gap`, y se orienta con patternTransform="rotate(...)".
+// Así una sola construcción cubre los cuatro ángulos. El descriptor común
+// (Display::patternFor) da ángulo y separación; el ángulo se ajusta con -90 y
+// el signo del flip global scale(1,-1): hatch0=vertical, hatch90=horizontal,
+// hatch45/135 diagonales, igual que el prólogo del EPSDisplay.
+std::string SVGDisplay::ensureHatchPattern(int idx) {
+    FillPattern fp = patternFor(idx);
+    if (fp.empty()) return "";
+
+    std::string color = fillColorHex();
+    char idbuf[48];
+    sprintf(idbuf, "mgpat_%d_%s", idx, color.c_str());
+    std::string id(idbuf);
+    if (emitted_patterns.count(id)) return id;
+    emitted_patterns.insert(id);
+
+    // Los 10 patrones actuales son una sola familia de líneas. El rayado
+    // cruzado/punteado (varias familias o `dashes`) queda pendiente (Paso 4).
+    const HatchLine &h = fp[0];
+    float sw = dspstate.line_width * 0.2f;
+    if (sw <= 0) sw = 0.5f;
+
+    fprintf(file,
+            "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
+            "width=\"%f\" height=\"%f\" patternTransform=\"rotate(%f)\">"
+            "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" "
+            "stroke-width=\"%f\"/></pattern></defs>\n",
+            id.c_str(), h.gap, h.gap, h.angle - 90.0f, h.gap, color.c_str(), sw);
+    return id;
 }
 
 std::string SVGDisplay::escapeXML(const std::string& data) {

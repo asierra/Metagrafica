@@ -14,6 +14,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 
 #include <stack>
 #include <string>
+#include <vector>
 using std::string;
 
 class MetaGrafica;
@@ -67,7 +68,22 @@ struct DisplayState {
   int fillcolor;
 };
 
-/** 
+/**
+   Descriptor de patrón de relleno, independiente del dispositivo. Sigue el
+   modelo del formato .pat de AutoCAD: un patrón es una o más familias de
+   líneas paralelas. Una sola familia = rayado simple; dos = rayado cruzado;
+   con `dashes` no vacío = líneas punteadas/de guiones. Cada backend traduce
+   este descriptor a su mecanismo nativo (EPS/PDF: clip + líneas; SVG: <pattern>).
+ */
+struct HatchLine {
+  float angle = 0.0f;          // dirección de las líneas (grados)
+  float gap   = 0.0f;          // separación perpendicular entre líneas (pt)
+  float ox = 0.0f, oy = 0.0f;  // origen/fase de la familia
+  std::vector<float> dashes;   // vacío = línea continua
+};
+using FillPattern = std::vector<HatchLine>;
+
+/**
    Abstract base class for physical output.
  */
 class Display {
@@ -162,6 +178,19 @@ public:
     dspstate.outlinefill = (fp < 0);
     dspstate.fillpattern = abs(fp);
   }
+
+  // Traduce el índice de patrón al descriptor común. idx 0 (o negativo) =
+  // relleno sólido → devuelve vector vacío. La tabla actual son 10 patrones
+  // de rayado unidireccional (4 ángulos x 3 densidades); reproduce byte a byte
+  // la aritmética ENTERA del EPSDisplay original.
+  virtual FillPattern patternFor(int idx) {
+    FillPattern fp;
+    if (idx <= 0) return fp;
+    float angle = (float)(((idx - 1) * 45) % 180);
+    float gap   = (float)(4 / (1 + (idx - 1) / 4));  // división entera, a propósito
+    fp.push_back(HatchLine{angle, gap});
+    return fp;
+  }
   
   void setFillGray(float fg) { 
     dspstate.outlinefill = (fg < 0);
@@ -218,6 +247,23 @@ protected:
 
   // Dimensions of the vision port in cms
   float dvx, dvy;
+
+  // Bounding box del path actual, en coordenadas de dispositivo. Se usa para
+  // barrer líneas de tramado dentro del área rellena. Común a EPS y (futuro)
+  // PDF; SVG no lo necesita (el <pattern> teja y recorta solo).
+  float xmin, xmax, ymin, ymax;
+  void set_limits(float x1, float y1, float x2, float y2) {
+    xmin = x1;
+    xmax = x2;
+    ymin = y1;
+    ymax = y2;
+  }
+  void adjust_limits(float x1, float y1, float x2, float y2) {
+    if (x1 < xmin) xmin = x1;
+    if (x2 > xmax) xmax = x2;
+    if (y1 < ymin) ymin = y1;
+    if (y2 > ymax) ymax = y2;
+  }
 
 
   /// Graphics state

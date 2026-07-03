@@ -72,24 +72,12 @@ class EPSDisplay: public Display {
   // EPSDisplay-specific
   void rline(float, float, float, float);
   void getTextSize(string s, float *w, float *h);
-  void set_limits(float x1, float y1, float x2, float y2) {
-    xmin = x1;
-    xmax = x2;
-    ymin = y1;
-    ymax = y2;
-  }
-  void adjust_limits(float x1, float y1, float x2, float y2) {
-    if (x1 < xmin) xmin = x1;
-    if (x2 > xmax) xmax = x2;
-    if (y1 < ymin) ymin = y1;
-    if (y2 > ymax) ymax = y2;
-  }
+  // set_limits/adjust_limits y el bbox (xmin..ymax) viven ahora en la base Display.
 
  private:
   string filename;
   FILE *file = nullptr;
   FILE *logfile = nullptr;
-  float xmin, xmax, ymin, ymax;
 };
 
 #endif

@@ -375,9 +375,11 @@ void EPSDisplay::rect(float x1, float y1, float x2, float y2) {
 }
 
 void EPSDisplay::useFillPattern() {
-  int angle = (int)(((dspstate.fillpattern - 1) * 45) % 180);
-  float wgap = 4/(1 + (dspstate.fillpattern-1)/4);
-  fprintf(file, "%f %f %f %f %f hatch%d\n", wgap, xmin, ymin, xmax, ymax, angle);
+  // El descriptor del patrón (ángulo + separación por familia de líneas) vive
+  // en la base Display; aquí solo se traduce a las rutinas hatch* del prólogo.
+  for (const HatchLine &h : patternFor(dspstate.fillpattern))
+    fprintf(file, "%f %f %f %f %f hatch%d\n",
+            h.gap, xmin, ymin, xmax, ymax, (int)h.angle);
 }
 
 void EPSDisplay::text(string s) {
