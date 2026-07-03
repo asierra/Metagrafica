@@ -196,9 +196,11 @@ base. La salida EPS **no debe cambiar**.
    rect) y respeta `outlinefill`. Verificado visualmente contra EPS con
    `fill_styles.mg` y `primitives.mg` (Inkscape). `max_fillpattern` ya valía 10
    (heredado); el bug real era que se ignoraba el patrón, ya corregido.
-   NOTA: en `primitives.svg` faltan unas elipses/círculos negros sin relleno
-   (`fill=none`) — bug PREEXISTENTE del manejo de arcos/elipses en SVG, ajeno a
-   patrones.
+   BUG PREEXISTENTE corregido de paso: `SVGDisplay::deviceTranslate` emitía el
+   translate en unidades normalizadas en vez de puntos (faltaba `*dvx,*dvy` como
+   en EPSDisplay), así que las figuras trasladadas con TLLC caían encima de las
+   originales (en `primitives` el círculo/elipse/rect/polígono rellenos tapaban
+   sus contornos negros). Ahora coincide con EPS.
 3. ⏭️ **SIGUIENTE — PDF**: reusa geometría de clip+líneas de EPS (`HPDF_Page_Clip`
    + líneas del bbox); sube `max_fillpattern` de 0 a 10.
 4. (Opcional) ampliar el catálogo: rayado cruzado y punteado, aprovechando que

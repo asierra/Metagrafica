@@ -217,7 +217,12 @@ void SVGDisplay::restore() {
 // es contabilidad común y vive en Display.
 // -------------------------------------------------------------
 void SVGDisplay::deviceTranslate(float x, float y) {
-    fprintf(file, "<g transform=\"translate(%f, %f)\">\n", x, y);
+    // x,y llegan en coordenadas normalizadas del documento; las coordenadas de
+    // los paths ya están en puntos, así que el translate debe escalarse a
+    // puntos igual que EPSDisplay::deviceTranslate (x*dvx, y*dvy). Sin esto el
+    // desplazamiento era ~0 y las figuras trasladadas (p.ej. TLLC) caían encima
+    // de las originales.
+    fprintf(file, "<g transform=\"translate(%f, %f)\">\n", x * dvx, y * dvy);
     current_open_groups++;
 }
 
