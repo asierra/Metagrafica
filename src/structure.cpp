@@ -139,11 +139,9 @@ void StructureArc::draw_side(Display &g, bool side) {
     rt = angf - 90;
   stpos.x = r*cos(angf*M_PI/180);
   stpos.y = r*sin(angf*M_PI/180);
-  if (g.getRatio() > 1.0) {
-    stpos.x *= g.getRatio();
-  } else if (g.getRatio() < 1.0) {
-    stpos.y /= g.getRatio();
-  }
+  // El arco se dibuja con el radio en escala y (arc fuerza w=h), así que la
+  // posición sobre el arco se compensa en x para cualquier proporción.
+  stpos.x *= g.getRatio();
   stpos.x += pos.x;
   stpos.y += pos.y;
   mtar.translate(stpos.x, stpos.y);
