@@ -265,7 +265,6 @@ EPSDisplay::EPSDisplay(string f) {
   dvy = 10;
   max_fillpattern = 10;
   filename = f;
-  relfontsize = 1.0;
 }
 
 void EPSDisplay::start() {
@@ -599,53 +598,26 @@ void EPSDisplay::setGray(float fg) {
 }
 
 
-/* Transformaciones */
+/* Transformaciones: solo la rama MTLC; la contabilidad MTST vive en Display */
 
-void EPSDisplay::translate(float x, float y, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    fprintf(file, "%f %f translate\n", x * dvx, y * dvy);
-  else if (pdmt == MTST)
-    mtst.translate(x, y);
+void EPSDisplay::deviceTranslate(float x, float y) {
+  fprintf(file, "%f %f translate\n", x * dvx, y * dvy);
 }
 
-void EPSDisplay::scale(float x, float y, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    fprintf(file, "%f %f scale\n", x, y);
-  else if (pdmt == MTST)
-    mtst.scale(x, y);
+void EPSDisplay::deviceScale(float x, float y) {
+  fprintf(file, "%f %f scale\n", x, y);
 }
 
-void EPSDisplay::shear(float x, float y, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    //fprintf(file, "%f %f scale\n", x, y);
-    fprintf(stderr, "Error PS no tiene shear\n");
-  else if (pdmt == MTST) {
-    //printf("shereando %g %g\n", x, y);
-    mtst.shear(x, y);
-    //mtst.print();
-  }
+void EPSDisplay::deviceShear(float, float) {
+  fprintf(stderr, "Error PS no tiene shear\n");
 }
 
-void EPSDisplay::rotate(float angle, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    fprintf(file, "%f rotate\n", angle);
-  else if (pdmt == MTST) {
-    mtst.rotate(angle);
-  }
+void EPSDisplay::deviceRotate(float angle) {
+  fprintf(file, "%f rotate\n", angle);
 }
 
-void EPSDisplay::compose(Matrix mt, PredefinedMatrix pdmt) {
-  if (pdmt == MTST) {
-    mtst = mtst*mt;
-  }
-}
-
-void EPSDisplay::init_matrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    fprintf(file, "defaultmatrix\n");
-  else if (pdmt == MTST) {
-    mtst.initialize();
-  }
+void EPSDisplay::deviceInitMatrix() {
+  fprintf(file, "defaultmatrix\n");
 }
 
 void EPSDisplay::structureDefBegin(std::string name) {
@@ -653,60 +625,3 @@ void EPSDisplay::structureDefBegin(std::string name) {
 }
 
 void EPSDisplay::structureDefEnd() { fprintf(file, "} bind def\n"); }
-
-void EPSDisplay::structure(std::string name) {
-  Structure *strct = mg_context ? mg_context->getStructure(name) : nullptr;
-  if (!strct) {
-    fprintf(stderr, "Error: estructura '%s' no definida\n", name.c_str());
-    return;
-  }
-  if (strct->isDefinedInDevice())
-    fprintf(file, "%s\n", name.c_str());
-  else {
-    dsstack.push(dspstate);
-    Matrix prevmtst = mtst;
-    strct->draw(*this);
-    dspstate = dsstack.top();
-    dsstack.pop();
-    mtst = prevmtst;
-  }
-}
-
-void EPSDisplay::pushMatrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTST) {
-    //mt *= mtst;
-    mtstack.push(mtst);
-    mt *= mtst;
-  }
-}
-
-void EPSDisplay::saveMatrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTST) {
-    mtstack.push(mtst);
-  }
-}
-
-void EPSDisplay::pushMatrix(Matrix &m) {
-  //	printf("pushing\n");
-  //mt *= m;
-  // mt.print();
-  mtstack.push(mt);
-  mt *= m;
-}
-
-void EPSDisplay::popMatrix() {
-  //	printf("poping\n");
-  //mtstack.pop();
-  mt = mtstack.top();
-  mtstack.pop();
-  // mt.print();
-}
-
-
-void EPSDisplay::popMatrix(PredefinedMatrix pdmt) {
-  //	printf("poping\n");
-  if (pdmt == MTST) 
-    mtst = mtstack.top();
-  mtstack.pop();
-  // mt.print();
-}

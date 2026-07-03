@@ -42,22 +42,6 @@ class SVGDisplay: public Display {
 
   void structureDefBegin(std::string) override;
   void structureDefEnd() override;
-  void structure(std::string) override;
-
-  void translate(float x, float y, PredefinedMatrix pdmt=MTLC) override;
-  void scale(float x, float y, PredefinedMatrix pdmt=MTLC) override;
-  void shear(float x, float y, PredefinedMatrix pdmt=MTLC) override;
-  void rotate(float a, PredefinedMatrix pdmt=MTLC) override;
-  void compose(Matrix mt, PredefinedMatrix pdmt=MTLC) override;
-  void init_matrix(PredefinedMatrix pdmt=MTLC) override;
-
-  void pushMatrix(Matrix &) override;
-  void pushMatrix(PredefinedMatrix) override;
-  void saveMatrix(PredefinedMatrix) override;
-  void popMatrix() override;
-  void popMatrix(PredefinedMatrix) override;
-
-  void setMGContext(MetaGrafica* mg) override { mg_context = mg; }
 
  protected:
   // Primitivas de dibujo
@@ -74,11 +58,11 @@ class SVGDisplay: public Display {
   void setFontFace(FontFace face) override;
   void arc(float x, float y, float rx, float ry, float startAng, float endAng) override;
   void dot(float x, float y, float r) override;
-  void setRelFontSize(float rfz) override {
-    if (rfz == relfontsize) return;
-    relfontsize = rfz;
-    dspstate.fontFace = FN_NOFACE;
-  }
+
+  void deviceTranslate(float x, float y) override;
+  void deviceScale(float x, float y) override;
+  void deviceShear(float x, float y) override;
+  void deviceRotate(float angle) override;
 
  private:
   // Helpers internos para generar el estilo SVG basado en dspstate
@@ -87,9 +71,6 @@ class SVGDisplay: public Display {
 
   string filename;
   FILE *file = nullptr;
-  MetaGrafica* mg_context = nullptr;
-
-  float relfontsize = 1.0;
 
   // Posición actual (en espacio ya transformado), para <text x= y=>,
   // igual que cur_x/cur_y en PDFDisplay.
@@ -98,14 +79,6 @@ class SVGDisplay: public Display {
   std::ostringstream path_builder; // Búfer para acumular los comandos del path actual
   std::stack<int> group_stack;     // Rastrea cuántas etiquetas <g> abrir por cada save()
   int current_open_groups = 0;     // Etiquetas <g> abiertas en el entorno actual
-
-  // Matrices C++, en paralelo a EPSDisplay/PDFDisplay: permiten "hornear"
-  // coordenadas (p. ej. al repetir una estructura) sin depender de que el
-  // formato de salida tenga su propia pila de transformaciones.
-  Matrix mt;
-  Matrix mtst;
-  std::stack<Matrix> mtstack;
-  std::stack<DisplayState> dsstack;
 };
 
 #endif

@@ -9,7 +9,6 @@
 
 SVGDisplay::SVGDisplay(string fname) {
     filename = fname;
-    relfontsize = 1.0;
 }
 
 // -------------------------------------------------------------
@@ -159,89 +158,32 @@ void SVGDisplay::restore() {
 }
 
 // -------------------------------------------------------------
-// TRANSFORMACIONES
-// Para MTLC abrimos grupos <g transform="..."> que se cierran en el
-// próximo restore() (igual que gsave/grestore envuelve translate/rotate en
-// EPSDisplay). Para MTST no emitimos nada: solo actualizamos la matriz C++
-// mtst, que luego se hornea en las coordenadas vía pushMatrix()/mt.transform,
-// exactamente como en EPSDisplay/PDFDisplay.
+// TRANSFORMACIONES — solo la rama MTLC (device*); abrimos grupos
+// <g transform="..."> que se cierran en el próximo restore() (igual que
+// gsave/grestore envuelve translate/rotate en EPSDisplay). La rama MTST
+// es contabilidad común y vive en Display.
 // -------------------------------------------------------------
-void SVGDisplay::translate(float x, float y, PredefinedMatrix pdmt) {
-    if (pdmt == MTLC) {
-        fprintf(file, "<g transform=\"translate(%f, %f)\">\n", x, y);
-        current_open_groups++;
-    } else if (pdmt == MTST) {
-        mtst.translate(x, y);
-    }
+void SVGDisplay::deviceTranslate(float x, float y) {
+    fprintf(file, "<g transform=\"translate(%f, %f)\">\n", x, y);
+    current_open_groups++;
 }
 
-void SVGDisplay::rotate(float a, PredefinedMatrix pdmt) {
-    if (pdmt == MTLC) {
-        fprintf(file, "<g transform=\"rotate(%f)\">\n", a);
-        current_open_groups++;
-    } else if (pdmt == MTST) {
-        mtst.rotate(a);
-    }
+void SVGDisplay::deviceRotate(float a) {
+    fprintf(file, "<g transform=\"rotate(%f)\">\n", a);
+    current_open_groups++;
 }
 
-void SVGDisplay::scale(float x, float y, PredefinedMatrix pdmt) {
-    if (pdmt == MTLC) {
-        fprintf(file, "<g transform=\"scale(%f, %f)\">\n", x, y);
-        current_open_groups++;
-    } else if (pdmt == MTST) {
-        mtst.scale(x, y);
-    }
+void SVGDisplay::deviceScale(float x, float y) {
+    fprintf(file, "<g transform=\"scale(%f, %f)\">\n", x, y);
+    current_open_groups++;
 }
 
-void SVGDisplay::shear(float x, float y, PredefinedMatrix pdmt) {
-    if (pdmt == MTLC) {
-        // A diferencia de PostScript, SVG sí soporta shear vía matrix().
-        fprintf(file, "<g transform=\"matrix(1, %f, %f, 1, 0, 0)\">\n", y, x);
-        current_open_groups++;
-    } else if (pdmt == MTST) {
-        mtst.shear(x, y);
-    }
+void SVGDisplay::deviceShear(float x, float y) {
+    // A diferencia de PostScript, SVG sí soporta shear vía matrix().
+    fprintf(file, "<g transform=\"matrix(1, %f, %f, 1, 0, 0)\">\n", y, x);
+    current_open_groups++;
 }
-
-void SVGDisplay::compose(Matrix mt, PredefinedMatrix pdmt) {
-    if (pdmt == MTST)
-        mtst = mtst * mt;
-}
-
-void SVGDisplay::init_matrix(PredefinedMatrix pdmt) {
-    if (pdmt == MTST)
-        mtst.initialize();
-    // MTLC: no hay equivalente directo de "defaultmatrix" sin desenrollar
-    // los <g> abiertos; no se usa actualmente desde el lenguaje MG a este nivel.
-}
-
-void SVGDisplay::pushMatrix(Matrix &m) {
-    mtstack.push(mt);
-    mt *= m;
-}
-
-void SVGDisplay::pushMatrix(PredefinedMatrix pdmt) {
-    if (pdmt == MTST) {
-        mtstack.push(mtst);
-        mt *= mtst;
-    }
-}
-
-void SVGDisplay::saveMatrix(PredefinedMatrix pdmt) {
-    if (pdmt == MTST)
-        mtstack.push(mtst);
-}
-
-void SVGDisplay::popMatrix() {
-    mt = mtstack.top();
-    mtstack.pop();
-}
-
-void SVGDisplay::popMatrix(PredefinedMatrix pdmt) {
-    if (pdmt == MTST)
-        mtst = mtstack.top();
-    mtstack.pop();
-}
+// deviceInitMatrix: sin override — no hay equivalente sin desenrollar los <g>
 
 void SVGDisplay::structureDefBegin(std::string name) {
     // TODO: emitir <defs><g id="name">...</g></defs> y usar <use> en
@@ -251,20 +193,6 @@ void SVGDisplay::structureDefBegin(std::string name) {
 }
 
 void SVGDisplay::structureDefEnd() {}
-
-void SVGDisplay::structure(std::string name) {
-    Structure *strct = mg_context ? mg_context->getStructure(name) : nullptr;
-    if (!strct) {
-        fprintf(stderr, "Error: estructura '%s' no definida\n", name.c_str());
-        return;
-    }
-    dsstack.push(dspstate);
-    Matrix prevmtst = mtst;
-    strct->draw(*this);
-    dspstate = dsstack.top();
-    dsstack.pop();
-    mtst = prevmtst;
-}
 
 // -------------------------------------------------------------
 // ATRIBUTOS

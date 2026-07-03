@@ -446,94 +446,23 @@ void PDFDisplay::text(string s) {
 /* Transformaciones                                                     */
 /* ------------------------------------------------------------------ */
 
-void PDFDisplay::translate(float x, float y, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    HPDF_Page_Concat(page, 1, 0, 0, 1, x * dvx, y * dvy);
-  else if (pdmt == MTST)
-    mtst.translate(x, y);
+// Solo la rama MTLC; la contabilidad MTST vive en Display
+
+void PDFDisplay::deviceTranslate(float x, float y) {
+  HPDF_Page_Concat(page, 1, 0, 0, 1, x * dvx, y * dvy);
 }
 
-void PDFDisplay::scale(float x, float y, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    HPDF_Page_Concat(page, x, 0, 0, y, 0, 0);
-  else if (pdmt == MTST)
-    mtst.scale(x, y);
+void PDFDisplay::deviceScale(float x, float y) {
+  HPDF_Page_Concat(page, x, 0, 0, y, 0, 0);
 }
 
-void PDFDisplay::shear(float x, float y, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC)
-    fprintf(stderr, "PDFDisplay: shear MTLC no implementado\n");
-  else if (pdmt == MTST)
-    mtst.shear(x, y);
+void PDFDisplay::deviceShear(float, float) {
+  fprintf(stderr, "PDFDisplay: shear MTLC no implementado\n");
 }
 
-void PDFDisplay::rotate(float angle, PredefinedMatrix pdmt) {
-  if (pdmt == MTLC) {
-    float rad = angle * (float)M_PI / 180.0f;
-    float c = cos(rad), s = sin(rad);
-    HPDF_Page_Concat(page, c, s, -s, c, 0, 0);
-  } else if (pdmt == MTST) {
-    mtst.rotate(angle);
-  }
+void PDFDisplay::deviceRotate(float angle) {
+  float rad = angle * (float)M_PI / 180.0f;
+  float c = cos(rad), s = sin(rad);
+  HPDF_Page_Concat(page, c, s, -s, c, 0, 0);
 }
-
-void PDFDisplay::compose(Matrix m, PredefinedMatrix pdmt) {
-  if (pdmt == MTST)
-    mtst = mtst * m;
-}
-
-void PDFDisplay::init_matrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTST)
-    mtst.initialize();
-  // MTLC: no hay equivalente a "defaultmatrix" en medio de un stream PDF
-}
-
-/* ------------------------------------------------------------------ */
-/* Estructuras                                                          */
-/* ------------------------------------------------------------------ */
-
-void PDFDisplay::structure(std::string name) {
-  Structure* strct = mg_context ? mg_context->getStructure(name) : nullptr;
-  if (!strct) {
-    fprintf(stderr, "Error: estructura '%s' no definida\n", name.c_str());
-    return;
-  }
-  dsstack.push(dspstate);
-  Matrix prevmtst = mtst;
-  strct->draw(*this);
-  dspstate = dsstack.top();
-  dsstack.pop();
-  mtst = prevmtst;
-}
-
-/* ------------------------------------------------------------------ */
-/* Matrices                                                             */
-/* ------------------------------------------------------------------ */
-
-void PDFDisplay::pushMatrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTST) {
-    mtstack.push(mtst);
-    mt *= mtst;
-  }
-}
-
-void PDFDisplay::saveMatrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTST)
-    mtstack.push(mtst);
-}
-
-void PDFDisplay::pushMatrix(Matrix& m) {
-  mtstack.push(mt);
-  mt *= m;
-}
-
-void PDFDisplay::popMatrix() {
-  mt = mtstack.top();
-  mtstack.pop();
-}
-
-void PDFDisplay::popMatrix(PredefinedMatrix pdmt) {
-  if (pdmt == MTST)
-    mtst = mtstack.top();
-  mtstack.pop();
-}
+// deviceInitMatrix: sin override — no hay "defaultmatrix" en un stream PDF

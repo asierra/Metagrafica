@@ -2,6 +2,17 @@
 
 Estado tras la sesión del 2026-06-30. Los ítems críticos (#1–#4, #6) están resueltos.
 
+**Actualización 2026-07-02:** corregido el bug de `ARCST` en formato apaisado
+(`StructureArc::draw_side` compensaba la posición con la rama equivocada; ahora
+`stpos.x *= ratio` incondicional). La política de aspect ratio de V2 quedó
+definida en `especificacion_mg.md` §3.1 (espacio isométrico); cuando se
+implemente, las compensaciones por `getRatio()` de `structure.cpp` desaparecen
+del motor. Se añadieron los ítems #16 y #17, detectados al verificar la receta
+de la Etapa 1 contra el código. La **Etapa 1 del ítem #8 quedó ejecutada y
+verificada** ese mismo día (ver el TL;DR de #8). Nota: `fig2-3.mg` → PDF falla
+con `libharu error 0x1025` desde antes de la Etapa 1 (preexistente, pendiente
+de diagnóstico aparte); EPS y SVG del mismo archivo salen bien.
+
 ---
 
 ## Importante (diseño / fidelidad a la filosofía)
@@ -32,15 +43,19 @@ map<string, std::unique_ptr<Structure>> structure_map;
 ### #8 — `Display` es una interfaz "gorda" e inconsistente
 **Archivo:** `include/Display.h`
 
-> **TL;DR / prioridad.** Hacer **Etapa 1** (subir a `Display` el estado y los
-> métodos de matrices que hoy están duplicados byte a byte en los tres backends).
-> Es bajo riesgo: no cambia firmas públicas ni la salida generada. **Etapa 2**
-> (extraer un tipo `DeviceBackend` puro) queda **diferida** hasta que haya un
-> cuarto backend o se quiera testeabilidad. La Etapa 1 es prerrequisito natural
-> de la 2, así que no es trabajo desechable.
+> **✓ Etapa 1 ejecutada (2026-07-02), partes 1A y 1B completas.** El estado y
+> los métodos duplicados subieron a `Display` (nuevo `src/Display.cpp` para
+> `structure()`); las transformaciones quedaron con el patrón `device*` (hooks
+> MTLC por backend, contabilidad MTST en la base). Verificado: compilación
+> limpia con `make clean && make`, y salida **idéntica byte a byte** en los 9
+> ejemplos × 3 formatos (la única diferencia en EPS fue la línea `%%Title`, que
+> incluye el nombre del archivo de salida; `fig2-3.pdf` sigue fallando igual por
+> el error preexistente de libharu, ver nota). **Etapa 2** (extraer un tipo
+> `DeviceBackend` puro) queda **diferida** hasta que haya un cuarto backend o se
+> quiera testeabilidad.
 >
-> **La receta paso a paso para la Etapa 1 está al final de esta sección
-> ("Etapa 1 — receta ejecutable"); sigue esos pasos en orden.**
+> La receta de la Etapa 1 se conserva abajo como referencia de lo hecho y como
+> plantilla del método de verificación para la Etapa 2.
 
 ~40 métodos virtuales puros mezclados con métodos concretos sin criterio claro:
 `setLineGray` es concreto, `setLineWidth` es virtual puro, `setLineStyle` tiene
@@ -133,8 +148,6 @@ interno, **el código de `draw()` no se toca**.
   `popMatrix(PredefinedMatrix)`, la rama `MTST` de `compose` y de
   `translate/scale/rotate/shear`.
 - `setMGContext`, `setRelFontSize` dejan de ser virtuales.
-- Eliminar la asimetría `x*dvx` vs `mt`: aplicar `dvx/dvy` en un solo lugar de la
-  máquina de estado, no a mano en cada rama `MTLC`.
 - `structure(string)` pasa a concreto en la base. La optimización de EPS
   (`isDefinedInDevice()`) es hoy **código muerto** (`define_in_device()` no se
   llama desde ningún backend): borrarla por ahora, y reintroducirla en la Etapa 2
@@ -143,7 +156,11 @@ interno, **el código de `draw()` no se toca**.
 Tras la Etapa 1, cada backend deja de implementar ~15 métodos de contabilidad;
 solo le quedan las primitivas reales (B).
 
-*Etapa 2 (mayor alcance) — extraer un `DeviceBackend` puro:*
+*Etapa 2 (mayor alcance) — extraer un `DeviceBackend` puro.* Aquí (no en la
+Etapa 1) va también eliminar la asimetría `x*dvx` vs `mt` — aplicar `dvx/dvy` en
+un solo lugar de la máquina de estado en vez de a mano en cada rama `MTLC` —
+porque cambia los bytes emitidos y hoy cada backend escala distinto (ver #16),
+lo que contradice el requisito "salida idéntica" de la Etapa 1:
 
 ```cpp
 // Interfaz mínima, SIN estado, todas las coords ya transformadas por la máquina A.
@@ -277,6 +294,17 @@ mover `structure()` a `Display` como método concreto usando el cuerpo de
 comportamiento no cambia. (Deja `define_in_device` y `isDefinedInDevice` donde
 están; limpiarlos es aparte.)
 
+**Ojo — `structure()` no puede ser inline en `Display.h`:** llama
+`mg_context->getStructure(name)` y `Display.h` solo tiene la *forward
+declaration* de `MetaGrafica` (el include completo crearía un ciclo con `mg.h`).
+Hay que crear `src/Display.cpp` con ese único método, añadirlo a `SRCS` en el
+`Makefile` (y su línea de dependencias). Los demás métodos sí pueden ser inline.
+
+**Ojo — constructores:** `EPSDisplay` y `SVGDisplay` asignan `relfontsize = 1.0`
+en su constructor; al borrar el miembro hay que borrar también esas asignaciones
+(el de PDF usa inicializador en línea y se va con el miembro). En `Display`, el
+miembro se declara con inicializador: `float relfontsize = 1.0f;`.
+
 ### Paso 1B — Unificar la rama MTST de las transformaciones (requiere criterio)
 
 `translate/scale/rotate/shear/compose` tienen DOS ramas: `MTLC` (específica del
@@ -298,9 +326,15 @@ protected:
 
 Cada backend renombra el cuerpo de su rama MTLC actual a `deviceTranslate` (y
 análogos `deviceScale`, `deviceRotate`, `deviceShear`; `compose` no tiene efecto
-MTLC hoy, así que su versión base solo hace la rama MTST y nada más). Repite para
-los cinco. Si esto se siente arriesgado, **es válido dejar 1B sin hacer** y quedarte
-solo con 1A: ya elimina la mayor parte de la duplicación.
+MTLC hoy, así que su versión base solo hace la rama MTST y nada más). Son **seis**
+métodos, no cinco: `init_matrix` también tiene rama MTST idéntica
+(`mtst.initialize()`) y rama MTLC específica — solo EPS emite algo
+(`defaultmatrix`, ver #17), así que el hook `deviceInitMatrix()` lleva cuerpo
+default vacío y solo EPS lo sobreescribe. Para preservar la semántica exacta,
+la base debe replicar el patrón `if (MTLC) hook; else if (MTST) mtst.op;` — otros
+valores de `PredefinedMatrix` no hacen nada, igual que hoy. Si esto se siente
+arriesgado, **es válido dejar 1B sin hacer** y quedarte solo con 1A: ya elimina
+la mayor parte de la duplicación.
 
 ### Paso 2 — Verificar (obligatorio)
 
@@ -376,6 +410,19 @@ const Path& getPath() const { return path; }
 
 ---
 
+### #16 — `SVGDisplay::translate` (MTLC) no escala por `dvx/dvy`
+**Archivo:** `src/SVGDisplay.cpp` (rama MTLC de `translate`)
+
+EPS emite `x*dvx, y*dvy` (puntos) y PDF hace lo mismo vía `HPDF_Page_Concat`,
+pero SVG emite `<g transform="translate(x, y)">` con los valores crudos en
+espacio unitario — y el espacio SVG tras el `<g scale(1,-1)>` raíz está en
+puntos. Un `TLLC` en SVG traslada una fracción de punto en vez de la fracción
+del canvas. `examples/primitives.mg` usa `TLLC`: comparar su `.svg` contra su
+`.eps` lo evidencia. **No corregirlo durante la Etapa 1** (rompería el diff
+byte a byte); es un fix aparte con su propia verificación visual.
+
+---
+
 ## Menor (al tocar esa zona)
 
 ### #11 — "Signo como bandera" repartido por el código
@@ -399,3 +446,10 @@ GraphicsItemType getType() const { return type; }
 
 ### #15 — Encabezado incorrecto en `mg.h`
 `include/mg.h:4` dice `File: structure.h`. Cambiar a `File: mg.h`.
+
+### #17 — `defaultmatrix` a secas es PostScript inválido
+`EPSDisplay::init_matrix` (rama MTLC, disparada por `IDLC`) emite
+`defaultmatrix` sin operandos; el operador requiere una matriz en la pila y no
+modifica la CTM (`matrix defaultmatrix setmatrix` sería lo correcto). Latente:
+ningún ejemplo usa `IDLC` hoy, pero cualquier `.mg` que lo use produce un EPS
+que revienta en el intérprete. Corregir al tocar esa zona (post-Etapa 1).

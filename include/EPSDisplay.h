@@ -12,8 +12,6 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #define __EPSDISPLAY_H
 
 #include <stdio.h>
-#include <stack>
-using std::stack;
 
 #include "Display.h"
 #include "mgflags.h"
@@ -44,22 +42,6 @@ class EPSDisplay: public Display {
 
   void structureDefBegin(std::string) override;
   void structureDefEnd() override;
-  void structure(std::string) override;
-
-  void translate(float x, float y, PredefinedMatrix pdmt=MTLC) override;
-  void scale(float x, float y, PredefinedMatrix pdmt=MTLC) override;
-  void shear(float x, float y, PredefinedMatrix pdmt=MTLC) override;
-  void rotate(float angle, PredefinedMatrix pdmt=MTLC) override;
-  void compose(Matrix mt, PredefinedMatrix pdmt=MTLC) override;
-  void init_matrix(PredefinedMatrix mt=MTLC) override;
-
-  void pushMatrix(Matrix &) override;
-  void pushMatrix(PredefinedMatrix) override;
-  void saveMatrix(PredefinedMatrix) override;
-  void popMatrix() override;
-  void popMatrix(PredefinedMatrix) override;
-
-  void setMGContext(MetaGrafica* mg) override { mg_context = mg; }
 
   // EPSDisplay-specific
   void useFillPattern();
@@ -80,12 +62,12 @@ class EPSDisplay: public Display {
   void setFontFace(FontFace face) override;
   void arc(float x, float y, float rx, float ry, float startAng, float endAng) override;
   void dot(float x, float y, float r) override;
-  void setRelFontSize(float rfz) override {
-    if (rfz==relfontsize)
-      return;
-    relfontsize = rfz;
-    dspstate.fontFace = FN_NOFACE;
-  }
+
+  void deviceTranslate(float x, float y) override;
+  void deviceScale(float x, float y) override;
+  void deviceShear(float x, float y) override;
+  void deviceRotate(float angle) override;
+  void deviceInitMatrix() override;
 
   // EPSDisplay-specific
   void rline(float, float, float, float);
@@ -107,16 +89,7 @@ class EPSDisplay: public Display {
   string filename;
   FILE *file = nullptr;
   FILE *logfile = nullptr;
-  MetaGrafica* mg_context = nullptr;
   float xmin, xmax, ymin, ymax;
-  float relfontsize;
-
-  // Local first level matrix
-  Matrix mt;
-  // Matriz para las estructuras
-  Matrix mtst;
-  stack<Matrix> mtstack;
-  stack<DisplayState> dsstack;
 };
 
 #endif

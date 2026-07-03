@@ -12,6 +12,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #if !defined(__DISPLAY_H)
 #define __DISPLAY_H
 
+#include <stack>
 #include <string>
 using std::string;
 
@@ -106,21 +107,41 @@ public:
 
   virtual void structureDefEnd()=0;
 
-  virtual void structure(string name)=0;
+  void structure(string name);   // rama común de los backends; en Display.cpp
 
   virtual void stroke()=0;
 
-  virtual void translate(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
+  // Transformaciones: la rama MTST es contabilidad común de la máquina de
+  // estado; la rama MTLC se delega al hook device* de cada backend. Otros
+  // valores de PredefinedMatrix no tienen efecto aquí (los maneja el parser).
+  void translate(float x, float y, PredefinedMatrix pdmt=MTLC) {
+    if (pdmt == MTLC) deviceTranslate(x, y);
+    else if (pdmt == MTST) mtst.translate(x, y);
+  }
 
-  virtual void scale(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
+  void scale(float x, float y, PredefinedMatrix pdmt=MTLC) {
+    if (pdmt == MTLC) deviceScale(x, y);
+    else if (pdmt == MTST) mtst.scale(x, y);
+  }
 
-  virtual void shear(float x, float y, PredefinedMatrix pdmt=MTLC)=0;
-  
-  virtual void rotate(float angle, PredefinedMatrix pdmt=MTLC)=0;
+  void shear(float x, float y, PredefinedMatrix pdmt=MTLC) {
+    if (pdmt == MTLC) deviceShear(x, y);
+    else if (pdmt == MTST) mtst.shear(x, y);
+  }
 
-  virtual void compose(Matrix mt, PredefinedMatrix pdmt=MTLC)=0;
-  
-  virtual void init_matrix(PredefinedMatrix mt=MTLC)=0;
+  void rotate(float angle, PredefinedMatrix pdmt=MTLC) {
+    if (pdmt == MTLC) deviceRotate(angle);
+    else if (pdmt == MTST) mtst.rotate(angle);
+  }
+
+  void compose(Matrix m, PredefinedMatrix pdmt=MTLC) {
+    if (pdmt == MTST) mtst = mtst * m;
+  }
+
+  void init_matrix(PredefinedMatrix pdmt=MTLC) {
+    if (pdmt == MTLC) deviceInitMatrix();
+    else if (pdmt == MTST) mtst.initialize();
+  }
 
   void setDimension(float x, float y) { dvx = x; dvy = y; ratio = dvy/dvx; }
   float getRatio() { return ratio; }
@@ -159,25 +180,40 @@ public:
   virtual void setFontFace(FontFace face) { dspstate.fontFace = face; }
   virtual void setFontSize(float p) { dspstate.fontSize = p; }
   float getFontSize() { return dspstate.fontSize; }
-  virtual void setRelFontSize(float r) = 0;
+  void setRelFontSize(float rfz) {
+    if (rfz == relfontsize)
+      return;
+    relfontsize = rfz;
+    dspstate.fontFace = FN_NOFACE;
+  }
 
   void setTextAlign(int a) { dspstate.text_align = a; }
   int getTextAlign() { return dspstate.text_align; }
 
-  virtual void setMGContext(MetaGrafica*) {}
+  void setMGContext(MetaGrafica* mg) { mg_context = mg; }
 
   virtual void save() = 0;
   virtual void restore() = 0;
-  virtual void pushMatrix(Matrix &) = 0;
-  virtual void pushMatrix(PredefinedMatrix) = 0;
-  virtual void saveMatrix(PredefinedMatrix) = 0;
-  virtual void popMatrix() = 0;
-  virtual void popMatrix(PredefinedMatrix) = 0;
+
+  // Contabilidad de matrices, común a todos los backends
+  void pushMatrix(Matrix &m)             { mtstack.push(mt); mt *= m; }
+  void pushMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) { mtstack.push(mtst); mt *= mtst; } }
+  void saveMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) mtstack.push(mtst); }
+  void popMatrix()                       { mt = mtstack.top(); mtstack.pop(); }
+  void popMatrix(PredefinedMatrix pdmt)  { if (pdmt == MTST) mtst = mtstack.top(); mtstack.pop(); }
 
   // Physical limitations for patterns
   int max_fillpattern;
   
 protected:
+  /// Hooks de la rama MTLC: solo la parte específica del dispositivo.
+  /// El backend no ve (ni puede corromper) la pila de matrices.
+  virtual void deviceTranslate(float x, float y) = 0;
+  virtual void deviceScale(float x, float y) = 0;
+  virtual void deviceShear(float x, float y) = 0;
+  virtual void deviceRotate(float angle) = 0;
+  virtual void deviceInitMatrix() {}
+
   /// Output Device properties
 
   // Dimensions of the vision port in cms
@@ -192,6 +228,19 @@ protected:
 
   /// Razon de aspecto
   float ratio;
+
+  /// Contexto para resolver estructuras por nombre
+  MetaGrafica* mg_context = nullptr;
+
+  /// Tamaño relativo de fuente (sub/superíndices del texto)
+  float relfontsize = 1.0f;
+
+  /// Matriz acumulada (semilla dvx/dvy de start() + matrices MTST horneadas)
+  Matrix mt;
+  /// Matriz de estructuras
+  Matrix mtst;
+  std::stack<Matrix> mtstack;
+  std::stack<DisplayState> dsstack;
 };
 
 #endif
