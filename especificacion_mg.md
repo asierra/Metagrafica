@@ -1018,7 +1018,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 
 - **Espacio y tamaño base** — `display_size`, `world_window` (§3) y `spline(mode=...)` (§9.1). *(V1: `$D`, `WW`, `$S`.)*
 - **Terminar el parseo** — `exit` detiene el procesamiento del archivo en ese punto; el resto se ignora. Útil para depurar. Es un control de parse-time: **no** sirve como condición de paro de una recursión (para eso, `if`, §8.1). *(V1: `EXIT`.)*
-- **Salida implícita** — el nombre del archivo de salida se deriva del de entrada (`figura.mg` → `figura.eps`). El backend se selecciona por bandera de línea de comandos (p. ej. `-svg`, ver ROADMAP). *(V1: igual.)*
+- **Salida implícita** — el nombre del archivo de salida se deriva del de entrada (`figura.mg` → `figura.eps`). El backend se selecciona por la extensión del archivo de salida (`.eps`, `.pdf`, `.svg`). *(V1: igual.)*
 - **Caracteres acentuados** — para usar caracteres no-ASCII (á, ñ, …) con las fuentes PostScript estándar, V2 activa automáticamente la recodificación del vector de codificación cuando el texto los contiene. *(V1: bandera interna `reencode`.)*
 - **Profundidad de recursión** — `max_depth n` fija el límite de expansión para structs recursivas (§8.1). Con la recursión ya especificada deja de ser un campo reservado: el motor debe aplicarlo, con un default razonable (p. ej. 32). *(V1: `MAXDEEP n`.)*
 
@@ -1034,7 +1034,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Texto: fuentes y estilos** | ✓ Resuelto | El markup interno del string (`/b`, `/i`, `$...$`, `\alpha`, `^{}`, `_{}`) lo maneja `parse_text()` sin cambios. Los argumentos de `text` cubren fuente base, tamaño y color (ver §14) |
 | **Texto: alineación vertical** | ⚠️ Abierto | ¿Baseline? ¿Centro vertical? ¿Caja del texto? Por ahora se asume baseline |
 | **Alcance (scope) de structs** | ✓ Resuelto | Definido en §15: nombres globales, no redefinibles, `include` antes del uso |
-| **Manejo de errores** | ◑ Parcial | El compilador ya reporta `archivo:línea` (ROADMAP Propuesta 1). Falta la columna |
+| **Manejo de errores** | ◑ Parcial | El compilador ya reporta `archivo:línea`. Falta la columna |
 | **Ejes y marcas (TICKS)** | ✓ Resuelto | Definido en §13: `ticks`, `numbers`, `trail` y el declarativo `axis` |
 | **Patrones de relleno (FPATRN)** | ✓ Resuelto | Definido en §4.11: `hatch=` (ángulo) y `hatch_gap=` (paso) |
 | **Color en escala de gris (LGRAY/FGRAY) y outline-fill** | ✓ Resuelto | Definido en §4: gris = color; contorno de relleno = presencia de `color=` |

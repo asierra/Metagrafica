@@ -9,16 +9,31 @@ definida en `especificacion_mg.md` §3.1 (espacio isométrico); cuando se
 implemente, las compensaciones por `getRatio()` de `structure.cpp` desaparecen
 del motor. Se añadieron los ítems #16 y #17, detectados al verificar la receta
 de la Etapa 1 contra el código. La **Etapa 1 del ítem #8 quedó ejecutada y
-verificada** ese mismo día (ver el TL;DR de #8). Nota: `fig2-3.mg` → PDF falla
-con `libharu error 0x1025` desde antes de la Etapa 1 (preexistente, pendiente
-de diagnóstico aparte); EPS y SVG del mismo archivo salen bien.
+verificada** ese mismo día (ver el TL;DR de #8).
+
+**Actualización 2026-07-04:** auditoría completa contra el código. Resueltos desde
+entonces: **#7, #9, #10, #14, #15** (lote de quick-wins), **#16** (SVG `deviceTranslate`
+ya escala por `dvx/dvy`) y **el bug de PDF de `fig2-3`** (los cuatro bugs de `libharu`
+`0x1051/0x1025` se corrigieron; ver commits `245baea`, `ee21b74`). El **#12** quedó
+medio resuelto: el refactor de estilos de línea (ver `plan_lineas.md`) reemplazó
+`DisplayState::line_width` (int) por `line_width_pt` (float); el `int` restante es
+`Attribute::value`, artefacto de la gramática V1 que V2 resuelve con `width=` float.
+Siguen abiertos: **#11, #13, #17** (y la mitad de gramática de #12). Ver marcas
+`✓ RESUELTO` en cada ítem.
 
 ---
 
 ## Importante (diseño / fidelidad a la filosofía)
 
-### #7 — Invariante de destrucción implícita entre `structure_map` y `StructureUser`
+### #7 — Invariante de destrucción implícita entre `structure_map` y `StructureUser` — ✓ RESUELTO (2026-07-04)
 **Archivo:** `src/structure.cpp:20-24`, `include/mg.h:160`
+
+> **Resuelto.** El `prlist.clear()` explícito en `~MetaGrafica` ya existía con su
+> comentario en `structure.cpp`; se añadió además un comentario cruzado junto a
+> `structure_map` en `mg.h` que documenta la invariante. (Nota: la corrección
+> propuesta abajo hablaba de "orden de declaración", pero `prlist` y `structure_map`
+> están en clases distintas —base vs derivada—; la protección real es el clear()
+> explícito, no el orden.)
 
 `~StructureUser` llama `structure->decUses()` sobre un puntero crudo. El
 `~MetaGrafica` necesita el `prlist.clear()` explícito para destruir los
@@ -365,8 +380,11 @@ concreta.
 
 ---
 
-### #9 — `point` no es const-correcto y tiene copy-ctor manual innecesario
+### #9 — `point` no es const-correcto y tiene copy-ctor manual innecesario — ✓ RESUELTO (2026-07-04)
 **Archivo:** `include/primitives.h:80-140`
+
+> **Resuelto.** Copy-ctor a `= default`; `distancesq`, `distance`, `length`,
+> `operator*`, `operator==`, `operator!=` marcados `const`.
 
 **a)** El copy-ctor manual `point(const point&p)` es idéntico al que generaría el
 compilador, pero al declararlo hace `point` no-trivial y suprime el move. Borrarlo
@@ -393,8 +411,12 @@ point operator*(const double& f) const { ... }
 
 ---
 
-### #10 — Copias innecesarias de `Path`
+### #10 — Copias innecesarias de `Path` — ✓ RESUELTO (2026-07-04)
 **Archivo:** `include/primitives.h:175-176`
+
+> **Resuelto.** `setPath(Path p) { path = std::move(p); }` y
+> `const Path& getPath() const { return path; }`. (No había ningún llamador de
+> `getPath`, así que el cambio de firma es seguro.)
 
 ```cpp
 void setPath(Path p) { path = p; }   // copia el argumento
@@ -410,16 +432,17 @@ const Path& getPath() const { return path; }
 
 ---
 
-### #16 — `SVGDisplay::translate` (MTLC) no escala por `dvx/dvy`
-**Archivo:** `src/SVGDisplay.cpp` (rama MTLC de `translate`)
+### #16 — `SVGDisplay::translate` (MTLC) no escala por `dvx/dvy` — ✓ RESUELTO
+**Archivo:** `src/SVGDisplay.cpp` (`deviceTranslate`)
+
+> **Resuelto.** `SVGDisplay::deviceTranslate` ya emite
+> `<g transform="translate(x*dvx, y*dvy)">`, igual que EPS/PDF.
 
 EPS emite `x*dvx, y*dvy` (puntos) y PDF hace lo mismo vía `HPDF_Page_Concat`,
-pero SVG emite `<g transform="translate(x, y)">` con los valores crudos en
+pero SVG emitía `<g transform="translate(x, y)">` con los valores crudos en
 espacio unitario — y el espacio SVG tras el `<g scale(1,-1)>` raíz está en
-puntos. Un `TLLC` en SVG traslada una fracción de punto en vez de la fracción
-del canvas. `examples/primitives.mg` usa `TLLC`: comparar su `.svg` contra su
-`.eps` lo evidencia. **No corregirlo durante la Etapa 1** (rompería el diff
-byte a byte); es un fix aparte con su propia verificación visual.
+puntos. Un `TLLC` en SVG trasladaba una fracción de punto en vez de la fracción
+del canvas.
 
 ---
 
@@ -430,22 +453,24 @@ byte a byte); es un fix aparte con su propia verificación visual.
 se usan para indicar "outline" o "ambos lados". Es implícito. Centralizar en
 una función con nombre o en la spec V2 darle sintaxis explícita.
 
-### #12 — `int` para anchos de línea y tamaños
-`Attribute::value` e `DisplayState::line_width` son `int`. No hay anchos de línea
-fraccionarios — limitación para gráficos de publicación finos. Considerar `float`.
+### #12 — `int` para anchos de línea y tamaños — ◑ MEDIO RESUELTO (2026-07-04)
+El refactor de estilos de línea (`plan_lineas.md`) reemplazó
+`DisplayState::line_width` (int) por `line_width_pt` (float): el almacenamiento
+interno ya es fraccionario. Queda `Attribute::value` como `int`, pero es un
+artefacto de la **gramática V1** (el valor parseado de `LWIDTH n`); V2 lo resuelve
+en la fuente con `width=` float (`especificacion_mg.md` §4.10). No hay nada más que
+hacer en el motor V1.
 
 ### #13 — `Matrix` usa `float`; `deg2rad` es `double`
 Composiciones largas acumulan error; `deg2rad` se trunca de `double` a `float` en
 cada rotación. Para "publication quality", `double` en la matriz es casi gratis.
 
-### #14 — `getType()` devuelve `int` en vez de `GraphicsItemType`
-`include/primitives.h:160`. Pierde el chequeo del compilador. Cambiar a:
-```cpp
-GraphicsItemType getType() const { return type; }
-```
+### #14 — `getType()` devuelve `int` en vez de `GraphicsItemType` — ✓ RESUELTO (2026-07-04)
+`include/primitives.h`: ahora `GraphicsItemType getType() const { return type; }`.
+(Sin llamadores que romper.)
 
-### #15 — Encabezado incorrecto en `mg.h`
-`include/mg.h:4` dice `File: structure.h`. Cambiar a `File: mg.h`.
+### #15 — Encabezado incorrecto en `mg.h` — ✓ RESUELTO (2026-07-04)
+`include/mg.h` ahora dice `File: mg.h`.
 
 ### #17 — `defaultmatrix` a secas es PostScript inválido
 `EPSDisplay::init_matrix` (rama MTLC, disparada por `IDLC`) emite

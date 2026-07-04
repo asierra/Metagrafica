@@ -1,5 +1,5 @@
 /*
-       File:  structure.h
+       File:  mg.h
               Definition of a complex graphic item based on a list of basic
               Display items and a name as identifier.
 MetaGrafica:  Human descriptive language to generate publication quality
@@ -157,6 +157,11 @@ public:
 
   void draw(Display &);
 
+  // Invariante de destrucción: cada StructureUser en `prlist` (heredado de
+  // Structure) apunta con un puntero crudo a una Structure de este mapa y llama
+  // structure->decUses() al morir. Como `prlist` vive en la base y se destruye
+  // DESPUÉS que este mapa, ~MetaGrafica() vacía `prlist` explícitamente antes de
+  // que el mapa libere las Structure (ver src/structure.cpp). No quitar ese clear().
   map<string, std::unique_ptr<Structure>> structure_map;
 
   int setName(string n) { name = n; return 0; }

@@ -12,6 +12,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #define __PRIMITIVES_H
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "matrix.h"
@@ -80,29 +81,29 @@ enum PredefinedMatrix {
 struct point {
   point() { x =0; y = 0; }
   point(float x1, float y1) { x = x1; y = y1; }
-  point (const point&p) { x = p.x; y = p.y; }
+  point(const point&) = default;
   float x, y;
 
-  float distancesq(point a)
-  { 
+  float distancesq(point a) const
+  {
     float dx = a.x - x;
     float dy = a.y - y;
     return (dx*dx + dy*dy);
   }
-  float distance(point a)
+  float distance(point a) const
   {
     return sqrt(distancesq(a));
   }
-  float length()
+  float length() const
   {
     return sqrt(x*x + y*y);
   }
-  point operator*(const double& f) {
+  point operator*(const double& f) const {
     point p = *this;
     p.x *= f;
     p.y *= f;
     return p;
-    } 
+    }
   friend point operator*(const double& f, point p) {
     p.x *= f;
     p.y *= f;
@@ -131,10 +132,10 @@ struct point {
     p1.y -= p2.y;
     return p1;
   }
-  bool operator==(const point& p2) {
+  bool operator==(const point& p2) const {
    return (x==p2.x && y==p2.y);
   }
-  bool operator!=(const point& p2) {
+  bool operator!=(const point& p2) const {
     return (x!=p2.x || y!=p2.y);
   }
 };
@@ -157,7 +158,7 @@ public:
   GraphicsItem(GraphicsItemType t) : type(t) { }
   virtual ~GraphicsItem()=default;
   
-  int getType() const { return type; }
+  GraphicsItemType getType() const { return type; }
   
   virtual void draw(Display &)=0;
   
@@ -172,8 +173,8 @@ protected:
 class GraphicsItemWithPath: public GraphicsItem {
 public:
   GraphicsItemWithPath(GraphicsItemType t) : GraphicsItem(t) { }
-  void setPath(Path p) { path = p; }
-  Path getPath() { return path; }
+  void setPath(Path p) { path = std::move(p); }
+  const Path& getPath() const { return path; }
 protected:
   Path path;
 };
