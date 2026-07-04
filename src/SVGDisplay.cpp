@@ -44,13 +44,22 @@ std::string SVGDisplay::getStyleAttributes() {
         style << "stroke-width=\"" << strokeWidth() << "\" ";
         sprintf(colorBuf, "#%06X", dspstate.linecolor);
         style << "stroke=\"" << colorBuf << "\" ";
-        // Mismos patrones que EPSDisplay::setLineStyle, en las mismas unidades.
-        switch (dspstate.line_style) {
-            case 2: style << "stroke-dasharray=\"4,2\" "; break;
-            case 3: style << "stroke-dasharray=\"2,1.6\" "; break;
-            case 4: style << "stroke-dasharray=\"4,2,1,2\" "; break;
-            case 5: style << "stroke-dasharray=\"4,2,2,2,2,2\" "; break;
-            default: break; // 0/1: sólida
+        // Misma fuente de verdad que EPS/PDF: Display::dashArrayForIndex().
+        if (!dspstate.dash_array.empty()) {
+            style << "stroke-dasharray=\"";
+            for (size_t i = 0; i < dspstate.dash_array.size(); i++) {
+                if (i > 0) style << ",";
+                style << dspstate.dash_array[i];
+            }
+            style << "\" ";
+        }
+        if (dspstate.line_cap != 0) {
+            static const char *caps[] = {"butt", "round", "square"};
+            style << "stroke-linecap=\"" << caps[dspstate.line_cap] << "\" ";
+        }
+        if (dspstate.line_join != 0) {
+            static const char *joins[] = {"miter", "round", "bevel"};
+            style << "stroke-linejoin=\"" << joins[dspstate.line_join] << "\" ";
         }
     } else {
         style << "stroke=\"none\" ";
@@ -253,8 +262,10 @@ void SVGDisplay::structureDefEnd() {}
 // -------------------------------------------------------------
 // ATRIBUTOS
 // -------------------------------------------------------------
-void SVGDisplay::setLineStyle(int ls) { dspstate.line_style = ls; }
-void SVGDisplay::setLineWidth(float lw) { dspstate.line_width = lw; line_width_set = true; }
+void SVGDisplay::setLineWidth(float lw) {
+    dspstate.line_width_pt = lw;
+    dspstate.line_width_set = true;
+}
 
 // Ancho de trazo en puntos. Reproduce el default de EPS/PDF: cuando el .mg
 // nunca ejecuta LWIDTH, PostScript (y libharu) usan 1.0 pt, no una línea fina;
@@ -262,9 +273,9 @@ void SVGDisplay::setLineWidth(float lw) { dspstate.line_width = lw; line_width_s
 // diminutos de datos— tengan el mismo grosor. Un LWIDTH 0 explícito sí es un
 // hairline, pero como stroke-width="0" es invisible en SVG se usa un mínimo.
 float SVGDisplay::strokeWidth() {
-    if (!line_width_set)
+    if (!dspstate.line_width_set)
         return 1.0f;                       // default de PostScript/PDF
-    float sw = dspstate.line_width * 0.2f;  // misma escala que EPS/PDF
+    float sw = dspstate.line_width_pt;
     return sw > 0 ? sw : 0.5f;              // LWIDTH 0 explícito -> hairline visible
 }
 void SVGDisplay::setLineColor(int lc) { dspstate.linecolor = lc; }

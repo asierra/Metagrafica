@@ -32,8 +32,10 @@ constexpr float cm_to_point = 28.34645669291339;
 struct DisplayState {
   DisplayState() {
     fill = false;
-    line_style = 0;
-    line_width = 0;
+    line_width_pt = 1.0f;
+    line_width_set = false;
+    line_cap = 0;
+    line_join = 0;
     fontSize = 10;
     fontFace = FN_NOFACE;
     fillpattern = 0;
@@ -46,12 +48,22 @@ struct DisplayState {
     fillcolor = 0;
 	textgray = 0;
   };
-  
+
   // path under creation?
   bool openpath;
 
-  int line_style;
-  int line_width;
+  // Grosor en PUNTOS tipográficos (no en unidades de 0.2 pt de V1).
+  float line_width_pt;
+  // ¿Se fijó explícitamente el grosor? Distingue el default (1.0 pt, el del
+  // dispositivo PS/PDF cuando nunca se llama LWIDTH) de un LWIDTH 0 explícito.
+  bool line_width_set;
+  // Patrón de guiones: longitudes on/off alternadas en pt. Vacío = línea continua.
+  // Única fuente de verdad del patrón; ver Display::dashArrayForIndex().
+  std::vector<float> dash_array;
+  // 0 butt, 1 round, 2 square. Dormido en V1: ninguna ruta lo invoca todavía.
+  int line_cap;
+  // 0 miter, 1 round, 2 bevel. Dormido en V1: ninguna ruta lo invoca todavía.
+  int line_join;
   float linegray;
   int linecolor;
 
@@ -169,7 +181,26 @@ public:
   bool isFilled() { return dspstate.fill; }
   void setFilled(bool m) { dspstate.fill = m; }
   
-  virtual void setLineStyle(int ls) { dspstate.line_style = ls; }
+  // Traduce el índice de patrón (V1: LPATRN n) al arreglo on/off en puntos.
+  // Única fuente de verdad para los cinco patrones clásicos; V2 la reutiliza
+  // para sus alias ("dashed", "dotted", ...). idx 0 o 1 -> línea continua
+  // (en el motor V1, LPATRN 1 nunca se distinguió de LPATRN 0).
+  static std::vector<float> dashArrayForIndex(int idx) {
+    switch (idx) {
+      case 2:  return {4, 2};
+      case 3:  return {2, 1.6f};
+      case 4:  return {4, 2, 1, 2};
+      case 5:  return {4, 2, 2, 2, 2, 2};
+      default: return {};
+    }
+  }
+
+  virtual void setLineStyle(int ls) {
+    dspstate.dash_array = dashArrayForIndex(ls);
+    applyDash();
+  }
+  virtual void setLineCap(int c) { dspstate.line_cap = c; applyLineCap(); }
+  virtual void setLineJoin(int j) { dspstate.line_join = j; applyLineJoin(); }
   virtual void setLineWidth(float lw)=0;
   void setLineGray(float lg) { dspstate.linegray = lg; }
   virtual void setLineColor(int lc) { dspstate.linecolor = lc; }
@@ -242,6 +273,13 @@ protected:
   virtual void deviceShear(float x, float y) = 0;
   virtual void deviceRotate(float angle) = 0;
   virtual void deviceInitMatrix() {}
+
+  /// Hooks de emisión del estilo de línea. No-op por defecto: SVG no los
+  /// necesita (lee dspstate al construir el atributo de estilo del elemento).
+  /// EPS y PDF los sobre-escriben para emitir de inmediato al backend nativo.
+  virtual void applyDash() {}
+  virtual void applyLineCap() {}
+  virtual void applyLineJoin() {}
 
   /// Output Device properties
 

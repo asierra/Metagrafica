@@ -552,29 +552,29 @@ void EPSDisplay::save() { fprintf(file, "gsave\n"); }
 
 void EPSDisplay::restore() { fprintf(file, "grestore\n"); }
 
-void EPSDisplay::setLineStyle(int l) {
-  switch (l) {
-  case 0:
-  case 1:
+void EPSDisplay::applyDash() {
+  if (dspstate.dash_array.empty()) {
     fprintf(file, "[] 0 setdash\n");
-    break;
-  case 2:
-    fprintf(file, "[ 4 2 ] 0 setdash\n");
-    break;
-  case 3:
-    fprintf(file, "[ 2 1.6 ] 0 setdash\n");
-    break;
-  case 4:
-    fprintf(file, "[ 4 2 1 2 ] 0 setdash\n");
-    break;
-  case 5:
-    fprintf(file, "[ 4 2 2 2 2 2 ] 0 setdash\n");
-    break;
+    return;
   }
+  fprintf(file, "[");
+  for (float v : dspstate.dash_array)
+    fprintf(file, " %g", v);
+  fprintf(file, " ] 0 setdash\n");
+}
+
+void EPSDisplay::applyLineCap() {
+  fprintf(file, "%d setlinecap\n", dspstate.line_cap);
+}
+
+void EPSDisplay::applyLineJoin() {
+  fprintf(file, "%d setlinejoin\n", dspstate.line_join);
 }
 
 void EPSDisplay::setLineWidth(float l) {
-  fprintf(file, "%f setlinewidth\n", l * 0.2);
+  dspstate.line_width_pt = l;
+  dspstate.line_width_set = true;
+  fprintf(file, "%g setlinewidth\n", l);
 }
 
 void int2rgb(int c, float &r, float &g, float &b) {

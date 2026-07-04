@@ -87,10 +87,10 @@ void Attribute::draw(Display &g) {
     g.setLineColor(value);
     break;
   case AT_LSTYLE:
-    g.setLineStyle(value);
+    g.setLineStyle(value);         // LPATRN n: el índice se resuelve a dash_array en la base
     break;
   case AT_LWIDTH:
-    g.setLineWidth(value);
+    g.setLineWidth(value * 0.2f);  // LWIDTH n: n está en unidades de 0.2 pt (V1) -> pt
     break;
   case AT_LGRAY:
     g.setLineGray(value/100.0);

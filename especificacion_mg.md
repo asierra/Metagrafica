@@ -22,6 +22,7 @@
 | Condicionales | `if cond { } else { }` con comparadores y `and`/`or`, ver §6.1 |
 | Recursión | Las structs pueden autoinvocarse; paro con `if`, límite con `max_depth`, ver §8.1 |
 | Aspect ratio | Espacio isométrico por construcción: escala uniforme (*meet*) + margen; deformación solo con `stretch=true`, ver §3.1 |
+| Unidad física | El punto tipográfico (`pt` = 1/72"): grosor, fuente y `dash` se miden en pt; salida vectorial independiente de la resolución (no es "72 DPI"), ver §3.2 |
 
 ---
 
@@ -106,8 +107,9 @@ ParamList   ::= Param ("," Param)*
 Param       ::= ID ["=" Expression]              % parámetros con default, p. ej. size=0.2
 ArgList     ::= Arg ("," Arg)*
 Arg         ::= Expression | ID "=" ArgValue     % posicionales primero, nombrados después
-ArgValue    ::= Expression | STRING | Tuple | TransformList
+ArgValue    ::= Expression | STRING | Tuple | Array | TransformList
 Tuple       ::= "(" Expression "," Expression ")"
+Array       ::= "[" [ExpressionList] "]"         % p. ej. dash=[10, 2, 1, 2]
 TransformList ::= TransformCall TransformCall*   % composición: rotate(30) scale(0.95)
 TransformCall ::= ("translate" | "rotate" | "scale" | "shear") "(" ExpressionList ")"
 PointList   ::= (Expression Expression)*
@@ -151,6 +153,32 @@ world_window 0 24 0 16 stretch=true       % estira por eje, como V1
 
 *(V1: el parser normalizaba cada eje por separado a [0,1]² y el backend estiraba con `scale(dvx,dvy)`; el manual pedía como "buena práctica" que `WW` y `$D` tuvieran la misma proporción.)*
 
+### 3.2 Unidad física: el punto tipográfico
+
+MetaGráfica maneja dos clases de cantidad y conviene no confundirlas:
+
+- **Cantidades de mundo** — posiciones y tamaños geométricos expresados en unidades de
+  `world_window` (§3.1): coordenadas de puntos, radios de `circle`/`arc`, dimensiones de
+  `rectangle`, tamaño al que se ajusta una struct. Escalan con la ventana.
+- **Cantidades físicas** — se miden en **puntos tipográficos** (`pt` = 1/72 de pulgada),
+  la unidad nativa de PostScript y PDF: el `display_size` (dado en cm y convertido a
+  pt), el **grosor de línea** (`width`, §4.10), el **tamaño de fuente** (`size`, §4.8) y
+  las longitudes de un patrón `dash`. **No** escalan con la ventana; conservan su tamaño
+  físico independientemente de `world_window`.
+
+El punto es la **única unidad física** del lenguaje. El sistema de coordenadas de salida
+es la retícula de puntos (72 unidades por pulgada); los tres backends inyectan la escala
+cm→pt (`display_size`) en su matriz de dibujo, y SVG declara además su lienzo en `pt`
+—con `viewBox` de extensión igual al número de puntos— para no caer en el default de
+96 px/pulgada de CSS. Así una línea `width=1` mide 1/72" ≈ 0.35 mm y una fuente `size=8`
+mide 8 pt en cualquier backend.
+
+**Esto no supone una resolución de 72 DPI.** La salida es vectorial y, por tanto,
+independiente de la resolución: el 72 es la *definición* del punto, no una densidad de
+píxeles. Una densidad real (DPI) solo interviene al **rasterizar** a un formato de mapa
+de bits o al definir un patrón en píxeles de dispositivo; para EPS, PDF y SVG
+vectoriales el DPI nunca entra en juego.
+
 ---
 
 ## 4. Primitivas gráficas
@@ -160,9 +188,10 @@ Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posic
 **Argumentos de estilo comunes (todos opcionales y nombrados):**
 - `color="blue"` / `color="#4080FF"` — color de trazo
 - `fill="red"` / `fill="#RRGGBB"` — color de relleno (activa relleno sólido)
-- `width=2.5` — grosor de línea
-- `dash="dashed"` — patrón de línea (ver §4.9)
-- `hatch=45` — relleno con trama en lugar de sólido (ver §4.10)
+- `width=2.5` — grosor de línea en puntos (default `1.0`; ver §4.10)
+- `dash="dashed"` — patrón de línea (ver §4.10)
+- `cap="round"` / `join="round"` — extremos y uniones del trazo (ver §4.10)
+- `hatch=45` — relleno con trama en lugar de sólido (ver §4.11)
 
 #### Color, gris y contorno
 
@@ -249,25 +278,94 @@ ellipse(rx=4, ry=2) { 2 2  8 2 }         % múltiples centros = múltiples elips
 
 `ellipse` es una conveniencia para la elipse cerrada completa; equivale a `arc(rx, ry, from=0, to=360)`. Para arcos elípticos parciales se usa `arc` con `from`/`to` (§4.5). *(V1: `EL rx ry`.)*
 
-### 4.10 Patrones de línea (`dash`)
+### 4.10 Estilo de línea (`width`, `dash`, `cap`, `join`)
 
-El argumento `dash` acepta un nombre de patrón predefinido:
+V2 abandona los índices cerrados de V1 (`LWIDTH n`, `LPATRN n`) por atributos con nombre
+compatibles de forma nativa con PostScript, PDF y SVG. Los cuatro son opcionales y se
+pasan a cualquier primitiva geométrica (o se heredan por cascada en un bloque `with`,
+§7).
 
-| `dash` | Patrón |
-|---|---|
-| `"solid"` (default) | línea continua |
-| `"dashed"` | guiones |
-| `"dotted"` | puntos |
-| `"dashdot"` | guión-punto |
-| `"dashdotdot"` | guión-punto-punto |
+#### Grosor (`width`)
+
+- Valor de punto flotante en **puntos tipográficos** (`pt` = 1/72 de pulgada), el
+  estándar universal de la industria editorial. `width=1.5` son 1.5 pt.
+- Si se omite, el grosor por defecto es **`1.0` pt**.
+- **No existe** el comportamiento *hairline* dependiente del dispositivo (el `width = 0`
+  del PostScript clásico, que dibuja el trazo más fino que el aparato permita). Para una
+  línea ultrafina se especifica un valor real y explícito, p. ej. `width=0.1`.
+
+```text
+polyline(width=1.5) { 0 0  10 10 }
+circle(width=0.25)  { 5 5 }          % línea fina (≈ el LWIDTH 1 de V1)
+```
+
+*(V1: el grosor iba en unidades de 0.2 pt —`LWIDTH 1` = 0.2 pt, `LWIDTH 5` = 1.0 pt— y
+`LWIDTH 0` producía el hairline del dispositivo. El traductor convierte
+`LWIDTH n` → `width = n × 0.2` y, por la prohibición del hairline, `LWIDTH 0` → `width=0.1`.)*
+
+#### Patrón (`dash`)
+
+El argumento `dash` es "inteligente": acepta un **nombre de alias** o un **arreglo
+explícito**.
+
+**A. Alias predefinidos.** Reproducen los patrones clásicos de V1. Las longitudes son
+trazo/hueco alternos, en puntos:
+
+| `dash` | Trazo/hueco (pt) | Equivale a V1 |
+|---|---|---|
+| `"solid"` (default) | — (línea continua) | `LPATRN 0` y `LPATRN 1` |
+| `"dashed"` | `4 2` | `LPATRN 2` |
+| `"dotted"` | `2 1.6` | `LPATRN 3` |
+| `"dashdot"` | `4 2 1 2` | `LPATRN 4` |
+| `"dashdotdot"` | `4 2 2 2 2 2` | `LPATRN 5` |
 
 ```text
 polyline(dash="dashed") { 0 0  10 0 }
 ```
 
-*(V1: `LPATRN n` con `n` = 1..5. El alias `LSTYLE` de V1 es un error de mapeo —apunta a `LWIDTH`— y se descarta en V2.)*
+> **Nota sobre V1.** El motor de V1 fundía los patrones 0 y 1 en la misma línea continua
+> (el "Pattern 1" de `line_patterns.mg` era indistinguible del 0), por eso ambos mapean a
+> `"solid"` y no existe un sexto alias. Tampoco existía "long-dash".
 
-> Reservado para el backend SVG (§ROADMAP): forma explícita `dash=[on, off, …]` con longitudes arbitrarias.
+**B. Arreglo explícito** (estilo `stroke-dasharray` de SVG). Para control total, `dash`
+acepta un arreglo de números que alternan longitud de trazo y de hueco, **multiplicados
+por el `width` actual** para conservar la proporción al cambiar el grosor:
+
+```text
+% trazo largo 10, hueco 2, punto 1, hueco 2  (× width)
+polyline(dash=[10, 2, 1, 2]) { 0 0  10 10 }
+```
+
+Los tres backends lo soportan: EPS emite `[ … ] 0 setdash`, SVG `stroke-dasharray="…"`,
+PDF `HPDF_Page_SetDash(...)`.
+
+#### Extremos y uniones (`cap`, `join`)
+
+Aunque V1 no los exponía, el motor PostScript/PDF/SVG subyacente siempre los ha
+soportado. Son clave para gráficos de calidad profesional, sobre todo en líneas gruesas.
+
+- **`cap`** — forma del extremo de un trazo abierto:
+
+  | `cap` | Efecto |
+  |---|---|
+  | `"butt"` (default) | corte exacto en el nodo |
+  | `"round"` | punta redondeada (ideal para `dash="dotted"`) |
+  | `"square"` | punta cuadrada que sobresale medio grosor del nodo |
+
+- **`join`** — forma de la esquina donde se unen dos segmentos (polilíneas, polígonos):
+
+  | `join` | Efecto |
+  |---|---|
+  | `"miter"` (default) | esquina afilada en punta |
+  | `"round"` | esquina redondeada |
+  | `"bevel"` | esquina biselada (recortada) |
+
+```text
+polyline(width=5.0, cap="round", join="round") { 0 0  5 5  10 0 }
+```
+
+*(V1 no tenía equivalente; los trazos usaban los defaults `butt`/`miter`. El traductor
+no genera `cap`/`join` salvo que se pidan explícitamente.)*
 
 ### 4.11 Patrones de relleno (`hatch`)
 
@@ -941,7 +1039,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Patrones de relleno (FPATRN)** | ✓ Resuelto | Definido en §4.11: `hatch=` (ángulo) y `hatch_gap=` (paso) |
 | **Color en escala de gris (LGRAY/FGRAY) y outline-fill** | ✓ Resuelto | Definido en §4: gris = color; contorno de relleno = presencia de `color=` |
 | **`ellipse` como primitiva** | ✓ Resuelto | Definido en §4.9: `ellipse(rx, ry)` (conveniencia de `arc(rx, ry, from=0, to=360)`) |
-| **Línea de puntos y flecha** | ✓ Resuelto | Definido en §4.10: `dash=` con nombres; arreglo explícito `dash=[…]` reservado para SVG |
+| **Estilo de línea (LWIDTH/LPATRN)** | ✓ Resuelto | Definido en §4.10: `width=` (pt), `dash=` (alias o arreglo `[…]`), `cap=`, `join=` |
 | **Output implícito** | ✓ Resuelto | Definido en §18: derivado del nombre de entrada; backend por bandera de CLI |
 | **Repetición de struct (RPST)** | ✓ Resuelto | Definido en §17: `repeat(...)` |
 | **Condicionales (`if`) y recursión de structs** | ✓ Resuelto | Definido en §6.1 (if, comparadores, `and`/`or`) y §8.1 (recursión con paro por `if`, límite `max_depth` §18) |
@@ -968,7 +1066,8 @@ MKST name  → Name()          # uso sin parámetros
 PL { ... } → polyline { ... }
 CR r : ... } → circle(r=r) { ... }
 BR p1 p2   → rectangle { p1 p2 }
-LWIDTH w   → (acumular: width=w en siguiente primitiva)
+LWIDTH w   → (acumular: width = w*0.2 en pt en siguiente primitiva; LWIDTH 0 → width=0.1)
+LPATRN n   → (acumular: dash="solid"|"dashed"|"dotted"|"dashdot"|"dashdotdot"; ver §4.10)
 LCOLOR c   → (acumular: color="c" en siguiente primitiva)
 FGRAY g    → (acumular: fill=gray_to_hex(g) en siguiente primitiva)
 INPUT f    → include "f"
@@ -1002,9 +1101,10 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `DOT` | `dot` | ✓ | §4.6 |
 | `BZ` | `bezier` | ✓ | §4.7 |
 | `SP` | `spline` | ✓ | §9.1 |
-| `LWIDTH` | `width=` | ✓ | §4 |
-| `LPATRN` | `dash=` | ✓ | §4.10 |
+| `LWIDTH` | `width=` (pt; `w×0.2`, `0`→`0.1`) | ✓ | §4.10 |
+| `LPATRN` | `dash=` (alias; `1`→`"solid"` como `0`) | ✓ | §4.10 |
 | `LSTYLE` | — | ✗ | bug V1 (mapea a `width`), se descarta |
+| — | `cap=` / `join=` (nuevos en V2) | ✓ | §4.10 |
 | `LCOLOR` | `color=` | ✓ | §4 |
 | `FCOLOR` | `fill=` | ✓ | §4 |
 | `FILL` / `NOFILL` | `fill=` (presencia/ausencia) | ✓ | §4 |

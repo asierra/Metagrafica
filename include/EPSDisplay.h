@@ -33,7 +33,6 @@ class EPSDisplay: public Display {
   void save() override;
   void restore() override;
 
-  void setLineStyle(int) override;
   void setLineWidth(float) override;
   void setLineColor(int lc) override;
   void setOpenPath(bool op) override;
@@ -68,6 +67,10 @@ class EPSDisplay: public Display {
   void deviceShear(float x, float y) override;
   void deviceRotate(float angle) override;
   void deviceInitMatrix() override;
+
+  void applyDash() override;
+  void applyLineCap() override;
+  void applyLineJoin() override;
 
   // EPSDisplay-specific
   void rline(float, float, float, float);

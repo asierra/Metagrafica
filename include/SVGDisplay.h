@@ -36,7 +36,6 @@ class SVGDisplay: public Display {
   void save() override;
   void restore() override;
 
-  void setLineStyle(int) override;
   void setLineWidth(float) override;
   void setLineColor(int lc) override;
   void setOpenPath(bool op) override;
@@ -92,7 +91,6 @@ class SVGDisplay: public Display {
   std::stack<int> group_stack;     // Rastrea cuántas etiquetas <g> abrir por cada save()
   int current_open_groups = 0;     // Etiquetas <g> abiertas en el entorno actual
   std::set<std::string> emitted_patterns; // ids de <pattern> ya emitidos (dedup)
-  bool line_width_set = false;     // ¿se ejecutó LWIDTH? (distingue el default)
 };
 
 #endif

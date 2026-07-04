@@ -24,7 +24,6 @@ public:
   void save() override;
   void restore() override;
 
-  void setLineStyle(int) override;
   void setLineWidth(float) override;
   void setLineColor(int lc) override;
   void setOpenPath(bool op) override;
@@ -51,6 +50,10 @@ protected:
   void deviceScale(float x, float y) override;
   void deviceShear(float x, float y) override;
   void deviceRotate(float angle) override;
+
+  void applyDash() override;
+  void applyLineCap() override;
+  void applyLineJoin() override;
 
 private:
   void applyFillColor();

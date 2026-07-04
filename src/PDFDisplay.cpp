@@ -211,22 +211,28 @@ void PDFDisplay::hatchCurrentPath() {
 void PDFDisplay::save()    { HPDF_Page_GSave(page);    }
 void PDFDisplay::restore() { HPDF_Page_GRestore(page); }
 
-void PDFDisplay::setLineStyle(int l) {
-  static const HPDF_REAL dash2[] = {4, 2};
-  static const HPDF_REAL dash3[] = {2, 2};
-  static const HPDF_REAL dash4[] = {4, 2, 1, 2};
-  static const HPDF_REAL dash5[] = {4, 2, 2, 2, 2, 2};
-  switch (l) {
-  case 0: case 1: HPDF_Page_SetDash(page, nullptr, 0, 0); break;
-  case 2:         HPDF_Page_SetDash(page, dash2, 2, 0);   break;
-  case 3:         HPDF_Page_SetDash(page, dash3, 2, 0);   break;
-  case 4:         HPDF_Page_SetDash(page, dash4, 4, 0);   break;
-  case 5:         HPDF_Page_SetDash(page, dash5, 6, 0);   break;
+void PDFDisplay::applyDash() {
+  const std::vector<float> &d = dspstate.dash_array;
+  if (d.empty()) {
+    HPDF_Page_SetDash(page, nullptr, 0, 0);
+    return;
   }
+  std::vector<HPDF_REAL> buf(d.begin(), d.end());
+  HPDF_Page_SetDash(page, buf.data(), (HPDF_UINT)buf.size(), 0);
+}
+
+void PDFDisplay::applyLineCap() {
+  HPDF_Page_SetLineCap(page, (HPDF_LineCap)dspstate.line_cap);
+}
+
+void PDFDisplay::applyLineJoin() {
+  HPDF_Page_SetLineJoin(page, (HPDF_LineJoin)dspstate.line_join);
 }
 
 void PDFDisplay::setLineWidth(float l) {
-  HPDF_Page_SetLineWidth(page, l * 0.2f);
+  dspstate.line_width_pt = l;
+  dspstate.line_width_set = true;
+  HPDF_Page_SetLineWidth(page, l);
 }
 
 void PDFDisplay::setLineColor(int lc) {
