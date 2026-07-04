@@ -1,9 +1,10 @@
 #CXX = g++
 CXX = clang++
-CXXFLAGS = -g -std=c++14
+CXXFLAGS = -g -std=c++14 -ffunction-sections -fdata-sections
 LIBS = -lm -Wmultichar
-LDFLAGS = -g -Wpedantic
+LDFLAGS = -g -Wpedantic -Wl,--gc-sections
 CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -O3
+HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -I$(HARUDIR)/include
 
 SHELL = /bin/sh
 PREFIX = /usr/local
@@ -43,7 +44,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
 $(OBJDIR)/haru/%.o: $(HARUDIR)/src/%.c | $(OBJDIR)/haru
-	$(CC) -c -O2 -I$(HARUDIR)/include $< -o $@
+	$(CC) -c $(HARU_CFLAGS) $< -o $@
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)

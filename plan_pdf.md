@@ -45,9 +45,8 @@ nuevos y el PDF generado desde `examples/primitives.mg` es válido (verificado c
 `file` y `pdftotext`).
 
 No hay cabecera que borrar para estos módulos: sus prototipos viven en
-`hpdf_encoder.h` y `hpdf_fontdef.h`, que sí se usan. Opcionalmente se puede borrar
-también `include/t4.h` si se elimina `hpdf_image_ccitt.c` (ver sección 2, no
-recomendado).
+`hpdf_encoder.h` y `hpdf_fontdef.h`, que sí se usan. (`include/t4.h` va con
+`hpdf_image_ccitt.c`, que **no** se borra —ver sección 2—, así que también se queda.)
 
 ## 2. Lo que NO se puede borrar (y el plan original decía que sí)
 
@@ -114,25 +113,51 @@ Segmento de código (`size`, columna `text`) del binario `bin/mg`:
 | + borrado de los 10 archivos huérfanos | 578 198 B | −42 % |
 | + `-ffunction-sections -fdata-sections` y `-Wl,--gc-sections` (C y C++) | 460 082 B | −54 % |
 
-En todas las configuraciones `mg` genera un PDF válido de una página desde
-`examples/primitives.mg` con texto extraíble correcto.
+En todas las configuraciones `mg` genera PDFs válidos con texto extraíble correcto
+(ver la verificación ampliada en §5, no solo `primitives.mg`).
+
+**Nota sobre los números:** son las cifras medidas cuando se escribió el plan. El
+árbol ha crecido desde entonces (p.ej. el embebido de la TTF matemática), así que
+los valores absolutos serán algo mayores —una re-medición dio ~596 KB tras el
+borrado— pero las proporciones (−42 % / −54 %) se mantienen. Que no cuadre 578 KB
+al dígito no indica que algo haya fallado.
 
 ## 5. Pasos de ejecución
 
-**Precondición: no ejecutar todavía.** El recorte se aplicará cuando `PDFDisplay`
-esté terminado y se confirme que no necesita nada de los 10 archivos. En particular,
-`hpdf_encoder_utf.c` es el único candidato realista a volverse necesario: si
-`PDFDisplay` acaba mostrando texto UTF-8 con la fuente TrueType (lo que requiere
-`HPDF_UseUTFEncodings` + encoder `UTF-8` + `HPDF_LoadTTFontFromMemory` con
-`embedding`), ese archivo debe conservarse. Los CJK y `hpdf_shading.c` seguirían
-siendo prescindibles. Al terminar `PDFDisplay`, repetir la verificación:
-compilar sin los 10 archivos y comprobar la salida PDF de los ejemplos.
+**Precondición: satisfecha (2026-07-04).** El riesgo que bloqueaba el recorte era
+`hpdf_encoder_utf.c`: se conservaría si `PDFDisplay` acabara mostrando texto UTF-8
+con la fuente TrueType (`HPDF_UseUTFEncodings` + encoder `UTF-8`). **Eso no ocurrió.**
+El `PDFDisplay` terminado usa `WinAnsiEncoding` para todas las fuentes —incluida la
+CMMI embebida con `HPDF_LoadTTFontFromMemory`— y `Symbol` para los símbolos; no
+llama `HPDF_UseUTFEncodings` ni usa un encoder `UTF-8`. Comprobado empíricamente:
+enlazar `mg` sin los 10 objetos no deja símbolos indefinidos, y el binario resultante
+genera PDFs válidos en todos los ejemplos (incluidos fig2-3/fig6-1, que embeben la
+TTF matemática, y fill_styles con patrones). Los 10 archivos son borrables.
 
-1. Borrar los 10 archivos de la sección 1 (git conserva el historial si algún día
-   hicieran falta). El `wildcard` del Makefile hace el resto.
+**Orden de riesgo:** el paso 1 (borrado de fuentes vendorizadas) es la parte
+destructiva —aunque git conserva el historial— y es la ya verificada arriba. Los
+pasos 2–3 (`--gc-sections`) son solo cambios de flags, reversibles con `make clean`.
+
+1. Borrar los 10 archivos de la sección 1. El `wildcard` del Makefile los saca de la
+   compilación automáticamente.
 2. Añadir `-ffunction-sections -fdata-sections` a `CXXFLAGS`, crear `HARU_CFLAGS`
    con los mismos flags para la regla de `obj/haru/%.o`, y añadir
    `-Wl,--gc-sections` a `LDFLAGS`.
-3. `make clean && make` y verificar un ejemplo con salida `.pdf`.
+3. `make clean && make`.
 4. No tocar `hpdf_config.h` ni añadir macros `-D`: la configuración vendorizada ya
    es la correcta (zlib sí, libpng no).
+
+**Verificación obligatoria (no basta `primitives.mg`).** `primitives.mg` no ejercita
+la ruta de embebido de fuente, que es justo lo que el borrado pone en riesgo. Tras
+recompilar, generar **todos** los ejemplos con salida `.pdf` y comprobar, para cada
+uno, que la salida no está vacía y que `pdftotext` devuelve el texto esperado —no
+solo que el archivo exista. Casos imprescindibles:
+
+- `fig2-3.mg` y `fig6-1.mg` → TTF matemática embebida + Symbol (la ruta riesgosa);
+  buscar en `pdftotext` la etiqueta rotada "heat capacity" y los subíndices (ψ, x₁′…).
+- `fill_styles.mg` → patrones de relleno.
+- El resto (`primitives`, `line_patterns`, `rpstest`, `bzsinepaths*`) sin errores de
+  libharu en stderr.
+
+Si algún ejemplo falla o le falta texto, restaurar los archivos borrados
+(`git checkout -- third_party/libharu/src/`) y revisar cuál módulo hacía falta.
