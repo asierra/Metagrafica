@@ -400,13 +400,161 @@ void SVGDisplay::dot(float x, float y, float r) {
     fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"%s\" />\n", x, y, r / 2.0f, colorBuf);
 }
 
+// -------------------------------------------------------------
+// TRADUCCIÓN DE FUENTES SIMBÓLICAS A UNICODE
+// El parser codifica letras griegas y símbolos matemáticos como bytes de las
+// fuentes Symbol (Adobe) o CMMI (TeX). SVG no dispone de esas fuentes, así que
+// se traducen a los puntos de código Unicode equivalentes, que cualquier fuente
+// del sistema renderiza. Se reutilizan las tablas nombre->byte del parser
+// (text_parser.cpp) junto con una tabla nombre->Unicode, para no transcribir
+// números de byte a mano.
+// -------------------------------------------------------------
+extern std::map<std::string, unsigned char> map_symbol;
+extern std::map<std::string, unsigned char> map_tex_cmmi;
+
+static const std::map<std::string, unsigned int> kNameToUnicode = {
+    // Griego minúsculas
+    {"alpha",0x3B1},{"beta",0x3B2},{"gamma",0x3B3},{"delta",0x3B4},
+    {"epsilon",0x3B5},{"zeta",0x3B6},{"eta",0x3B7},{"theta",0x3B8},
+    {"iota",0x3B9},{"kappa",0x3BA},{"lambda",0x3BB},{"mu",0x3BC},
+    {"nu",0x3BD},{"xi",0x3BE},{"pi",0x3C0},{"rho",0x3C1},
+    {"sigma",0x3C3},{"tau",0x3C4},{"upsilon",0x3C5},{"phi",0x3C6},
+    {"chi",0x3C7},{"psi",0x3C8},{"omega",0x3C9},
+    {"varepsilon",0x3B5},{"vartheta",0x3D1},{"varpi",0x3D6},{"varrho",0x3F1},
+    {"varsigma",0x3C2},{"varphi",0x3D5},
+    // Griego mayúsculas
+    {"Gamma",0x393},{"Delta",0x394},{"Theta",0x398},{"Lambda",0x39B},
+    {"Xi",0x39E},{"Pi",0x3A0},{"Sigma",0x3A3},{"Upsilon",0x3A5},
+    {"Phi",0x3A6},{"Psi",0x3A8},{"Omega",0x3A9},
+    // Símbolos matemáticos
+    {"aleph",0x2135},{"wp",0x2118},{"Re",0x211C},{"Im",0x2111},
+    {"partial",0x2202},{"infty",0x221E},{"prime",0x2032},{"nabla",0x2207},
+    {"bot",0x22A5},{"forall",0x2200},{"exists",0x2203},{"neg",0xAC},
+    {"sharp",0x266F},{"clubsuit",0x2663},{"diamondsuit",0x2666},
+    {"heartsuit",0x2665},{"spadesuit",0x2660},{"int",0x222B},{"prod",0x220F},
+    {"sum",0x2211},{"wedge",0x2227},{"vee",0x2228},{"cap",0x2229},{"cup",0x222A},
+    {"diamond",0x22C4},{"bullet",0x2219},{"div",0xF7},{"oslash",0x2298},
+    {"otimes",0x2297},{"oplus",0x2295},{"pm",0xB1},{"cdot",0x22C5},
+    {"times",0xD7},{"propto",0x221D},{"mid",0x2223},{"Leftrightarrow",0x21D4},
+    {"Leftarrow",0x21D0},{"Rightarrow",0x21D2},{"leq",0x2264},{"geq",0x2265},
+    {"approx",0x2248},{"supset",0x2283},{"subset",0x2282},{"supseteq",0x2287},
+    {"subseteq",0x2286},{"in",0x2208},{"ni",0x220B},{"leftrightarrow",0x2194},
+    {"leftarrow",0x2190},{"rightarrow",0x2192},{"sim",0x223C},{"equiv",0x2261},
+    {"colon",0x3A},{"uparrow",0x2191},{"downarrow",0x2193},{"Uparrow",0x21D1},
+    {"Downarrow",0x21D3},{"rangle",0x232A},{"langle",0x2329},{"rceil",0x2309},
+    {"lceil",0x2308},{"rfloor",0x230B},{"lfloor",0x230A},{"angle",0x2220},
+    {"therefore",0x2234},{"neq",0x2260},{"textdegree",0xB0},{"cong",0x2245},
+    {"surd",0x221A},{"hbar",0x210F}};
+
+// Construye byte->Unicode para una fuente a partir de su tabla nombre->byte.
+static std::map<unsigned char, unsigned int>
+makeUnicodeMap(const std::map<std::string, unsigned char> &name2byte) {
+    std::map<unsigned char, unsigned int> m;
+    for (const auto &kv : name2byte) {
+        auto it = kNameToUnicode.find(kv.first);
+        if (it != kNameToUnicode.end())
+            m[kv.second] = it->second;
+    }
+    return m;
+}
+
+// Accesores con inicialización perezosa (evita problemas de orden de
+// inicialización estática entre unidades de traducción: map_symbol vive en otra).
+static const std::map<unsigned char, unsigned int> &symbolUnicode() {
+    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_symbol);
+    return m;
+}
+static const std::map<unsigned char, unsigned int> &cmmiUnicode() {
+    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_tex_cmmi);
+    return m;
+}
+
+// Codifica un punto de código Unicode como UTF-8.
+static void appendUTF8(std::string &out, unsigned int cp) {
+    if (cp < 0x80) {
+        out += (char)cp;
+    } else if (cp < 0x800) {
+        out += (char)(0xC0 | (cp >> 6));
+        out += (char)(0x80 | (cp & 0x3F));
+    } else {
+        out += (char)(0xE0 | (cp >> 12));
+        out += (char)(0x80 | ((cp >> 6) & 0x3F));
+        out += (char)(0x80 | (cp & 0x3F));
+    }
+}
+
+// Familias de fuente con métricas compatibles con las base-14 (Times,
+// Helvetica, Courier) que usan las tablas de anchos de text.cpp. Se listan
+// primero las fuentes con métricas idénticas (Liberation/Nimbus son
+// métrica-compatibles) para que el avance de cur_x calculado coincida con el
+// ancho realmente renderizado y el texto no se encabalgue ni se separe de más.
+static const char *kSerifFamily =
+    "'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif";
+static const char *kSansFamily =
+    "Helvetica, Arial, 'Liberation Sans', 'Nimbus Sans', sans-serif";
+static const char *kMonoFamily =
+    "'Courier New', Courier, 'Liberation Mono', 'Nimbus Mono', monospace";
+
+// Traduce la cara de fuente de MetaGráfica a atributos SVG.
+static void svgFontAttrs(FontFace f, const char *&family,
+                         const char *&style, const char *&weight) {
+    family = kSerifFamily; style = "normal"; weight = "normal";
+    switch (f) {
+    case FN_SERIF_ITALIC:          style = "italic"; break;
+    case FN_SERIF_BOLD:            weight = "bold"; break;
+    case FN_SERIF_ITALIC_BOLD:     style = "italic"; weight = "bold"; break;
+    case FN_SANSERIF:              family = kSansFamily; break;
+    case FN_SANSERIF_ITALIC:       family = kSansFamily; style = "italic"; break;
+    case FN_SANSERIF_BOLD:         family = kSansFamily; weight = "bold"; break;
+    case FN_SANSERIF_ITALIC_BOLD:  family = kSansFamily; style = "italic"; weight = "bold"; break;
+    case FN_COURIER:               family = kMonoFamily; break;
+    case FN_COURIER_ITALIC:        family = kMonoFamily; style = "italic"; break;
+    case FN_COURIER_BOLD:          family = kMonoFamily; weight = "bold"; break;
+    case FN_COURIER_ITALIC_BOLD:   family = kMonoFamily; style = "italic"; weight = "bold"; break;
+    case FN_SYMBOL:                break;                       // griego/símbolos, recto
+    case FN_TEX_CMMI:              style = "italic"; break;     // matemática itálica
+    default:                       break;                       // FN_SERIF / FN_DEFAULT
+    }
+}
+
+std::string SVGDisplay::renderText(const std::string &s) {
+    bool symbolic = (dspstate.fontFace == FN_SYMBOL ||
+                     dspstate.fontFace == FN_TEX_CMMI);
+    const std::map<unsigned char, unsigned int> *umap = nullptr;
+    if (dspstate.fontFace == FN_SYMBOL)        umap = &symbolUnicode();
+    else if (dspstate.fontFace == FN_TEX_CMMI) umap = &cmmiUnicode();
+
+    std::string out;
+    for (unsigned char c : s) {
+        unsigned int cp = c;  // por defecto: byte como punto de código Latin-1
+        if (symbolic && umap) {
+            auto it = umap->find(c);
+            if (it != umap->end()) cp = it->second;  // griego/símbolo -> Unicode
+            // si no está en la tabla (p.ej. dígito latino en un run CMMI) se
+            // deja el byte tal cual, que se renderiza en la cara itálica.
+        }
+        switch (cp) {
+        case '&':  out += "&amp;";  break;
+        case '<':  out += "&lt;";   break;
+        case '>':  out += "&gt;";   break;
+        case '"':  out += "&quot;"; break;
+        case '\'': out += "&apos;"; break;
+        default:   appendUTF8(out, cp);
+        }
+    }
+    return out;
+}
+
 void SVGDisplay::text(string s) {
     // El texto se dibuja en (cur_x, cur_y), la última posición alcanzada por
     // moveto/moveto_nopath (igual que PS usa el "current point" para show).
     // Para que las letras no salgan reflejadas bajo el scale(1,-1) global,
     // el <text> lleva su propio scale(1,-1) local; por eso "y" se da en
     // negativo, de forma que ese segundo flip lo deje en cur_y.
-    std::string safeText = escapeXML(s);
+    std::string body = renderText(s);
+
+    const char *family, *style, *weight;
+    svgFontAttrs(dspstate.fontFace, family, style, weight);
 
     char colorBuf[10];
     sprintf(colorBuf, "#%06X", dspstate.linecolor);
@@ -415,8 +563,19 @@ void SVGDisplay::text(string s) {
     if (dspstate.text_align == 1) anchor = "middle";
     else if (dspstate.text_align == 2) anchor = "end";
 
+    float size = dspstate.fontSize * relfontsize;
     fprintf(file,
             "<text x=\"%f\" y=\"%f\" transform=\"scale(1, -1)\" text-anchor=\"%s\" "
-            "fill=\"%s\" font-size=\"%f\" font-family=\"sans-serif\">%s</text>\n",
-            cur_x, -cur_y, anchor, colorBuf, dspstate.fontSize * relfontsize, safeText.c_str());
+            "fill=\"%s\" font-size=\"%f\" font-family=\"%s\" font-style=\"%s\" "
+            "font-weight=\"%s\">%s</text>\n",
+            cur_x, -cur_y, anchor, colorBuf, size, family, style, weight, body.c_str());
+
+    // Avanzar cur_x igual que el "current point" de PostScript tras show, para
+    // que los runs siguientes de la misma línea (p.ej. "Cosine ", pi, "/2") no
+    // se encABALguen. El ancho se obtiene de las métricas de fuente.
+    TextState ts;
+    ts.font_face = dspstate.fontFace;
+    ts.font_size = relfontsize;
+    ts.script = 0;
+    cur_x += text_width(ts, s) * dspstate.fontSize;
 }

@@ -69,6 +69,10 @@ class SVGDisplay: public Display {
   // Helpers internos para generar el estilo SVG basado en dspstate
   std::string getStyleAttributes();
   std::string escapeXML(const std::string& data);
+  // Convierte un run de texto a UTF-8 seguro para XML según la cara de fuente
+  // actual: para FN_SYMBOL/FN_TEX_CMMI traduce los bytes a caracteres Unicode
+  // (letras griegas, símbolos matemáticos); para el resto reinterpreta Latin-1.
+  std::string renderText(const std::string& s);
   // Color de relleno como hex de 6 dígitos (sin '#'), desde fillcolor/fillgray.
   std::string fillColorHex();
   // Garantiza que exista un <pattern> de tramado para el índice/color actual

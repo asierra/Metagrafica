@@ -81,6 +81,10 @@ struct TextState {
     " Script " + std::to_string(script); }
 };
 
+// Ancho de una cadena en unidades em relativas (multiplicar por el tamaño de
+// fuente del dispositivo para obtener puntos). Definido en text.cpp.
+float text_width(TextState ts, string s);
+
 constexpr float fn_relsz_script = 0.7;
 //constexpr float fn_relsz_script2 = 0.5;
 constexpr float fn_relsz_big = 1.5;
