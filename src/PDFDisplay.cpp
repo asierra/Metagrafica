@@ -554,6 +554,14 @@ void PDFDisplay::deviceShear(float, float) {
 void PDFDisplay::deviceRotate(float angle) {
   float rad = angle * (float)M_PI / 180.0f;
   float c = cos(rad), s = sin(rad);
-  HPDF_Page_Concat(page, c, s, -s, c, 0, 0);
+  // Se rota alrededor de la posición actual de la pluma (cur_x, cur_y), no del
+  // origen, para preservar ese punto igual que `rotate` en PostScript/EPS y que
+  // el <g rotate(a,cx,cy)> de SVGDisplay. Sin esto, el texto rotado (p.ej. una
+  // etiqueta de eje colocada con XYPP+RTLC) se posiciona con MoveTextPos en el
+  // sistema ya rotado y aterriza fuera de la página. La traslación (e,f) deja
+  // fijo (cur_x, cur_y).
+  float e = cur_x * (1 - c) + s * cur_y;
+  float f = cur_y * (1 - c) - s * cur_x;
+  HPDF_Page_Concat(page, c, s, -s, c, e, f);
 }
 // deviceInitMatrix: sin override — no hay "defaultmatrix" en un stream PDF
