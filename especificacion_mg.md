@@ -1169,3 +1169,90 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `INTXT` / `XYTXT` | — | ✗ | obsoletos, se eliminan |
 | `MKMR` / `MR` | — | ✗ | internos/obsoletos, revisar al traducir |
 
+---
+
+## 22. Continuidad del motor y hoja de ruta de ingeniería V2
+
+Esta sección consolida las conclusiones de la auditoría de backend (2026-06/07) que
+siguen siendo relevantes hacia adelante. **Sustituye a `PENDIENTES.md`**, que era el
+registro de esa auditoría: al abrir la rama de V2, ese archivo puede retirarse — lo
+histórico (ítems ya resueltos) no necesita viajar, y lo que sí importa vive aquí y en
+§19 (decisiones de diseño abiertas).
+
+### 22.1 Qué se reemplaza y qué continúa
+
+V1 no es una sola pieza; son tres capas con destinos distintos:
+
+| Capa | Qué es | Destino en V2 |
+|---|---|---|
+| **Front-end de gramática** | Léxico + parser de comandos de dos letras (`PL`, `CR`, `OPST`, `MKST`, matrices `TL`/`ID`/`CP`…) | **Se congela y se reemplaza.** La gramática V2 (§1–§18) es nueva; la migración de fuentes V1 es vía el traductor `mg1to2.py` (§20), no un modo dual en el compilador. No vale la pena invertir en esta capa. |
+| **Motor / backend compartido** | `Display` y sus tres backends (EPS/PDF/SVG), `Matrix`, `primitives`, `splines`, y el módulo de texto (heredado sin cambios, §14.2) | **Continúa.** El compilador V2 estrena gramática pero **emite a través de esta misma maquinaria.** Toda inversión aquí es inversión en V2. |
+| **Traductor V1→V2** | `mg1to2.py` | **Nuevo.** Es donde el conocimiento de la sintaxis V1 se preserva de forma ejecutable (§20–§21). |
+
+La consecuencia práctica: la distinción útil no es "V1 vs V2" sino **"front-end
+congelado" vs "motor compartido que perdura"**. Endurecer el motor no es mantenimiento
+de V1 legado; es preparar el sustrato de V2.
+
+### 22.2 Estado del motor: punto de partida para V2
+
+La auditoría dejó el motor en un estado deliberadamente más robusto y profesional que
+el que describía el artículo original de V1. Lo relevante para construir V2 encima:
+
+- **Coordenadas en `double` de punta a punta.** `Matrix` y toda la tubería
+  (`Display`, los tres backends, `point` y demás primitivas, parser, texto, splines)
+  pasaron de `float` a `double`. Las composiciones largas de transformaciones ya no
+  acumulan error de precisión y `deg2rad` (que siempre fue `double`) deja de truncarse
+  en cada rotación. Para calidad de publicación, importa.
+- **Máquina de estado de matrices unificada en la clase base.** El estado compartido
+  (`mt`, `mtst`, las pilas) y su contabilidad (`pushMatrix`/`popMatrix`/`init_matrix`,
+  la rama `MTST` de las transformaciones) viven en `Display`; cada backend solo
+  implementa los *hooks* `device*` de su rama nativa (`MTLC`). Los tres backends son
+  simétricos y ninguno reimplementa la aritmética de la pila.
+- **EPS válido.** El emisor de `init_matrix` producía `defaultmatrix` a secas
+  (PostScript inválido: `stackunderflow`); ahora emite `initmatrix`, que es el
+  operador correcto para resetear la CTM.
+
+### 22.3 Refactor de motor diferido: extraer `DeviceBackend` puro
+
+Queda una mejora de arquitectura **no urgente** pero recomendada cuando V2 empiece a
+exigirle a los backends (recursión, `transform` anidados, o un cuarto formato de
+salida). Hoy `Display` mezcla dos responsabilidades:
+
+- **(A)** la máquina de estado semántica de MetaGráfica (pila de transformaciones,
+  estado de dibujo, resolución de structs) — idéntica entre backends; y
+- **(B)** las primitivas de salida — genuinamente específicas de cada formato.
+
+La Etapa 1 de esa separación ya está hecha (A subió a `Display`). La **Etapa 2** es
+extraer un tipo `DeviceBackend` puro y sin estado (~12 métodos: ciclo de vida,
+agrupamiento, transform nativo, y las primitivas `path`/`arc`/`dot`/`text`). Un backend
+nuevo implementaría solo eso y **estructuralmente no podría corromper la pila de
+transformaciones** — ni siquiera tendría acceso a ella. El peor bug de la sesión de
+`SVGDisplay` fue exactamente eso, y con este diseño sería imposible de escribir.
+Emprenderla solo si se prevé ese cuarto backend o se quiere testeabilidad (mock/null
+backend); no es bloqueante.
+
+### 22.4 El puente isométrico (§3.1)
+
+La política de aspect ratio de V2 —espacio isométrico por construcción, escala uniforme
+*meet* + margen (§3.1)— es el cambio que más toca al motor compartido. Al implementarla
+**desaparecen las compensaciones por `getRatio()`** repartidas hoy en `src/structure.cpp`
+(los `stpos.x *= ratio` y análogos), y con ellas la causa raíz del defecto de V1: la
+normalización anisotrópica a [0,1]² que deformaba en formato apaisado. Es trabajo de
+diseño de V2 que se ejecuta sobre el backend, no sobre la gramática.
+
+### 22.5 Red de regresión (prerrequisito del salto)
+
+El motor **no tiene suite de pruebas**; la corrección se verifica por inspección visual
+de los `.eps`/`.svg`/`.pdf`. Eso no escala a un rediseño de gramática. El primer paso de
+mayor palanca al abrir la rama V2 es un arnés de regresión *golden-file* sobre
+`examples/`: capturar la salida de referencia, y tras cada cambio comparar por bytes
+`.eps` y `.svg` (`diff -q`) y visualmente el `.pdf` (varía por timestamps internos). Con
+esa red, tocar el backend deja de ser una apuesta manual.
+
+### 22.6 Orden de trabajo recomendado para la rama V2
+
+1. **Arnés de regresión** sobre `examples/` (§22.5) — barato y desbloquea todo lo demás.
+2. **`mg1to2.py`** (§20) — preserva el conocimiento de V1 y da corpus de prueba.
+3. **Gramática V2** (§1–§18) y **política isométrica** (§3.1 / §22.4).
+4. **Refactor `DeviceBackend`** (§22.3) — oportunista, cuando el manejo de matrices estorbe.
+

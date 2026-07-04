@@ -1,5 +1,13 @@
 # Correcciones pendientes — auditoría de backend
 
+> **Nota (2026-07-04): este archivo es histórico y puede retirarse al abrir la rama
+> de V2.** Ya no queda ningún defecto de código real en el motor V1. Las conclusiones
+> que sí importan hacia adelante —qué capa del motor continúa en V2, el estado
+> endurecido del backend, el refactor `DeviceBackend` diferido, el puente isométrico y
+> la falta de red de regresión— quedaron consolidadas en `especificacion_mg.md` §22.
+> Las decisiones de diseño abiertas viven en §19. Lo de abajo es el registro de la
+> auditoría (ítems ya resueltos, para trazabilidad).
+
 Estado tras la sesión del 2026-06-30. Los ítems críticos (#1–#4, #6) están resueltos.
 
 **Actualización 2026-07-02:** corregido el bug de `ARCST` en formato apaisado
@@ -18,8 +26,13 @@ ya escala por `dvx/dvy`) y **el bug de PDF de `fig2-3`** (los cuatro bugs de `li
 medio resuelto: el refactor de estilos de línea (ver `plan_lineas.md`) reemplazó
 `DisplayState::line_width` (int) por `line_width_pt` (float); el `int` restante es
 `Attribute::value`, artefacto de la gramática V1 que V2 resuelve con `width=` float.
-Siguen abiertos: **#11, #17** (y la mitad de gramática de #12). Ver marcas
+Siguen abiertos: **#11** (y la mitad de gramática de #12). Ver marcas
 `✓ RESUELTO` en cada ítem.
+
+**Actualización 2026-07-04 (bis):** resueltos **#13** (`Matrix` a `double`,
+propagado a toda la tubería) y **#17** (`defaultmatrix` → `initmatrix`). El único
+pendiente de código real cae; lo que queda abierto (#8 Etapa 2, #11, mitad de #12)
+es refactor diferido o materia de diseño de la spec V2, no defectos del motor.
 
 ---
 
@@ -478,9 +491,15 @@ cada rotación. Para "publication quality", `double` en la matriz es casi gratis
 ### #15 — Encabezado incorrecto en `mg.h` — ✓ RESUELTO (2026-07-04)
 `include/mg.h` ahora dice `File: mg.h`.
 
-### #17 — `defaultmatrix` a secas es PostScript inválido
+### #17 — `defaultmatrix` a secas es PostScript inválido — ✓ RESUELTO (2026-07-04)
 `EPSDisplay::init_matrix` (rama MTLC, disparada por `IDLC`) emite
 `defaultmatrix` sin operandos; el operador requiere una matriz en la pila y no
 modifica la CTM (`matrix defaultmatrix setmatrix` sería lo correcto). Latente:
 ningún ejemplo usa `IDLC` hoy, pero cualquier `.mg` que lo use produce un EPS
-que revienta en el intérprete. Corregir al tocar esa zona (post-Etapa 1).
+que revienta en el intérprete.
+
+> **Resuelto.** `EPSDisplay::deviceInitMatrix` ahora emite `initmatrix` (operador
+> sin operandos que resetea la CTM a la default del dispositivo), que es lo que
+> semánticamente se buscaba. Verificado con un `.mg` de prueba que dispara `IDLC`:
+> el EPS resultante pasa por Ghostscript sin errores, mientras que la versión con
+> `defaultmatrix` produce `stackunderflow in --defaultmatrix--`.

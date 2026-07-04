@@ -619,7 +619,7 @@ void EPSDisplay::deviceRotate(double angle) {
 }
 
 void EPSDisplay::deviceInitMatrix() {
-  fprintf(file, "defaultmatrix\n");
+  fprintf(file, "initmatrix\n");
 }
 
 void EPSDisplay::structureDefBegin(std::string name) {
