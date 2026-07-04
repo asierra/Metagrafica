@@ -47,8 +47,11 @@ void Polyline::draw(Display &g) {
     }
     i++;
   }
-  g.stroke();
-  if (type==GI_POLYGON && !filled) 
+  // Los ticks ya hicieron su propio stroke por cada marca dentro del bucle;
+  // un stroke final aquí no tendría path y en libharu dispara GMODE.
+  if (type!=GI_TICKS)
+    g.stroke();
+  if (type==GI_POLYGON && !filled)
     g.setFilled(false);
 }
 

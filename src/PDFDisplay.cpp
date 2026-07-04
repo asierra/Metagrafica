@@ -15,8 +15,13 @@ MetaGrafica:  Human descriptive language to generate publication quality
 static const char* CMMI_TTF_PATH = "/usr/share/fonts/truetype/lyx/cmmi10.ttf";
 
 static void hpdf_error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void*) {
-  fprintf(stderr, "libharu error: 0x%04X detail: 0x%04X\n",
+  // El primer error deja el documento inválido: todo lo posterior falla en
+  // cascada (0x1025 INVALID_DOCUMENT). No tiene sentido continuar, así que
+  // abortamos de inmediato con el error real en vez de inundar la salida.
+  fprintf(stderr, "Error de libharu 0x%04X (detalle 0x%04X): "
+                  "no se puede generar el PDF.\n",
           (unsigned)error_no, (unsigned)detail_no);
+  exit(EXIT_FAILURE);
 }
 
 /* Descompone un entero RGB empaquetado en componentes [0,1]. */
@@ -251,9 +256,11 @@ void PDFDisplay::moveto(float x, float y) {
 }
 
 void PDFDisplay::rmoveto(float x, float y) {
+  // Se usa para reposicionar sub/superíndices dentro de una línea de texto.
+  // Solo mueve el cursor de texto: HPDF_Page_MoveTo iniciaría un path y el
+  // siguiente text() fallaría con GMODE al fijar color de relleno.
   cur_x += x; cur_y += y;
   adjust_limits(cur_x, cur_y, cur_x, cur_y);
-  HPDF_Page_MoveTo(page, cur_x, cur_y);
 }
 
 void PDFDisplay::lineto(float x, float y) {
