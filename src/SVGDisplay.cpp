@@ -294,8 +294,13 @@ void SVGDisplay::moveto(float x, float y) {
 }
 
 void SVGDisplay::rmoveto(float dx, float dy) {
+    // rmoveto solo lo usa la maquetación de texto (TextLine: alineación y
+    // sub/superíndices), nunca para construir paths. Debe mover únicamente el
+    // cursor de texto, como moveto_nopath. Si escribiera en path_builder
+    // ensuciaría el path de la figura siguiente: p.ej. arc() elige M o L según
+    // si path_builder está vacío, y un "m" residual lo hacía dibujar una línea
+    // espuria desde el punto del texto hasta el arco.
     cur_x += dx; cur_y += dy;
-    path_builder << "m " << dx << " " << dy << " ";
 }
 
 void SVGDisplay::lineto(float x, float y) {
