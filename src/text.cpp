@@ -364,11 +364,11 @@ FontMetricsMap cmmi_metrics_map = {
     {191, 437}, {192, 540}, {193, 595}, {194, 625}, {195, 651}, {196, 277},
     {199, 540}};
 
-float text_width(TextState ts, string s) {
+double text_width(TextState ts, string s) {
   if (ts.font_face==FN_COURIER) 
     return s.length() * 600 * ts.font_size / 1000;
 
-  float width = 0;
+  double width = 0;
   FontMetricsMap fmmap;
 
   switch (ts.font_face) {
@@ -412,7 +412,7 @@ void Text::draw(Display &g) {
 }
 
 void TextLine::draw(Display &g) {
-  float vdesp;
+  double vdesp;
 
   int text_align = g.getTextAlign();
   if (text_align > 0) {
@@ -436,8 +436,8 @@ void TextLine::draw(Display &g) {
     g.setTextAlign(text_align);
 }
 
-float TextLine::width() {
-  float w = 0;
+double TextLine::width() {
+  double w = 0;
   for (const auto &text : textline) {
     TextState ts = text->getState();
     w += text_width(ts, text->getText());

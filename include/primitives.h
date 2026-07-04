@@ -80,21 +80,21 @@ enum PredefinedMatrix {
 /// Vectorial pixel, not vector because we don't define all vector operations
 struct point {
   point() { x =0; y = 0; }
-  point(float x1, float y1) { x = x1; y = y1; }
+  point(double x1, double y1) { x = x1; y = y1; }
   point(const point&) = default;
-  float x, y;
+  double x, y;
 
-  float distancesq(point a) const
+  double distancesq(point a) const
   {
-    float dx = a.x - x;
-    float dy = a.y - y;
+    double dx = a.x - x;
+    double dy = a.y - y;
     return (dx*dx + dy*dy);
   }
-  float distance(point a) const
+  double distance(point a) const
   {
     return sqrt(distancesq(a));
   }
-  float length() const
+  double length() const
   {
     return sqrt(x*x + y*y);
   }
@@ -204,13 +204,13 @@ public:
 
   void draw(Display &);
 
-  void setRadius(float x, float y) { rx = x; ry = y; }
+  void setRadius(double x, double y) { rx = x; ry = y; }
 
-  void setAngles(float x, float y) { ai = x; af = y; }
+  void setAngles(double x, double y) { ai = x; af = y; }
 
 private:
-  float rx, ry;
-  float ai, af;
+  double rx, ry;
+  double ai, af;
 };
 
 class Dot : public GraphicsItemWithPath {
@@ -219,10 +219,10 @@ public:
 
   void draw(Display &);
 
-  void setRadius(float x) { r = x;  }
+  void setRadius(double x) { r = x;  }
 
 private:
-  float r;
+  double r;
 };
 
 class Attribute : public GraphicsItem {
@@ -254,7 +254,7 @@ public:
 
   void setPoint(point p) { tl = p; }
 
-  void setRotation(float r) { rt = r; }
+  void setRotation(double r) { rt = r; }
 
   void setMatrix(Matrix m) { mt = m; }
   
@@ -262,7 +262,7 @@ private:
   MatrixOperation op;
   PredefinedMatrix predefmat;
   point tl;
-  float rt;
+  double rt;
   Matrix mt;
 };
 

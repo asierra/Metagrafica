@@ -18,7 +18,7 @@ ya escala por `dvx/dvy`) y **el bug de PDF de `fig2-3`** (los cuatro bugs de `li
 medio resuelto: el refactor de estilos de línea (ver `plan_lineas.md`) reemplazó
 `DisplayState::line_width` (int) por `line_width_pt` (float); el `int` restante es
 `Attribute::value`, artefacto de la gramática V1 que V2 resuelve con `width=` float.
-Siguen abiertos: **#11, #13, #17** (y la mitad de gramática de #12). Ver marcas
+Siguen abiertos: **#11, #17** (y la mitad de gramática de #12). Ver marcas
 `✓ RESUELTO` en cada ítem.
 
 ---
@@ -461,9 +461,15 @@ artefacto de la **gramática V1** (el valor parseado de `LWIDTH n`); V2 lo resue
 en la fuente con `width=` float (`especificacion_mg.md` §4.10). No hay nada más que
 hacer en el motor V1.
 
-### #13 — `Matrix` usa `float`; `deg2rad` es `double`
+### #13 — `Matrix` usa `float`; `deg2rad` es `double` — ✓ RESUELTO (2026-07-04)
 Composiciones largas acumulan error; `deg2rad` se trunca de `double` a `float` en
 cada rotación. Para "publication quality", `double` en la matriz es casi gratis.
+
+> **Resuelto.** `Matrix` pasó a `double` y el cambio se propagó mecánicamente a
+> toda la tubería: `Display.h`, los tres backends (EPS/PDF/SVG), `point` y demás
+> primitivas, `Parser`, texto y splines. No queda ningún `float` en el núcleo
+> (solo en `lexmg.cpp` generado y en libharu). Verificado compilando limpio y
+> regenerando todos los ejemplos.
 
 ### #14 — `getType()` devuelve `int` en vez de `GraphicsItemType` — ✓ RESUELTO (2026-07-04)
 `include/primitives.h`: ahora `GraphicsItemType getType() const { return type; }`.

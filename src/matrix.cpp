@@ -15,7 +15,7 @@ void Matrix::initialize() { memcpy(M, MATIDEN, sizeof(DataMatrix)); }
 
 void Matrix::set(DataMatrix m) { memcpy(M, m, sizeof(DataMatrix)); }
 
-void Matrix::scale(float x, float y) {
+void Matrix::scale(double x, double y) {
   DataMatrix A;
   memcpy(A, MATIDEN, sizeof(DataMatrix));
   A[0][0] = x;
@@ -23,7 +23,7 @@ void Matrix::scale(float x, float y) {
   matmat(A);
 }
 
-void Matrix::shear(float x, float y) {
+void Matrix::shear(double x, double y) {
   DataMatrix A;
   memcpy(A, MATIDEN, sizeof(DataMatrix));
   A[0][1] = x;
@@ -31,7 +31,7 @@ void Matrix::shear(float x, float y) {
   matmat(A);
 }
 
-void Matrix::translate(float x, float y) {
+void Matrix::translate(double x, double y) {
   DataMatrix A;
   memcpy(A, MATIDEN, sizeof(DataMatrix));
   A[0][2] = x;
@@ -39,17 +39,17 @@ void Matrix::translate(float x, float y) {
   matmat(A);
 }
 
-void Matrix::to_rectangle(float x1, float y1, float x2, float y2) {
+void Matrix::to_rectangle(double x1, double y1, double x2, double y2) {
   initialize();
   translate(x1, y1);
   scale(x2-x1, y2-y1);
 }
 
-void Matrix::rotate(float theta) {
+void Matrix::rotate(double theta) {
   DataMatrix A;
   memcpy(A, MATIDEN, sizeof(DataMatrix));
   theta *= deg2rad;
-  float cs=cos(theta), sn=sin(theta);
+  double cs=cos(theta), sn=sin(theta);
 
   A[0][0] = cs;
   A[0][1] = -sn;
@@ -58,15 +58,15 @@ void Matrix::rotate(float theta) {
   matmat(A);
 }
 
-void Matrix::transform(float &x, float &y) {
-  float xp = x, yp = y;
+void Matrix::transform(double &x, double &y) {
+  double xp = x, yp = y;
 
   x = M[0][0] * xp + M[0][1] * yp + M[0][2];
   y = M[1][0] * xp + M[1][1] * yp + M[1][2];
 }
 
-void Matrix::transf2d(float &x, float &y) {
-  float xp = x, yp = y;
+void Matrix::transf2d(double &x, double &y) {
+  double xp = x, yp = y;
 
   x = M[0][0] * xp + M[0][1] * yp;
   y = M[1][0] * xp + M[1][1] * yp;

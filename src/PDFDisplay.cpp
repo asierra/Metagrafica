@@ -25,7 +25,7 @@ static void hpdf_error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void
 }
 
 /* Descompone un entero RGB empaquetado en componentes [0,1]. */
-static void int2rgb(int c, float &r, float &g, float &b) {
+static void int2rgb(int c, double &r, double &g, double &b) {
   b = (c & 0xff) / 255.0f;
   g = ((c >> 8)  & 0xff) / 255.0f;
   r = ((c >> 16) & 0xff) / 255.0f;
@@ -37,33 +37,33 @@ static void int2rgb(int c, float &r, float &g, float &b) {
   y para elipses con rx != ry.
 */
 static void arc_bezier(HPDF_Page page,
-                       float cx, float cy, float rx, float ry,
-                       float startDeg, float endDeg) {
-  const float PI = (float)M_PI;
-  float startRad = startDeg * PI / 180.0f;
-  float endRad   = endDeg   * PI / 180.0f;
-  float sweep    = endRad - startRad;
+                       double cx, double cy, double rx, double ry,
+                       double startDeg, double endDeg) {
+  const double PI = (double)M_PI;
+  double startRad = startDeg * PI / 180.0f;
+  double endRad   = endDeg   * PI / 180.0f;
+  double sweep    = endRad - startRad;
 
   if (sweep == 0.0f) return;
 
   int numSegs = (int)ceil(fabs(sweep) / (PI * 0.5f));
   if (numSegs < 1) numSegs = 1;
-  float segSweep = sweep / numSegs;
-  float alpha = (4.0f / 3.0f) * tan(segSweep / 4.0f);
+  double segSweep = sweep / numSegs;
+  double alpha = (4.0f / 3.0f) * tan(segSweep / 4.0f);
 
-  float curAngle = startRad;
-  float x0 = cx + rx * cos(curAngle);
-  float y0 = cy + ry * sin(curAngle);
+  double curAngle = startRad;
+  double x0 = cx + rx * cos(curAngle);
+  double y0 = cy + ry * sin(curAngle);
   HPDF_Page_MoveTo(page, x0, y0);
 
   for (int i = 0; i < numSegs; i++) {
-    float nextAngle = curAngle + segSweep;
-    float x3 = cx + rx * cos(nextAngle);
-    float y3 = cy + ry * sin(nextAngle);
-    float x1 = x0 - alpha * rx * sin(curAngle);
-    float y1 = y0 + alpha * ry * cos(curAngle);
-    float x2 = x3 + alpha * rx * sin(nextAngle);
-    float y2 = y3 - alpha * ry * cos(nextAngle);
+    double nextAngle = curAngle + segSweep;
+    double x3 = cx + rx * cos(nextAngle);
+    double y3 = cy + ry * sin(nextAngle);
+    double x1 = x0 - alpha * rx * sin(curAngle);
+    double y1 = y0 + alpha * ry * cos(curAngle);
+    double x2 = x3 + alpha * rx * sin(nextAngle);
+    double y2 = y3 - alpha * ry * cos(nextAngle);
     HPDF_Page_CurveTo(page, x1, y1, x2, y2, x3, y3);
     curAngle = nextAngle;
     x0 = x3; y0 = y3;
@@ -123,7 +123,7 @@ void PDFDisplay::end() {
 
 void PDFDisplay::applyFillColor() {
   if (dspstate.fillcolor > 0) {
-    float r, g, b;
+    double r, g, b;
     int2rgb(dspstate.fillcolor, r, g, b);
     HPDF_Page_SetRGBFill(page, r, g, b);
   } else {
@@ -133,7 +133,7 @@ void PDFDisplay::applyFillColor() {
 
 void PDFDisplay::applyStrokeColor() {
   if (dspstate.linecolor > 0) {
-    float r, g, b;
+    double r, g, b;
     int2rgb(dspstate.linecolor, r, g, b);
     HPDF_Page_SetRGBStroke(page, r, g, b);
   } else {
@@ -175,7 +175,7 @@ void PDFDisplay::hatchCurrentPath() {
 
   // Las líneas de tramado son trazos: se pintan con el color de relleno.
   if (dspstate.fillcolor > 0) {
-    float r, g, b;
+    double r, g, b;
     int2rgb(dspstate.fillcolor, r, g, b);
     HPDF_Page_SetRGBStroke(page, r, g, b);
   } else {
@@ -183,20 +183,20 @@ void PDFDisplay::hatchCurrentPath() {
   }
 
   FillPattern fp = patternFor(dspstate.fillpattern);
-  float cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
-  float ddx = xmax - xmin, ddy = ymax - ymin;
-  float D = sqrtf(ddx * ddx + ddy * ddy);  // diagonal: cubre el bbox a cualquier ángulo
+  double cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
+  double ddx = xmax - xmin, ddy = ymax - ymin;
+  double D = sqrtf(ddx * ddx + ddy * ddy);  // diagonal: cubre el bbox a cualquier ángulo
   if (D <= 0) D = 1;
   for (const HatchLine &h : fp) {
     if (h.gap <= 0) continue;
     // Dirección visual de las líneas = 90 - ángulo, misma semántica que el
     // prólogo hatch* del EPS (0=vertical, 90=horizontal, 45/135 diagonales).
-    float th = (90.0f - h.angle) * (float)M_PI / 180.0f;
-    float ux = cosf(th), uy = sinf(th);   // a lo largo de la línea
-    float px = -uy, py = ux;              // perpendicular: paso entre líneas
+    double th = (90.0f - h.angle) * (double)M_PI / 180.0f;
+    double ux = cosf(th), uy = sinf(th);   // a lo largo de la línea
+    double px = -uy, py = ux;              // perpendicular: paso entre líneas
     int N = (int)(D / (2 * h.gap)) + 1;
     for (int k = -N; k <= N; k++) {
-      float ox = cx + k * h.gap * px, oy = cy + k * h.gap * py;
+      double ox = cx + k * h.gap * px, oy = cy + k * h.gap * py;
       HPDF_Page_MoveTo(page, ox - (D / 2) * ux, oy - (D / 2) * uy);
       HPDF_Page_LineTo(page, ox + (D / 2) * ux, oy + (D / 2) * uy);
     }
@@ -212,7 +212,7 @@ void PDFDisplay::save()    { HPDF_Page_GSave(page);    }
 void PDFDisplay::restore() { HPDF_Page_GRestore(page); }
 
 void PDFDisplay::applyDash() {
-  const std::vector<float> &d = dspstate.dash_array;
+  const std::vector<double> &d = dspstate.dash_array;
   if (d.empty()) {
     HPDF_Page_SetDash(page, nullptr, 0, 0);
     return;
@@ -229,7 +229,7 @@ void PDFDisplay::applyLineJoin() {
   HPDF_Page_SetLineJoin(page, (HPDF_LineJoin)dspstate.line_join);
 }
 
-void PDFDisplay::setLineWidth(float l) {
+void PDFDisplay::setLineWidth(double l) {
   dspstate.line_width_pt = l;
   dspstate.line_width_set = true;
   HPDF_Page_SetLineWidth(page, l);
@@ -244,14 +244,14 @@ void PDFDisplay::setLineColor(int lc) {
 /* Paths                                                                */
 /* ------------------------------------------------------------------ */
 
-void PDFDisplay::moveto_nopath(float x, float y) {
+void PDFDisplay::moveto_nopath(double x, double y) {
   // Solo actualiza posición para texto; no inicia un path
   // (HPDF_Page_MoveTo pondría la página en PATH_OBJECT, bloqueando BeginText)
   mt.transform(x, y);
   cur_x = x; cur_y = y;
 }
 
-void PDFDisplay::moveto(float x, float y) {
+void PDFDisplay::moveto(double x, double y) {
   mt.transform(x, y);
   cur_x = x; cur_y = y;
   if (!dspstate.openpath) set_limits(x, y, x, y);
@@ -261,7 +261,7 @@ void PDFDisplay::moveto(float x, float y) {
   HPDF_Page_MoveTo(page, x, y);
 }
 
-void PDFDisplay::rmoveto(float x, float y) {
+void PDFDisplay::rmoveto(double x, double y) {
   // Se usa para reposicionar sub/superíndices dentro de una línea de texto.
   // Solo mueve el cursor de texto: HPDF_Page_MoveTo iniciaría un path y el
   // siguiente text() fallaría con GMODE al fijar color de relleno.
@@ -269,21 +269,21 @@ void PDFDisplay::rmoveto(float x, float y) {
   adjust_limits(cur_x, cur_y, cur_x, cur_y);
 }
 
-void PDFDisplay::lineto(float x, float y) {
+void PDFDisplay::lineto(double x, double y) {
   mt.transform(x, y);
   cur_x = x; cur_y = y;
   adjust_limits(x, y, x, y);
   HPDF_Page_LineTo(page, x, y);
 }
 
-void PDFDisplay::rlineto(float x, float y) {
+void PDFDisplay::rlineto(double x, double y) {
   cur_x += x; cur_y += y;
   adjust_limits(cur_x, cur_y, cur_x, cur_y);
   HPDF_Page_LineTo(page, cur_x, cur_y);
 }
 
-void PDFDisplay::curveto(float x1, float y1, float x2, float y2,
-                         float x3, float y3) {
+void PDFDisplay::curveto(double x1, double y1, double x2, double y2,
+                         double x3, double y3) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
   mt.transform(x3, y3);
@@ -295,7 +295,7 @@ void PDFDisplay::curveto(float x1, float y1, float x2, float y2,
   HPDF_Page_CurveTo(page, x1, y1, x2, y2, x3, y3);
 }
 
-void PDFDisplay::line(float x1, float y1, float x2, float y2) {
+void PDFDisplay::line(double x1, double y1, double x2, double y2) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
   prepareDraw();
@@ -337,7 +337,7 @@ void PDFDisplay::setOpenPath(bool op) {
 /* Primitivos                                                           */
 /* ------------------------------------------------------------------ */
 
-void PDFDisplay::rect(float x1, float y1, float x2, float y2) {
+void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
   if (!dspstate.openpath) set_limits(x1, y1, x2, y2);
@@ -356,9 +356,9 @@ void PDFDisplay::rect(float x1, float y1, float x2, float y2) {
     HPDF_Page_Stroke(page);
 }
 
-void PDFDisplay::arc(float x, float y, float w, float h,
-                     float startAng, float endAng) {
-  float sa = startAng, ea = endAng;
+void PDFDisplay::arc(double x, double y, double w, double h,
+                     double startAng, double endAng) {
+  double sa = startAng, ea = endAng;
   mt.transform(x, y);
   if (w != h)
     mt.transf2d(w, h);
@@ -380,7 +380,7 @@ void PDFDisplay::arc(float x, float y, float w, float h,
     ea = sa + endAng;
   }
 
-  float aw = fabs(w), ah = fabs(h);
+  double aw = fabs(w), ah = fabs(h);
   if (!dspstate.openpath) set_limits(x - aw, y - ah, x + aw, y + ah);
   else adjust_limits(x - aw, y - ah, x + aw, y + ah);
   ensurePatternGSave();
@@ -389,7 +389,7 @@ void PDFDisplay::arc(float x, float y, float w, float h,
   stroke();
 }
 
-void PDFDisplay::dot(float x, float y, float r) {
+void PDFDisplay::dot(double x, double y, double r) {
   mt.transform(x, y);
   HPDF_Page_GSave(page);
   applyFillColor();            // en PAGE_DESCRIPTION, antes del path
@@ -454,7 +454,7 @@ static unsigned char cmmi_to_sym(unsigned char c) {
   }
 }
 
-void PDFDisplay::setFontSize(float fz) {
+void PDFDisplay::setFontSize(double fz) {
   if (fz == dspstate.fontSize) return;
   Display::setFontSize(fz);
   dspstate.fontFace = FN_NOFACE;
@@ -494,7 +494,7 @@ void PDFDisplay::setFontFace(FontFace face) {
 void PDFDisplay::text(string s) {
   if (!current_font) return;
 
-  float size = dspstate.fontSize * relfontsize;
+  double size = dspstate.fontSize * relfontsize;
 
   // Para FN_TEX_CMMI, un solo carácter puede ser griego (traducir a Symbol)
   // o latino (usar Times-Italic como aproximación a math italic).
@@ -513,16 +513,16 @@ void PDFDisplay::text(string s) {
   // El texto debe usar el color de trazo (linecolor), no el fill color de shapes.
   // En PDF modo 0 (fill), SetRGBFill controla el color del texto.
   if (dspstate.linecolor > 0) {
-    float r, g, b; int2rgb(dspstate.linecolor, r, g, b);
+    double r, g, b; int2rgb(dspstate.linecolor, r, g, b);
     HPDF_Page_SetRGBFill(page, r, g, b);
   } else {
     HPDF_Page_SetGrayFill(page, dspstate.linegray);
   }
 
   HPDF_Page_SetFontAndSize(page, use_font, size);
-  float tw = HPDF_Page_TextWidth(page, s_out.c_str());
+  double tw = HPDF_Page_TextWidth(page, s_out.c_str());
 
-  float tx = cur_x;
+  double tx = cur_x;
   if (dspstate.text_align == 1)      tx -= tw / 2.0f;
   else if (dspstate.text_align == 2) tx -= tw;
 
@@ -545,29 +545,29 @@ void PDFDisplay::text(string s) {
 
 // Solo la rama MTLC; la contabilidad MTST vive en Display
 
-void PDFDisplay::deviceTranslate(float x, float y) {
+void PDFDisplay::deviceTranslate(double x, double y) {
   HPDF_Page_Concat(page, 1, 0, 0, 1, x * dvx, y * dvy);
 }
 
-void PDFDisplay::deviceScale(float x, float y) {
+void PDFDisplay::deviceScale(double x, double y) {
   HPDF_Page_Concat(page, x, 0, 0, y, 0, 0);
 }
 
-void PDFDisplay::deviceShear(float, float) {
+void PDFDisplay::deviceShear(double, double) {
   fprintf(stderr, "PDFDisplay: shear MTLC no implementado\n");
 }
 
-void PDFDisplay::deviceRotate(float angle) {
-  float rad = angle * (float)M_PI / 180.0f;
-  float c = cos(rad), s = sin(rad);
+void PDFDisplay::deviceRotate(double angle) {
+  double rad = angle * (double)M_PI / 180.0f;
+  double c = cos(rad), s = sin(rad);
   // Se rota alrededor de la posición actual de la pluma (cur_x, cur_y), no del
   // origen, para preservar ese punto igual que `rotate` en PostScript/EPS y que
   // el <g rotate(a,cx,cy)> de SVGDisplay. Sin esto, el texto rotado (p.ej. una
   // etiqueta de eje colocada con XYPP+RTLC) se posiciona con MoveTextPos en el
   // sistema ya rotado y aterriza fuera de la página. La traslación (e,f) deja
   // fijo (cur_x, cur_y).
-  float e = cur_x * (1 - c) + s * cur_y;
-  float f = cur_y * (1 - c) - s * cur_x;
+  double e = cur_x * (1 - c) + s * cur_y;
+  double f = cur_y * (1 - c) - s * cur_x;
   HPDF_Page_Concat(page, c, s, -s, c, e, f);
 }
 // deviceInitMatrix: sin override — no hay "defaultmatrix" en un stream PDF

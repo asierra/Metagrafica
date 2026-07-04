@@ -19,8 +19,8 @@ using std::string;
 
 class MetaGrafica;
 
-constexpr float point_to_cm =  0.03527777777777;
-constexpr float cm_to_point = 28.34645669291339;
+constexpr double point_to_cm =  0.03527777777777;
+constexpr double cm_to_point = 28.34645669291339;
 
 #include "primitives.h"
 #include "text.h"
@@ -53,30 +53,30 @@ struct DisplayState {
   bool openpath;
 
   // Grosor en PUNTOS tipográficos (no en unidades de 0.2 pt de V1).
-  float line_width_pt;
+  double line_width_pt;
   // ¿Se fijó explícitamente el grosor? Distingue el default (1.0 pt, el del
   // dispositivo PS/PDF cuando nunca se llama LWIDTH) de un LWIDTH 0 explícito.
   bool line_width_set;
   // Patrón de guiones: longitudes on/off alternadas en pt. Vacío = línea continua.
   // Única fuente de verdad del patrón; ver Display::dashArrayForIndex().
-  std::vector<float> dash_array;
+  std::vector<double> dash_array;
   // 0 butt, 1 round, 2 square. Dormido en V1: ninguna ruta lo invoca todavía.
   int line_cap;
   // 0 miter, 1 round, 2 bevel. Dormido en V1: ninguna ruta lo invoca todavía.
   int line_join;
-  float linegray;
+  double linegray;
   int linecolor;
 
-  float fontSize;
+  double fontSize;
   FontFace fontFace;
   int text_align;
-  float textgray;
+  double textgray;
 
   // objects should be filled?
   bool fill;
   int fillpattern;
   bool outlinefill;
-  float fillgray;
+  double fillgray;
   int fillcolor;
 };
 
@@ -88,10 +88,10 @@ struct DisplayState {
    este descriptor a su mecanismo nativo (EPS/PDF: clip + líneas; SVG: <pattern>).
  */
 struct HatchLine {
-  float angle = 0.0f;          // dirección de las líneas (grados)
-  float gap   = 0.0f;          // separación perpendicular entre líneas (pt)
-  float ox = 0.0f, oy = 0.0f;  // origen/fase de la familia
-  std::vector<float> dashes;   // vacío = línea continua
+  double angle = 0.0f;          // dirección de las líneas (grados)
+  double gap   = 0.0f;          // separación perpendicular entre líneas (pt)
+  double ox = 0.0f, oy = 0.0f;  // origen/fase de la familia
+  std::vector<double> dashes;   // vacío = línea continua
 };
 using FillPattern = std::vector<HatchLine>;
 
@@ -111,25 +111,25 @@ public:
 
   virtual void end()=0;
 
-  virtual void moveto_nopath(float, float)=0;
+  virtual void moveto_nopath(double, double)=0;
 
-  virtual void moveto(float, float)=0;
+  virtual void moveto(double, double)=0;
 
-  virtual void rmoveto(float, float)=0;
+  virtual void rmoveto(double, double)=0;
 
-  virtual void lineto(float, float)=0;
+  virtual void lineto(double, double)=0;
 
-  virtual void rlineto(float, float)=0;
+  virtual void rlineto(double, double)=0;
 
-  virtual void line(float, float, float, float)=0;
+  virtual void line(double, double, double, double)=0;
 
-  virtual void arc(float x, float y, float rx, float ry, float startAng, float arcAng)=0;
+  virtual void arc(double x, double y, double rx, double ry, double startAng, double arcAng)=0;
 
-  virtual void dot(float x, float y, float r)=0;
+  virtual void dot(double x, double y, double r)=0;
 
-  virtual void rect(float x1, float y1, float x2, float y2)=0;
+  virtual void rect(double x1, double y1, double x2, double y2)=0;
 
-  virtual void curveto(float x1, float y1, float x2, float y2, float x3, float y3)=0;
+  virtual void curveto(double x1, double y1, double x2, double y2, double x3, double y3)=0;
 
   virtual void structureDefBegin(string name)=0;
 
@@ -142,22 +142,22 @@ public:
   // Transformaciones: la rama MTST es contabilidad común de la máquina de
   // estado; la rama MTLC se delega al hook device* de cada backend. Otros
   // valores de PredefinedMatrix no tienen efecto aquí (los maneja el parser).
-  void translate(float x, float y, PredefinedMatrix pdmt=MTLC) {
+  void translate(double x, double y, PredefinedMatrix pdmt=MTLC) {
     if (pdmt == MTLC) deviceTranslate(x, y);
     else if (pdmt == MTST) mtst.translate(x, y);
   }
 
-  void scale(float x, float y, PredefinedMatrix pdmt=MTLC) {
+  void scale(double x, double y, PredefinedMatrix pdmt=MTLC) {
     if (pdmt == MTLC) deviceScale(x, y);
     else if (pdmt == MTST) mtst.scale(x, y);
   }
 
-  void shear(float x, float y, PredefinedMatrix pdmt=MTLC) {
+  void shear(double x, double y, PredefinedMatrix pdmt=MTLC) {
     if (pdmt == MTLC) deviceShear(x, y);
     else if (pdmt == MTST) mtst.shear(x, y);
   }
 
-  void rotate(float angle, PredefinedMatrix pdmt=MTLC) {
+  void rotate(double angle, PredefinedMatrix pdmt=MTLC) {
     if (pdmt == MTLC) deviceRotate(angle);
     else if (pdmt == MTST) mtst.rotate(angle);
   }
@@ -171,8 +171,8 @@ public:
     else if (pdmt == MTST) mtst.initialize();
   }
 
-  void setDimension(float x, float y) { dvx = x; dvy = y; ratio = dvy/dvx; }
-  float getRatio() { return ratio; }
+  void setDimension(double x, double y) { dvx = x; dvy = y; ratio = dvy/dvx; }
+  double getRatio() { return ratio; }
 
   void setPlumePosition(point &p) { pp = p; }
   void getPlumePosition(point &p) { p = pp; }
@@ -185,7 +185,7 @@ public:
   // Única fuente de verdad para los cinco patrones clásicos; V2 la reutiliza
   // para sus alias ("dashed", "dotted", ...). idx 0 o 1 -> línea continua
   // (en el motor V1, LPATRN 1 nunca se distinguió de LPATRN 0).
-  static std::vector<float> dashArrayForIndex(int idx) {
+  static std::vector<double> dashArrayForIndex(int idx) {
     switch (idx) {
       case 2:  return {4, 2};
       case 3:  return {2, 1.6f};
@@ -201,8 +201,8 @@ public:
   }
   virtual void setLineCap(int c) { dspstate.line_cap = c; applyLineCap(); }
   virtual void setLineJoin(int j) { dspstate.line_join = j; applyLineJoin(); }
-  virtual void setLineWidth(float lw)=0;
-  void setLineGray(float lg) { dspstate.linegray = lg; }
+  virtual void setLineWidth(double lw)=0;
+  void setLineGray(double lg) { dspstate.linegray = lg; }
   virtual void setLineColor(int lc) { dspstate.linecolor = lc; }
 
   virtual void setFillPattern(int fp) {
@@ -217,13 +217,13 @@ public:
   virtual FillPattern patternFor(int idx) {
     FillPattern fp;
     if (idx <= 0) return fp;
-    float angle = (float)(((idx - 1) * 45) % 180);
-    float gap   = (float)(4 / (1 + (idx - 1) / 4));  // división entera, a propósito
+    double angle = (double)(((idx - 1) * 45) % 180);
+    double gap   = (double)(4 / (1 + (idx - 1) / 4));  // división entera, a propósito
     fp.push_back(HatchLine{angle, gap});
     return fp;
   }
   
-  void setFillGray(float fg) { 
+  void setFillGray(double fg) { 
     dspstate.outlinefill = (fg < 0);
     dspstate.fillgray = fabs(fg);
     dspstate.fillcolor = 0;
@@ -238,9 +238,9 @@ public:
   virtual void text(string)=0;
 
   virtual void setFontFace(FontFace face) { dspstate.fontFace = face; }
-  virtual void setFontSize(float p) { dspstate.fontSize = p; }
-  float getFontSize() { return dspstate.fontSize; }
-  void setRelFontSize(float rfz) {
+  virtual void setFontSize(double p) { dspstate.fontSize = p; }
+  double getFontSize() { return dspstate.fontSize; }
+  void setRelFontSize(double rfz) {
     if (rfz == relfontsize)
       return;
     relfontsize = rfz;
@@ -268,10 +268,10 @@ public:
 protected:
   /// Hooks de la rama MTLC: solo la parte específica del dispositivo.
   /// El backend no ve (ni puede corromper) la pila de matrices.
-  virtual void deviceTranslate(float x, float y) = 0;
-  virtual void deviceScale(float x, float y) = 0;
-  virtual void deviceShear(float x, float y) = 0;
-  virtual void deviceRotate(float angle) = 0;
+  virtual void deviceTranslate(double x, double y) = 0;
+  virtual void deviceScale(double x, double y) = 0;
+  virtual void deviceShear(double x, double y) = 0;
+  virtual void deviceRotate(double angle) = 0;
   virtual void deviceInitMatrix() {}
 
   /// Hooks de emisión del estilo de línea. No-op por defecto: SVG no los
@@ -284,19 +284,19 @@ protected:
   /// Output Device properties
 
   // Dimensions of the vision port in cms
-  float dvx, dvy;
+  double dvx, dvy;
 
   // Bounding box del path actual, en coordenadas de dispositivo. Se usa para
   // barrer líneas de tramado dentro del área rellena. Común a EPS y (futuro)
   // PDF; SVG no lo necesita (el <pattern> teja y recorta solo).
-  float xmin, xmax, ymin, ymax;
-  void set_limits(float x1, float y1, float x2, float y2) {
+  double xmin, xmax, ymin, ymax;
+  void set_limits(double x1, double y1, double x2, double y2) {
     xmin = x1;
     xmax = x2;
     ymin = y1;
     ymax = y2;
   }
-  void adjust_limits(float x1, float y1, float x2, float y2) {
+  void adjust_limits(double x1, double y1, double x2, double y2) {
     if (x1 < xmin) xmin = x1;
     if (x2 > xmax) xmax = x2;
     if (y1 < ymin) ymin = y1;
@@ -311,13 +311,13 @@ protected:
   point pp;
 
   /// Razon de aspecto
-  float ratio;
+  double ratio;
 
   /// Contexto para resolver estructuras por nombre
   MetaGrafica* mg_context = nullptr;
 
   /// Tamaño relativo de fuente (sub/superíndices del texto)
-  float relfontsize = 1.0f;
+  double relfontsize = 1.0f;
 
   /// Matriz acumulada (semilla dvx/dvy de start() + matrices MTST horneadas)
   Matrix mt;

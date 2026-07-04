@@ -69,9 +69,9 @@ void StructureRectangle::draw(Display &g) {
 void StructureLine::draw_side(Display &g, bool side) {
   Matrix mtln;
   point pos;
-  float rt = 0.0;
-  float dx = (rup.x - llp.x);
-  float dy = (rup.y - llp.y);
+  double rt = 0.0;
+  double dx = (rup.x - llp.x);
+  double dy = (rup.y - llp.y);
 
   if (side) {
     pos.x = llp.x + shift*dx;
@@ -104,7 +104,7 @@ void StructureLine::draw_side(Display &g, bool side) {
 void StructureLine::draw(Display &g) {
   if (gap > 0) {
     point mm = (rup - llp)/2;
-    float d = 1-gap/2;
+    double d = 1-gap/2;
     point lm = llp + d*mm;
     point rm = rup - d*mm;
     //printf("gap %g %g %g %g\n", mm.x, mm.y, gap, d);
@@ -119,7 +119,7 @@ void StructureLine::draw(Display &g) {
 
 void StructureArc::draw_side(Display &g, bool side) {
   Matrix mtar;
-  float angi, angf, rt = 0.0;
+  double angi, angf, rt = 0.0;
   point stpos;
 
   if (side) {
@@ -130,7 +130,7 @@ void StructureArc::draw_side(Display &g, bool side) {
     angi = af;
   }
   if (shift!=1.0) {
-    float da = (angf - angi)*shift;
+    double da = (angf - angi)*shift;
     angf = angi + da;
   }
   if (angi < angf)

@@ -74,7 +74,7 @@ string Parser::parseString() {
   return s;
 }
 
-float Parser::parseFloat() {
+double Parser::parseFloat() {
   lastyylex = yylex();
 
   if (lastyylex==NUM)
@@ -85,7 +85,7 @@ float Parser::parseFloat() {
 
 void Parser::parseDef(int def) {
   int n;
-  float x, y;
+  double x, y;
 
   switch (def) {
   case 'D':
@@ -111,7 +111,7 @@ void Parser::parseDef(int def) {
 }
 
 void Parser::oldParseMatrix(int mo, Matrix &mt) {
-  float x, y;
+  double x, y;
 
   switch (mo) {
   case OPMTL:
@@ -195,7 +195,7 @@ std::unique_ptr<GraphicsItem> Parser::parsePrimitive(int type) {
   case GI_ELLIPSE:
   case GI_CIRCLE: {
     int k = 0;
-    float r[8]; // r d0 a0
+    double r[8]; // r d0 a0
     while (yylex() == NUM && k < 8) {
       r[k++] = yylval.f;
     }
@@ -226,7 +226,7 @@ std::unique_ptr<GraphicsItem> Parser::parsePrimitive(int type) {
   case GI_DOT:
     if (yylex() == NUM) {
       flags.using_dot = true;
-      float r = yylval.f / 2.0;
+      double r = yylval.f / 2.0;
       auto d = std::make_unique<Dot>();
       d->setRadius(r);
       pl = std::move(d);
@@ -271,7 +271,7 @@ void Parser::setLogFile(FILE *f) { logout = f; }
 
 Path Parser::parseRectangle() {
   Path l;
-  float x, y;
+  double x, y;
   point z;
 
   x = parseFloat();
@@ -289,7 +289,7 @@ Path Parser::parseRectangle() {
 }
 
 point Parser::parsePoint() {
-  float x, y;
+  double x, y;
   point z;
 
   x = parseFloat();
@@ -302,7 +302,7 @@ point Parser::parsePoint() {
 
 Path Parser::parsePath() {
   Path l;
-  float x, y;
+  double x, y;
   point z;
 
   while ((lastyylex = yylex()) == NUM) {
@@ -379,9 +379,9 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     }
     case YLNST: {
       if (st) {
-        float gap = 0;
-        float shift = 1;
-        float sc = parseFloat();
+        double gap = 0;
+        double shift = 1;
+        double sc = parseFloat();
         int n = 1;
         bool bothsides = (sc < 0);
         sc = fabs(sc);
@@ -417,13 +417,13 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
     } break;
     case YARCST: {
       if (st) {
-        float sc = parseFloat();
-        float r = parseFloat();
-        float da = parseFloat();
-        float ai = parseFloat();
-        float shift = 1;
+        double sc = parseFloat();
+        double r = parseFloat();
+        double da = parseFloat();
+        double ai = parseFloat();
+        double shift = 1;
         int n = 1;
-        float af = ai + da;
+        double af = ai + da;
         bool bothsides = (sc < 0);
         sc = fabs(sc);
         if (yylex() == NUM) {
@@ -528,16 +528,16 @@ void Parser::parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpat
   switch (token) {
     case YLISTA: {
       int n = (int)parseFloat();
-      float xx = parseFloat();
-      float yy = parseFloat();
+      double xx = parseFloat();
+      double yy = parseFloat();
       Path l;
       string name = parseString();
       if (listmap.find(name)!=listmap.end()) {
         fprintf(stderr, "%sWarning: the path %s already exists.\n", location().c_str(), name.c_str());
       }
       point z;
-      float x = (xx - wmx) / wdx;
-      float y = (yy - wmy) / wdy;
+      double x = (xx - wmx) / wdx;
+      double y = (yy - wmy) / wdy;
       for (int i = 0; i < n; i++) {
         z.x = x;
         z.y = y;
@@ -633,7 +633,7 @@ void Parser::parseAttribute(int token, GraphicsItemList &prlist, FontFace &ff) {
       return; // Don't add attribute
     }
   } else {
-    float f = parseFloat();
+    double f = parseFloat();
     at->set(type, (int)f);
   }
   prlist.push_back(std::move(at));
@@ -658,14 +658,14 @@ void Parser::parseGraphicsState(int token, GraphicsItemList &prlist, bool &is_co
 
 void Parser::parseTextOp(int token, GraphicsItemList &prlist, point &pp, Matrix &mtpp, FontFace &ff) {
   if (token == YRPNUM) {
-    float x0 = parseFloat();
-    float xinc = parseFloat();
+    double x0 = parseFloat();
+    double xinc = parseFloat();
     int n = (int)parseFloat();
     int ndec = (int)parseFloat();
     char fmt[8], str[80];
     sprintf(fmt, "%%.%df", ndec);
     for (int i = 0; i < n; i++) {
-      float x = x0 + i * xinc;
+      double x = x0 + i * xinc;
       auto gs = std::make_unique<GraphicsState>();
       gs->setPosition(pp);
       prlist.push_back(std::move(gs));
@@ -697,7 +697,7 @@ GraphicsItemList Parser::parsePrimitives() {
   GraphicsItemList prlist;
   Structure *st = NULL;
   Matrix mtst, mtpp, mtrs;
-  float pwmx, pwmy, pwdx, pwdy;
+  double pwmx, pwmy, pwdx, pwdy;
   FontFace ff = FN_DEFAULT;
   point pp;
   string ctpathname;

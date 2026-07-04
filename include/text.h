@@ -66,7 +66,7 @@ struct TextState {
 
   // This is a relative font size, the real size is property of the 
   // external device
-  float font_size;
+  double font_size;
 
   // 0 no script, upper > 0 , down < 0
   int script;
@@ -83,12 +83,12 @@ struct TextState {
 
 // Ancho de una cadena en unidades em relativas (multiplicar por el tamaño de
 // fuente del dispositivo para obtener puntos). Definido en text.cpp.
-float text_width(TextState ts, string s);
+double text_width(TextState ts, string s);
 
-constexpr float fn_relsz_script = 0.7;
-//constexpr float fn_relsz_script2 = 0.5;
-constexpr float fn_relsz_big = 1.5;
-constexpr float fn_relsz_small = 0.5;
+constexpr double fn_relsz_script = 0.7;
+//constexpr double fn_relsz_script2 = 0.5;
+constexpr double fn_relsz_big = 1.5;
+constexpr double fn_relsz_small = 0.5;
 
 
 
@@ -134,7 +134,7 @@ public:
 
   size_t length() { return textline.size(); } 
 
-  float width();
+  double width();
 
 private:
   std::vector<std::unique_ptr<Text>> textline;
@@ -153,7 +153,7 @@ class TextStruct : public GraphicsItem {public:
 
   size_t length(); 
 
-  float width();
+  double width();
 
 private:
   std::list<TextLine*> textlines;

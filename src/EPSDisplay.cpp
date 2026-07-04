@@ -300,12 +300,12 @@ void EPSDisplay::end() {
   if (file) { fflush(file); fclose(file); file = nullptr; }
 }
 
-void EPSDisplay::moveto_nopath(float x, float y) {
+void EPSDisplay::moveto_nopath(double x, double y) {
   mt.transform(x, y);
   fprintf(file, "%f %f moveto\n", x, y);
 }
 
-void EPSDisplay::moveto(float x, float y) {
+void EPSDisplay::moveto(double x, double y) {
   mt.transform(x, y);
   if (!dspstate.openpath) {
     fprintf(file, "newpath\n");
@@ -316,35 +316,35 @@ void EPSDisplay::moveto(float x, float y) {
 }
 
 
-void EPSDisplay::rmoveto(float x, float y) {
+void EPSDisplay::rmoveto(double x, double y) {
   fprintf(file, " %f %f rmoveto\n", x, y);
 }
 
-void EPSDisplay::lineto(float x, float y) {
+void EPSDisplay::lineto(double x, double y) {
   mt.transform(x, y);
   fprintf(file, "%f %f lineto\n", x, y);
   adjust_limits(x,y,x,y);
 }
 
-void EPSDisplay::curveto(float x1, float y1, float x2, float y2, float x3,
-                        float y3) {
+void EPSDisplay::curveto(double x1, double y1, double x2, double y2, double x3,
+                        double y3) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
   mt.transform(x3, y3);
   fprintf(file, "%g %g %g %g %g %g curveto\n", x1, y1, x2, y2, x3, y3);
 }
 
-void EPSDisplay::rlineto(float x, float y) {
+void EPSDisplay::rlineto(double x, double y) {
   fprintf(file, "%f %f rlineto\n", x, y);
 }
 
-void EPSDisplay::line(float x1, float y1, float x2, float y2) {
+void EPSDisplay::line(double x1, double y1, double x2, double y2) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
   fprintf(file, "newpath %f %f moveto %f %f lineto stroke\n", x1, y1, x2, y2);
 }
 
-void EPSDisplay::rect(float x1, float y1, float x2, float y2) {
+void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
   if (!dspstate.openpath) {
@@ -402,9 +402,9 @@ void EPSDisplay::text(string s) {
     fprintf(file, "(%s) show\n", s.c_str());
 }
 
-void EPSDisplay::getTextSize(string s, float *w, float *h) {}
+void EPSDisplay::getTextSize(string s, double *w, double *h) {}
 
-void EPSDisplay::setFontSize(float fz)
+void EPSDisplay::setFontSize(double fz)
 {
   //printf("size %g %g\n", fz, dspstate.fontSize);
   if (fz==dspstate.fontSize)
@@ -470,9 +470,9 @@ void EPSDisplay::setFontFace(FontFace face) {
           getFontSize() * relfontsize);
 }
 
-void EPSDisplay::arc(float x, float y, float w, float h, float startAng,
-                     float endAng) {
-  float sa = startAng, ea = endAng;
+void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
+                     double endAng) {
+  double sa = startAng, ea = endAng;
   mt.transform(x, y);
   if (w != h)
     mt.transf2d(w, h);
@@ -512,7 +512,7 @@ void EPSDisplay::arc(float x, float y, float w, float h, float startAng,
   stroke();
 }
 
-void EPSDisplay::dot(float x, float y, float r) {
+void EPSDisplay::dot(double x, double y, double r) {
   mt.transform(x, y);
   fprintf(file, "%f %f %f dot\n", x, y, r);                   
 }
@@ -558,7 +558,7 @@ void EPSDisplay::applyDash() {
     return;
   }
   fprintf(file, "[");
-  for (float v : dspstate.dash_array)
+  for (double v : dspstate.dash_array)
     fprintf(file, " %g", v);
   fprintf(file, " ] 0 setdash\n");
 }
@@ -571,13 +571,13 @@ void EPSDisplay::applyLineJoin() {
   fprintf(file, "%d setlinejoin\n", dspstate.line_join);
 }
 
-void EPSDisplay::setLineWidth(float l) {
+void EPSDisplay::setLineWidth(double l) {
   dspstate.line_width_pt = l;
   dspstate.line_width_set = true;
   fprintf(file, "%g setlinewidth\n", l);
 }
 
-void int2rgb(int c, float &r, float &g, float &b) {
+void int2rgb(int c, double &r, double &g, double &b) {
   b = (c & 0xff)/255.0;
   g = ((c>>8) & 0xff)/255.0;
   r = ((c>>16) & 0xff)/255.0;
@@ -585,7 +585,7 @@ void int2rgb(int c, float &r, float &g, float &b) {
 }
 
 void EPSDisplay::setColor(int fc) {
-  float r, g, b;
+  double r, g, b;
   int2rgb(fc, r, g, b);
   fprintf(file, "%g %g %g setrgbcolor\n", r, g, b);
 }
@@ -595,26 +595,26 @@ void EPSDisplay::setLineColor(int lc) {
   setColor(dspstate.linecolor);
 }
 
-void EPSDisplay::setGray(float fg) {
+void EPSDisplay::setGray(double fg) {
   fprintf(file, "%g setgray\n", fg);
 }
 
 
 /* Transformaciones: solo la rama MTLC; la contabilidad MTST vive en Display */
 
-void EPSDisplay::deviceTranslate(float x, float y) {
+void EPSDisplay::deviceTranslate(double x, double y) {
   fprintf(file, "%f %f translate\n", x * dvx, y * dvy);
 }
 
-void EPSDisplay::deviceScale(float x, float y) {
+void EPSDisplay::deviceScale(double x, double y) {
   fprintf(file, "%f %f scale\n", x, y);
 }
 
-void EPSDisplay::deviceShear(float, float) {
+void EPSDisplay::deviceShear(double, double) {
   fprintf(stderr, "Error PS no tiene shear\n");
 }
 
-void EPSDisplay::deviceRotate(float angle) {
+void EPSDisplay::deviceRotate(double angle) {
   fprintf(file, "%f rotate\n", angle);
 }
 

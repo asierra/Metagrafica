@@ -27,7 +27,7 @@ enum MatrixOperation {
   OPMCP, // Compose
 };
 
-using DataMatrix = float[3][3];
+using DataMatrix = double[3][3];
 
 class Matrix {
 public:
@@ -43,21 +43,21 @@ public:
 
   void initialize();
 
-  void scale(float, float);
+  void scale(double, double);
 
-  void shear(float, float);
+  void shear(double, double);
 
-  void translate(float, float);
+  void translate(double, double);
 
-  void rotate(float);
+  void rotate(double);
 
-  void transform(float&, float&);
+  void transform(double&, double&);
 
-  void transf2d(float&, float&);
+  void transf2d(double&, double&);
 
   void set(DataMatrix m);
 
-  void to_rectangle(float x1, float y1, float x2, float y2);
+  void to_rectangle(double x1, double y1, double x2, double y2);
   
 //  bool has_translation() { return (fabs(M[0][2]) > 0.01 || fabs(M[1][2]) > 0.01); }
 

@@ -20,27 +20,27 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #include <stdio.h>
 #include <math.h>
 
-float distancesq(point a, point b)
+double distancesq(point a, point b)
 { 
-  float dx = a.x - b.x;
-  float dy = a.y - b.y;
+  double dx = a.x - b.x;
+  double dy = a.y - b.y;
 
   return (dx*dx + dy*dy);
 }
 
-float distance(point a, point b)
+double distance(point a, point b)
 {
   return sqrt(distancesq(a,b));
 }
 
 
 void get_spline_coefficients(point p0, point p1, point p2, point p3,
-  float alpha,
+  double alpha,
   point &c0, point &c1, point &c2, point &c3) 
 {
-  float dt0 = powf(distancesq(p0, p1), alpha);
-  float dt1 = powf(distancesq(p1, p2), alpha);
-  float dt2 = powf(distancesq(p2, p3), alpha);
+  double dt0 = powf(distancesq(p0, p1), alpha);
+  double dt1 = powf(distancesq(p1, p2), alpha);
+  double dt2 = powf(distancesq(p2, p3), alpha);
 
   // safety check for repeated points
   if (dt1 < 1e-4f)    dt1 = 1.0f;
@@ -70,7 +70,7 @@ Path splines(Path cp, int intervals) {
 
   // Polynomial coefficients
   point c0, c1, c2, c3;
-  float alpha = 0.5;  // Centripetal parametrization
+  double alpha = 0.5;  // Centripetal parametrization
 
   int n = cp.size();
   Path::iterator cpit = cp.begin();
@@ -103,7 +103,7 @@ Path splines_to_bezier(Path cp) {
 
   int n = cp.size();
   point q0, q1, q2, q3;
-  float conversion_factor=10;
+  double conversion_factor=10;
   Path::iterator cpit = cp.begin();
   for (int i = 0; i < n-3; i++) {
     Path::iterator it = cpit;
@@ -185,8 +185,8 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
     point p2b = path2.back(), p2f = path2.front();
     mt.transform(p2b.x, p2b.y);
     mt.transform(p2f.x, p2f.y);
-    float dx = p1.x;
-    float dfy = p1.y - p2f.y;
+    double dx = p1.x;
+    double dfy = p1.y - p2f.y;
     //printf("p2f %g p2b %g\n", p2f.x, p2b.x);
     if (p2f.x > p2b.x) {
       std::reverse(path2.begin(), path2.end());
@@ -204,10 +204,10 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
 
 void get_bezier_tangents(point p0, point p1, point p2, point p3, point &t1, point &t2)
 {
-  float d, alpha = 0.5;
-  float d1 = powf(distancesq(p0, p1), alpha);
-  float d2 = powf(distancesq(p1, p2), alpha);
-  float d3 = powf(distancesq(p2, p3), alpha);
+  double d, alpha = 0.5;
+  double d1 = powf(distancesq(p0, p1), alpha);
+  double d2 = powf(distancesq(p1, p2), alpha);
+  double d3 = powf(distancesq(p2, p3), alpha);
 
   // compute tangents when parameterized in [t1,t2]
   point m = d1*d1*p2 - d2*d2*p0 + (2*d1*d1 + 3*d1*d2 + d2*d2)*p1;

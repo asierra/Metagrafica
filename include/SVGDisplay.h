@@ -36,7 +36,7 @@ class SVGDisplay: public Display {
   void save() override;
   void restore() override;
 
-  void setLineWidth(float) override;
+  void setLineWidth(double) override;
   void setLineColor(int lc) override;
   void setOpenPath(bool op) override;
 
@@ -45,24 +45,24 @@ class SVGDisplay: public Display {
 
  protected:
   // Primitivas de dibujo
-  void moveto_nopath(float, float) override;
-  void moveto(float, float) override;
-  void rmoveto(float, float) override;
-  void lineto(float, float) override;
-  void rlineto(float, float) override;
-  void line(float, float, float, float) override;
-  void rect(float, float, float, float) override;
-  void curveto(float, float, float, float, float, float) override;
+  void moveto_nopath(double, double) override;
+  void moveto(double, double) override;
+  void rmoveto(double, double) override;
+  void lineto(double, double) override;
+  void rlineto(double, double) override;
+  void line(double, double, double, double) override;
+  void rect(double, double, double, double) override;
+  void curveto(double, double, double, double, double, double) override;
   void text(string) override;
-  void setFontSize(float p) override;
+  void setFontSize(double p) override;
   void setFontFace(FontFace face) override;
-  void arc(float x, float y, float rx, float ry, float startAng, float endAng) override;
-  void dot(float x, float y, float r) override;
+  void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
+  void dot(double x, double y, double r) override;
 
-  void deviceTranslate(float x, float y) override;
-  void deviceScale(float x, float y) override;
-  void deviceShear(float x, float y) override;
-  void deviceRotate(float angle) override;
+  void deviceTranslate(double x, double y) override;
+  void deviceScale(double x, double y) override;
+  void deviceShear(double x, double y) override;
+  void deviceRotate(double angle) override;
 
  private:
   // Helpers internos para generar el estilo SVG basado en dspstate
@@ -73,7 +73,7 @@ class SVGDisplay: public Display {
   // (letras griegas, símbolos matemáticos); para el resto reinterpreta Latin-1.
   std::string renderText(const std::string& s);
   // Ancho de trazo en puntos para el estado actual (ver definición).
-  float strokeWidth();
+  double strokeWidth();
   // Color de relleno como hex de 6 dígitos (sin '#'), desde fillcolor/fillgray.
   std::string fillColorHex();
   // Garantiza que exista un <pattern> de tramado para el índice/color actual
@@ -85,7 +85,7 @@ class SVGDisplay: public Display {
 
   // Posición actual (en espacio ya transformado), para <text x= y=>,
   // igual que cur_x/cur_y en PDFDisplay.
-  float cur_x = 0, cur_y = 0;
+  double cur_x = 0, cur_y = 0;
 
   std::ostringstream path_builder; // Búfer para acumular los comandos del path actual
   std::stack<int> group_stack;     // Rastrea cuántas etiquetas <g> abrir por cada save()

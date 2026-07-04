@@ -3,7 +3,7 @@
 
 typedef union {
   char *s;
-  float f;
+  double f;
   int i;
 } YYSTYPE;
 

@@ -33,7 +33,7 @@ class EPSDisplay: public Display {
   void save() override;
   void restore() override;
 
-  void setLineWidth(float) override;
+  void setLineWidth(double) override;
   void setLineColor(int lc) override;
   void setOpenPath(bool op) override;
 
@@ -45,27 +45,27 @@ class EPSDisplay: public Display {
   // EPSDisplay-specific
   void useFillPattern();
   void setColor(int lc);
-  void setGray(float fg);
+  void setGray(double fg);
 
  protected:
-  void moveto_nopath(float, float) override;
-  void moveto(float, float) override;
-  void rmoveto(float, float) override;
-  void lineto(float, float) override;
-  void rlineto(float, float) override;
-  void line(float, float, float, float) override;
-  void rect(float, float, float, float) override;
-  void curveto(float, float, float, float, float, float) override;
+  void moveto_nopath(double, double) override;
+  void moveto(double, double) override;
+  void rmoveto(double, double) override;
+  void lineto(double, double) override;
+  void rlineto(double, double) override;
+  void line(double, double, double, double) override;
+  void rect(double, double, double, double) override;
+  void curveto(double, double, double, double, double, double) override;
   void text(string) override;
-  void setFontSize(float p) override;
+  void setFontSize(double p) override;
   void setFontFace(FontFace face) override;
-  void arc(float x, float y, float rx, float ry, float startAng, float endAng) override;
-  void dot(float x, float y, float r) override;
+  void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
+  void dot(double x, double y, double r) override;
 
-  void deviceTranslate(float x, float y) override;
-  void deviceScale(float x, float y) override;
-  void deviceShear(float x, float y) override;
-  void deviceRotate(float angle) override;
+  void deviceTranslate(double x, double y) override;
+  void deviceScale(double x, double y) override;
+  void deviceShear(double x, double y) override;
+  void deviceRotate(double angle) override;
   void deviceInitMatrix() override;
 
   void applyDash() override;
@@ -73,8 +73,8 @@ class EPSDisplay: public Display {
   void applyLineJoin() override;
 
   // EPSDisplay-specific
-  void rline(float, float, float, float);
-  void getTextSize(string s, float *w, float *h);
+  void rline(double, double, double, double);
+  void getTextSize(string s, double *w, double *h);
   // set_limits/adjust_limits y el bbox (xmin..ymax) viven ahora en la base Display.
 
  private:

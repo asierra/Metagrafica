@@ -45,7 +45,7 @@ public:
   MGFlags flags;
 
 private:
-  float parseFloat();
+  double parseFloat();
   string parseString();
   string location() const;
   void parseDef(int def);
@@ -66,7 +66,7 @@ private:
   void parseTextOp(int token, GraphicsItemList &prlist, point &pp, Matrix &mtpp, FontFace &ff);
 
   /// Window
-  float wmx, wmy, wdx, wdy;
+  double wmx, wmy, wdx, wdy;
   Matrix mtpt;
   //point pp;
   //StructureMap structure_map;

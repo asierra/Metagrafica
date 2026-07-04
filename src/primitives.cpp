@@ -107,7 +107,7 @@ void Attribute::draw(Display &g) {
     g.setFillPattern(value);
     break;
   case AT_THEIGHT:
-    g.setFontSize((float)value);
+    g.setFontSize((double)value);
     break;
   case AT_TALIGN:
     g.setTextAlign(value);

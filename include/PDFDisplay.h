@@ -24,7 +24,7 @@ public:
   void save() override;
   void restore() override;
 
-  void setLineWidth(float) override;
+  void setLineWidth(double) override;
   void setLineColor(int lc) override;
   void setOpenPath(bool op) override;
 
@@ -32,24 +32,24 @@ public:
   void structureDefEnd() override {}
 
 protected:
-  void moveto_nopath(float, float) override;
-  void moveto(float, float) override;
-  void rmoveto(float, float) override;
-  void lineto(float, float) override;
-  void rlineto(float, float) override;
-  void line(float, float, float, float) override;
-  void rect(float, float, float, float) override;
-  void curveto(float, float, float, float, float, float) override;
+  void moveto_nopath(double, double) override;
+  void moveto(double, double) override;
+  void rmoveto(double, double) override;
+  void lineto(double, double) override;
+  void rlineto(double, double) override;
+  void line(double, double, double, double) override;
+  void rect(double, double, double, double) override;
+  void curveto(double, double, double, double, double, double) override;
   void text(string) override;
-  void setFontSize(float p) override;
+  void setFontSize(double p) override;
   void setFontFace(FontFace face) override;
-  void arc(float x, float y, float rx, float ry, float startAng, float endAng) override;
-  void dot(float x, float y, float r) override;
+  void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
+  void dot(double x, double y, double r) override;
 
-  void deviceTranslate(float x, float y) override;
-  void deviceScale(float x, float y) override;
-  void deviceShear(float x, float y) override;
-  void deviceRotate(float angle) override;
+  void deviceTranslate(double x, double y) override;
+  void deviceScale(double x, double y) override;
+  void deviceShear(double x, double y) override;
+  void deviceRotate(double angle) override;
 
   void applyDash() override;
   void applyLineCap() override;
@@ -74,7 +74,7 @@ private:
   HPDF_Page page = nullptr;
 
   // Current position in page space (tracked for rmoveto/rlineto)
-  float cur_x = 0.0f, cur_y = 0.0f;
+  double cur_x = 0.0f, cur_y = 0.0f;
 
   // Current font handle and dirty flag
   HPDF_Font current_font = nullptr;

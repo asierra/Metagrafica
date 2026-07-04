@@ -104,7 +104,7 @@ std::string SVGDisplay::ensureHatchPattern(int idx) {
     // Los 10 patrones actuales son una sola familia de líneas. El rayado
     // cruzado/punteado (varias familias o `dashes`) queda pendiente (Paso 4).
     const HatchLine &h = fp[0];
-    float sw = strokeWidth();
+    double sw = strokeWidth();
 
     fprintf(file,
             "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
@@ -218,7 +218,7 @@ void SVGDisplay::restore() {
 // gsave/grestore envuelve translate/rotate en EPSDisplay). La rama MTST
 // es contabilidad común y vive en Display.
 // -------------------------------------------------------------
-void SVGDisplay::deviceTranslate(float x, float y) {
+void SVGDisplay::deviceTranslate(double x, double y) {
     // x,y llegan en coordenadas normalizadas del documento; las coordenadas de
     // los paths ya están en puntos, así que el translate debe escalarse a
     // puntos igual que EPSDisplay::deviceTranslate (x*dvx, y*dvy). Sin esto el
@@ -228,7 +228,7 @@ void SVGDisplay::deviceTranslate(float x, float y) {
     current_open_groups++;
 }
 
-void SVGDisplay::deviceRotate(float a) {
+void SVGDisplay::deviceRotate(double a) {
     // Se rota alrededor de la posición actual de la pluma (cur_x, cur_y), no del
     // origen. En PostScript/EPS `rotate` gira la CTM pero preserva el punto
     // actual fijado por el moveto previo (p.ej. XYPP antes de RTLC): el texto
@@ -238,12 +238,12 @@ void SVGDisplay::deviceRotate(float a) {
     current_open_groups++;
 }
 
-void SVGDisplay::deviceScale(float x, float y) {
+void SVGDisplay::deviceScale(double x, double y) {
     fprintf(file, "<g transform=\"scale(%f, %f)\">\n", x, y);
     current_open_groups++;
 }
 
-void SVGDisplay::deviceShear(float x, float y) {
+void SVGDisplay::deviceShear(double x, double y) {
     // A diferencia de PostScript, SVG sí soporta shear vía matrix().
     fprintf(file, "<g transform=\"matrix(1, %f, %f, 1, 0, 0)\">\n", y, x);
     current_open_groups++;
@@ -262,7 +262,7 @@ void SVGDisplay::structureDefEnd() {}
 // -------------------------------------------------------------
 // ATRIBUTOS
 // -------------------------------------------------------------
-void SVGDisplay::setLineWidth(float lw) {
+void SVGDisplay::setLineWidth(double lw) {
     dspstate.line_width_pt = lw;
     dspstate.line_width_set = true;
 }
@@ -272,14 +272,14 @@ void SVGDisplay::setLineWidth(float lw) {
 // SVG debe hacer lo mismo para que los trazos —y en particular los círculos
 // diminutos de datos— tengan el mismo grosor. Un LWIDTH 0 explícito sí es un
 // hairline, pero como stroke-width="0" es invisible en SVG se usa un mínimo.
-float SVGDisplay::strokeWidth() {
+double SVGDisplay::strokeWidth() {
     if (!dspstate.line_width_set)
         return 1.0f;                       // default de PostScript/PDF
-    float sw = dspstate.line_width_pt;
+    double sw = dspstate.line_width_pt;
     return sw > 0 ? sw : 0.5f;              // LWIDTH 0 explícito -> hairline visible
 }
 void SVGDisplay::setLineColor(int lc) { dspstate.linecolor = lc; }
-void SVGDisplay::setFontSize(float p) { dspstate.fontSize = p; }
+void SVGDisplay::setFontSize(double p) { dspstate.fontSize = p; }
 void SVGDisplay::setFontFace(FontFace face) { dspstate.fontFace = face; }
 
 void SVGDisplay::setOpenPath(bool op) {
@@ -291,20 +291,20 @@ void SVGDisplay::setOpenPath(bool op) {
 // -------------------------------------------------------------
 // PRIMITIVAS DE DIBUJO (PATH BUILDER)
 // -------------------------------------------------------------
-void SVGDisplay::moveto_nopath(float x, float y) {
+void SVGDisplay::moveto_nopath(double x, double y) {
     // Solo actualiza la posición (usado para setPlumePosition); no debe
     // arrancar ni ensuciar el path acumulado, igual que en PDFDisplay.
     mt.transform(x, y);
     cur_x = x; cur_y = y;
 }
 
-void SVGDisplay::moveto(float x, float y) {
+void SVGDisplay::moveto(double x, double y) {
     mt.transform(x, y);
     cur_x = x; cur_y = y;
     path_builder << "M " << x << " " << y << " ";
 }
 
-void SVGDisplay::rmoveto(float dx, float dy) {
+void SVGDisplay::rmoveto(double dx, double dy) {
     // rmoveto solo lo usa la maquetación de texto (TextLine: alineación y
     // sub/superíndices), nunca para construir paths. Debe mover únicamente el
     // cursor de texto, como moveto_nopath. Si escribiera en path_builder
@@ -314,18 +314,18 @@ void SVGDisplay::rmoveto(float dx, float dy) {
     cur_x += dx; cur_y += dy;
 }
 
-void SVGDisplay::lineto(float x, float y) {
+void SVGDisplay::lineto(double x, double y) {
     mt.transform(x, y);
     cur_x = x; cur_y = y;
     path_builder << "L " << x << " " << y << " ";
 }
 
-void SVGDisplay::rlineto(float dx, float dy) {
+void SVGDisplay::rlineto(double dx, double dy) {
     cur_x += dx; cur_y += dy;
     path_builder << "l " << dx << " " << dy << " ";
 }
 
-void SVGDisplay::curveto(float x1, float y1, float x2, float y2, float x3, float y3) {
+void SVGDisplay::curveto(double x1, double y1, double x2, double y2, double x3, double y3) {
     mt.transform(x1, y1);
     mt.transform(x2, y2);
     mt.transform(x3, y3);
@@ -334,8 +334,8 @@ void SVGDisplay::curveto(float x1, float y1, float x2, float y2, float x3, float
                  << x3 << " " << y3 << " ";
 }
 
-void SVGDisplay::arc(float x, float y, float w, float h, float startAng, float endAng) {
-    float sa = startAng, ea = endAng;
+void SVGDisplay::arc(double x, double y, double w, double h, double startAng, double endAng) {
+    double sa = startAng, ea = endAng;
     mt.transform(x, y);
     mt.transf2d(w, h);
     if (h == 0) h = w;
@@ -353,14 +353,14 @@ void SVGDisplay::arc(float x, float y, float w, float h, float startAng, float e
         ea = sa + endAng;
     }
 
-    float startRad = sa * M_PI / 180.0;
-    float endRad = ea * M_PI / 180.0;
-    float rx = fabs(w), ry = fabs(h);
+    double startRad = sa * M_PI / 180.0;
+    double endRad = ea * M_PI / 180.0;
+    double rx = fabs(w), ry = fabs(h);
 
-    float startX = x + rx * cos(startRad);
-    float startY = y + ry * sin(startRad);
-    float endX = x + rx * cos(endRad);
-    float endY = y + ry * sin(endRad);
+    double startX = x + rx * cos(startRad);
+    double startY = y + ry * sin(startRad);
+    double endX = x + rx * cos(endRad);
+    double endY = y + ry * sin(endRad);
 
     if (path_builder.tellp() == 0)
         path_builder << "M " << startX << " " << startY << " ";
@@ -369,8 +369,8 @@ void SVGDisplay::arc(float x, float y, float w, float h, float startAng, float e
 
     if (fabs(ea - sa) >= 360.0) {
         // SVG no permite un arco de 360°: se parte en dos mitades.
-        float midX = x - rx * cos(startRad);
-        float midY = y - ry * sin(startRad);
+        double midX = x - rx * cos(startRad);
+        double midY = y - ry * sin(startRad);
         path_builder << "A " << rx << " " << ry << " 0 1 1 " << midX << " " << midY << " "
                      << "A " << rx << " " << ry << " 0 1 1 " << startX << " " << startY << " ";
         cur_x = startX; cur_y = startY;
@@ -400,13 +400,13 @@ void SVGDisplay::stroke() {
     path_builder.clear();
 }
 
-void SVGDisplay::line(float x1, float y1, float x2, float y2) {
+void SVGDisplay::line(double x1, double y1, double x2, double y2) {
     moveto(x1, y1);
     lineto(x2, y2);
     stroke();
 }
 
-void SVGDisplay::rect(float x1, float y1, float x2, float y2) {
+void SVGDisplay::rect(double x1, double y1, double x2, double y2) {
     // (x1,y1)-(x2,y2) son las esquinas opuestas del rectángulo, igual que
     // en EPSDisplay/PDFDisplay (Rectangle::draw pasa llp/rup directamente).
     moveto(x1, y1);
@@ -417,7 +417,7 @@ void SVGDisplay::rect(float x1, float y1, float x2, float y2) {
     stroke();
 }
 
-void SVGDisplay::dot(float x, float y, float r) {
+void SVGDisplay::dot(double x, double y, double r) {
     // "dot" en EPS/PDF usa r como diámetro (radio = r/2) y toma el color de
     // línea actual, no un negro fijo.
     mt.transform(x, y);
@@ -589,7 +589,7 @@ void SVGDisplay::text(string s) {
     if (dspstate.text_align == 1) anchor = "middle";
     else if (dspstate.text_align == 2) anchor = "end";
 
-    float size = dspstate.fontSize * relfontsize;
+    double size = dspstate.fontSize * relfontsize;
     fprintf(file,
             "<text x=\"%f\" y=\"%f\" transform=\"scale(1, -1)\" text-anchor=\"%s\" "
             "fill=\"%s\" font-size=\"%f\" font-family=\"%s\" font-style=\"%s\" "

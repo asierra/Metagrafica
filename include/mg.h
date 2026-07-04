@@ -96,18 +96,18 @@ private:
 class StructureLine : public StructureUser {
 public:
   StructureLine() { both_sides = false; shift = 1; gap = 0; }
-  void setScale(float sx, float sy) { scale.x = sx; scale.y = sy; }
+  void setScale(double sx, double sy) { scale.x = sx; scale.y = sy; }
   void setPoints(point q1, point q2) {  llp = q1; rup = q2; }
-  void setShift(float p) {  shift = p; }
-  void setGap(float p) {  gap = p; }
+  void setShift(double p) {  shift = p; }
+  void setGap(double p) {  gap = p; }
   void setBothSides(bool both=true) { both_sides = both; }
   void draw(Display &) override;
 private:
   void draw_side(Display &g, bool side);
   point scale;
   point llp, rup;
-  float shift;
-  float gap;
+  double shift;
+  double gap;
   bool both_sides;
 };
 
@@ -119,20 +119,20 @@ private:
 class StructureArc : public StructureUser {
 public:
   StructureArc() { both_sides = false; shift = 1; }
-  void setScale(float sx, float sy) { scale.x = sx; scale.y = sy; }  
-  void setRadius(float rr) { r = rr; }
-  void setAngles(float x, float y) { ai = x; af = y; }
+  void setScale(double sx, double sy) { scale.x = sx; scale.y = sy; }  
+  void setRadius(double rr) { r = rr; }
+  void setAngles(double x, double y) { ai = x; af = y; }
   void setPoint(point q1) {  pos = q1; }
-  void setShift(float p) {  shift = p; }
+  void setShift(double p) {  shift = p; }
   void setBothSides(bool both=true) { both_sides = both; }
   void draw(Display &) override;
 private:
   void draw_side(Display &g, bool side);
   point scale;
-  float r;
-  float ai, af;
+  double r;
+  double ai, af;
   point pos;
-  float shift;
+  double shift;
   bool both_sides;
 };
 
@@ -170,12 +170,12 @@ public:
     return Structure::getStructure(name, structure_map);
   }
 
-  void setDimension(float x, float y) {
+  void setDimension(double x, double y) {
     dcmx = x;
     dcmy = y;
   }
 
-  void getDimension(float &x, float &y) {
+  void getDimension(double &x, double &y) {
     x = dcmx;
     y = dcmy;
   }
@@ -190,9 +190,9 @@ private:
   /// Profundidad maxima de recursion
   int maxDepth;
   /// Dimensiones físicas en cm
-  float dcmx, dcmy;
+  double dcmx, dcmy;
   /// Font size in points
-  float fontsize;
+  double fontsize;
   ///
   //Matrix matrix;
 };
