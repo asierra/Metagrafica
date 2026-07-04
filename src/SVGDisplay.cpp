@@ -41,13 +41,7 @@ std::string SVGDisplay::getStyleAttributes() {
     // Trazo: se omite cuando la figura está rellena sin contorno
     // (misma condición que "!dspstate.fill || dspstate.outlinefill" en EPS).
     if (!dspstate.fill || dspstate.outlinefill) {
-        // Misma escala que EPSDisplay/PDFDisplay ("l * 0.2"). A diferencia de
-        // PostScript/PDF, donde 0 setlinewidth es una convención de "línea
-        // más delgada posible", en SVG stroke-width="0" es literalmente
-        // invisible, así que se usa un mínimo visible.
-        float sw = dspstate.line_width * 0.2f;
-        if (sw <= 0) sw = 0.5f;
-        style << "stroke-width=\"" << sw << "\" ";
+        style << "stroke-width=\"" << strokeWidth() << "\" ";
         sprintf(colorBuf, "#%06X", dspstate.linecolor);
         style << "stroke=\"" << colorBuf << "\" ";
         // Mismos patrones que EPSDisplay::setLineStyle, en las mismas unidades.
@@ -101,8 +95,7 @@ std::string SVGDisplay::ensureHatchPattern(int idx) {
     // Los 10 patrones actuales son una sola familia de líneas. El rayado
     // cruzado/punteado (varias familias o `dashes`) queda pendiente (Paso 4).
     const HatchLine &h = fp[0];
-    float sw = dspstate.line_width * 0.2f;
-    if (sw <= 0) sw = 0.5f;
+    float sw = strokeWidth();
 
     fprintf(file,
             "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
@@ -261,7 +254,19 @@ void SVGDisplay::structureDefEnd() {}
 // ATRIBUTOS
 // -------------------------------------------------------------
 void SVGDisplay::setLineStyle(int ls) { dspstate.line_style = ls; }
-void SVGDisplay::setLineWidth(float lw) { dspstate.line_width = lw; }
+void SVGDisplay::setLineWidth(float lw) { dspstate.line_width = lw; line_width_set = true; }
+
+// Ancho de trazo en puntos. Reproduce el default de EPS/PDF: cuando el .mg
+// nunca ejecuta LWIDTH, PostScript (y libharu) usan 1.0 pt, no una línea fina;
+// SVG debe hacer lo mismo para que los trazos —y en particular los círculos
+// diminutos de datos— tengan el mismo grosor. Un LWIDTH 0 explícito sí es un
+// hairline, pero como stroke-width="0" es invisible en SVG se usa un mínimo.
+float SVGDisplay::strokeWidth() {
+    if (!line_width_set)
+        return 1.0f;                       // default de PostScript/PDF
+    float sw = dspstate.line_width * 0.2f;  // misma escala que EPS/PDF
+    return sw > 0 ? sw : 0.5f;              // LWIDTH 0 explícito -> hairline visible
+}
 void SVGDisplay::setLineColor(int lc) { dspstate.linecolor = lc; }
 void SVGDisplay::setFontSize(float p) { dspstate.fontSize = p; }
 void SVGDisplay::setFontFace(FontFace face) { dspstate.fontFace = face; }

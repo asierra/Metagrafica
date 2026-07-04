@@ -73,6 +73,8 @@ class SVGDisplay: public Display {
   // actual: para FN_SYMBOL/FN_TEX_CMMI traduce los bytes a caracteres Unicode
   // (letras griegas, símbolos matemáticos); para el resto reinterpreta Latin-1.
   std::string renderText(const std::string& s);
+  // Ancho de trazo en puntos para el estado actual (ver definición).
+  float strokeWidth();
   // Color de relleno como hex de 6 dígitos (sin '#'), desde fillcolor/fillgray.
   std::string fillColorHex();
   // Garantiza que exista un <pattern> de tramado para el índice/color actual
@@ -90,6 +92,7 @@ class SVGDisplay: public Display {
   std::stack<int> group_stack;     // Rastrea cuántas etiquetas <g> abrir por cada save()
   int current_open_groups = 0;     // Etiquetas <g> abiertas en el entorno actual
   std::set<std::string> emitted_patterns; // ids de <pattern> ya emitidos (dedup)
+  bool line_width_set = false;     // ¿se ejecutó LWIDTH? (distingue el default)
 };
 
 #endif
