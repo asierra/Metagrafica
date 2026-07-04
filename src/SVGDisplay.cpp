@@ -227,7 +227,12 @@ void SVGDisplay::deviceTranslate(float x, float y) {
 }
 
 void SVGDisplay::deviceRotate(float a) {
-    fprintf(file, "<g transform=\"rotate(%f)\">\n", a);
+    // Se rota alrededor de la posición actual de la pluma (cur_x, cur_y), no del
+    // origen. En PostScript/EPS `rotate` gira la CTM pero preserva el punto
+    // actual fijado por el moveto previo (p.ej. XYPP antes de RTLC): el texto
+    // queda anclado ahí y solo giran los glifos. Rotar sobre el origen mandaría
+    // el ancla fuera del lienzo (bug de las etiquetas verticales de eje).
+    fprintf(file, "<g transform=\"rotate(%f, %f, %f)\">\n", a, cur_x, cur_y);
     current_open_groups++;
 }
 
