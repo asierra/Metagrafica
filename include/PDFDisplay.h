@@ -2,12 +2,18 @@
        File:  PDFDisplay.h
               Implementation of graphics items in PDF via libharu.
 MetaGrafica:  Human descriptive language to generate publication quality
-              graphics.
-     Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
+              Display in PostScript.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
-#if !defined(__PDFDISPLAY_H)
-#define __PDFDISPLAY_H
+#if !defined(MG_PDFDISPLAY_H)
+#define MG_PDFDISPLAY_H
 
 #include "Display.h"
 #include "hpdf.h"
@@ -15,7 +21,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 class PDFDisplay : public Display {
 
 public:
-  PDFDisplay(string filename);
+  PDFDisplay(std::string filename);
   ~PDFDisplay() {}
 
   void start() override;
@@ -40,7 +46,7 @@ protected:
   void line(double, double, double, double) override;
   void rect(double, double, double, double) override;
   void curveto(double, double, double, double, double, double) override;
-  void text(string) override;
+  void text(std::string) override;
   void setFontSize(double p) override;
   void setFontFace(FontFace face) override;
   void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
@@ -68,7 +74,7 @@ private:
   void hatchCurrentPath();
   bool clip_pending = false;
 
-  string filename;
+  std::string filename;
 
   HPDF_Doc  pdf  = nullptr;
   HPDF_Page page = nullptr;

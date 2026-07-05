@@ -4,12 +4,17 @@
               transformations in Encapsulated PostScript.
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-     Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
-Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
-#if !defined(__EPSDISPLAY_H)
-#define __EPSDISPLAY_H
+#if !defined(MG_EPSDISPLAY_H)
+#define MG_EPSDISPLAY_H
 
 #include <stdio.h>
 
@@ -19,7 +24,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 class EPSDisplay: public Display {
 
  public:
-  EPSDisplay(string);
+  EPSDisplay(std::string);
 
   MGFlags flags;
 
@@ -56,7 +61,7 @@ class EPSDisplay: public Display {
   void line(double, double, double, double) override;
   void rect(double, double, double, double) override;
   void curveto(double, double, double, double, double, double) override;
-  void text(string) override;
+  void text(std::string) override;
   void setFontSize(double p) override;
   void setFontFace(FontFace face) override;
   void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
@@ -74,11 +79,11 @@ class EPSDisplay: public Display {
 
   // EPSDisplay-specific
   void rline(double, double, double, double);
-  void getTextSize(string s, double *w, double *h);
+  void getTextSize(std::string s, double *w, double *h);
   // set_limits/adjust_limits y el bbox (xmin..ymax) viven ahora en la base Display.
 
  private:
-  string filename;
+  std::string filename;
   FILE *file = nullptr;
   FILE *logfile = nullptr;
 };

@@ -1,5 +1,20 @@
-#ifndef __MGLEXER_H
-#define __MGLEXER_H
+/*
+       File:  MGLexer.h
+              Wrapper around the flex-generated yyFlexLexer for the .mg
+              lexer; keyword and matrix-operator lookup tables.
+MetaGrafica:  Human descriptive language to generate publication quality
+              Display in PostScript.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
+*/
+#ifndef MG_MGLEXER_H
+#define MG_MGLEXER_H
 
 #if ! defined(yyFlexLexerOnce)
 #include <FlexLexer.h>
@@ -23,7 +38,7 @@ public:
     virtual ~MGLexer() = default;
 
     using yyFlexLexer::yylex;
-    virtual int yylex();
+    int yylex() override;
     
     void setBegin(int s) { 
         yy_start = 1 + 2 * s; 

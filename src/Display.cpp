@@ -10,7 +10,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 #include <stdio.h>
 #include "Display.h"
 
-void Display::structure(string name) {
+void Display::structure(const std::string &name) {
   Structure *strct = mg_context ? mg_context->getStructure(name) : nullptr;
   if (!strct) {
     fprintf(stderr, "Error: estructura '%s' no definida\n", name.c_str());

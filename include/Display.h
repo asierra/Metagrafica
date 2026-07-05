@@ -4,18 +4,24 @@
               we define its abstract base class, properties and methods.
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-     Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
-Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
 
-#if !defined(__DISPLAY_H)
-#define __DISPLAY_H
+#if !defined(MG_DISPLAY_H)
+#define MG_DISPLAY_H
+
+#include <stdio.h>
 
 #include <stack>
 #include <string>
 #include <vector>
-using std::string;
 
 class MetaGrafica;
 
@@ -31,54 +37,35 @@ constexpr double cm_to_point = 28.34645669291339;
    Important information relevant to the graphics output.
  */
 struct DisplayState {
-  DisplayState() {
-    fill = false;
-    line_width_pt = 1.0f;
-    line_width_set = false;
-    line_cap = 0;
-    line_join = 0;
-    fontSize = 10;
-    fontFace = FN_NOFACE;
-    fillpattern = 0;
-    outlinefill = false;
-    openpath = false;
-    text_align = 0;
-    fillgray = 0.0;
-    linegray = 0;
-    linecolor = 0;
-    fillcolor = 0;
-	textgray = 0;
-  };
-
   // path under creation?
-  bool openpath;
+  bool openpath = false;
 
   // Grosor en PUNTOS tipográficos (no en unidades de 0.2 pt de V1).
-  double line_width_pt;
+  double line_width_pt = 1.0;
   // ¿Se fijó explícitamente el grosor? Distingue el default (1.0 pt, el del
   // dispositivo PS/PDF cuando nunca se llama LWIDTH) de un LWIDTH 0 explícito.
-  bool line_width_set;
+  bool line_width_set = false;
   // Patrón de guiones: longitudes on/off alternadas en pt. Vacío = línea continua.
   // Única fuente de verdad del patrón; ver Display::dashArrayForIndex().
   std::vector<double> dash_array;
   // 0 butt, 1 round, 2 square. Dormido en V1: ninguna ruta lo invoca todavía.
-  int line_cap;
+  int line_cap = 0;
   // 0 miter, 1 round, 2 bevel. Dormido en V1: ninguna ruta lo invoca todavía.
-  int line_join;
-  double linegray;
-  int linecolor;
+  int line_join = 0;
+  double linegray = 0.0;
+  int linecolor = 0;
 
-  double fontSize;
-  FontFace fontFace;
-  int text_align;
-  double textgray;
+  double fontSize = 10;
+  FontFace fontFace = FN_NOFACE;
+  int text_align = 0;
+  double textgray = 0.0;
 
   // objects should be filled?
-  bool fill;
-  int fillpattern;
-  bool outlinefill;
-  double fillgray;
-  int fillcolor;
+  bool fill = false;
+  int fillpattern = 0;
+  bool outlinefill = false;
+  double fillgray = 0.0;
+  int fillcolor = 0;
 };
 
 /**
@@ -108,6 +95,8 @@ public:
     max_fillpattern = 10;
   }
 
+  virtual ~Display() = default;
+
   virtual void start()=0;
 
   virtual void end()=0;
@@ -132,11 +121,11 @@ public:
 
   virtual void curveto(double x1, double y1, double x2, double y2, double x3, double y3)=0;
 
-  virtual void structureDefBegin(string name)=0;
+  virtual void structureDefBegin(std::string name)=0;
 
   virtual void structureDefEnd()=0;
 
-  void structure(string name);   // rama común de los backends; en Display.cpp
+  void structure(const std::string &name);   // rama común de los backends; en Display.cpp
 
   virtual void stroke()=0;
 
@@ -173,13 +162,13 @@ public:
   }
 
   void setDimension(double x, double y) { dvx = x; dvy = y; ratio = dvy/dvx; }
-  double getRatio() { return ratio; }
+  double getRatio() const { return ratio; }
 
   void setPlumePosition(point &p) { pp = p; }
   void getPlumePosition(point &p) { p = pp; }
   virtual void setOpenPath(bool op) { dspstate.openpath = op; }
   
-  bool isFilled() { return dspstate.fill; }
+  bool isFilled() const { return dspstate.fill; }
   void setFilled(bool m) { dspstate.fill = m; }
   
   // Traduce el índice de patrón (V1: LPATRN n) al arreglo on/off en puntos.
@@ -236,11 +225,11 @@ public:
     dspstate.fillgray = 0.0;
   }
 
-  virtual void text(string)=0;
+  virtual void text(std::string)=0;
 
   virtual void setFontFace(FontFace face) { dspstate.fontFace = face; }
   virtual void setFontSize(double p) { dspstate.fontSize = p; }
-  double getFontSize() { return dspstate.fontSize; }
+  double getFontSize() const { return dspstate.fontSize; }
   void setRelFontSize(double rfz) {
     if (rfz == relfontsize)
       return;
@@ -249,7 +238,7 @@ public:
   }
 
   void setTextAlign(int a) { dspstate.text_align = a; }
-  int getTextAlign() { return dspstate.text_align; }
+  int getTextAlign() const { return dspstate.text_align; }
 
   void setMGContext(MetaGrafica* mg) { mg_context = mg; }
 
@@ -260,12 +249,31 @@ public:
   void pushMatrix(Matrix &m)             { mtstack.push(mt); mt *= m; }
   void pushMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) { mtstack.push(mtst); mt *= mtst; } }
   void saveMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) mtstack.push(mtst); }
-  void popMatrix()                       { mt = mtstack.top(); mtstack.pop(); }
-  void popMatrix(PredefinedMatrix pdmt)  { if (pdmt == MTST) mtst = mtstack.top(); mtstack.pop(); }
+  void popMatrix() {
+    if (mtstack.empty()) {
+      fprintf(stderr, "Error: pila de matrices vacía (restore sin save previo)\n");
+      return;
+    }
+    mt = mtstack.top();
+    mtstack.pop();
+  }
+  void popMatrix(PredefinedMatrix pdmt) {
+    if (pdmt != MTST) return;
+    if (mtstack.empty()) {
+      fprintf(stderr, "Error: pila de matrices vacía (restore sin save previo)\n");
+      return;
+    }
+    mtst = mtstack.top();
+    mtstack.pop();
+  }
 
   // Physical limitations for patterns
   int max_fillpattern;
-  
+
+  // Contador de anidamiento de StructurePath::draw(); ver structpath_depth.
+  int beginStructPath() { return ++structpath_depth; }
+  void endStructPath() { --structpath_depth; }
+
 protected:
   /// Hooks de la rama MTLC: solo la parte específica del dispositivo.
   /// El backend no ve (ni puede corromper) la pila de matrices.
@@ -290,7 +298,7 @@ protected:
   // Bounding box del path actual, en coordenadas de dispositivo. Se usa para
   // barrer líneas de tramado dentro del área rellena. Común a EPS y (futuro)
   // PDF; SVG no lo necesita (el <pattern> teja y recorta solo).
-  double xmin, xmax, ymin, ymax;
+  double xmin = 0, xmax = 0, ymin = 0, ymax = 0;
   void set_limits(double x1, double y1, double x2, double y2) {
     xmin = x1;
     xmax = x2;
@@ -316,6 +324,9 @@ protected:
 
   /// Contexto para resolver estructuras por nombre
   MetaGrafica* mg_context = nullptr;
+
+  /// Anidamiento actual de StructurePath::draw(); ver beginStructPath()/endStructPath().
+  int structpath_depth = 0;
 
   /// Tamaño relativo de fuente (sub/superíndices del texto)
   double relfontsize = 1.0f;

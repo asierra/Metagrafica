@@ -3,6 +3,8 @@
 #include <memory>
 #include <stack>
 using std::stack;
+using std::string;
+using std::map;
 
 
 

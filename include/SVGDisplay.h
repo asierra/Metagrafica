@@ -4,11 +4,17 @@
               transformations in Scalable Vector Graphics (SVG).
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-     Author:  Alejandro Aguilar Sierra, UNAM / IA Assistant
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
     Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
-#if !defined(__SVGDISPLAY_H)
-#define __SVGDISPLAY_H
+#if !defined(MG_SVGDISPLAY_H)
+#define MG_SVGDISPLAY_H
 
 #include <stdio.h>
 #include <stack>
@@ -22,7 +28,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 class SVGDisplay: public Display {
 
  public:
-  SVGDisplay(string filename);
+  SVGDisplay(std::string filename);
 
   MGFlags flags;
 
@@ -53,7 +59,7 @@ class SVGDisplay: public Display {
   void line(double, double, double, double) override;
   void rect(double, double, double, double) override;
   void curveto(double, double, double, double, double, double) override;
-  void text(string) override;
+  void text(std::string) override;
   void setFontSize(double p) override;
   void setFontFace(FontFace face) override;
   void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
@@ -80,7 +86,7 @@ class SVGDisplay: public Display {
   // (lo emite en un <defs> la primera vez) y devuelve su id. "" si idx<=0.
   std::string ensureHatchPattern(int idx);
 
-  string filename;
+  std::string filename;
   FILE *file = nullptr;
 
   // Posición actual (en espacio ya transformado), para <text x= y=>,

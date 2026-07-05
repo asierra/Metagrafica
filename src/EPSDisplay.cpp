@@ -1,7 +1,9 @@
 #include "EPSDisplay.h"
-#include "font_cmmi.h"
 #include <math.h>
 
+using std::string;
+
+#include "font_cmmi.h"
 
 
 string ps_creator = R"(%%Creator: MetaGrafica v4.0 2023

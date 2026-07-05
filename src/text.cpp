@@ -1,6 +1,8 @@
 #include "text.h"
 #include "Display.h"
 
+using std::string;
+
 FontMetricsMap serif_metrics_map = {
     {32, 250},  {33, 333},  {34, 408},  {35, 500},  {36, 500},  {37, 833},
     {38, 778},  {39, 333},  {40, 333},  {41, 333},  {42, 500},  {43, 564},

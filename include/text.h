@@ -1,21 +1,24 @@
 /*
        File:  text.h
               Text operations.
-MetaGrafica:  Human descriptive language to generate publication quality graphics.
+MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-     Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
-Antecedents: 2011, 1999 C++ STL, 1991 C, Original: 1988, Pascal and Assembler.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
 
-#if !defined(__TEXT_H)
-#define __TEXT_H
+#if !defined(MG_TEXT_H)
+#define MG_TEXT_H
 
 #include <string>
-using std::string;
 
 #include<map>
-using std::map;
 
 #include <vector>
 #include <memory>
@@ -56,7 +59,7 @@ enum FontFace {
 };
 
 
-using FontMetricsMap = map<unsigned char, int>;
+using FontMetricsMap = std::map<unsigned char, int>;
 
 
 struct TextState {
@@ -71,19 +74,19 @@ struct TextState {
   // 0 no script, upper > 0 , down < 0
   int script;
   
-  bool operator==( const TextState& other ) {
+  bool operator==( const TextState& other ) const {
         return font_face == other.font_face &&
                font_size    == other.font_size    &&
                script    == other.script;
   }
-  string str() { return "Face " + std::to_string(font_face) + 
-    " Size " + std::to_string(font_size) + 
+  std::string str() { return "Face " + std::to_string(font_face) +
+    " Size " + std::to_string(font_size) +
     " Script " + std::to_string(script); }
 };
 
 // Ancho de una cadena en unidades em relativas (multiplicar por el tamaño de
 // fuente del dispositivo para obtener puntos). Definido en text.cpp.
-double text_width(TextState ts, string s);
+double text_width(TextState ts, std::string s);
 
 constexpr double fn_relsz_script = 0.7;
 //constexpr double fn_relsz_script2 = 0.5;
@@ -98,41 +101,41 @@ constexpr double fn_relsz_small = 0.5;
 class Text : public GraphicsItem {
 public:
   Text() : GraphicsItem(GI_TEXT) { }
-  
-  void draw(Display &);
-  
 
-  void setText(string s) { text = s; }
-  void addText(string s) { text.append(s); }
-  string getText() { return text; }
+  void draw(Display &) override;
+
+
+  void setText(std::string s) { text = s; }
+  void addText(std::string s) { text.append(s); }
+  std::string getText() const { return text; }
 
   void setState(TextState s) { textstate = s; }
-  TextState getState() { return textstate; }
+  TextState getState() const { return textstate; }
   void setFontFace(FontFace face) { textstate.font_face = face; }
 
-  size_t length() { return text.length(); } 
+  size_t length() const { return text.length(); }
 
   //int width();
 
 private:
-  string text;
+  std::string text;
   TextState textstate;
 };
 
 
-/** 
+/**
    A text line starts in the pen position and can include text with
    different font faces or sizes.
  */
 class TextLine : public GraphicsItem {
 public:
   TextLine() : GraphicsItem(GI_TEXTLINE) { }
-  
-  void draw(Display &);
-    
+
+  void draw(Display &) override;
+
   void addText(std::unique_ptr<Text> t) { textline.push_back(std::move(t)); }
 
-  size_t length() { return textline.size(); } 
+  size_t length() const { return textline.size(); }
 
   double width();
 

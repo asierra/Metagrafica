@@ -11,6 +11,8 @@ MetaGrafica:  Human descriptive language to generate publication quality
 #include <stdio.h>
 #include <stdlib.h>
 
+using std::string;
+
 static const char* CMMI_TTF_PATH = "/usr/share/fonts/truetype/lyx/cmmi10.ttf";
 
 static void hpdf_error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void*) {

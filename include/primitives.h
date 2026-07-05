@@ -2,14 +2,21 @@
        File:  primitives.h
               Definition of graphic items like primitives, atributes and 
               transformations.
-MetaGrafica:  Human descriptive language to generate publication quality graphics.
+MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-     Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
-Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
-#if !defined(__PRIMITIVES_H)
-#define __PRIMITIVES_H
+#if !defined(MG_PRIMITIVES_H)
+#define MG_PRIMITIVES_H
+
+#include <math.h>
 
 #include <memory>
 #include <utility>
@@ -156,6 +163,11 @@ public:
 
   GraphicsItem(GraphicsItemType t) : type(t) { }
   virtual ~GraphicsItem()=default;
+
+  // Jerarquía polimórfica con contabilidad en destructores (StructureUser):
+  // una copia implícita rompería los contadores de uso.
+  GraphicsItem(const GraphicsItem&) = delete;
+  GraphicsItem& operator=(const GraphicsItem&) = delete;
   
   GraphicsItemType getType() const { return type; }
   
@@ -182,8 +194,8 @@ protected:
 class Polyline : public GraphicsItemWithPath {
 public:
   Polyline(GraphicsItemType t=GI_POLYLINE) : GraphicsItemWithPath(t) { }
-  
-  void draw(Display &);
+
+  void draw(Display &) override;
 };
 
 
@@ -195,62 +207,62 @@ class Rectangle : public GraphicsItemWithPath {
 public:
   Rectangle() : GraphicsItemWithPath(GI_RECTANGLE) { }
 
-  void draw(Display &);
+  void draw(Display &) override;
 };
 
 class Arc : public GraphicsItemWithPath {
 public:
-  Arc() : GraphicsItemWithPath(GI_ARC) { ai = 0; af = 360; }
+  Arc() : GraphicsItemWithPath(GI_ARC) { }
 
-  void draw(Display &);
+  void draw(Display &) override;
 
   void setRadius(double x, double y) { rx = x; ry = y; }
 
   void setAngles(double x, double y) { ai = x; af = y; }
 
 private:
-  double rx, ry;
-  double ai, af;
+  double rx = 0, ry = 0;
+  double ai = 0, af = 360;
 };
 
 class Dot : public GraphicsItemWithPath {
 public:
-  Dot() : GraphicsItemWithPath(GI_DOT) { r = 1; }
+  Dot() : GraphicsItemWithPath(GI_DOT) { }
 
-  void draw(Display &);
+  void draw(Display &) override;
 
   void setRadius(double x) { r = x;  }
 
 private:
-  double r;
+  double r = 1;
 };
 
 class Attribute : public GraphicsItem {
 public:
   Attribute() : GraphicsItem(GI_ATTRIBUTE) {}
-  
-  void draw(Display &);
+
+  void draw(Display &) override;
   
   void set(AttributeType t, int v) { atype = t; value = v; }
 
 private:
-  int value;
-  AttributeType atype;
+  int value = 0;
+  AttributeType atype = AT_LWIDTH;
 };
 
 class Transform : public GraphicsItem {
 public:
   Transform() : GraphicsItem(GI_TRANSFORM) {}
 
-  void draw(Display &);
+  void draw(Display &) override;
 
   void setOperation(MatrixOperation o) { op = o; }
 
-  MatrixOperation getOperation() { return op; }
+  MatrixOperation getOperation() const { return op; }
 
   void setPredefinedMatrix(PredefinedMatrix pdmt) { predefmat = pdmt; }
 
-  PredefinedMatrix getPredefinedMatrix() { return predefmat; }
+  PredefinedMatrix getPredefinedMatrix() const { return predefmat; }
 
   void setPoint(point p) { tl = p; }
 
@@ -259,10 +271,12 @@ public:
   void setMatrix(Matrix m) { mt = m; }
   
 private:
-  MatrixOperation op;
-  PredefinedMatrix predefmat;
+  // OPMMT es el caso inerte de Transform::draw(): un Transform nunca
+  // configurado no debe alterar ninguna matriz.
+  MatrixOperation op = OPMMT;
+  PredefinedMatrix predefmat = MTLC;
   point tl;
-  double rt;
+  double rt = 0;
   Matrix mt;
 };
 
@@ -277,13 +291,15 @@ public:
     gstype = gs;
   }
 
-  void draw(Display &);
+  void draw(Display &) override;
 
   void setGSType(GraphicsStateType gs) { gstype = gs; }
   void setPosition(point p) { position = p; gstype = GS_PLUMEPOSITION; }
 
 private:
-  GraphicsStateType gstype;
+  // GS_CLOSEPATH es inocuo con el estado inicial (openpath ya es false);
+  // el parser siempre fija el tipo real antes de dibujar.
+  GraphicsStateType gstype = GS_CLOSEPATH;
   point position;
 };
 

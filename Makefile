@@ -3,7 +3,7 @@ CXX = clang++
 CXXFLAGS = -g -std=c++14 -ffunction-sections -fdata-sections
 LIBS = -lm -Wmultichar
 LDFLAGS = -g -Wpedantic -Wl,--gc-sections
-CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -O3
+CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3
 HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -I$(HARUDIR)/include
 
 SHELL = /bin/sh

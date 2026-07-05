@@ -35,18 +35,18 @@ public:
 
   std::string getName() const { return name; }
 
-  int setName(string n, const map<string, std::unique_ptr<Structure>>& smap) {
+  int setName(std::string n, const std::map<std::string, std::unique_ptr<Structure>>& smap) {
     if (smap.count(n)) return -1;
     name = n;
     return 0;
   }
 
-  static Structure* getStructure(string nombre, const map<string, std::unique_ptr<Structure>>& smap) {
+  static Structure* getStructure(std::string nombre, const std::map<std::string, std::unique_ptr<Structure>>& smap) {
     auto it = smap.find(nombre);
     return (it != smap.end()) ? it->second.get() : nullptr;
   }
 
-  static void define_in_device(Display &g, const map<string, std::unique_ptr<Structure>>& smap);
+  static void define_in_device(Display &g, const std::map<std::string, std::unique_ptr<Structure>>& smap);
 
   void setGraphicsItems(GraphicsItemList p) { prlist = std::move(p); }
  
@@ -151,7 +151,7 @@ private:
 */
 class StructurePath : public StructureUser {
 public:
-  void setPath(Path p) {  path = p; }
+  void setPath(Path p) { path = std::move(p); }
 
   void draw(Display &) override;
 private:
@@ -173,11 +173,11 @@ public:
   // structure->decUses() al morir. Como `prlist` vive en la base y se destruye
   // DESPUÉS que este mapa, ~MetaGrafica() vacía `prlist` explícitamente antes de
   // que el mapa libere las Structure (ver src/structure.cpp). No quitar ese clear().
-  map<string, std::unique_ptr<Structure>> structure_map;
+  std::map<std::string, std::unique_ptr<Structure>> structure_map;
 
-  int setName(string n) { name = n; return 0; }
+  int setName(std::string n) { name = n; return 0; }
 
-  Structure* getStructure(string name) {
+  Structure* getStructure(std::string name) {
     return Structure::getStructure(name, structure_map);
   }
 
@@ -194,7 +194,7 @@ public:
   void setDepth(int d) { maxDepth = d; }
   int getDepth() { return maxDepth; }
 
-  void setFontSize(int d) { fontsize = d; }
+  void setFontSize(double d) { fontsize = d; }
 //  int getFontSize() { return fontsize; }
 
 private:

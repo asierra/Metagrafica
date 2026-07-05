@@ -2,12 +2,18 @@
        File:  splines.h
               Implementation of Catmull-Rom splines and conversion to Bezier.
 MetaGrafica:  Human descriptive language to generate publication quality
-graphics. Display in PostScript. Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
-Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
+              Display in PostScript.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
-#if !defined(__SPLINES_H)
-#define __SPLINES_H
+#if !defined(MG_SPLINES_H)
+#define MG_SPLINES_H
 
 #include "primitives.h"
 #include <vector>

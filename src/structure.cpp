@@ -3,6 +3,8 @@
 #include "structures.h"
 #include "Display.h"
 
+using std::string;
+using std::map;
 
 void Structure::define_in_device(Display &g, const map<string, std::unique_ptr<Structure>>& smap) {
   for (auto& it : smap) {
@@ -29,9 +31,8 @@ void Structure::draw(Display &g) {
 }
 
 void StructurePath::draw(Display &g) {
-  static int depth=0;
+  int depth = g.beginStructPath();
 
-  depth++;
   for (const auto &p : path) {
     Matrix mtpt;
     mtpt.translate(p.x, p.y);
@@ -52,7 +53,7 @@ void StructurePath::draw(Display &g) {
     g.popMatrix(MTST);
     g.popMatrix();
   }
-  depth--;
+  g.endStructPath();
 }
 
 void StructureRectangle::draw(Display &g) {
