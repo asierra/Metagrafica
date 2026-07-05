@@ -1,0 +1,127 @@
+% Fig. 7.9 IMQ 3a. ed., oct. 1998, dic. 2002
+% Potencial de contacto.
+
+$D 11.8 4.7
+$P 8
+
+INPUT arrow
+
+OPST FIG1
+WW 0 10 0 7
+%PL 0 5 10 5 ; 0 3.75 10 3.75 ; 0 2.5 10 2.5 }
+% interruptor:
+LWIDTH 1
+DOT 3 4.25 .75 5.75 .75 }
+PL 4 .75 4.25 .75  5.6875 1.325 ; 5.75 .75 6 .75 }
+
+% Cotas:
+LWIDTH 0
+TLPP 0 .2
+XYPP 2 1.95
+TICKS 23 2 0
+XYPP 6 1.95
+TICKS 23 2 0
+TLPT 0 .2
+GNPATH 16 3 1.95 dots
+IDPT
+DOT 3 &dots
+TLPT 0 .2
+GNPATH 10 7 1.95 dots
+IDPT
+DOT 3 &dots
+LPATRN 0
+FPATRN -2
+FILL BR 2 .25 4 .75  6 .25 8 .75 }
+NOFILL
+LWIDTH 3
+BR 2 .25 4 .75  6 .25 8 .75 }
+PL 0 7  2 7  2 1.8 ; 4 1.8  4 7  6 7  6 1.8 ; 8 1.8  8 7  10 7 }
+
+LWIDTH 0
+LPATRN 3
+PL 0 4.95 1 4.95 ; 1.7 4.95 2 4.95 ; 8 3.75 8.19 3.75 ; 9 3.75 10 3.75 }
+
+LPATRN 0
+MKST arrowr
+LNST -.015 0 1 .5 : .4 4.95 .4 7 }
+LNST -.015 0 1 .4 : 9.5 3.75 9.5 7 }
+
+XYDT 2.2 -.25 metal A
+XYDT 6.2 -.25 metal B
+TSTYLE italic
+XYDT  1 4.8 E_{F_A} 
+XYDT  .05 5.8 W_A 
+XYDT 9.2 5.2 W_B 
+XYDT 8.2 3.6 E_{F_B} 
+CLST
+
+OPST FIG2
+WW 0 10 0 7
+%PL 0 5 10 5 ; 0 3.75 10 3.75 ; 0 2.5 10 2.5 }
+
+% interruptor
+LWIDTH 1
+DOT 3 4.25 .75 5.75 .75 }
+PL 4 .75 4.25 .75 ; 4.25 .83 5.8 .83 ; 5.75 .75 6 .75 }
+
+LSTYLE 0
+TLPP 0 .2
+XYPP 2 1.95
+TICKS 17 2 0
+XYPP 6 1.95
+TICKS 23 2 0
+IDPT
+TLPT 0 .2
+GNPATH 10 3 1.95 dots
+IDPT
+DOT 3 &dots
+TLPT 4 0
+DOT 3 &dots
+
+LPATRN 2
+PL 0 7 2 7 }
+LPATRN 0
+FPATRN 2
+FILL BR 2 .25 4 .75  6 .25 8 .75 }
+NOFILL
+LSTYLE 3
+BR 2 .25 4 .75  6 .25 8 .75 }
+PL 0 5.6  2 5.6  2 1.8 ; 4 1.8  4 5.6  6 7  6 1.8 ; 8 1.8  8 7  10 7 }
+
+LWIDTH 1
+LPATRN 3
+PL 0 3.75 1 3.75 ; 1.7 3.75 2 3.75 ; 8 3.75 8.19 3.75 ; 9 3.75 10 3.75 }
+LPATRN 0
+MKST arrowr
+LNST -.01 0 1 .5 : .4 3.75 .4 5.6 }
+LNST -.01 0 1 .4 : 9.5 3.75 9.5 7 }
+LNST -.01 0 1 .7 : 1 5.6 1 7 }
+
+XYDT 2.2 -.25 metal A
+XYDT 6.2 -.25 metal B
+TSTYLE italic
+XYDT 1 3.6 E_{F_A} 
+XYDT .05 4.5 W_A 
+XYDT 9.2 5.2 W_B 
+XYDT 8.2 3.6 E_{F_B} 
+XYDT 0 6.12 \Delta{V}=W_{B}-W_A 
+CLST
+
+WW -.4 11.4  -1.3 8.1
+
+LWIDTH 1
+MKST arrowr
+LNST .02 : .1 1.4  .1 7.8 }
+
+SCST .45 .8
+%MKST FIG1 PWST 0 0 5 7
+MKST FIG1 PWST .5 0 5.5 7
+MKST FIG2 PWST 6.2 0 11.2 7
+
+XYDT 2.8 -.9 a) 
+XYDT 8.5 -.9 b)
+
+XYPP -.05 2
+RTLC 90
+DT energy
+
