@@ -129,6 +129,9 @@ void Parser::oldParseMatrix(int mo, Matrix &mt) {
   case OPMSC:
     x = parseFloat();
     y = parseFloat();
+    // Igual que en parseMatrix: escala anisotrópica ⇒ posible elipse en EPS.
+    if (x != y)
+      flags.using_ellipse = true;
     mt.scale(x, y);
     break;
   case OPMID:
@@ -158,6 +161,10 @@ std::unique_ptr<Transform> Parser::parseMatrix(int mo) {
   case OPMSC:
     z.x = parseFloat();
     z.y = parseFloat();
+    // Deformación explícita: un círculo bajo esta matriz saldrá como elipse,
+    // así que EPS necesitará su procedimiento `ellipse` en el encabezado.
+    if (mo == OPMSH || z.x != z.y)
+      flags.using_ellipse = true;
     t->setPoint(z);
     break;
   case OPMID:
@@ -347,6 +354,12 @@ void Parser::parseMatrixOp(int token, GraphicsItemList &prlist, Matrix &mtpp, Ma
 }
 
 void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &st, Matrix &mtpp, Matrix &mtrs, point &pp) {
+  // Traducción V1→mundo de la escala de placements: en V1 la caja unitaria de
+  // la struct colocada medía min(canvas); en el espacio isométrico mide 1
+  // unidad de mundo, así que se multiplica por min(wdx, wdy) del documento.
+  // Dentro de cuerpos de struct (depth>1) el espacio sigue siendo la caja
+  // unitaria y no hay nada que traducir.
+  double stf = (currentDepth == 1) ? docwmin : 1;
   switch (token) {
     case YDPST: {
       string name = parseString();
@@ -357,6 +370,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
       }
       auto sr = std::make_unique<StructurePath>();
       sr->setStructure(strct);
+      sr->setScale(stf);
       Path pt;
       pt.push_back(pp);
       sr->setPath(pt);
@@ -399,7 +413,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
         point rup = parsePoint();
         for (int i = 1; i <= n; i++) {
           auto sr = std::make_unique<StructureLine>();
-          sr->setScale(sc, sc);
+          sr->setScale(sc * stf, sc * stf);
           sr->setBothSides(bothsides);
           sr->setShift(shift);
           sr->setGap(gap);
@@ -436,7 +450,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
         point p = parsePoint();
         for (int i = 1; i <= n; i++) {
           auto sr = std::make_unique<StructureArc>();
-          sr->setScale(sc, sc);
+          sr->setScale(sc * stf, sc * stf);
           sr->setBothSides(bothsides);
           sr->setShift(shift);
           sr->setRadius(r / wdy);
@@ -474,6 +488,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
         int n = (int)parseFloat();
         auto sr = std::make_unique<StructurePath>();
         sr->setStructure(st);
+        sr->setScale(stf);
         Path pt;
         for (int i = 1; i <= n; i++) {
           pt.push_back(pp);
@@ -492,6 +507,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
             prlist.push_back(std::move(t));
             sr = std::make_unique<StructurePath>();
             sr->setStructure(st);
+            sr->setScale(stf);
             pt.clear();
             if (i==n) {
               auto gs = std::make_unique<GraphicsState>(GS_RESTORE);
@@ -516,6 +532,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
       } else {
         auto sr = std::make_unique<StructurePath>();
         sr->setStructure(strct);
+        sr->setScale(stf);
         sr->setPath(parsePath());
         prlist.push_back(std::move(sr));
       }
@@ -739,13 +756,26 @@ GraphicsItemList Parser::parsePrimitives() {
     }
 
     switch (lastyylex) {
-    case YWW:
-      wmx = parseFloat();
-      wdx = parseFloat() - wmx;
-      wmy = parseFloat();
-      wdy = parseFloat() - wmy;
-      // dbprintf("WW %g %g %g %g\n", wmx, wmy, wdx, wdy);
-      break;
+    case YWW: {
+      double x0 = parseFloat();
+      double dx = parseFloat() - x0;
+      double y0 = parseFloat();
+      double dy = parseFloat() - y0;
+      if (currentDepth == 1) {
+        // Ventana del documento: va al motor (mapeo isométrico en la matriz
+        // semilla, §3.1). El parser deja las coordenadas en unidades de mundo
+        // (wmx/wdx quedan en identidad), sin normalizar por eje como en V1.
+        mg->setWindow(x0, y0, dx, dy);
+        // Traducción de la semántica V1 de placements ("caja de la struct =
+        // min del canvas") a unidades de mundo; ver parseStructureOp.
+        docwmin = (dx < dy) ? dx : dy;
+      } else {
+        // Cuerpos de struct: conservan su ventana local normalizada a [0,1]²
+        // (el contrato caja-unitaria de los placements V1).
+        wmx = x0; wdx = dx;
+        wmy = y0; wdy = dy;
+      }
+    } break;
     case YOP: {
       int primtype = yylval.i;
       do {

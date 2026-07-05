@@ -31,20 +31,11 @@ void Structure::draw(Display &g) {
 }
 
 void StructurePath::draw(Display &g) {
-  int depth = g.beginStructPath();
-
   for (const auto &p : path) {
     Matrix mtpt;
     mtpt.translate(p.x, p.y);
-
-    // Hacer este ajuste solo una vez en el primer nivel o no hacerlo
-    if (depth==1) {
-      if (g.getRatio() > 1.0) { 
-        mtpt.scale(1.0, 1/g.getRatio());
-      } else if (g.getRatio() < 1.0) {
-        mtpt.scale(g.getRatio(), 1.0);
-      }
-    }
+    if (scale != 1)
+      mtpt.scale(scale, scale);
     g.pushMatrix(mtpt);
     g.pushMatrix(MTST);
     g.save();
@@ -53,7 +44,6 @@ void StructurePath::draw(Display &g) {
     g.popMatrix(MTST);
     g.popMatrix();
   }
-  g.endStructPath();
 }
 
 void StructureRectangle::draw(Display &g) {
@@ -84,13 +74,6 @@ void StructureLine::draw_side(Display &g, bool side) {
     pos.y = rup.y + shift*dy;
   }
   mtln.translate(pos.x, pos.y);
-  if (g.getRatio() > 1.0) {
-    mtln.scale(1.0, 1/g.getRatio());
-    dy *= g.getRatio();
-  } else if (g.getRatio() < 1.0) {
-    mtln.scale(g.getRatio(), 1.0);
-    dy *= g.getRatio();
-  }
   mtln.scale(scale.x, scale.y);
   rt = atan2(dy, dx)*180/M_PI;
   if (rt!=0.0)
@@ -140,17 +123,9 @@ void StructureArc::draw_side(Display &g, bool side) {
     rt = angf - 90;
   stpos.x = r*cos(angf*M_PI/180);
   stpos.y = r*sin(angf*M_PI/180);
-  // El arco se dibuja con el radio en escala y (arc fuerza w=h), así que la
-  // posición sobre el arco se compensa en x para cualquier proporción.
-  stpos.x *= g.getRatio();
   stpos.x += pos.x;
   stpos.y += pos.y;
   mtar.translate(stpos.x, stpos.y);
-  if (g.getRatio() > 1.0) {
-    mtar.scale(1.0, 1/g.getRatio());
-  } else if (g.getRatio() < 1.0) {
-    mtar.scale(g.getRatio(), 1.0);
-  }
   mtar.scale(scale.x, scale.y);
   if (rt!=0.0)
     mtar.rotate(rt);
@@ -180,6 +155,7 @@ void MetaGrafica::draw(Display &g) {
   g.setMGContext(this);
   if (dcmx > 0)
     g.setDimension(dcmx, dcmy);
+  g.setWindow(wwx, wwy, wwdx, wwdy);
   if (fontsize > 0)
     g.setFontSize(fontsize);
   g.start();

@@ -72,6 +72,9 @@ private:
 
   /// Window
   double wmx, wmy, wdx, wdy;
+  /// min(wdx, wdy) de la ventana real del documento: factor que traduce la
+  /// escala V1 de placements (relativa a min del canvas) a unidades de mundo.
+  double docwmin = 1;
   Matrix mtpt;
   //point pp;
   //StructureMap structure_map;

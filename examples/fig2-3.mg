@@ -2,7 +2,7 @@
 % with temperature % compared with the prediction of Einstein’s 
 % quantum theory.
 
-$D 13 8
+$D 12 8
 $P 8
 
 WW -1 11  -1 7

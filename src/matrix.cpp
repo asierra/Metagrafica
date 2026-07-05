@@ -72,6 +72,13 @@ void Matrix::transf2d(double &x, double &y) {
   y = M[1][0] * xp + M[1][1] * yp;
 }
 
+void Matrix::transform_radii(double &w, double &h) {
+  double nx = sqrt(M[0][0] * M[0][0] + M[1][0] * M[1][0]);
+  double ny = sqrt(M[0][1] * M[0][1] + M[1][1] * M[1][1]);
+  w *= (M[0][0] < 0) ? -nx : nx;
+  h *= (M[1][1] < 0) ? -ny : ny;
+}
+
 Matrix Matrix::operator*(const Matrix& B) {
   Matrix A(*this);
   A.matmat(B.M);

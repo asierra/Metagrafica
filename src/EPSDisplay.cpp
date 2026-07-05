@@ -269,12 +269,15 @@ EPSDisplay::EPSDisplay(string f) {
 }
 
 void EPSDisplay::start() {
-  dvx = dvx * cm_to_point + 0.5;
-  dvy = dvy * cm_to_point + 0.5;
+  // Escala de dibujo exacta (§3.2); el redondeo a entero es solo para el
+  // %%BoundingBox impreso. El +0.5 de V1 contaminaba la escala y rompía la
+  // isometría en el último decimal.
+  dvx = dvx * cm_to_point;
+  dvy = dvy * cm_to_point;
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n", filename.c_str());
-  fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n%%%%EndComments\n", (int)dvx,
-          (int)dvy);
+  fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n%%%%EndComments\n",
+          (int)(dvx + 0.5), (int)(dvy + 0.5));
   if (flags.using_ellipse)
     fprintf(file, "%s", ps_ellipse);
   if (flags.using_dot)
@@ -289,11 +292,8 @@ void EPSDisplay::start() {
     fprintf(file, "%s", font_cmmi1.c_str());
     fprintf(file, "%s", font_cmmi2.c_str());
   }
-  // Define structures without initial transform
-  // Structure::define_in_device(*this);
-  Matrix mtmp;
-  mtmp.scale(dvx, dvy);
-  pushMatrix(mtmp);
+  // Semilla mundo→dispositivo (§3.1): isométrica por default, en la base.
+  pushWorldMatrix();
 }
 
 void EPSDisplay::end() {
@@ -475,12 +475,11 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
                      double endAng) {
   double sa = startAng, ea = endAng;
   mt.transform(x, y);
-  if (w != h)
-    mt.transf2d(w, h);
-  else {
-    mt.transf2d(w, h);
-    w = h;
-  }
+  // Radios por norma de columna: un círculo sigue siendo círculo bajo
+  // isometría+rotación; ya no se fuerza w=h (compensación V1 de la
+  // normalización por eje). Una deformación explícita (SCST anisotrópico,
+  // stretch) produce elipse, que es lo honesto.
+  mt.transform_radii(w, h);
   if (h == 0)
     h = w;
 
@@ -501,7 +500,9 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
   } else 
     adjust_limits(x - w, y - h, x + w, y + h);
   
-  if (fabs(w) == fabs(h)) {
+  // Igualdad con tolerancia relativa: las normas de columna de un círculo
+  // rotado difieren solo por redondeo flotante.
+  if (fabs(fabs(w) - fabs(h)) <= 1e-9 * (fabs(w) + fabs(h))) {
     if (endAng < startAng)
       fprintf(file, "%f %f %f %f %f arcn\n", x, y, w, sa, ea);
     else
@@ -604,7 +605,8 @@ void EPSDisplay::setGray(double fg) {
 /* Transformaciones: solo la rama MTLC; la contabilidad MTST vive en Display */
 
 void EPSDisplay::deviceTranslate(double x, double y) {
-  fprintf(file, "%f %f translate\n", x * dvx, y * dvy);
+  // x,y son un vector en unidades de mundo; sx/sy los llevan a puntos.
+  fprintf(file, "%f %f translate\n", x * sx, y * sy);
 }
 
 void EPSDisplay::deviceScale(double x, double y) {

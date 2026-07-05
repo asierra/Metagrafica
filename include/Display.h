@@ -91,7 +91,6 @@ public:
   Display() {
     dvx = 10;
     dvy = 10;
-    ratio = 1;
     max_fillpattern = 10;
   }
 
@@ -161,8 +160,12 @@ public:
     else if (pdmt == MTST) mtst.initialize();
   }
 
-  void setDimension(double x, double y) { dvx = x; dvy = y; ratio = dvy/dvx; }
-  double getRatio() const { return ratio; }
+  void setDimension(double x, double y) { dvx = x; dvy = y; }
+
+  /// Ventana de mundo del documento (§3.1). Default: cuadrado unitario.
+  void setWindow(double x0, double y0, double dx, double dy) {
+    wwx = x0; wwy = y0; wwdx = dx; wwdy = dy;
+  }
 
   void setPlumePosition(point &p) { pp = p; }
   void getPlumePosition(point &p) { p = pp; }
@@ -270,11 +273,29 @@ public:
   // Physical limitations for patterns
   int max_fillpattern;
 
-  // Contador de anidamiento de StructurePath::draw(); ver structpath_depth.
-  int beginStructPath() { return ++structpath_depth; }
-  void endStructPath() { --structpath_depth; }
-
 protected:
+  /// Semilla mundo→dispositivo (§3.1): p ↦ o + s·(p − wm). Los backends la
+  /// aplican en start() después de convertir dvx/dvy a puntos. Default
+  /// isométrico *meet*: escala uniforme al mayor factor que hace caber la
+  /// ventana en el canvas, sobrante repartido como margen centrado.
+  /// stretch=true reproduce el estiramiento por eje de V1 (lo usará el
+  /// traductor); no hay compensaciones por primitiva en ningún modo.
+  void pushWorldMatrix() {
+    sx = dvx / wwdx;
+    sy = dvy / wwdy;
+    double ox = 0, oy = 0;
+    if (!stretch_mode) {
+      sx = sy = (sx < sy) ? sx : sy;
+      ox = (dvx - sx * wwdx) / 2;
+      oy = (dvy - sy * wwdy) / 2;
+    }
+    Matrix m;
+    m.translate(ox, oy);
+    m.scale(sx, sy);
+    m.translate(-wwx, -wwy);
+    pushMatrix(m);
+  }
+
   /// Hooks de la rama MTLC: solo la parte específica del dispositivo.
   /// El backend no ve (ni puede corromper) la pila de matrices.
   virtual void deviceTranslate(double x, double y) = 0;
@@ -319,14 +340,15 @@ protected:
   // Current plume position
   point pp;
 
-  /// Razon de aspecto
-  double ratio;
+  /// Ventana de mundo (setWindow) y factores de escala mundo→pt de la semilla.
+  /// sx == sy salvo en modo stretch. deviceTranslate() de cada backend usa
+  /// sx/sy para convertir vectores de mundo a puntos.
+  double wwx = 0, wwy = 0, wwdx = 1, wwdy = 1;
+  double sx = 1, sy = 1;
+  bool stretch_mode = false;
 
   /// Contexto para resolver estructuras por nombre
   MetaGrafica* mg_context = nullptr;
-
-  /// Anidamiento actual de StructurePath::draw(); ver beginStructPath()/endStructPath().
-  int structpath_depth = 0;
 
   /// Tamaño relativo de fuente (sub/superíndices del texto)
   double relfontsize = 1.0f;

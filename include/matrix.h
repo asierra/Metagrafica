@@ -60,6 +60,12 @@ public:
 
   void transf2d(double&, double&);
 
+  // Transforma un par de semiejes (w,h) al dispositivo: cada uno escala con
+  // la norma de la columna correspondiente (signo del elemento diagonal, para
+  // reflejos). Bajo isometría+rotación un círculo sigue siendo círculo, cosa
+  // que transf2d no garantiza (rota el vector (w,h) y mezcla componentes).
+  void transform_radii(double&, double&);
+
   void set(DataMatrix m);
 
   void to_rectangle(double x1, double y1, double x2, double y2);

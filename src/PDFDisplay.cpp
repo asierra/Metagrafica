@@ -80,8 +80,9 @@ PDFDisplay::PDFDisplay(string f) : filename(f) {
 }
 
 void PDFDisplay::start() {
-  dvx = dvx * cm_to_point + 0.5f;
-  dvy = dvy * cm_to_point + 0.5f;
+  // Escala y tamaño de página exactos (§3.2), sin el +0.5 de V1.
+  dvx = dvx * cm_to_point;
+  dvy = dvy * cm_to_point;
 
   pdf  = HPDF_New(hpdf_error_handler, nullptr);
   page = HPDF_AddPage(pdf);
@@ -103,10 +104,8 @@ void PDFDisplay::start() {
   if (!cmmi_face)
     fprintf(stderr, "Advertencia: no se pudo cargar %s\n", CMMI_TTF_PATH);
 
-  // Matriz inicial: escala de coordenadas normalizadas [0,1] a puntos
-  Matrix mtmp;
-  mtmp.scale(dvx, dvy);
-  pushMatrix(mtmp);
+  // Semilla mundo→dispositivo (§3.1): isométrica por default, en la base.
+  pushWorldMatrix();
 }
 
 void PDFDisplay::end() {
@@ -361,12 +360,9 @@ void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
   double sa = startAng, ea = endAng;
   mt.transform(x, y);
-  if (w != h)
-    mt.transf2d(w, h);
-  else {
-    mt.transf2d(w, h);
-    w = h;
-  }
+  // Radios por norma de columna: círculo se conserva bajo isometría+rotación;
+  // sin forzado w=h (compensación V1).
+  mt.transform_radii(w, h);
   if (h == 0) h = w;
 
   // Misma corrección de signos que EPSDisplay para reflejos matriciales
@@ -547,7 +543,8 @@ void PDFDisplay::text(string s) {
 // Solo la rama MTLC; la contabilidad MTST vive en Display
 
 void PDFDisplay::deviceTranslate(double x, double y) {
-  HPDF_Page_Concat(page, 1, 0, 0, 1, x * dvx, y * dvy);
+  // Vector en unidades de mundo → puntos, igual que en EPS/SVG.
+  HPDF_Page_Concat(page, 1, 0, 0, 1, x * sx, y * sy);
 }
 
 void PDFDisplay::deviceScale(double x, double y) {

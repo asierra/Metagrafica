@@ -152,10 +152,15 @@ private:
 class StructurePath : public StructureUser {
 public:
   void setPath(Path p) { path = std::move(p); }
+  void setScale(double s) { scale = s; }
 
   void draw(Display &) override;
 private:
   Path path;
+  // Lado de la caja unitaria de la struct, en unidades de mundo del espacio
+  // donde se coloca. El front-end V1 lo usa para traducir su semántica
+  // "caja = min(canvas)" a unidades de mundo (min de la ventana).
+  double scale = 1;
 };
 
 /**
@@ -190,6 +195,11 @@ public:
     x = dcmx;
     y = dcmy;
   }
+
+  /// Ventana de mundo del documento (WW / world_window, §3.1).
+  void setWindow(double x0, double y0, double dx, double dy) {
+    wwx = x0; wwy = y0; wwdx = dx; wwdy = dy;
+  }
   
   void setDepth(int d) { maxDepth = d; }
   int getDepth() { return maxDepth; }
@@ -202,10 +212,10 @@ private:
   int maxDepth;
   /// Dimensiones físicas en cm
   double dcmx, dcmy;
+  /// Ventana de mundo; default el cuadrado unitario (V1 sin WW)
+  double wwx = 0, wwy = 0, wwdx = 1, wwdy = 1;
   /// Font size in points
   double fontsize;
-  ///
-  //Matrix matrix;
 };
 
 #endif

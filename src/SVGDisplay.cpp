@@ -156,8 +156,10 @@ void SVGDisplay::start() {
     // dvx/dvy llegan en cm (ver Display::setDimension); los convertimos a
     // puntos igual que EPSDisplay::start() para que el tamaño del documento
     // coincida entre los tres backends.
-    dvx = dvx * cm_to_point + 0.5;
-    dvy = dvy * cm_to_point + 0.5;
+    // Escala exacta (§3.2), sin el +0.5 de V1 (que era solo para el
+    // BoundingBox entero de EPS y aquí ni eso).
+    dvx = dvx * cm_to_point;
+    dvy = dvy * cm_to_point;
 
     fprintf(file, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
     fprintf(file, "<svg width=\"%fpt\" height=\"%fpt\" viewBox=\"0 %f %f %f\" xmlns=\"http://www.w3.org/2000/svg\">\n",
@@ -168,12 +170,10 @@ void SVGDisplay::start() {
     // texto) funcionen igual que en EPS.
     fprintf(file, "<g transform=\"scale(1, -1)\">\n");
 
-    // Igual que EPSDisplay::start(): la escala de dvx/dvy que lleva del
-    // espacio normalizado del documento a puntos se inyecta como una matriz
-    // más, para que se componga automáticamente con las de las estructuras.
-    Matrix mtmp;
-    mtmp.scale(dvx, dvy);
-    pushMatrix(mtmp);
+    // Igual que EPSDisplay::start(): la semilla mundo→puntos (§3.1) se
+    // inyecta como una matriz más, para que se componga automáticamente
+    // con las de las estructuras.
+    pushWorldMatrix();
 }
 
 void SVGDisplay::end() {
@@ -220,12 +220,11 @@ void SVGDisplay::restore() {
 // es contabilidad común y vive en Display.
 // -------------------------------------------------------------
 void SVGDisplay::deviceTranslate(double x, double y) {
-    // x,y llegan en coordenadas normalizadas del documento; las coordenadas de
-    // los paths ya están en puntos, así que el translate debe escalarse a
-    // puntos igual que EPSDisplay::deviceTranslate (x*dvx, y*dvy). Sin esto el
-    // desplazamiento era ~0 y las figuras trasladadas (p.ej. TLLC) caían encima
-    // de las originales.
-    fprintf(file, "<g transform=\"translate(%f, %f)\">\n", x * dvx, y * dvy);
+    // x,y llegan como vector en unidades de mundo; las coordenadas de los
+    // paths ya están en puntos, así que el translate se escala con sx/sy
+    // igual que EPSDisplay::deviceTranslate. Sin esto el desplazamiento era
+    // ~0 y las figuras trasladadas (p.ej. TLLC) caían encima de las originales.
+    fprintf(file, "<g transform=\"translate(%f, %f)\">\n", x * sx, y * sy);
     current_open_groups++;
 }
 
@@ -338,7 +337,9 @@ void SVGDisplay::curveto(double x1, double y1, double x2, double y2, double x3, 
 void SVGDisplay::arc(double x, double y, double w, double h, double startAng, double endAng) {
     double sa = startAng, ea = endAng;
     mt.transform(x, y);
-    mt.transf2d(w, h);
+    // Radios por norma de columna, igual que EPS/PDF: círculo sigue círculo
+    // bajo isometría+rotación.
+    mt.transform_radii(w, h);
     if (h == 0) h = w;
 
     // Misma corrección de signos que EPSDisplay/PDFDisplay cuando la matriz
