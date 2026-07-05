@@ -2,7 +2,6 @@
 obj/
 bin/
 src/lexmg.cpp
-include/version.h
 man/mg.1
 
 # Editor
