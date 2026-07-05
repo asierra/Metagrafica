@@ -1,6 +1,6 @@
 #include <math.h>
 #include <stdio.h>
-#include "mg.h"
+#include "structures.h"
 #include "Display.h"
 
 

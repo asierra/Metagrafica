@@ -7,7 +7,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 
-#include "mg.h"
+#include "structures.h"
 #include "EPSDisplay.h"
 #include "PDFDisplay.h"
 #include "SVGDisplay.h"

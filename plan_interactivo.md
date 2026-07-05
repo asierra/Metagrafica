@@ -7,10 +7,9 @@
 
 ## Visión
 
-Un editor en el navegador donde el usuario escribe `.mg` en un panel y ve el gráfico
-renderizado al lado, en tiempo real (o con un botón "compilar"). Sin instalación,
-accesible desde cualquier dispositivo. Baja radicalmente la barrera de entrada: alguien
-puede probar MetaGráfica sin compilar el binario ni tocar la terminal.
+Un editor en el navegador donde el usuario escribe `.mg` en un panel y ve el gráfico renderizado al lado, en tiempo real (o con un botón "compilar"). Además cuenta con herramientas interactivas para crear primitivas y acomodarlas en el canvas. También se puede conectar un chat a una herramienta IA que tenga el contexto de mg y pueda entender instrucciones para crear y corregir gráficos.
+
+Sin instalación,accesible desde cualquier dispositivo. Baja radicalmente la barrera de entrada: alguien puede probar MetaGráfica sin compilar el binario ni tocar la terminal y usar un asistente IA para crear gráficos complejos.
 
 ## Prerequisitos — ya cumplidos
 

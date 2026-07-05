@@ -7,7 +7,6 @@ MetaGrafica:  Human descriptive language to generate publication quality
     Version:  2024
 */
 #include "PDFDisplay.h"
-#include "mg.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

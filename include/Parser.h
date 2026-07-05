@@ -11,7 +11,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 #if !defined(__PARSER_H)
 #define __PARSER_H
 
-#include "mg.h"
+#include "structures.h"
 #include "MGLexer.h"
 #include "mgflags.h"
 #include <memory>

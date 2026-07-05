@@ -1,5 +1,4 @@
 #include "SVGDisplay.h"
-#include "mg.h"
 #include <cmath>
 #include <iomanip>
 

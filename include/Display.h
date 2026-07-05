@@ -24,6 +24,7 @@ constexpr double cm_to_point = 28.34645669291339;
 
 #include "primitives.h"
 #include "text.h"
+#include "structures.h"
 
 
 /** 

@@ -1252,7 +1252,7 @@ esa red, tocar el backend deja de ser una apuesta manual.
 ### 22.6 Orden de trabajo recomendado para la rama V2
 
 1. **Arnés de regresión** sobre `examples/` (§22.5) — barato y desbloquea todo lo demás.
-2. **`mg1to2.py`** (§20) — preserva el conocimiento de V1 y da corpus de prueba.
-3. **Gramática V2** (§1–§18) y **política isométrica** (§3.1 / §22.4).
+2. **Gramática V2** (§1–§18) y **política isométrica** (§3.1 / §22.4).
+3. **`mg1to2.py`** (§20) — preserva el conocimiento de V1 y da corpus de prueba. No puede hacerse antes de que la gramática haya sido resuelta.
 4. **Refactor `DeviceBackend`** (§22.3) — oportunista, cuando el manejo de matrices estorbe.
 

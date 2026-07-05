@@ -77,7 +77,7 @@ enum PredefinedMatrix {
   MTRS, // Repeat structure 
 };
 
-/// Vectorial pixel, not vector because we don't define all vector operations
+/// Geometric point, Vectorial pixel, our basic element. Not vector because we don't define all vector operations
 struct point {
   point() { x =0; y = 0; }
   point(double x1, double y1) { x = x1; y = y1; }
@@ -143,7 +143,6 @@ struct point {
 
 class GraphicsItem;
 using Path = std::vector<point>;
-using GraphicsItemList = std::vector<std::unique_ptr<GraphicsItem>>;
 
 // Abstract output device
 class Display;
@@ -190,6 +189,7 @@ public:
 
 /* 
    A rectangle is defined by a pair of points: the left lower point and the right upper point.
+   The number of points in the path must be even.
  */
 class Rectangle : public GraphicsItemWithPath {
 public:

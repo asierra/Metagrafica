@@ -1,6 +1,5 @@
 #include "EPSDisplay.h"
 #include "font_cmmi.h"
-#include "mg.h"
 #include <math.h>
 
 

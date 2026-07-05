@@ -1,12 +1,17 @@
 /*
-       File:  mg.h
-              Definition of a complex graphic item based on a list of basic
-              Display items and a name as identifier.
+       File:  structures.h
+              Definition of complex graphic items based on a list of primitive
+              graphics items and a name as identifier.
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-     Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
-Antecedents: 2011, 1999 C++ STL; 1991 C; Original: 1988 Pascal and Assembler.
+Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+    Version:  2026
+Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
+			 Version 1.0 1991 C, first published book.
+			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
+			 
+ This file is part of MetaGrafica.
+ Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */
 #if !defined(MG_H)
 #define MG_H
@@ -14,8 +19,12 @@ Antecedents: 2011, 1999 C++ STL; 1991 C; Original: 1988 Pascal and Assembler.
 #include "version.h"
 #include "text.h"
 
+
+using GraphicsItemList = std::vector<std::unique_ptr<GraphicsItem>>;
+
+
 /** 
-    A structure is defined by a name and a list of Display items. 
+    A structure is defined by a name and a list of GraphicsItems in order to draw complex objects. 
  */
 class Structure {
 public:
@@ -58,7 +67,7 @@ protected:
 };
 
 
-/* 
+/** 
    The basic structure user has a reference to a structure and is displayed 
    using the structure matrix.
  */
@@ -76,7 +85,7 @@ protected:
 };
 
 
-/* 
+/** 
    A rectangle structure user is displayed over a specific user defined rectangle.
 */
 class StructureRectangle : public StructureUser {
@@ -89,7 +98,7 @@ private:
 };
 
 
-/* 
+/** 
    A line structure user is displayed with a line between two points and the
    referenced structure rotated according to the line inclination.
 */
@@ -112,7 +121,7 @@ private:
 };
 
 
-/* 
+/** 
    An arc structure user is displayed with a circular arc and the
    referenced structure rotated according to the inclination.
 */
@@ -137,8 +146,8 @@ private:
 };
 
 
-/* 
-   A rectangle structure user is displayed over a specific user defined rectangle.
+/** 
+   A path structure user is displayed over every point of the path.
 */
 class StructurePath : public StructureUser {
 public:
@@ -149,7 +158,9 @@ private:
   Path path;
 };
 
-
+/**
+ The main drawing is in this structure.
+*/
 class MetaGrafica : public Structure {
 public:
   MetaGrafica();

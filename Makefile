@@ -25,17 +25,13 @@ SRCS = $(addprefix $(SRCDIR)/, Display.cpp EPSDisplay.cpp PDFDisplay.cpp SVGDisp
 
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 
-all: $(INCDIR)/version.h $(BINDIR)/mg $(MANDIR)/mg.1
+all: $(BINDIR)/mg $(MANDIR)/mg.1
 
 $(MANDIR)/mg.1: $(MANDIR)/mg.1.md
 	pandoc $< -s -t man -o $@
 
 $(MANDIR)/mg.1.pdf: $(MANDIR)/mg.1.md
 	pandoc $< -s -t pdf -o $@
-
-$(INCDIR)/version.h:
-	git log -1 --pretty=format:'#define MG_VERSION "%h - %cd"' > $@
-	echo "\n" >> $@
 
 $(SRCDIR)/lexmg.cpp: $(SRCDIR)/mgpp.l
 	flex -o $@ $<
@@ -70,22 +66,22 @@ clean:
 	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp
 # DO NOT DELETE
 
-$(OBJDIR)/Display.o: $(INCDIR)/Display.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/mg.h
+$(OBJDIR)/Display.o: $(INCDIR)/Display.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
 $(OBJDIR)/EPSDisplay.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
-$(OBJDIR)/EPSDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/font_cmmi.h $(INCDIR)/mg.h
+$(OBJDIR)/EPSDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/font_cmmi.h $(INCDIR)/structures.h
 $(OBJDIR)/PDFDisplay.o: $(INCDIR)/PDFDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
-$(OBJDIR)/PDFDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/mg.h
+$(OBJDIR)/PDFDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
 $(OBJDIR)/SVGDisplay.o: $(INCDIR)/SVGDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
-$(OBJDIR)/SVGDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/mg.h
+$(OBJDIR)/SVGDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
 $(OBJDIR)/lexmg.o: $(INCDIR)/mgpp_tab.h
-$(OBJDIR)/main.o: $(INCDIR)/mg.h $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
+$(OBJDIR)/main.o: $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
 $(OBJDIR)/main.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Parser.h $(INCDIR)/version.h
 $(OBJDIR)/matrix.o: $(INCDIR)/matrix.h
-$(OBJDIR)/Parser.o: $(INCDIR)/Parser.h $(INCDIR)/mg.h $(INCDIR)/text.h $(INCDIR)/primitives.h
+$(OBJDIR)/Parser.o: $(INCDIR)/Parser.h $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h
 $(OBJDIR)/Parser.o: $(INCDIR)/matrix.h $(INCDIR)/mgpp_tab.h $(INCDIR)/text_parser.h $(INCDIR)/splines.h
 $(OBJDIR)/primitives.o: $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/Display.h $(INCDIR)/text.h
 $(OBJDIR)/splines.o: $(INCDIR)/splines.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
-$(OBJDIR)/structure.o: $(INCDIR)/mg.h $(INCDIR)/text.h $(INCDIR)/primitives.h
+$(OBJDIR)/structure.o: $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h
 $(OBJDIR)/structure.o: $(INCDIR)/matrix.h $(INCDIR)/Display.h
 $(OBJDIR)/text.o: $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/Display.h
 $(OBJDIR)/text_parser.o: $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h

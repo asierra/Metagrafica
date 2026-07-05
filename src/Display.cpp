@@ -9,7 +9,6 @@ MetaGrafica:  Human descriptive language to generate publication quality
 */
 #include <stdio.h>
 #include "Display.h"
-#include "mg.h"
 
 void Display::structure(string name) {
   Structure *strct = mg_context ? mg_context->getStructure(name) : nullptr;
