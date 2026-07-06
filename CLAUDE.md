@@ -13,8 +13,8 @@ The forward-looking design lives in `especificacion_mg.md`: §3.1 (isometric spa
 ```bash
 make                  # build bin/mg and man page
 make clean
-./bin/mg examples/primitives.mg          # → primitives.eps
-./bin/mg examples/fig2-3.mg out.svg      # backend by extension (.eps/.svg/.pdf)
+./bin/mg examples/v1/primitives.mg       # → primitives.eps
+./bin/mg examples/v1/fig2-3.mg out.svg   # backend by extension (.eps/.svg/.pdf)
 
 bash test/run.sh check    # golden-file regression (EPS+SVG). MUST be ok=16 fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
@@ -26,7 +26,13 @@ Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regener
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, examples (+`.mg` corpus) in `examples/`, regression harness in `test/`.
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`.
+
+The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
+- **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
+- **`examples/v3/`** — V3-syntax staging (new grammar §1–§18). **Not compilable yet** — no V3 parser exists; these are spec fixtures / translation targets whose render must match the v1 reference.
+
+`test/run.sh` currently compiles `examples/v1/`; at cutover it moves to `examples/v3/`. The current `bin/mg` on `main` still parses V1 (V3 grammar not implemented yet).
 
 ## Architecture
 
@@ -51,9 +57,9 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 1. Token in `src/mgpp.l` (`keyword_map` in `init_tables()`); 2. `GI_*` enum + subclass in `include/primitives.h`; 3. handle in `Parser::parsePrimitive()` or a `parse*` helper; 4. `draw(Display&)` calling `Display` virtuals; 5. implement those in the three backends.
 
-## Roadmap state (2026-07-05)
+## Roadmap state (2026-07-06)
 
-Done: golden harness; orthodox-C++ hardening; isometric engine (§3.1/§22.4). Next per §22.6: add approved non-square examples (fig2-6, fig4-1, fig6-10) to `EXAMPLES` in `test/run.sh`; V3 grammar (§1–§18) — **start with fig4-10**, the canonical case study (needs drastic redesign with per-panel structs + `fit`, compare against `examples/fig4-10-V1.eps`); then `mg1to2.py` translator (disproportionate V1 files need `stretch=true` or renumbering, §21). Known wart: `EPSDisplay::start` doesn't check `fopen` failure (segfaults on unwritable path).
+Done: golden harness; orthodox-C++ hardening; isometric engine (§3.1/§22.4); `StructurePath` tangent orientation for markers (§C.1 of `plan_marcadores.md`, temporary `$O` trigger); V1/V3 corpus split with committed SVG oracle (`examples/v1/reference/`). Next per §22.6: **refine the V3 grammar by hand-translating the corpus** into `examples/v3/` (each translation surfaces grammar gaps — e.g. `$P`/base-text-size keyword still open, `FPATRN`→`hatch` not 1:1); a notable refinement already made: §7 replaced the `with(...)` block with scoped **state statements** + bare `{ }` blocks (recovers V1's imperative feel). Then V3 grammar (§1–§18) — **start with fig4-10**, the canonical case study (needs per-panel structs + `fit`, compare against `examples/v1/reference/fig4-10.svg`); then `mg1to2.py` translator (state commands now map 1:1 to state statements; disproportionate V1 files need `stretch=true` or renumbering, §21). Known wart: `EPSDisplay::start` doesn't check `fopen` failure (segfaults on unwritable path).
 
 ## Code style
 

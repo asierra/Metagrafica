@@ -104,6 +104,9 @@ void Parser::parseDef(int def) {
     else if (n > 1)
       spline_nodes_per_segment = n;
     break;
+  case 'O':  // TEMPORAL: orientación tangente de placements sobre path (§C.1).
+    orient_next = ((int)parseFloat() != 0);
+    break;
   default:
     fprintf(stderr, "%sError: Undefined definition %d %c\n", location().c_str(), def, def);
     break;
@@ -371,6 +374,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
       auto sr = std::make_unique<StructurePath>();
       sr->setStructure(strct);
       sr->setScale(stf);
+      sr->setOrient(orient_next);
       Path pt;
       pt.push_back(pp);
       sr->setPath(pt);
@@ -489,6 +493,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
         auto sr = std::make_unique<StructurePath>();
         sr->setStructure(st);
         sr->setScale(stf);
+        sr->setOrient(orient_next);
         Path pt;
         for (int i = 1; i <= n; i++) {
           pt.push_back(pp);
@@ -508,6 +513,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
             sr = std::make_unique<StructurePath>();
             sr->setStructure(st);
             sr->setScale(stf);
+            sr->setOrient(orient_next);
             pt.clear();
             if (i==n) {
               auto gs = std::make_unique<GraphicsState>(GS_RESTORE);
@@ -533,6 +539,7 @@ void Parser::parseStructureOp(int token, GraphicsItemList &prlist, Structure* &s
         auto sr = std::make_unique<StructurePath>();
         sr->setStructure(strct);
         sr->setScale(stf);
+        sr->setOrient(orient_next);
         sr->setPath(parsePath());
         prlist.push_back(std::move(sr));
       }

@@ -153,6 +153,10 @@ class StructurePath : public StructureUser {
 public:
   void setPath(Path p) { path = std::move(p); }
   void setScale(double s) { scale = s; }
+  // Si es true, cada instancia se rota para alinearse con la tangente local del
+  // path (marker_orient="auto", spec §10.1). Por default no rota (marcador
+  // "derecho", correcto para dispersión).
+  void setOrient(bool o) { orient = o; }
 
   void draw(Display &) override;
 private:
@@ -161,6 +165,7 @@ private:
   // donde se coloca. El front-end V1 lo usa para traducir su semántica
   // "caja = min(canvas)" a unidades de mundo (min de la ventana).
   double scale = 1;
+  bool orient = false;
 };
 
 /**

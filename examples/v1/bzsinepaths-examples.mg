@@ -47,16 +47,6 @@ BZ &cos2pi
 TLPT 1.6 0
 BZ &sin2pi
 
-%LWIDTH 0
-%IDPP
-%XYPP 0 .25
-%TLPP 0 .25
-%TICKS 3 1 0
-
-%LCOLOR blue
-%XYPP 0 .45
-%TICKS 3 1 0
-
 % With CTPT and the same PT matrix you can concatenate 
 % curves in a new larger one. Not much is automated yet,
 % you have all the control.

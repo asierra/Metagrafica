@@ -85,6 +85,11 @@ private:
   std::string canfilename;
   bool is_spline_to_bezier;
   int spline_nodes_per_segment;
+  // Disparador TEMPORAL (V1) para probar la orientación tangente de placements
+  // sobre path (§C.1 de plan_marcadores). Se activa con `$O 1` y lo lee cada
+  // StructurePath al construirse. Morirá con la capa de atributos V3
+  // (marker_orient), que lo fijará por primitiva.
+  bool orient_next = false;
   Path bufferpt;
   int currentDepth;
   std::unique_ptr<MGLexer> lexer;

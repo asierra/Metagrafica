@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="283.464567pt" height="283.464567pt" viewBox="0 -283.464567 283.464567 283.464567" xmlns="http://www.w3.org/2000/svg">
+<g transform="scale(1, -1)">
+<g>
+<path d="M 14.1732 14.1732 L 99.2126 14.1732 L 99.2126 99.2126 L 14.1732 99.2126 L 14.1732 14.1732 " fill="none" stroke-width="1" stroke="#000000" />
+</g>
+<g>
+<path d="M 99.2126 14.1732 L 184.252 14.1732 L 184.252 99.2126 L 99.2126 99.2126 L 99.2126 14.1732 " fill="none" stroke-width="1" stroke="#000000" />
+</g>
+<g>
+<path d="M 184.252 14.1732 L 269.291 14.1732 L 269.291 99.2126 L 184.252 99.2126 L 184.252 14.1732 " fill="none" stroke-width="1" stroke="#000000" />
+</g>
+<text x="141.732283" y="-266.456693" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="10.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Repeate Structure Test</text>
+<g>
+<path d="M 14.1732 104.882 L 70.8661 104.882 L 70.8661 140.315 L 14.1732 140.315 L 14.1732 104.882 " fill="none" stroke-width="1" stroke="#00FF00" />
+</g>
+<g>
+<path d="M 70.8661 143.15 L 127.559 143.15 L 127.559 178.583 L 70.8661 178.583 L 70.8661 143.15 " fill="none" stroke-width="1" stroke="#00FF00" />
+</g>
+<g>
+<path d="M 127.559 181.417 L 184.252 181.417 L 184.252 216.85 L 127.559 216.85 L 127.559 181.417 " fill="none" stroke-width="1" stroke="#00FF00" />
+</g>
+<g>
+<path d="M 184.252 219.685 L 240.945 219.685 L 240.945 255.118 L 184.252 255.118 L 184.252 219.685 " fill="none" stroke-width="1" stroke="#00FF00" />
+</g>
+<g>
+<path d="M 198.425 141.732 L 255.118 141.732 L 255.118 177.165 L 198.425 177.165 L 198.425 141.732 " fill="none" stroke-width="1" stroke="#FF0000" />
+</g>
+<g>
+<path d="M 198.425 141.732 L 226.772 172.418 L 177.674 190.135 L 149.328 159.449 L 198.425 141.732 " fill="none" stroke-width="1" stroke="#FF0000" />
+</g>
+<g>
+<path d="M 198.425 141.732 L 170.079 172.418 L 120.981 154.702 L 149.328 124.016 L 198.425 141.732 " fill="none" stroke-width="1" stroke="#FF0000" />
+</g>
+<g>
+<path d="M 198.425 141.732 L 141.732 141.732 L 141.732 106.299 L 198.425 106.299 L 198.425 141.732 " fill="none" stroke-width="1" stroke="#FF0000" />
+</g>
+<g>
+<path d="M 198.425 141.732 L 170.079 111.046 L 219.176 93.3298 L 247.523 124.016 L 198.425 141.732 " fill="none" stroke-width="1" stroke="#FF0000" />
+</g>
+<g>
+<path d="M 28.3465 212.598 L 85.0394 212.598 L 85.0394 248.031 L 28.3465 248.031 L 28.3465 212.598 " fill="none" stroke-width="1" stroke="#FF0000" />
+</g>
+</g>
+</svg>

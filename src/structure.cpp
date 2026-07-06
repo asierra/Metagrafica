@@ -31,9 +31,26 @@ void Structure::draw(Display &g) {
 }
 
 void StructurePath::draw(Display &g) {
-  for (const auto &p : path) {
+  const size_t n = path.size();
+  for (size_t i = 0; i < n; i++) {
+    const point &p = path[i];
     Matrix mtpt;
     mtpt.translate(p.x, p.y);
+    // Orden T·R·S: la struct (definida en el origen) se escala, se rota con la
+    // tangente y se traslada al vértice. Mismo patrón que StructureLine.
+    if (orient && n >= 2) {
+      // Tangente por diferencia: central en interiores, unilateral en extremos.
+      point d;
+      if (i == 0)
+        d = path[1] - path[0];
+      else if (i == n - 1)
+        d = path[n - 1] - path[n - 2];
+      else
+        d = path[i + 1] - path[i - 1];
+      double a = atan2(d.y, d.x) * 180 / M_PI;
+      if (a != 0.0)
+        mtpt.rotate(a);
+    }
     if (scale != 1)
       mtpt.scale(scale, scale);
     g.pushMatrix(mtpt);

@@ -13,3 +13,8 @@ man/mg.1
 *.eps
 *.pdf
 *.svg
+
+# Excepción: los renders de referencia del corpus V1 son el oráculo de
+# migración (deben versionarse), no artefactos de build.
+!examples/v1/reference/
+!examples/v1/reference/*.svg

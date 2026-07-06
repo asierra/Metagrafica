@@ -10,7 +10,7 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MG="$ROOT/bin/mg"
-EXDIR="$ROOT/examples"
+EXDIR="$ROOT/examples/v1"
 GOLD="$ROOT/test/golden"
 
 FORMATS="eps svg"

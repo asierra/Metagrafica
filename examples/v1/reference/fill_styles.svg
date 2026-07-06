@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="283.464567pt" height="283.464567pt" viewBox="0 -283.464567 283.464567 283.464567" xmlns="http://www.w3.org/2000/svg">
+<g transform="scale(1, -1)">
+<defs><pattern id="mgpat_1_000000" patternUnits="userSpaceOnUse" width="4.000000" height="4.000000" patternTransform="rotate(-90.000000)"><line x1="0" y1="0" x2="4.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 23.622 42.5197 L 47.2441 42.5197 L 47.2441 66.1417 L 23.622 66.1417 Z " fill="url(#mgpat_1_000000)" stroke="none" />
+<defs><pattern id="mgpat_2_000000" patternUnits="userSpaceOnUse" width="4.000000" height="4.000000" patternTransform="rotate(-45.000000)"><line x1="0" y1="0" x2="4.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 47.2441 42.5197 L 70.8661 42.5197 L 70.8661 66.1417 L 47.2441 66.1417 Z " fill="url(#mgpat_2_000000)" stroke="none" />
+<defs><pattern id="mgpat_3_000000" patternUnits="userSpaceOnUse" width="4.000000" height="4.000000" patternTransform="rotate(0.000000)"><line x1="0" y1="0" x2="4.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 70.8661 42.5197 L 94.4882 42.5197 L 94.4882 66.1417 L 70.8661 66.1417 Z " fill="url(#mgpat_3_000000)" stroke="none" />
+<defs><pattern id="mgpat_4_000000" patternUnits="userSpaceOnUse" width="4.000000" height="4.000000" patternTransform="rotate(45.000000)"><line x1="0" y1="0" x2="4.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 94.4882 42.5197 L 118.11 42.5197 L 118.11 66.1417 L 94.4882 66.1417 Z " fill="url(#mgpat_4_000000)" stroke="none" />
+<defs><pattern id="mgpat_5_000000" patternUnits="userSpaceOnUse" width="2.000000" height="2.000000" patternTransform="rotate(-90.000000)"><line x1="0" y1="0" x2="2.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 118.11 42.5197 L 141.732 42.5197 L 141.732 66.1417 L 118.11 66.1417 Z " fill="url(#mgpat_5_000000)" stroke="none" />
+<defs><pattern id="mgpat_6_000000" patternUnits="userSpaceOnUse" width="2.000000" height="2.000000" patternTransform="rotate(-45.000000)"><line x1="0" y1="0" x2="2.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 141.732 42.5197 L 165.354 42.5197 L 165.354 66.1417 L 141.732 66.1417 Z " fill="url(#mgpat_6_000000)" stroke="none" />
+<defs><pattern id="mgpat_7_000000" patternUnits="userSpaceOnUse" width="2.000000" height="2.000000" patternTransform="rotate(0.000000)"><line x1="0" y1="0" x2="2.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 165.354 42.5197 L 188.976 42.5197 L 188.976 66.1417 L 165.354 66.1417 Z " fill="url(#mgpat_7_000000)" stroke="none" />
+<defs><pattern id="mgpat_8_000000" patternUnits="userSpaceOnUse" width="2.000000" height="2.000000" patternTransform="rotate(45.000000)"><line x1="0" y1="0" x2="2.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 188.976 42.5197 L 212.598 42.5197 L 212.598 66.1417 L 188.976 66.1417 Z " fill="url(#mgpat_8_000000)" stroke="none" />
+<defs><pattern id="mgpat_9_000000" patternUnits="userSpaceOnUse" width="1.000000" height="1.000000" patternTransform="rotate(-90.000000)"><line x1="0" y1="0" x2="1.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 212.598 42.5197 L 236.22 42.5197 L 236.22 66.1417 L 212.598 66.1417 Z " fill="url(#mgpat_9_000000)" stroke="none" />
+<defs><pattern id="mgpat_10_000000" patternUnits="userSpaceOnUse" width="1.000000" height="1.000000" patternTransform="rotate(-45.000000)"><line x1="0" y1="0" x2="1.000000" y2="0" stroke="#000000" stroke-width="0.200000"/></pattern></defs>
+<path d="M 236.22 42.5197 L 259.843 42.5197 L 259.843 66.1417 L 236.22 66.1417 Z " fill="url(#mgpat_10_000000)" stroke="none" />
+<path d="M 23.622 113.386 L 47.2441 113.386 L 47.2441 137.008 L 23.622 137.008 Z " fill="#191919" stroke="none" />
+<path d="M 47.2441 113.386 L 70.8661 113.386 L 70.8661 137.008 L 47.2441 137.008 Z " fill="#333333" stroke="none" />
+<path d="M 70.8661 113.386 L 94.4882 113.386 L 94.4882 137.008 L 70.8661 137.008 Z " fill="#4C4C4C" stroke="none" />
+<path d="M 94.4882 113.386 L 118.11 113.386 L 118.11 137.008 L 94.4882 137.008 Z " fill="#666666" stroke="none" />
+<path d="M 118.11 113.386 L 141.732 113.386 L 141.732 137.008 L 118.11 137.008 Z " fill="#7F7F7F" stroke="none" />
+<path d="M 141.732 113.386 L 165.354 113.386 L 165.354 137.008 L 141.732 137.008 Z " fill="#999999" stroke="none" />
+<path d="M 165.354 113.386 L 188.976 113.386 L 188.976 137.008 L 165.354 137.008 Z " fill="#B2B2B2" stroke="none" />
+<path d="M 188.976 113.386 L 212.598 113.386 L 212.598 137.008 L 188.976 137.008 Z " fill="#CCCCCC" stroke="none" />
+<path d="M 212.598 113.386 L 236.22 113.386 L 236.22 137.008 L 212.598 137.008 Z " fill="#E5E5E5" stroke="none" />
+<path d="M 236.22 113.386 L 259.843 113.386 L 259.843 137.008 L 236.22 137.008 Z " fill="#FFFFFF" stroke-width="0.2" stroke="#000000" />
+<path d="M 23.622 184.252 L 47.2441 184.252 L 47.2441 207.874 L 23.622 207.874 Z " fill="#000000" stroke="none" />
+<path d="M 47.2441 184.252 L 70.8661 184.252 L 70.8661 207.874 L 47.2441 207.874 Z " fill="#0000FF" stroke="none" />
+<path d="M 70.8661 184.252 L 94.4882 184.252 L 94.4882 207.874 L 70.8661 207.874 Z " fill="#A52A2A" stroke="none" />
+<path d="M 94.4882 184.252 L 118.11 184.252 L 118.11 207.874 L 94.4882 207.874 Z " fill="#00FFFF" stroke="none" />
+<path d="M 118.11 184.252 L 141.732 184.252 L 141.732 207.874 L 118.11 207.874 Z " fill="#00FF00" stroke="none" />
+<path d="M 141.732 184.252 L 165.354 184.252 L 165.354 207.874 L 141.732 207.874 Z " fill="#FF00FF" stroke="none" />
+<path d="M 165.354 184.252 L 188.976 184.252 L 188.976 207.874 L 165.354 207.874 Z " fill="#CC3232" stroke="none" />
+<path d="M 188.976 184.252 L 212.598 184.252 L 212.598 207.874 L 188.976 207.874 Z " fill="#FF0000" stroke="none" />
+<path d="M 212.598 184.252 L 236.22 184.252 L 236.22 207.874 L 212.598 207.874 Z " fill="#FFFFFF" stroke-width="0.2" stroke="#000000" />
+<path d="M 236.22 184.252 L 259.843 184.252 L 259.843 207.874 L 236.22 207.874 Z " fill="#FFFF00" stroke="none" />
+<text x="23.622047" y="-243.307087" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="12.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Different ways to fill areas</text>
+<text x="23.622047" y="-144.094488" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="10.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">FGRAY</text>
+<text x="23.622047" y="-214.960630" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="10.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">FCOLOR</text>
+<text x="23.622047" y="-73.228346" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="10.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">FPATRN</text>
+<text x="23.622047" y="-231.496063" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">An hyphen or negative value indicates to outline</text>
+<text x="35.433071" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">1</text>
+<text x="59.055118" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">2</text>
+<text x="82.677165" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">3</text>
+<text x="106.299213" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">4</text>
+<text x="129.921260" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">5</text>
+<text x="153.543307" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">6</text>
+<text x="177.165354" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">7</text>
+<text x="200.787402" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">8</text>
+<text x="224.409449" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">9</text>
+<text x="248.031496" y="-29.527559" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">10</text>
+<text x="29.527559" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">10</text>
+<text x="53.149606" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">20</text>
+<text x="76.771654" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">30</text>
+<text x="100.393701" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">40</text>
+<text x="124.015748" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">50</text>
+<text x="147.637795" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">60</text>
+<text x="171.259843" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">70</text>
+<text x="194.881890" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">80</text>
+<text x="218.503937" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">90</text>
+<text x="242.125984" y="-101.574803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">-100</text>
+<text x="212.598425" y="-172.440945" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">-white</text>
+</g>
+</svg>

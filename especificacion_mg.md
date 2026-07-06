@@ -17,7 +17,7 @@
 | Nombres | Comandos descriptivos en minúsculas: `polyline`, `circle`, `rectangle`, `bezier`, `text` |
 | Caso (case) | **Todo en minúsculas**; `snake_case` para compuestos inevitables (`world_window`, `tick_size`). Se **recomienda Capitalizar** los nombres de structs del usuario (`Flecha`, `Tick`) para distinguirlas de los comandos |
 | Paths | Secuencias de pares `x y`; primitivas multi-punto aplican la operación en cada punto |
-| Transformaciones | Bloque `transform(translate=, rotate=, scale=, shear=) { }` (local), ver §11 |
+| Transformaciones | Sentencias de estado `translate`/`rotate`/`scale`/`shear`, con ámbito de bloque `{ }`, ver §7/§11 |
 | Posición de pluma | `moveto(x,y)` fija el punto actual; `step(...)` define el avance entre elementos, ver §12 |
 | Condicionales | `if cond { } else { }` con comparadores y `and`/`or`, ver §6.1 |
 | Recursión | Las structs pueden autoinvocarse; paro con `if`, límite con `max_depth`, ver §8.1 |
@@ -49,8 +49,8 @@ Statement   ::= ConfigStmt
               | StructDef
               | ForStmt
               | IfStmt
-              | WithStmt
-              | TransformStmt
+              | StateStmt
+              | Block
               | CompoundStmt
               | RepeatStmt
               | PenStmt
@@ -69,10 +69,13 @@ PathDef     ::= "path" ID "=" PathExpr
 StructDef   ::= "struct" ID "(" [ParamList] ")" "{" Statement* "}"
 ForStmt     ::= "for" ID "=" Expression "to" Expression ["step" Expression] "{" Statement* "}"
 IfStmt      ::= "if" Condition "{" Statement* "}" [ "else" "{" Statement* "}" ]
-WithStmt    ::= "with" "(" ArgList ")" "{" Statement* "}"
+StateStmt   ::= AttrName ArgValue+            % sentencia de estado, ámbito léxico (§7)
+AttrName    ::= "color" | "fill" | "width" | "dash" | "cap" | "join"
+              | "hatch" | "hatch_gap" | "size" | "align"
+              | "translate" | "rotate" | "scale" | "shear"
+Block       ::= "{" Statement* "}"            % bloque anónimo: apila/restaura estado (§7.1)
 Import      ::= "include" STRING
 
-TransformStmt ::= "transform" "(" ArgList ")" "{" Statement* "}"
 CompoundStmt  ::= "compound" "(" [ArgList] ")" "{" (Primitive | Placement)* "}"
 RepeatStmt    ::= "repeat" "(" ID "," ArgList ")"
 PenStmt       ::= "moveto" "(" Expression "," Expression ")"
@@ -282,8 +285,7 @@ ellipse(rx=4, ry=2) { 2 2  8 2 }         % múltiples centros = múltiples elips
 
 V3 abandona los índices cerrados de V1 (`LWIDTH n`, `LPATRN n`) por atributos con nombre
 compatibles de forma nativa con PostScript, PDF y SVG. Los cuatro son opcionales y se
-pasan a cualquier primitiva geométrica (o se heredan por cascada en un bloque `with`,
-§7).
+pasan a cualquier primitiva geométrica (o se fijan como estado de bloque, §7).
 
 #### Grosor (`width`)
 
@@ -428,40 +430,103 @@ if r > 2 {
 ```
 
 - Comparadores: `<`, `>`, `<=`, `>=`, `==`, `!=`; combinables con `and` / `or`.
-- El bloque tiene ámbito léxico, como `for` y `with`; la rama `else` es opcional.
+- El bloque tiene ámbito léxico, como `for` y los bloques `{ }` (§7.1); la rama `else` es opcional.
 - Su uso principal es la condición de paro en structs recursivas (§8.1); también permite variantes de una struct según sus parámetros.
 
 ---
 
-## 7. Atributos con bloque `with`
+## 7. Estado, atributos y bloques
 
-Para aplicar atributos de estilo a un grupo de primitivas sin repetirlos en cada una:
+MetaGráfica mantiene un **estado gráfico** (color, grosor, relleno, tamaño de texto, transformación local…). En V3 el estado se fija con **sentencias**: una palabra clave seguida de su valor, sin paréntesis ni `=`, exactamente como `display_size` o `world_window` (§3). Una sentencia de estado aplica a **todo lo que le sigue** hasta que se cambie o hasta el final del bloque que la contiene.
 
 ```text
-with(color="blue", width=2) {
-    polyline { 0 0  10 0 }
-    polyline { 0 5  10 5 }
-    circle(r=1) { 5 2.5 }
+color "blue"
+width 2
+polyline { 0 0  10 0 }        % azul, width 2
+polyline { 0 5  10 5 }        % azul, width 2 (el estado persiste)
+circle(r=1) { 5 2.5 }         % azul, width 2
+```
+
+Esto recupera la sencillez imperativa de V1 (`LCOLOR`, `LWIDTH`, `FILL`, `TLLC`… eran sentencias) con una diferencia decisiva: **el estado tiene alcance léxico** (§7.1), así que no se fuga de forma global —que era la principal fragilidad de V1.
+
+### 7.1 Bloques y alcance
+
+Una llave `{ … }` en posición de sentencia abre un **bloque anónimo**: un ámbito que apila el estado gráfico al entrar y lo restaura al salir (un `gsave`/`grestore`). Los cambios de estado dentro del bloque **no se filtran** afuera.
+
+```text
+color "black"
+polyline { 0 0  10 0 }        % negro
+
+{                             % ← bloque: acota el estado
+    color "red"
+    width 3
+    polyline { 0 2  10 2 }    % rojo, width 3
+    circle(r=1) { 5 2.5 }     % rojo, width 3
+}
+
+polyline { 0 4  10 4 }        % negro otra vez: el bloque restauró el estado
+```
+
+Es el mismo mecanismo con que `world_window` se redefine dentro de un bloque (§16) y con que las structs aíslan su estado (§8): un solo modelo de ámbito para todo.
+
+### 7.2 Cambios a media secuencia
+
+Como el estado son sentencias, puede cambiar **entre** primitivas dentro del mismo bloque —algo que un encabezado de atributos no permite sin anidar:
+
+```text
+{
+    color "red"
+    polyline { 0 0  10 0 }    % rojo
+    color "blue"
+    polyline { 0 2  10 2 }    % azul
 }
 ```
 
-Los atributos en `with` se propagan a todas las primitivas del bloque. Un atributo explícito en una primitiva individual tiene precedencia sobre el `with`.
+### 7.3 Atributos de estado
 
-**Cascada (with anidados).** Un `with` interno **combina** con el externo: hereda los atributos que no redefine y sobreescribe los que repite. La precedencia, de mayor a menor, es:
+Todos usan la forma `palabra valor(es)`. Los nombres **coinciden** con los argumentos por primitiva (§4), así que `color "red"` fija lo mismo que `polyline(color="red")`.
+
+| Sentencia | Efecto | Sección |
+|---|---|---|
+| `color "c"` / `color "#RRGGBB"` / `color "none"` | color de trazo (`"none"` = sin trazo) | §4 |
+| `fill "c"` / `fill "none"` | color de relleno sólido (`"none"` = sin relleno) | §4 |
+| `width w` | grosor de línea en pt | §4.10 |
+| `dash "dashed"` / `dash [10,2]` | patrón de línea | §4.10 |
+| `cap "round"` / `join "round"` | extremos / uniones de trazo | §4.10 |
+| `hatch a` / `hatch_gap g` | relleno con trama | §4.11 |
+| `size h` | tamaño de texto en pt | §14 |
+| `align "center"` | alineación de texto | §4.8 |
+| `translate dx dy` / `rotate a` / `scale s` / `shear hx hy` | transformación local | §11 |
+
+### 7.4 Precedencia
+
+De mayor a menor:
 
 ```text
-atributo explícito en la primitiva  >  with interno  >  with externo
+argumento explícito en la primitiva  >  estado del bloque interno  >  estado del bloque externo
 ```
 
 ```text
-with(color="blue", width=2) {
-    polyline { 0 0  10 0 }                 % azul, width 2
-    with(width=4) {
-        polyline { 0 1  10 1 }             % azul (heredado), width 4 (redefinido)
+{
+    color "blue"
+    width 2
+    polyline { 0 0  10 0 }                  % azul, width 2
+    {
+        width 4
+        polyline { 0 1  10 1 }              % azul (heredado), width 4 (redefinido)
         polyline(color="red") { 0 2  10 2 } % rojo (explícito gana), width 4
     }
 }
 ```
+
+### 7.5 Argumentos por primitiva: para casos puntuales
+
+La forma con paréntesis (`polyline(color="green") { … }`, §4) sigue disponible y es la más cómoda cuando un atributo aplica a **una sola** primitiva. La distinción es clara:
+
+- **paréntesis** → atributo adjunto a *esa* llamada;
+- **sentencia** → estado que rige *hasta el fin del bloque*.
+
+> **V3 elimina el bloque `with(...)`.** La sentencia de estado + el bloque anónimo lo sustituyen por completo: más expresivo (cambios a media secuencia, §7.2), consistente con `display_size` y `world_window` (global y anidado, §16), y una sola forma que aprender.
 
 ---
 
@@ -491,10 +556,14 @@ Una struct puede invocarse a sí misma, lo que habilita fractales, árboles y pa
 struct Rama(longitud, grosor) {
     if longitud >= 1 {                    % condición de paro
         polyline(width=grosor) { 0 0  0 longitud }
-        transform(translate=(0, longitud), rotate=30) {
+        {
+            translate 0 longitud
+            rotate 30
             Rama(longitud * 0.7, grosor * 0.7)
         }
-        transform(translate=(0, longitud), rotate=-30) {
+        {
+            translate 0 longitud
+            rotate -30
             Rama(longitud * 0.7, grosor * 0.7)
         }
     }
@@ -651,62 +720,62 @@ Por default preserva la proporción de la struct: escala uniforme al mayor tama�
 
 ## 11. Transformaciones y sistemas de coordenadas
 
-MetaGráfica transforma cada coordenada a través de una pila de matrices homogéneas 3×3. El motor mantiene **cinco matrices** con roles distintos. La mayoría se manejan de forma implícita; V3 expone explícitamente la transformación local mediante el bloque `transform`.
+MetaGráfica transforma cada coordenada a través de una pila de matrices homogéneas 3×3. El motor mantiene **cinco matrices** con roles distintos. La mayoría se manejan de forma implícita; V3 expone explícitamente la transformación local mediante las sentencias de estado `translate`/`rotate`/`scale`/`shear` (§7/§11.1).
 
 | Matriz | Rol | Cómo se controla en V3 |
 |---|---|---|
-| **Local** (MTLC) | Transformación local a un bloque | bloque `transform { }` (§11.1) |
+| **Local** (MTLC) | Transformación local a un bloque | sentencias `translate`/`rotate`/`scale`/`shear` (§11.1) |
 | **Structure** (MTST) | Rotación/escala de una struct colocada | placements (automático, §10) o `transform` alrededor de la llamada (§11.2) |
 | **Plume** (MTPP) | Avance de la pluma entre elementos generados | `step(...)` (§12) |
 | **Path** (MTPT) | Se aplica al reutilizar un path nombrado | álgebra de paths (§9), normalmente implícito |
 | **Repeat** (MTRS) | Transformación acumulada en repeticiones de struct | `repeat(...)` (§17) |
 
-### 11.1 El bloque `transform`
+### 11.1 Transformaciones locales
 
-Aplica una transformación afín a todas las primitivas y structs contenidas en el bloque. Todos los argumentos son opcionales y nombrados.
+Las transformaciones locales se fijan con **sentencias de estado** (§7), acotadas por el bloque que las contiene:
+
+- `translate dx dy` — desplazamiento en unidades de usuario.
+- `rotate deg` — rotación en grados (positivo = antihorario).
+- `scale s` o `scale sx sy` — escala uniforme, o por eje.
+- `shear hx hy` — cizalladura.
 
 ```text
-transform(translate=(dx,dy), rotate=deg, scale=(sx,sy), shear=(hx,hy)) {
-    ... primitivas y structs ...
+{
+    translate 5 5
+    rotate 30
+    rectangle(fill="cyan") { 0 0  3 2 }   % rectángulo llevado a (5,5) y rotado 30°
 }
 ```
 
-- `translate=(dx,dy)` — desplazamiento en unidades de usuario.
-- `rotate=deg` — rotación en grados (positivo = antihorario).
-- `scale=(sx,sy)` o `scale=s` — escala por eje, o uniforme con un solo valor.
-- `shear=(hx,hy)` — cizalladura.
+**Orden de composición:** cada sentencia **post-multiplica** la matriz local, así que las transformaciones se componen **en el orden en que se escriben** (igual que las secuencias `TLLC`/`RTLC`/`SCLC` de V1, y que la clase `Matrix` del motor). Arriba, `translate 5 5` seguido de `rotate 30` da **T·R**: la geometría se rota y luego se lleva a (5,5); escribir `rotate 30` antes de `translate 5 5` daría **R·T**, otro resultado. El autor controla el orden con la secuencia.
 
-**Orden de composición:** dentro de un mismo bloque la transformación se aplica en el orden **escala → rotación → traslación** (la geometría se escala, luego se rota y finalmente se traslada a su posición). Los bloques anidados **componen**: el hijo se multiplica con el del padre.
-
-```text
-transform(translate=(5,5), rotate=30) {
-    rectangle(fill="cyan") { 0 0  3 2 }   % rectángulo rotado 30° alrededor de (5,5)
-}
-```
-
-**Alcance (scope):** la transformación es léxica al bloque y se restaura al salir (equivale a un `gsave`/`grestore`).
+**Alcance (scope):** léxico al bloque; se restaura al salir (`gsave`/`grestore`), como todo el estado (§7.1). Los bloques anidados **componen** con el del padre.
 
 **Equivalencia V1 → V3:**
 
 | V1 | V3 |
 |---|---|
-| `TLLC dx dy` | `transform(translate=(dx,dy)) { }` |
-| `RTLC a` | `transform(rotate=a) { }` |
-| `SCLC sx sy` | `transform(scale=(sx,sy)) { }` |
-| `SHLC hx hy` | `transform(shear=(hx,hy)) { }` |
-| `IDLC` | (cierre del bloque `transform`) |
+| `TLLC dx dy` | `translate dx dy` |
+| `RTLC a` | `rotate a` |
+| `SCLC sx sy` | `scale sx sy` |
+| `SHLC hx hy` | `shear hx hy` |
+| `IDLC` | (cierre del bloque `{ }`) |
+
+> Las palabras `translate`/`rotate`/`scale`/`shear` aparecen en dos papeles: como **sentencia de estado** (`rotate 30`, sin paréntesis, esta sección) y como **constructor de valor** de matriz dentro del argumento `transform=` de `repeat` (`rotate(30) scale(0.95)`, con paréntesis, §17). El primero es imperativo y scoped; el segundo es una matriz que se pasa como dato.
 
 ### 11.2 Transformaciones sobre structs (MTST)
 
-Los placements (§10) ya fijan la matriz de estructura automáticamente para alinear cada instancia con la tangente local. Para transformar manualmente una struct al invocarla, basta envolver la llamada en un bloque `transform`, que compone sobre la matriz de estructura:
+Los placements (§10) ya fijan la matriz de estructura automáticamente para alinear cada instancia con la tangente local. Para transformar manualmente una struct al invocarla, basta encerrar la llamada en un bloque cuyo estado incluya las transformaciones deseadas, que componen sobre la matriz de estructura:
 
 ```text
-transform(rotate=45, scale=1.5) {
+{
+    rotate 45
+    scale 1.5
     Flecha(3, 0)        % flecha rotada y escalada
 }
 ```
 
-No se necesita sintaxis adicional: MTST se deriva de la composición léxica de los `transform` activos en el punto de invocación.
+No se necesita sintaxis adicional: MTST se deriva de la composición léxica de las transformaciones activas en el punto de invocación.
 
 ---
 
@@ -1028,8 +1097,8 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 
 | Tema | Estado | Notas |
 |---|---|---|
-| **Transformaciones locales** | ✓ Resuelto | Definidas en §11: bloque `transform(translate=, rotate=, scale=, shear=) { }` (matriz MTLC) y composición sobre structs (MTST) |
-| **Atributos heredados vs. explícitos** | ✓ Resuelto | Semántica de cascada definida en §7: primitiva > `with` interno > `with` externo |
+| **Transformaciones locales** | ✓ Resuelto | Definidas en §7/§11.1: sentencias `translate`/`rotate`/`scale`/`shear` con ámbito de bloque (matriz MTLC), componen en orden de escritura, y se aplican sobre structs (MTST) |
+| **Atributos heredados vs. explícitos** | ✓ Resuelto | Semántica de estado y bloques en §7: argumento explícito en la primitiva > estado del bloque interno > estado del bloque externo |
 | **`both_sides` en placements** | ⚠️ Abierto | El parámetro V1 `sc < 0` activa ambos lados de forma implícita. En V3 es `both_sides=true`, pero el significado geométrico exacto (perpendicular vs. especular) necesita documentarse |
 | **Texto: fuentes y estilos** | ✓ Resuelto | El markup interno del string (`/b`, `/i`, `$...$`, `\alpha`, `^{}`, `_{}`) lo maneja `parse_text()` sin cambios. Los argumentos de `text` cubren fuente base, tamaño y color (ver §14) |
 | **Texto: alineación vertical** | ⚠️ Abierto | ¿Baseline? ¿Centro vertical? ¿Caja del texto? Por ahora se asume baseline |
@@ -1066,14 +1135,23 @@ MKST name  → Name()          # uso sin parámetros
 PL { ... } → polyline { ... }
 CR r : ... } → circle(r=r) { ... }
 BR p1 p2   → rectangle { p1 p2 }
-LWIDTH w   → (acumular: width = w*0.2 en pt en siguiente primitiva; LWIDTH 0 → width=0.1)
-LPATRN n   → (acumular: dash="solid"|"dashed"|"dotted"|"dashdot"|"dashdotdot"; ver §4.10)
-LCOLOR c   → (acumular: color="c" en siguiente primitiva)
-FGRAY g    → (acumular: fill=gray_to_hex(g) en siguiente primitiva)
+LWIDTH w   → width <w*0.2>    # sentencia de estado (§7); LWIDTH 0 → width 0.1
+LPATRN n   → dash "solid"|"dashed"|"dotted"|"dashdot"|"dashdotdot"   # §4.10
+LCOLOR c   → color "c"        # sentencia de estado
+FCOLOR c   → fill "c"
+FGRAY g    → fill gray_to_hex(g)
+FILL/NOFILL→ fill "c" / fill "none"
+TALIGN n   → align "left"|"center"|"right"
+THEIGHT h  → size h
+TLLC dx dy → translate dx dy  # transformaciones también son sentencias (§11.1)
+RTLC a     → rotate a
+SCLC sx sy → scale sx sy
 INPUT f    → include "f"
 LNST ...   → place(...) { p1 p2 }
 ARCST ...  → place(..., r, sweep, from) { c }
 ```
+
+> **El nuevo modelo de estado (§7) simplifica el traductor:** los comandos de estado de V1 (`LCOLOR`, `LWIDTH`, `FILL`, `TLLC`…) son sentencias que aplican hasta cambiarse, y mapean **1:1** a las sentencias de estado de V3 —sin la lógica de "acumular sobre la siguiente primitiva". El único cuidado es el **ámbito**: donde V1 abría/cerraba estado con estructuras o al reasignar, el traductor puede envolver en un bloque `{ }` para acotar el efecto y reproducir el alcance original.
 
 > Nota: el traductor capitaliza los nombres de structs (`OPST flecha` → `struct Flecha`) para seguir la convención de §1.
 
@@ -1144,7 +1222,8 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 
 | V1 | V3 | Estado | Sección |
 |---|---|---|---|
-| `TLLC`/`RTLC`/`SCLC`/`SHLC`/`IDLC` | `transform(...) { }` | ✓ | §11 |
+| `TLLC`/`RTLC`/`SCLC`/`SHLC` | `translate`/`rotate`/`scale`/`shear` (sentencias) | ✓ | §7 / §11 |
+| `IDLC` | (cierre del bloque `{ }`) | ✓ | §7.1 |
 | `··ST` (MTST) | `transform` sobre la llamada | ✓ | §11.2 |
 | `··PP` (MTPP) | `step(...)` | ✓ | §12 |
 | `··PT` (MTPT) | álgebra de paths | ✓ | §9 |
