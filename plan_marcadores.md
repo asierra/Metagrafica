@@ -257,6 +257,21 @@ embebidos), pero conviene hacerlo a la vez.
 > `snake_case` en identificadores (la spec §1 lo usa para keywords), reconsiderar el
 > prefijo interno. Retirar además `MKMR`/`MR` vestigiales (§A.3).
 
+**Biblioteca embebida hermana — segmentos de curva (bzsinepaths).** El mismo
+mecanismo de embebido de §C.2 debería hospedar una **biblioteca builtin de
+segmentos de curva**: los paths Bézier de seno/coseno de `examples/v1/bzsinepaths.mg`
+(`&sinpi`, `&cospi`, `&sin2pi`, …), aproximaciones reutilizables sobre intervalos
+estándar. Es el análogo en *paths* de los marcadores estándar (structs): el usuario
+obtiene curvas matemáticas sin `INPUT`, y con `concat` arma ondas largas. En V3 son
+objetos `path` (§9); embeberlos = registrarlos en `listmap` al arranque, igual que
+los `Mk*` en `structure_map`.
+>
+> **Estado de `concat` (verificado 2026-07-06):** `concat_paths` (`splines.cpp`)
+> funcionaba solo si el frente de cada segmento estaba en x=0 (precondición no
+> documentada); se corrigió la alineación en x (era asimétrica con la y). Pendiente
+> para V3: continuidad C1 (tangente) en los empalmes —hoy solo C0— y hacer el
+> auto-empalme explícito (`concat(&a, &b, join=true)`) en vez de mágico (§9).
+
 ### C.3 Emisión: dos estrategias (decisión abierta ⚠️)
 
 **Estrategia 1 — Expansión en el parser (recomendada).** Al parsear una primitiva

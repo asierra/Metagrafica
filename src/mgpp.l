@@ -198,7 +198,6 @@ INPUT		  BEGIN(incl);
 
 <incl>[ \t]*      /* eat the whitespace */
 <incl>[^ \t\n\r]+   { /* got the include file name */
-	 	    printf("Include [%s]\n", yytext);
             openFile(yytext, this);
              BEGIN(INITIAL);
              }

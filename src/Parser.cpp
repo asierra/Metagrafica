@@ -184,7 +184,6 @@ std::unique_ptr<GraphicsItem> Parser::parsePrimitive(int type) {
   case GI_SPLINE: {
     Path controlpoints = parsePath();
     if (is_spline_to_bezier) {
-      printf("Converting spline to Bezier.\n");
       pl = std::make_unique<Polyline>(GI_BEZIER);
       pl->setPath(splines_to_bezier(controlpoints));
     } else {
@@ -261,7 +260,6 @@ Parser::Parser(string f) {
   }
   canfilename = filename.substr(0, n);
 
-  printf("Opening %s\n", filename.c_str());
   pInfile = std::make_unique<std::ifstream>(filename);
   if (!pInfile->is_open()) {
     fprintf(stderr, "Error: File not found %s\n", filename.c_str());
@@ -329,7 +327,6 @@ Path Parser::parsePath() {
       l = process_path(mtpt, listmap[name]);
     } else if (name=="buffer") {
       l.insert(l.end(), bufferpt.begin(), bufferpt.end());
-      printf("buffer %zu\n", l.size());
       bufferpt.clear();
     } else {
       fprintf(stderr, "%sError: Invalid path identifier [%s]\n",
@@ -617,7 +614,6 @@ void Parser::parsePathOp(int token, bool &is_concat, string &ctname, Path &ctpat
           concat_paths(ctpath, listmap[name], mtpr, false);
         else
           bufferpt = process_path(mtpr, listmap[name]);
-        printf("PWPT %s\n", name.c_str());
       } else
         fprintf(stderr, "%sError: PWPT: the path %s was not found.\n", location().c_str(), name.c_str());
       break;
@@ -669,7 +665,6 @@ void Parser::parseGraphicsState(int token, GraphicsItemList &prlist, bool &is_co
     is_concat = false;
     listmap[ctname] = ctpath;
     mtpt.initialize();
-    printf("New path %s size %zu\n", ctname.c_str(), listmap[ctname].size());
     return; // Don't add GS
   } else if (yylval.i == GS_PLUMEPOSITION) {
     pp.x = (parseFloat() - wmx) / wdx;
@@ -855,7 +850,6 @@ GraphicsItemList Parser::parsePrimitives() {
       printf("Aviso: Comando obsoleto <>, usar el comando actual.\n");
       break;
     case YEXIT:
-      printf("Cerrando parsing\n");
       return prlist;
       break;
     }

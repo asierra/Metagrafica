@@ -53,12 +53,16 @@ text(0, 1) { "Primitivos gráficos" }
     polygon { -0.2 -0.5  -0.4073 -0.2147  -0.7427 -0.3237
               -0.7427 -0.6763  -0.4073 -0.785 }
 
-    {                          % los mismos, rellenos y desplazados
+    {                          % los mismos, ahora tramados y desplazados
         translate -0.2 -0.15
         color "green"
-        fill  "cyan"
-        % V1: FCOLOR -cyan + FPATRN -2 (trama con contorno).
-        % ⚠ FPATRN índice → hatch ángulo no es 1:1: revisión manual (§20).
+        % V1: FCOLOR -cyan + FPATRN -2 (trama, con contorno). FPATRN 2 = hatch 45°,
+        % gap 4 — mapeo 1:1 (ver fill_styles.mg). Al haber FPATRN activo el relleno
+        % es TRAMA, no cian sólido, así que no hay fill= sólido.
+        % ⚠ Abierto (§4.11): ¿de qué color son las líneas de trama cuando también
+        %   se dio FCOLOR? (¿color= de trazo, o el de relleno?).
+        hatch 45
+        hatch_gap 4
         polygon { -0.2 -0.5  -0.4073 -0.2147  -0.7427 -0.3237
                   -0.7427 -0.6763  -0.4073 -0.785 }
         circle(r=0.2)           { 0.5 0.5 }

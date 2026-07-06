@@ -185,12 +185,14 @@ void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
     point p2b = path2.back(), p2f = path2.front();
     mt.transform(p2b.x, p2b.y);
     mt.transform(p2f.x, p2f.y);
-    double dx = p1.x;
+    // Alinea el frente del segmento con el final del acumulado (p1), en ambos
+    // ejes. La resta de p2f evita asumir que el frente está en x=0 local.
+    double dx = p1.x - p2f.x;
     double dfy = p1.y - p2f.y;
-    //printf("p2f %g p2b %g\n", p2f.x, p2b.x);
     if (p2f.x > p2b.x) {
+      // Tras invertir, el nuevo frente es el antiguo final (p2b).
       std::reverse(path2.begin(), path2.end());
-      dx += p2f.x - p2b.x;
+      dx = p1.x - p2b.x;
       dfy = p1.y - p2b.y;
     }
     if (use_translation) 
