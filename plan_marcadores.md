@@ -268,9 +268,11 @@ los `Mk*` en `structure_map`.
 >
 > **Estado de `concat` (verificado 2026-07-06):** `concat_paths` (`splines.cpp`)
 > funcionaba solo si el frente de cada segmento estaba en x=0 (precondición no
-> documentada); se corrigió la alineación en x (era asimétrica con la y). Pendiente
-> para V3: continuidad C1 (tangente) en los empalmes —hoy solo C0— y hacer el
-> auto-empalme explícito (`concat(&a, &b, join=true)`) en vez de mágico (§9).
+> documentada); se corrigió la alineación en x (era asimétrica con la y). La
+> semántica de empalme ya está especificada en §9 de la spec (`join=true` default =
+> C0 por traslación, `join=false` = crudo, sin auto-reversión, variádico). Pendiente
+> para V3: continuidad C1 (tangente) en los empalmes —hoy solo C0—, p. ej.
+> `join="smooth"`.
 
 ### C.3 Emisión: dos estrategias (decisión abierta ⚠️)
 

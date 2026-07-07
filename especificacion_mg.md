@@ -98,7 +98,7 @@ PathExpr    ::= "{" PointList "}"                % path literal
               | "smooth"  "{" PointList "}"
               | "trail"   "(" ArgList ")"
               | "tile"    "(" "&" ID "," "times" "=" NUMBER ")"
-              | "concat"  "(" "&" ID "," "&" ID ")"
+              | "concat"  "(" "&" ID ("," "&" ID)+ [ "," "join" "=" ("true"|"false") ] ")"
               | "reverse" "(" "&" ID ")"
               | "normalize" "(" "&" ID ")"
               | "fitrect" "(" "&" ID ")" "{" PointList "}"
@@ -596,6 +596,15 @@ bezier(&sinpi)
 ```
 
 > Las dos operaciones "ajustar a rectángulo" tienen nombres distintos según su operando: `fitrect(&path)` produce un path (álgebra, esta sección); `fit(Struct)` (§10.2) coloca una struct. Igual con la repetición: `tile(&path)` concatena un path; `repeat(Struct)` (§17) repite una struct.
+
+**Empalme en `concat` y `tile` (semántica de unión).** Al construir un path a partir de varios, cada operando subsiguiente se **traslada** para que su primer punto continúe desde el último punto del path acumulado. Este empalme automático es lo que permite armar una curva larga a partir de segmentos definidos en un dominio canónico (p. ej. los medios periodos seno/coseno de una biblioteca de curvas).
+
+- **`join=true` (default).** Traslada cada pieza para pegar su inicio al final de la anterior. Es continuidad **C0** (de posición): la **tangente no se ajusta**, así que para uniones suaves los segmentos deben estar diseñados para encontrarse (como las Bézier de seno/coseno) o se usa `smooth`/`spline` (§9.1–9.2) sobre los nodos combinados. `tile` siempre empalma así (repetir sin empalmar solo produciría copias superpuestas).
+- **`join=false`.** Concatena las coordenadas **tal cual**, sin trasladar. Útil cuando los paths ya están posicionados en coordenadas absolutas y solo se quiere unir sus listas de puntos.
+- **Sin auto-reversión.** El empalme pega el *inicio* de cada operando al final del anterior. Si un segmento debe recorrerse al revés, se envuelve explícitamente en `reverse(&seg)` (evita heurísticas de dirección frágiles).
+- **Variádico.** `concat(&a, &b, &c, …)` une la secuencia en orden. Para tamaños distintos por segmento, se transforma cada operando antes (p. ej. con `fitrect`); `concat` solo une, no escala.
+
+*(V1: `CTPT`/`RPPT` con la matriz `PT` y `SCPT` entre appends. La traslación de empalme la hacía el motor —`concat_paths`— pero asumía que el frente de cada segmento estaba en x=0 (precondición no documentada, corregida 2026-07-06 para alinear en ambos ejes). La continuidad C1 en las uniones queda como posible extensión futura, p. ej. `join="smooth"`.)*
 
 ### 9.1 spline con control de nodos
 
