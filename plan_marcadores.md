@@ -80,6 +80,19 @@ Cualquier primitiva que genere una ruta (`polyline`, `polygon`, `spline`,
 Semántica de cascada: siguen la regla de §7 de la spec (primitiva > `with`
 interno > `with` externo), igual que `color`/`width`.
 
+> **Refinamiento (2026-07-07, al traducir fig2-3 y revisar fig1 del artículo original).**
+> El **tamaño** de un marcador es **cantidad física** (unidades de dispositivo), inmune a la
+> ventana y a las transformaciones; solo su **posición** se transforma. Es obligatorio para
+> graficar datos: un marco de datos usa `stretch` (spec §13.7) y ahí todo tamaño de *mundo* se
+> deforma —`circle` saldría elíptico, y una struct colocada con `place`/`scale` también, porque su
+> tamaño es de mundo—. Consecuencia: aunque los marcadores estándar se resuelvan como structs
+> internas, su **render de tamaño NO puede ir por el escalado de mundo de `place`**; debe ser
+> físico, como el de `dot` (spec §4.6; verificado: centro transformado, tamaño en dispositivo).
+> `place`/`StructureLine` aportan **posición y orientación (tangente)**, no tamaño. `dot` es el
+> caso base físico (dispersión de puntos); la familia `marker` es su versión rica (formas +
+> start/mid/end) y comparte ese render físico. Evidencia de corpus: fig1 del artículo original
+> dispersa **puntos-en-círculo (⊙) y cruces (+)** sobre una curva; fig2-3, círculos abiertos.
+
 ### B.2 Tipos de marcadores
 
 **A. Marcadores estándar (cadenas).** Nativos, tamaño base proporcional al

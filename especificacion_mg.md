@@ -63,15 +63,16 @@ Statement   ::= ConfigStmt
 ConfigStmt  ::= "display_size" NUMBER NUMBER
               | "world_window" NUMBER NUMBER NUMBER NUMBER (ID "=" ArgValue)*
 
-Assignment  ::= ID "=" Expression
+Assignment  ::= ID "=" RHS
+RHS         ::= Expression | STRING | Tuple | Array   % una variable puede ser número, cadena, tupla o lista
 PathDef     ::= "path" ID "=" PathExpr
 
 StructDef   ::= "struct" ID "(" [ParamList] ")" "{" Statement* "}"
 ForStmt     ::= "for" ID "=" Expression "to" Expression ["step" Expression] "{" Statement* "}"
 IfStmt      ::= "if" Condition "{" Statement* "}" [ "else" "{" Statement* "}" ]
 StateStmt   ::= AttrName ArgValue+            % sentencia de estado, ámbito léxico (§7)
-AttrName    ::= "color" | "fill" | "width" | "dash" | "cap" | "join"
-              | "hatch" | "hatch_gap" | "size" | "align"
+AttrName    ::= "color" | "fill" | "line_width" | "dash" | "cap" | "join"
+              | "hatch" | "hatch_gap" | "font" | "font_size" | "align" | "valign"
               | "translate" | "rotate" | "scale" | "shear"
 Block       ::= "{" Statement* "}"            % bloque anónimo: apila/restaura estado (§7.1)
 Import      ::= "include" STRING
@@ -86,7 +87,7 @@ Generator     ::= "ticks"   "(" ArgList ")"
               | "grid"    "(" ArgList ")" "{" PointList "}"
 
 Primitive   ::= PrimName "(" [ArgList] ")" "{" PointList "}"
-TextStmt    ::= "text" [ "(" ArgList ")" ] "{" STRING "}"
+TextStmt    ::= "text" "(" STRING ["," ArgList] ")" [ "{" PointList "}" ]
 
 Placement   ::= "place" "(" ID [ "," ArgList ] ")" "{" Locus "}"
               | "fit"   "(" ID ")" "{" PointList "}"
@@ -104,7 +105,7 @@ PathExpr    ::= "{" PointList "}"                % path literal
               | "fitrect" "(" "&" ID ")" "{" PointList "}"
 
 PrimName    ::= "polyline" | "polygon" | "circle" | "rectangle"
-              | "arc" | "ellipse" | "dot" | "bezier"
+              | "arc" | "ellipse" | "dot" | "marker" | "bezier"
 
 ParamList   ::= Param ("," Param)*
 Param       ::= ID ["=" Expression]              % parámetros con default, p. ej. size=0.2
@@ -112,7 +113,8 @@ ArgList     ::= Arg ("," Arg)*
 Arg         ::= Expression | ID "=" ArgValue     % posicionales primero, nombrados después
 ArgValue    ::= Expression | STRING | Tuple | Array | TransformList
 Tuple       ::= "(" Expression "," Expression ")"
-Array       ::= "[" [ExpressionList] "]"         % p. ej. dash=[10, 2, 1, 2]
+Array       ::= "[" [ ArrayElem ("," ArrayElem)* ] "]"   % p. ej. [10,2,1,2] o ["red","blue"]
+ArrayElem   ::= Expression | STRING | Tuple
 TransformList ::= TransformCall TransformCall*   % composición: rotate(30) scale(0.95)
 TransformCall ::= ("translate" | "rotate" | "scale" | "shear") "(" ExpressionList ")"
 PointList   ::= (Expression Expression)*
@@ -122,8 +124,11 @@ Comparison  ::= Expression RelOp Expression
 RelOp       ::= "<" | ">" | "<=" | ">=" | "==" | "!="
 
 Expression  ::= Term (("+" | "-") Term)*
-Term        ::= Factor (("*" | "/") Factor)*
-Factor      ::= NUMBER | ID | "&" ID | FuncCall | "(" Expression ")" | "-" Factor
+Term        ::= Unary (("*" | "/" | "%") Unary)*   % % = módulo
+Unary       ::= "-" Unary | Power
+Power       ::= Atom ["^" Unary]                    % ^ = potencia, asociativa a la derecha
+Atom        ::= NUMBER | ID | Index | "&" ID | FuncCall | "(" Expression ")"
+Index       ::= ID "[" Expression "]"            % indexado de lista, base 0
 FuncCall    ::= ID "(" [ExpressionList] ")"
 ExpressionList ::= Expression ("," Expression)*
 ```
@@ -165,7 +170,7 @@ MetaGráfica maneja dos clases de cantidad y conviene no confundirlas:
   `rectangle`, tamaño al que se ajusta una struct. Escalan con la ventana.
 - **Cantidades físicas** — se miden en **puntos tipográficos** (`pt` = 1/72 de pulgada),
   la unidad nativa de PostScript y PDF: el `display_size` (dado en cm y convertido a
-  pt), el **grosor de línea** (`width`, §4.10), el **tamaño de fuente** (`font_size`, §4.8) y
+  pt), el **grosor de línea** (`line_width`, §4.10), el **tamaño de fuente** (`font_size`, §4.8) y
   las longitudes de un patrón `dash`. **No** escalan con la ventana; conservan su tamaño
   físico independientemente de `world_window`.
 
@@ -173,7 +178,7 @@ El punto es la **única unidad física** del lenguaje. El sistema de coordenadas
 es la retícula de puntos (72 unidades por pulgada); los tres backends inyectan la escala
 cm→pt (`display_size`) en su matriz de dibujo, y SVG declara además su lienzo en `pt`
 —con `viewBox` de extensión igual al número de puntos— para no caer en el default de
-96 px/pulgada de CSS. Así una línea `width=1` mide 1/72" ≈ 0.35 mm y una fuente `font_size=8`
+96 px/pulgada de CSS. Así una línea `line_width=1` mide 1/72" ≈ 0.35 mm y una fuente `font_size=8`
 mide 8 pt en cualquier backend.
 
 **Esto no supone una resolución de 72 DPI.** La salida es vectorial y, por tanto,
@@ -188,12 +193,14 @@ vectoriales el DPI nunca entra en juego.
 
 Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posicionales son los parámetros geométricos propios de cada primitiva. El bloque `{ }` contiene la lista de puntos.
 
-**Regla de posición.** La magnitud que define la forma va **posicional y primero** —el radio de `circle`/`dot`, el par `rx, ry` (en ese orden) de `ellipse`— y su nombre es opcional (`circle(2)` ≡ `circle(r=2)`). Los calificadores que no se leen solos como números sueltos van **nombrados** (`from=`/`to=` de `arc`, `hatch_gap=`), para no volverlos crípticos.
+**Regla de posición.** La magnitud que define la forma va **posicional y primero** —el radio de `circle`/`dot`, el par `rx, ry` (en ese orden) de `ellipse`, la cadena de `text`— y su nombre es opcional (`circle(2)` ≡ `circle(r=2)`). Los calificadores que no se leen solos como números sueltos van **nombrados** (`from=`/`to=` de `arc`, `hatch_gap=`), para no volverlos crípticos.
+
+**Regla de coordenadas.** Las coordenadas de posición van **siempre en el bloque `{ }`**, nunca en los paréntesis. La regla no tiene excepciones, incluido el texto: `text("etiqueta") { x y }` coloca la cadena igual que `circle(r) { x y }` coloca un círculo (§4.8). El paréntesis lleva *contenido y atributos* (qué se dibuja y con qué estilo); el bloque lleva *dónde* (uno o varios puntos). De esa ortogonalidad sale gratis la siembra múltiple: `circle(0.2) { 0 0  5 5 }` traza dos círculos y `text("×") { 0 0  5 5 }` estampa la misma etiqueta en dos puntos.
 
 **Argumentos de estilo comunes (todos opcionales y nombrados):**
 - `color="blue"` / `color="#4080FF"` — color de trazo
 - `fill="red"` / `fill="#RRGGBB"` — color de relleno (activa relleno sólido)
-- `width=2.5` — grosor de línea en puntos (default `1.0`; ver §4.10)
+- `line_width=2.5` — grosor de línea en puntos (default `1.0`; ver §4.10)
 - `dash="dashed"` — patrón de línea (ver §4.10)
 - `cap="round"` / `join="round"` — extremos y uniones del trazo (ver §4.10)
 - `hatch=45` — relleno con trama en lugar de sólido (ver §4.11)
@@ -221,7 +228,7 @@ polygon(fill="cyan", color="black") { 0 0  5 0  5 5  0 5 } % relleno + borde neg
 ### 4.1 polyline — polilínea abierta
 
 ```text
-polyline(color="black", width=1) {
+polyline(color="black", line_width=1) {
     0 0   5 3   10 0
 }
 ```
@@ -250,6 +257,8 @@ El bloque `{ }` contiene pares `x y` de centros. Por cada par se dibuja un círc
 rectangle(fill="gray") { 1 1  9 7 }  % esquina inferior-izquierda, esquina superior-derecha
 ```
 
+Se define por dos esquinas opuestas. **Bajo rotación o shear los backends aún no son consistentes** (pendiente, §19): SVG transforma las cuatro esquinas y produce el cuadrilátero girado correcto, pero EPS y PDF transforman solo las dos esquinas dadas y dibujan una caja **alineada a los ejes de dispositivo** entre ellas —una rotación de 45° da una caja recta equivocada, no un cuadrado girado. Bajo escala/traslación puras los tres coinciden. Hasta unificarlo, una struct que vaya a rotarse debe trazar su contorno con `polyline` (así lo hace `Cuadro` en `examples/v3/rpstest.mg`).
+
 ### 4.5 arc
 
 ```text
@@ -257,11 +266,36 @@ arc(3, from=0, to=180) { 5 5 }   % semicírculo superior, centro (5,5); r posici
 arc(rx=4, ry=2, from=0, to=360) { 5 5 }  % arco elíptico completo
 ```
 
-### 4.6 dot — punto sólido relleno
+### 4.6 dot y marker — marcadores de tamaño físico
+
+Ambos estampan un símbolo en cada posición del bloque. Son **marcadores de tamaño físico**: su **posición** la transforma el sistema de coordenadas vigente, pero su **tamaño** se emite en unidades de dispositivo y **no** lo afectan la ventana ni las transformaciones —a diferencia del radio de `circle`, que es cantidad de mundo (§3.2). Por eso son el primitivo correcto para marcar datos dentro de un marco `stretch` (§13.7): los símbolos caen donde deben y no se deforman por la anisotropía del marco.
+
+**`dot(r)`** es el caso base: un disco de radio físico `r`. Por defecto relleno; con `color=` y sin `fill=`, un círculo **abierto** (convención §4). Se conserva por brevedad y compatibilidad.
+
+**`marker(r, shape="…")`** generaliza `dot` a una familia de formas, todas de radio físico `r` (el símbolo cabe en un círculo de radio `r`, para que queden comparables). `dot(r)` ≡ `marker(r, shape="disk")`.
 
 ```text
-dot(0.15) { 2 3  4 3  6 3 }   % tres puntos (r posicional)
+dot(0.15) { 2 3  4 3 }                             % disco relleno (atajo)
+marker(0.1, shape="circle", color="black") { … }  % círculos abiertos (fig2-3)
+marker(0.12, shape="cross") { … }                  % cruces +           (fig1)
+marker(0.12, shape="circle-dot") { … }             % círculo con punto ⊙ (fig1)
 ```
+
+**Formas:**
+
+| `shape` | Símbolo | Relleno/contorno |
+|---|---|---|
+| `"disk"` (= `dot`) | ● disco | relleno (o abierto con `color=` sin `fill=`) |
+| `"circle"` | ○ círculo | abierto/relleno según §4 |
+| `"square"` | □ cuadro | abierto/relleno según §4 |
+| `"diamond"` | ◇ rombo | abierto/relleno según §4 |
+| `"cross"` | + | solo trazo |
+| `"x"` | × | solo trazo |
+| `"circle-dot"` | ⊙ círculo con punto | compuesto: contorno + punto central relleno |
+
+Color y relleno/contorno siguen §4 (`fill=` rellena; `color=` fija el trazo; en las formas de solo trazo —`cross`, `x`— manda `color=`). El radio `r` es **físico**: no se deforma bajo `stretch` ni bajo transformaciones —solo la posición se transforma.
+
+*(V1: `DOT` (físico) y los marcadores con prefijo `MK`, inconclusos —ver `plan_marcadores.md`. La familia de **atributos** `marker_start`/`marker_mid`/`marker_end`, que decora los vértices de una curva en vez de dispersar puntos sueltos, comparte estas mismas formas y este render físico.)*
 
 ### 4.7 bezier — curva de Bézier cúbica
 
@@ -273,13 +307,16 @@ Los puntos son: posición inicial, control 1, control 2, posición final. Segmen
 
 ### 4.8 text — texto en posición
 
+La cadena y los atributos van en los paréntesis; la posición va en el bloque, como en cualquier primitiva (§4, regla de coordenadas):
+
 ```text
-text(x, y) { "Texto normal" }
-text(x, y, color="red", font_size=14) { "Título" }
-text(x, y, align="center", valign="middle") { "$\alpha + \beta = \gamma$" }
+text("Texto normal") { x y }
+text("Título", color="red", font_size=14) { x y }
+text("$\alpha + \beta = \gamma$", align="center", valign="middle") { x y }
+text("etiqueta") { 0 0  5 5  10 0 }   % la misma cadena en varios puntos
 ```
 
-El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). La forma sin coordenadas, `text { "..." }`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
+El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). La forma sin bloque (o con bloque vacío), `text("...")`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
 
 ### 4.9 ellipse — elipse completa
 
@@ -290,29 +327,29 @@ ellipse(4, 2) { 2 2  8 2 }         % múltiples centros = múltiples elipses
 
 `ellipse` es una conveniencia para la elipse cerrada completa; equivale a `arc(rx, ry, from=0, to=360)`. Para arcos elípticos parciales se usa `arc` con `from`/`to` (§4.5). *(V1: `EL rx ry`.)*
 
-### 4.10 Estilo de línea (`width`, `dash`, `cap`, `join`)
+### 4.10 Estilo de línea (`line_width`, `dash`, `cap`, `join`)
 
 V3 abandona los índices cerrados de V1 (`LWIDTH n`, `LPATRN n`) por atributos con nombre
 compatibles de forma nativa con PostScript, PDF y SVG. Los cuatro son opcionales y se
 pasan a cualquier primitiva geométrica (o se fijan como estado de bloque, §7).
 
-#### Grosor (`width`)
+#### Grosor (`line_width`)
 
 - Valor de punto flotante en **puntos tipográficos** (`pt` = 1/72 de pulgada), el
-  estándar universal de la industria editorial. `width=1.5` son 1.5 pt.
+  estándar universal de la industria editorial. `line_width=1.5` son 1.5 pt.
 - Si se omite, el grosor por defecto es **`1.0` pt**.
-- **No existe** el comportamiento *hairline* dependiente del dispositivo (el `width = 0`
+- **No existe** el comportamiento *hairline* dependiente del dispositivo (el `line_width = 0`
   del PostScript clásico, que dibuja el trazo más fino que el aparato permita). Para una
-  línea ultrafina se especifica un valor real y explícito, p. ej. `width=0.1`.
+  línea ultrafina se especifica un valor real y explícito, p. ej. `line_width=0.1`.
 
 ```text
-polyline(width=1.5) { 0 0  10 10 }
-circle(width=0.25)  { 5 5 }          % línea fina (≈ el LWIDTH 1 de V1)
+polyline(line_width=1.5) { 0 0  10 10 }
+circle(line_width=0.25)  { 5 5 }          % línea fina (≈ el LWIDTH 1 de V1)
 ```
 
 *(V1: el grosor iba en unidades de 0.2 pt —`LWIDTH 1` = 0.2 pt, `LWIDTH 5` = 1.0 pt— y
 `LWIDTH 0` producía el hairline del dispositivo. El traductor convierte
-`LWIDTH n` → `width = n × 0.2` y, por la prohibición del hairline, `LWIDTH 0` → `width=0.1`.)*
+`LWIDTH n` → `line_width = n × 0.2` y, por la prohibición del hairline, `LWIDTH 0` → `line_width=0.1`.)*
 
 #### Patrón (`dash`)
 
@@ -340,10 +377,10 @@ polyline(dash="dashed") { 0 0  10 0 }
 
 **B. Arreglo explícito** (estilo `stroke-dasharray` de SVG). Para control total, `dash`
 acepta un arreglo de números que alternan longitud de trazo y de hueco, **multiplicados
-por el `width` actual** para conservar la proporción al cambiar el grosor:
+por el `line_width` actual** para conservar la proporción al cambiar el grosor:
 
 ```text
-% trazo largo 10, hueco 2, punto 1, hueco 2  (× width)
+% trazo largo 10, hueco 2, punto 1, hueco 2  (× line_width)
 polyline(dash=[10, 2, 1, 2]) { 0 0  10 10 }
 ```
 
@@ -372,7 +409,7 @@ soportado. Son clave para gráficos de calidad profesional, sobre todo en línea
   | `"bevel"` | esquina biselada (recortada) |
 
 ```text
-polyline(width=5.0, cap="round", join="round") { 0 0  5 5  10 0 }
+polyline(line_width=5.0, cap="round", join="round") { 0 0  5 5  10 0 }
 ```
 
 *(V1 no tenía equivalente; los trazos usaban los defaults `butt`/`miter`. El traductor
@@ -380,18 +417,34 @@ no genera `cap`/`join` salvo que se pidan explícitamente.)*
 
 ### 4.11 Patrones de relleno (`hatch`)
 
-En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **trama** de líneas paralelas. El motor provee tramas en cuatro ángulos:
+En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **trama** de líneas paralelas. La trama tiene exactamente **dos parámetros**:
+
+- `hatch` — ángulo de la trama en grados; **obligatorio**, restringido a los cuatro valores que provee el motor: `0`, `45`, `90` o `135`.
+- `hatch_gap` — separación entre líneas en **puntos**; **opcional** (default según el motor). Es una cantidad física (pt), no escala con `world_window` (§3.2), porque el tramado se barre en el espacio de dispositivo ya transformado a pt (`EPSDisplay::rect` aplica la matriz antes de emitir; SVG teja un `<pattern>` en userSpace de pt). Por eso las tres densidades de V1 (`FPATRN`) equivalen a `hatch_gap` de **4, 2 y 1 pt**, mapeo 1:1 sin calibración.
+
+No hay más: la trama son **trazos**, así que su **color** y su **grosor** salen del estado de trazo vigente (`color` y `line_width`, §4.10) —no existe un `hatch_color` ni un `hatch_width` aparte. Si se da `color=`, además se dibuja el contorno de la región en ese mismo color (§4); sin `color=`, la trama usa el color de trazo del bloque (negro por default).
+
+**Dos registros** (la distinción general de §7.5):
+
+- **Atributo** (en paréntesis, nombrado) — aplica a una sola primitiva:
 
 ```text
-polygon(hatch=45)              { 0 0  5 0  5 5  0 5 } % trama diagonal a 45°
-polygon(hatch=0, hatch_gap=3)  { 0 0  5 0  5 5  0 5 } % trama horizontal, paso 3 pt
+polygon(hatch=45)             { 0 0  5 0  5 5  0 5 } % trama diagonal a 45°
+polygon(hatch=0, hatch_gap=3) { 0 0  5 0  5 5  0 5 } % trama horizontal, paso 3 pt
 ```
 
-- `hatch=` — ángulo de la trama en grados: `0`, `45`, `90` o `135`.
-- `hatch_gap=` — separación entre líneas en puntos (opcional; default según el motor).
-- `color=` fija el color de las **líneas de la trama** (que son trazos) y, si se da, dibuja además el contorno de la región en ese mismo color (§4). Sin `color=`, la trama usa el color de trazo vigente del bloque (negro por default). *(V1: `FCOLOR c` + `FPATRN` → `color "c"` + `hatch a`; el `FCOLOR` de la trama es el color de trazo, no un relleno sólido.)*
+- **Sentencia de estado** (posicional, rige hasta el fin del bloque, §7) — el ángulo y el paso opcional caben en una sola línea, igual que `translate dx dy`:
 
-*(V1: `FPATRN n`, donde el índice `n` codifica ángulo y densidad de forma combinada; `n` negativo añadía el contorno.)*
+```text
+hatch 45          % solo ángulo; el paso toma el default
+hatch 45 4        % ángulo 45, paso 4 pt
+polygon { 0 0  5 0  5 5  0 5 }   % ambos con esa trama
+polygon { 6 0  9 0  9 5  6 5 }
+```
+
+  El segundo valor posicional es el paso; equivale a fijarlo aparte con `hatch_gap 4`. Como el ángulo está limitado a cuatro valores, el paso nunca resulta ambiguo.
+
+*(V1: `FCOLOR c` + `FPATRN` → `color "c"` + `hatch a`; el `FCOLOR` de la trama es el color de trazo, no un relleno sólido. `FPATRN n` codificaba ángulo y densidad de forma combinada en el índice `n`; `n` negativo añadía el contorno.)*
 
 ---
 
@@ -408,7 +461,37 @@ circle(r = r_base + 1) { margen margen }
 circle(r = r_base / n) { 0 0 }
 ```
 
-**Funciones matemáticas disponibles:** `sin(x)`, `cos(x)`, `tan(x)`, `sqrt(x)`, `abs(x)`, `atan2(y, x)`, `pi` (constante).
+Los **operadores y funciones** disponibles se detallan en §5.2; las **listas**, en §5.1.
+
+### 5.1 Listas
+
+Una variable puede contener una **lista** de valores —números, cadenas o tuplas— con la misma sintaxis `[…]` de `dash` (§4.10). Se indexa con `lista[i]` (**base 0**) y `len(lista)` da su longitud. Es lo que permite recorrer una tabla de valores con un `for` (§6):
+
+```text
+fills = ["black", "blue", "brown", "cyan", "green", "red", "yellow"]
+
+for i = 0 to len(fills)-1 {
+    x = i * 0.1
+    rectangle(fill = fills[i]) { x 0  x+0.1 0.1 }
+}
+```
+
+El elemento extraído **conserva su tipo**: `fills[i]` es una cadena y sirve donde iría `"red"`; una lista de números sirve donde iría un número. Las listas son valores de primera clase (se asignan y se pasan como argumento), pero **no participan en la aritmética**: solo se indexan y se consulta su `len`.
+
+### 5.2 Operadores y funciones
+
+**Operadores aritméticos**, de menor a mayor precedencia:
+
+| Operadores | Papel |
+|---|---|
+| `+`  `-` | suma / resta |
+| `*`  `/`  `%` | producto / división / **módulo** (residuo) |
+| `^` | **potencia**, asociativa a la derecha (`2^3^2` = `2^(3^2)`) |
+| `-` (unario) | negación; más débil que `^`, de modo que `-2^2` = `-(2^2)` = `-4` y `2^-1` = `0.5` |
+
+Los paréntesis agrupan como de costumbre. `%` y `^` son operadores simples, no funciones.
+
+**Funciones y constante:** `sin(x)`, `cos(x)`, `tan(x)`, `sqrt(x)`, `abs(x)`, `atan2(y, x)`, `len(lista)`, y `pi`. El conjunto se mantiene deliberadamente pequeño; se ampliará (redondeo, `min`/`max`, transcendentales como `exp`/`ln`…) **solo cuando el corpus lo exija** —para no cargar el lenguaje con funciones especulativas.
 
 ---
 
@@ -450,10 +533,10 @@ MetaGráfica mantiene un **estado gráfico** (color, grosor, relleno, tamaño de
 
 ```text
 color "blue"
-width 2
-polyline { 0 0  10 0 }        % azul, width 2
-polyline { 0 5  10 5 }        % azul, width 2 (el estado persiste)
-circle(r=1) { 5 2.5 }         % azul, width 2
+line_width 2
+polyline { 0 0  10 0 }        % azul, line_width 2
+polyline { 0 5  10 5 }        % azul, line_width 2 (el estado persiste)
+circle(r=1) { 5 2.5 }         % azul, line_width 2
 ```
 
 Esto recupera la sencillez imperativa de V1 (`LCOLOR`, `LWIDTH`, `FILL`, `TLLC`… eran sentencias) con una diferencia decisiva: **el estado tiene alcance léxico** (§7.1), así que no se fuga de forma global —que era la principal fragilidad de V1.
@@ -468,9 +551,9 @@ polyline { 0 0  10 0 }        % negro
 
 {                             % ← bloque: acota el estado
     color "red"
-    width 3
-    polyline { 0 2  10 2 }    % rojo, width 3
-    circle(r=1) { 5 2.5 }     % rojo, width 3
+    line_width 3
+    polyline { 0 2  10 2 }    % rojo, line_width 3
+    circle(r=1) { 5 2.5 }     % rojo, line_width 3
 }
 
 polyline { 0 4  10 4 }        % negro otra vez: el bloque restauró el estado
@@ -499,10 +582,11 @@ Todos usan la forma `palabra valor(es)`. Los nombres **coinciden** con los argum
 |---|---|---|
 | `color "c"` / `color "#RRGGBB"` / `color "none"` | color de trazo (`"none"` = sin trazo) | §4 |
 | `fill "c"` / `fill "none"` | color de relleno sólido (`"none"` = sin relleno) | §4 |
-| `width w` | grosor de línea en pt | §4.10 |
+| `line_width w` | grosor de línea en pt | §4.10 |
 | `dash "dashed"` / `dash [10,2]` | patrón de línea | §4.10 |
 | `cap "round"` / `join "round"` | extremos / uniones de trazo | §4.10 |
-| `hatch a` / `hatch_gap g` | relleno con trama | §4.11 |
+| `hatch a [g]` | relleno con trama: ángulo `a` (obligatorio) y paso `g` (opcional); o `hatch_gap g` aparte | §4.11 |
+| `font "italic"` | fuente base del texto (`"roman"`, `"italic"`, `"bold"`, …, §14.3) | §14.3 |
 | `font_size h` | tamaño de texto en pt (mismo keyword en documento y en bloque) | §14 |
 | `align "center"` / `valign "middle"` | alineación horizontal / vertical de texto | §4.8 |
 | `translate dx dy` / `rotate a` / `scale s` / `shear hx hy` | transformación local | §11 |
@@ -520,12 +604,12 @@ argumento explícito en la primitiva  >  estado del bloque interno  >  estado de
 ```text
 {
     color "blue"
-    width 2
-    polyline { 0 0  10 0 }                  % azul, width 2
+    line_width 2
+    polyline { 0 0  10 0 }                  % azul, line_width 2
     {
-        width 4
-        polyline { 0 1  10 1 }              % azul (heredado), width 4 (redefinido)
-        polyline(color="red") { 0 2  10 2 } % rojo (explícito gana), width 4
+        line_width 4
+        polyline { 0 1  10 1 }              % azul (heredado), line_width 4 (redefinido)
+        polyline(color="red") { 0 2  10 2 } % rojo (explícito gana), line_width 4
     }
 }
 ```
@@ -559,6 +643,25 @@ Flecha(3, 0)              % flecha horizontal
 Flecha(0, 2, size=0.3)    % flecha vertical más grande
 ```
 
+**Modificadores de colocación (`at`, `rotate`, `scale`).** Además de sus parámetros propios, toda invocación acepta tres argumentos nombrados opcionales:
+
+- `at=(x, y)` — coloca el origen local de la struct en ese punto (dentro del sistema de coordenadas vigente, §11).
+- `rotate=deg` — giro de la instancia en grados (positivo = antihorario), alrededor de su origen local.
+- `scale=s` o `scale=(sx, sy)` — tamaño de la struct, uniforme o por eje. Es la misma `scale` de `place`/`repeat` (la matriz de estructura MTST, §11).
+
+```text
+Cuadro(scale=(0.2, 0.125), at=(0.1, 0.75))       % colocada y dimensionada
+Flecha(3, 0, at=(5, 5), rotate=30)               % girada 30° y llevada a (5,5)
+```
+
+Se aplican en **orden canónico fijo `T·R·S`**: la struct se **escala** y **gira** en su marco local y luego se **traslada** a `at`. Por eso **el orden en que se escriben los modificadores no altera el resultado** —lo fija la spec, no el texto—, y equivalen exactamente a envolver la llamada en el bloque
+
+```text
+{ translate 5 5   rotate 30   Flecha(3, 0) }     % T·R, post-multiplicado (§11.1)
+```
+
+`at`/`rotate`/`scale` son, pues, azúcar del caso común "coloca una copia aquí, con este giro y tamaño". Cuando la composición **dependa del orden** de un modo distinto al canónico (escalar *después* de trasladar, cizallar, etc.), se usan las sentencias de transformación (§11.1) o `transform=` (§17), donde el orden de escritura *es* la composición. Los tres son **nombres reservados** de la invocación: una struct no puede declarar parámetros propios así llamados; como los parámetros declarados son posicionales, no chocan (`Flecha(3, 0, rotate=30)`).
+
 ### 8.1 Recursión
 
 Una struct puede invocarse a sí misma, lo que habilita fractales, árboles y patrones autosimilares. Con parámetros propios y ámbito léxico la recursión es segura: cada invocación recibe sus argumentos y no depende de estado global. La condición de paro se expresa con `if` (§6.1):
@@ -566,7 +669,7 @@ Una struct puede invocarse a sí misma, lo que habilita fractales, árboles y pa
 ```text
 struct Rama(longitud, grosor) {
     if longitud >= 1 {                    % condición de paro
-        polyline(width=grosor) { 0 0  0 longitud }
+        polyline(line_width=grosor) { 0 0  0 longitud }
         {
             translate 0 longitud
             rotate 30
@@ -710,6 +813,8 @@ place(Tick, scale=0.2) { 0.1 0.2  0.3 0.5  0.7 0.8 }
 
 **V1:** `LNST` (línea), `ARCST` (arco), `DPST` / `&name path` (path).
 
+> **`place` es para loci con extensión** (2+ puntos, arco o path): repite y orienta cada instancia según la tangente. Para colocar **una sola** instancia en un punto no se usa `place` —no hay locus ni tangente— sino la invocación directa con `at`/`scale` (§8). El *identifier placement* de V1 (`cuadro .1 .75`) traduce a `Cuadro(at=(.1, .75))`, no a `place` (que corresponde a `LNST`/`ARCST`/`DPST`).
+
 ### 10.2 fit — ajustar una struct a un rectángulo
 
 No repite: transforma el sistema de coordenadas de la struct para que ocupe el rectángulo dado.
@@ -797,6 +902,8 @@ Los placements (§10) ya fijan la matriz de estructura automáticamente para ali
 
 No se necesita sintaxis adicional: MTST se deriva de la composición léxica de las transformaciones activas en el punto de invocación.
 
+> **Dos regímenes, sin conflicto.** Para el caso común —una instancia colocada, girada y dimensionada— la invocación acepta los modificadores `at`/`rotate`/`scale` (§8), que son azúcar de este bloque con **orden canónico fijo `T·R·S`** (su orden de escritura es irrelevante). El bloque explícito de arriba, en cambio, respeta el **orden de las sentencias** (§11.1) y es el que se usa cuando la composición **depende del orden** (recuérdese que las matrices no conmutan: `T·R ≠ R·T`).
+
 ---
 
 ## 12. Posición de pluma y dibujo relativo
@@ -812,7 +919,7 @@ La transformación de `step` se **acumula**: en cada avance se aplica al punto a
 
 ### 12.1 Texto secuencial
 
-`text { "..." }` (sin coordenadas) dibuja en la posición de pluma y la avanza un `step`. Es la forma relativa de `text(x, y)`, que es absoluto. *(V1: `DT`.)*
+`text("...")` (sin bloque) dibuja en la posición de pluma y la avanza un `step`. Es la forma relativa de `text("...") { x y }`, que es absoluto. *(V1: `DT`.)*
 
 ```text
 moveto(0, 0)
@@ -862,9 +969,15 @@ numbers(from=0, by=2, count=6, decimals=0)   % 0  2  4  6  8  10
 
 % forma compacta equivalente (posición y avance en la llamada):
 numbers(from=0, by=2, count=6, decimals=0, at=(0, -0.5), advance=(2, 0))
+
+% con decoración textual literal (envuelve al número ya formateado por decimals):
+numbers(from=1, by=1, count=5, decimals=0, prefix="Pattern ")   % Pattern 1 … Pattern 5
+numbers(from=10, by=10, count=5, decimals=0, suffix=" K")       % 10 K  20 K … 50 K
 ```
 
 Genera `count` etiquetas numéricas, empezando en `from` e incrementando `by` en cada paso, con `decimals` decimales, en el estilo de texto actual (§14), posicionadas en la pluma y avanzando con `step`. Opcionalmente, `at=(x,y)` y `advance=(dx,dy)` fijan la posición inicial y el avance en la propia llamada, sin `moveto`/`step`. *(V1: `GNNUM i0 inc n decimals`.)*
+
+Los argumentos opcionales `prefix` y `suffix` son cadenas **literales** que se anteponen y posponen al número ya formateado por `decimals` (`prefix="Pattern "` → `Pattern 3`; `suffix=" K"` → `20 K`). No son un lenguaje de formato: el número lo sigue gobernando `decimals`, y prefix/suffix solo lo envuelven —ejes ortogonales que componen sin conflicto. Con ellos, una etiqueta que *contiene* un número (un rótulo `Pattern n`, una marca con unidades) deja de necesitar una `text` por elemento. `axis` (§13.5) los propaga a sus `numbers` internos, para rotular marcas con unidades.
 
 > Nota: hay dos ejes independientes. `by` es el incremento del **valor numérico** impreso; `advance` (o `step`) es la traslación de la **posición** entre etiquetas. Se usa `advance` —no `step`— en la llamada, precisamente para no confundirlos.
 
@@ -912,12 +1025,16 @@ axis(from=0, to=8, step=1, ticks="out", labels=true) { 0 0  0 8 }
 |---|---|---|
 | `from`, `to` | — | valores numéricos en el extremo inicial y final |
 | `step` | — | intervalo de valor entre marcas/etiquetas |
+| `start` | `from` | valor de la **primera** marca/etiqueta; sirve para omitir el origen (`start=0.1`) |
 | `ticks` | `"out"` | dirección de las marcas: `"out"`, `"in"`, `"both"`, `"none"` (relativas a la línea) |
 | `tick_size` | pequeño | longitud de las marcas en unidades de usuario |
 | `labels` | `true` | mostrar etiquetas numéricas |
 | `decimals` | `0` | decimales en las etiquetas |
 | `label_gap` | auto | distancia de las etiquetas a la línea |
 | `title` | — | rótulo del eje (texto, admite markup matemático §14) |
+| `title_font`, `title_size` | ambiente | fuente/tamaño del título, para cuando difieren de las etiquetas |
+
+Las **marcas y etiquetas** van en `start, start+step, …` hasta `to` (`start` default = `from`). Las **etiquetas** heredan el estado de texto vigente (`font`, `font_size`, `align`, §7.3); solo el **título** admite override propio (`title_font`/`title_size`), porque suele diferir —p. ej. números en itálica y título en romana, como en fig2-3.
 
 La orientación de marcas y etiquetas se deriva de la dirección de la línea (la lógica de tangente del motor de placements), así que un eje horizontal, vertical o inclinado se escriben igual, cambiando solo los extremos del bloque. Aquí `step` es el **intervalo de valor** (como en el `for` loop, §6), no el `step` de avance de pluma (§12).
 
@@ -955,7 +1072,7 @@ grid(xstep=2, ystep=1, color="lightgray") { 0 0  10 8 }
 grid(xstep=2, ystep=2, dash="dotted")      { 0 0  10 8 } % retícula punteada
 ```
 
-**Argumentos:** `xstep` / `ystep` (intervalos en unidades de usuario), más los atributos de estilo comunes (`color`, `width`, `dash`). Útil como fondo de una gráfica antes de trazar datos y ejes.
+**Argumentos:** `xstep` / `ystep` (intervalos en unidades de usuario), más los atributos de estilo comunes (`color`, `line_width`, `dash`). Útil como fondo de una gráfica antes de trazar datos y ejes.
 
 ### 13.7 Graficar datos: el marco de datos (⚠️ propuesta para estudiar)
 
@@ -992,14 +1109,15 @@ world_window -1 11  -1 7            % lienzo físico exterior
     world_window 0 1  0 6  stretch=true   % (xmin xmax ymin ymax) EN DATOS
 
     % Curva: en coordenadas de datos, sin pre-escalar ×10
-    width 4
+    line_width 0.8                                  % V1 LWIDTH 4 → 4×0.2 = 0.8 pt
     dash "dashed"
+    % Nota: concatenar estos dos segmentos para que sea una sola curva
     polyline { 0 0  0.076 0 }                       % tramo recto inicial
     bezier   { 0.076 0  0.266 0.025  0.179 5.07  0.998 5.45 }
 
-    % Puntos experimentales (en datos)
-    width 2
-    dot(0.1) { 0.160 0.73  0.194 1.14  0.210 1.36  0.944 5.55 }
+    % Puntos experimentales (en datos). dot es marcador FÍSICO (§4.6): la posición
+    % la transforma el marco, el tamaño no → redondos pese al stretch.
+    dot(0.1, color="black") { 0.160 0.73  0.194 1.14  0.210 1.36  0.944 5.55 }
 
     % Ejes: rango heredado de la ventana; solo se da la decoración.
     % 'edge' elige el borde y omite el bloque de extremos (§13.5, propuesta).
@@ -1011,6 +1129,15 @@ world_window -1 11  -1 7            % lienzo físico exterior
 Aquí `axis` no repite `from`/`to`: los toma de la ventana del marco (`0..1` en x, `0..6` en y).
 La temperatura relativa se grafica **tal cual** (0.160, 0.194, …), y las etiquetas salen `0.1,
 0.2, …, 1.0` solas — el ×10 desaparece.
+
+**Marcadores en un marco `stretch`.** Como el marco es anisótropo por definición, los tamaños
+que son **cantidad de mundo** se deforman: un `circle(0.1)` saldría elíptico, y una struct
+colocada con `place`/`scale` también (su tamaño es de mundo). La regla es: dentro de un marco de
+datos, **la posición va en datos pero el tamaño de los marcadores y del texto se queda físico**.
+El primitivo `dot` (§4.6) ya cumple esto por construcción (posición transformada, tamaño en
+dispositivo), así que es el marcador correcto para puntos de datos; los símbolos de la familia de
+marcadores (`plan_marcadores.md`) deben heredar esta misma propiedad física, no el escalado de
+mundo de `place`.
 
 **Relación con `fit` (§10.2).** El marco de datos y `fit` son el **mismo mecanismo** a distinta
 granularidad: `fit(Curva, stretch=true) { caja }` hace con una **struct reutilizable** (que trae
@@ -1053,8 +1180,8 @@ $...$    activa la fuente CMMI (Computer Modern Math Italic) para el bloque
 ```
 
 ```text
-text(5, 3) { "$\alpha + \beta = \gamma$" }
-text(2, 7) { "Radio $r = 2\pi / \lambda$" }
+text("$\alpha + \beta = \gamma$") { 5 3 }
+text("Radio $r = 2\pi / \lambda$") { 2 7 }
 ```
 
 #### Símbolos griegos y matemáticos
@@ -1083,9 +1210,9 @@ _{...}   subíndice de un grupo
 ```
 
 ```text
-text(3, 5) { "$x^2 + y^2 = r^2$" }
-text(3, 3) { "$E_n = -13.6 / n^2$ eV" }
-text(3, 1) { "$\psi_{nlm}(r,\theta,\phi)$" }
+text("$x^2 + y^2 = r^2$") { 3 5 }
+text("$E_n = -13.6 / n^2$ eV") { 3 3 }
+text("$\psi_{nlm}(r,\theta,\phi)$") { 3 1 }
 ```
 
 Los scripts reducen el tamaño de fuente al 70% y son anidables: `$x^{2^n}$`.
@@ -1105,8 +1232,8 @@ El prefijo `/` seguido de un código cambia la fuente para el resto del string (
 | `/$` | CMMI (math italic) |
 
 ```text
-text(2, 5) { "/bTítulo en negrita" }
-text(2, 3) { "Normal, /itálica, /rnormal otra vez" }
+text("/bTítulo en negrita") { 2 5 }
+text("Normal, /itálica, /rnormal otra vez") { 2 3 }
 ```
 
 #### Agrupación
@@ -1114,15 +1241,15 @@ text(2, 3) { "Normal, /itálica, /rnormal otra vez" }
 `{...}` delimita el alcance de sub/superíndices:
 
 ```text
-text(3, 5) { "$e^{i\pi} + 1 = 0$" }
-text(3, 3) { "$\sum_{n=0}^{\infty} a_n x^n$" }
+text("$e^{i\pi} + 1 = 0$") { 3 5 }
+text("$\sum_{n=0}^{\infty} a_n x^n$") { 3 3 }
 ```
 
 ### 14.2 Arquitectura: por qué no cambia en V3
 
 `parse_text()` es una función pura: toma un string UTF-8 y una fuente base, devuelve un `GraphicsItem` (`Text` o `TextLine`). No depende del parser del `.mg` ni del Display. En V3:
 
-- El parser V3 extrae el string de `text(...) { "..." }`
+- El parser V3 extrae el string de `text("...") { ... }`
 - Lo pasa a `parse_text()` con la fuente base del contexto
 - Obtiene un `GraphicsItem` listo para dibujar con cualquier Display
 
@@ -1131,12 +1258,12 @@ text(3, 3) { "$\sum_{n=0}^{\infty} a_n x^n$" }
 ### 14.3 Argumentos de `text`
 
 ```text
-text(x, y)                              % posición, fuente y tamaño del contexto
-text(x, y, font_size=12)                % tamaño en puntos
-text(x, y, font="italic")               % fuente base: "roman", "italic", "bold",
-                                        %   "italic-bold", "sanserif", "courier"
-text(x, y, align="center", color="red") % alineación horizontal y color
-text(x, y, valign="middle")             % alineación vertical
+text("...") { x y }                              % posición en el bloque; fuente y tamaño del contexto
+text("...", font_size=12) { x y }                % tamaño en puntos
+text("...", font="italic") { x y }               % fuente base: "roman", "italic", "bold",
+                                                 %   "italic-bold", "sanserif", "courier"
+text("...", align="center", color="red") { x y } % alineación horizontal y color
+text("...", valign="middle") { x y }             % alineación vertical
 ```
 
 La fuente base determina el punto de partida del markup interno; los `/b`, `/i`, etc. dentro del string son relativos a ella.
@@ -1190,14 +1317,13 @@ La ventana anidada se mapea **isométricamente** a su región, igual que la glob
 `repeat` coloca la struct indicada `count` veces, avanzando la posición con `step` (§12) y, opcionalmente, **acumulando** una transformación sobre la struct en cada repetición. Esto es lo que permite espirales, patrones de crecimiento y disposiciones cuasi-fractales que un `for` loop expresa de forma menos compacta.
 
 ```text
-moveto(0, 0)
-step(translate=(1.5, 0))
-repeat(Hoja, count=8, transform=scale(0.85))
+repeat(Hoja, count=8, transform=scale(0.85), at=(0, 0), advance=(1.5, 0))
 % 8 instancias de Hoja, cada una 0.85× de la anterior, avanzando 1.5 en x
 ```
 
 - `count` — número de repeticiones (nombrado).
-- la posición avanza con el `step` activo (matriz de pluma, §12).
+- `scale=s` / `scale=(sx,sy)` y `rotate=deg` — tamaño y giro **fijos** de cada instancia (matriz de estructura MTST), idénticos a los modificadores de `place` y de la invocación directa (§8/§10): se aplican **por igual** a todas las copias, **no** se acumulan.
+- `at=(x,y)` / `advance=(dx,dy)` — posición inicial y avance entre instancias, en la propia llamada (misma convención que los generadores, §13.2): evitan el par `moveto`/`step` previo y hacen cada `repeat` **autocontenido** —sin estado de pluma compartido que se filtre entre repeticiones. `advance` es una **traslación pura**; para un avance de pluma que además rote o escale (disposiciones radiales/espirales) se usa el comando `step(...)` (§12). Sin `at`/`advance` (ni `moveto`/`step`) se parte de la pluma vigente sin avanzar.
 - `transform=` — transformación acumulada sobre la struct: la instancia *k* recibe `transform` elevada a la *k* (composición sucesiva). Equivale a la matriz `MTRS` de V1. Acepta una composición de llamadas — p. ej. `transform=rotate(30) scale(0.95)` — que se multiplica como una sola matriz antes de acumularse:
 
 ```text
@@ -1206,6 +1332,8 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 ```
 
 *(V1: `RPST n`, con `MTPP` para la posición y `MTRS` para transformar la struct.)*
+
+> **`rotate=` (fijo) vs. `transform=rotate(...)` (acumulado)** — operaciones distintas, no redundantes. `rotate=30` inclina **cada** copia 30° por igual (giro constante, MTST); `transform=rotate(30)` gira la copia *k* en 30°·*k* —cada una respecto a la anterior—, que es lo que produce abanicos y espirales (MTRS). El arreglo radial necesita el acumulado; `rotate=` no lo sustituye. Lo mismo aplica a `scale=` (tamaño fijo) frente a `transform=scale(...)` (escala acumulada).
 
 > `repeat(Struct)` (repite una struct, esta sección) no debe confundirse con `tile(&path)` (concatena un path, §9). Operan sobre cosas distintas y por eso tienen nombres distintos.
 
@@ -1238,13 +1366,14 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Patrones de relleno (FPATRN)** | ✓ Resuelto | Definido en §4.11: `hatch=` (ángulo) y `hatch_gap=` (paso) |
 | **Color en escala de gris (LGRAY/FGRAY) y outline-fill** | ✓ Resuelto | Definido en §4: gris = color; contorno de relleno = presencia de `color=` |
 | **`ellipse` como primitiva** | ✓ Resuelto | Definido en §4.9: `ellipse(rx, ry)` (conveniencia de `arc(rx, ry, from=0, to=360)`) |
-| **Estilo de línea (LWIDTH/LPATRN)** | ✓ Resuelto | Definido en §4.10: `width=` (pt), `dash=` (alias o arreglo `[…]`), `cap=`, `join=` |
+| **Estilo de línea (LWIDTH/LPATRN)** | ✓ Resuelto | Definido en §4.10: `line_width=` (pt), `dash=` (alias o arreglo `[…]`), `cap=`, `join=` |
 | **Output implícito** | ✓ Resuelto | Definido en §18: derivado del nombre de entrada; backend por bandera de CLI |
 | **Repetición de struct (RPST)** | ✓ Resuelto | Definido en §17: `repeat(...)` |
 | **Condicionales (`if`) y recursión de structs** | ✓ Resuelto | Definido en §6.1 (if, comparadores, `and`/`or`) y §8.1 (recursión con paro por `if`, límite `max_depth` §18) |
 | **Regla de relleno en `compound`** | ✓ Resuelto | Definido en §9.4: `fill_rule="non-zero"` (default) / `"even-odd"` |
 | **Aspect ratio / no-deformación** | ✓ Resuelto | Definido en §3.1: escala uniforme (*meet*) + margen con `align=`; `stretch=true` para deformar; `fit` preserva proporción por default (§10.2); ventanas anidadas isométricas (§16) |
 | **Texto bajo `transform`** | ⚠️ Abierto | Deseado: que el texto rote/escale con los `transform` activos (EPS lo permite). Falta definir si se transforma solo el punto de anclaje o también los glifos |
+| **`rectangle` bajo rotación/shear** | ⚠️ Abierto | Inconsistencia de backend: SVG rota bien —transforma las 4 esquinas (`SVGDisplay::rect`)—, pero EPS/PDF transforman solo las 2 esquinas dadas y emiten una caja alineada a ejes (`EPSDisplay::rect`; `HPDF_Page_Rectangle`), así que una rotación las deforma. Solución: que EPS/PDF construyan el path de 4 esquinas transformadas, como SVG. Trivial para trazo/relleno sólido; el caso tramado necesita además rotar el clip del hatch (§4.11). Mientras tanto, las structs rotables trazan su contorno con `polyline` (§8, `rpstest.mg`) |
 | **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
 | **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
 | **Graficar datos: marco de datos, `axis` obligatorios/optativos, `plot`** | ⚠️ Abierto | Borrador en §13.7: la curva se da en coordenadas de datos dentro de una `world_window` anidada con `stretch` (marco de datos, §16), y `axis` decora los bordes heredando el rango (`edge=`). Propuestas de §13.5: `step` automático, `edge=`, `minor`/`at`/`scale="log"`/`format`. Falta decidir el azúcar `plot { }`. Caso guía: fig2-3 (§22.6) |
@@ -1268,7 +1397,7 @@ MKST name  → Name()          # uso sin parámetros
 PL { ... } → polyline { ... }
 CR r : ... } → circle(r=r) { ... }
 BR p1 p2   → rectangle { p1 p2 }
-LWIDTH w   → width <w*0.2>    # sentencia de estado (§7); LWIDTH 0 → width 0.1
+LWIDTH w   → line_width <w*0.2>  # sentencia de estado (§7); LWIDTH 0 → line_width 0.1
 LPATRN n   → dash "solid"|"dashed"|"dotted"|"dashdot"|"dashdotdot"   # §4.10
 LCOLOR c   → color "c"        # sentencia de estado
 FCOLOR c   → fill "c"
@@ -1312,9 +1441,9 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `DOT` | `dot` | ✓ | §4.6 |
 | `BZ` | `bezier` | ✓ | §4.7 |
 | `SP` | `spline` | ✓ | §9.1 |
-| `LWIDTH` | `width=` (pt; `w×0.2`, `0`→`0.1`) | ✓ | §4.10 |
+| `LWIDTH` | `line_width=` (pt; `w×0.2`, `0`→`0.1`) | ✓ | §4.10 |
 | `LPATRN` | `dash=` (alias; `1`→`"solid"` como `0`) | ✓ | §4.10 |
-| `LSTYLE` | — | ✗ | bug V1 (mapea a `width`), se descarta |
+| `LSTYLE` | — | ✗ | bug V1 (mapea a `line_width`), se descarta |
 | — | `cap=` / `join=` (nuevos en V3) | ✓ | §4.10 |
 | `LCOLOR` | `color=` | ✓ | §4 |
 | `FCOLOR` | `fill=` | ✓ | §4 |
@@ -1362,8 +1491,8 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `··PT` (MTPT) | álgebra de paths | ✓ | §9 |
 | `··RS` (MTRS) | `repeat(transform=...)` | ✓ | §17 |
 | `XYPP` | `moveto` | ✓ | §12 |
-| `DT` | `text { }` | ✓ | §12.1 |
-| `XYDT` | `text(x,y)` | ✓ | §4.8 |
+| `DT` | `text("s")` (en la pluma) | ✓ | §12.1 |
+| `XYDT` | `text("s") { x y }` | ✓ | §4.8 |
 | `TICKS` | `ticks` / `axis` | ✓ | §13.1 / §13.5 |
 | `GNNUM` | `numbers` | ✓ | §13.2 |
 
