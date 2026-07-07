@@ -46,5 +46,5 @@ text(6, 5.1) { "Width 5" }
 
 align "center"
 text(8.5, 6.0) { "Line Widths LWIDTH" }
-size 6
+font_size 6
 text(8.5, 5.7) { "(units of 0.2 typographic points)" }

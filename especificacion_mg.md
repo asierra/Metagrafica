@@ -165,7 +165,7 @@ MetaGráfica maneja dos clases de cantidad y conviene no confundirlas:
   `rectangle`, tamaño al que se ajusta una struct. Escalan con la ventana.
 - **Cantidades físicas** — se miden en **puntos tipográficos** (`pt` = 1/72 de pulgada),
   la unidad nativa de PostScript y PDF: el `display_size` (dado en cm y convertido a
-  pt), el **grosor de línea** (`width`, §4.10), el **tamaño de fuente** (`size`, §4.8) y
+  pt), el **grosor de línea** (`width`, §4.10), el **tamaño de fuente** (`font_size`, §4.8) y
   las longitudes de un patrón `dash`. **No** escalan con la ventana; conservan su tamaño
   físico independientemente de `world_window`.
 
@@ -173,7 +173,7 @@ El punto es la **única unidad física** del lenguaje. El sistema de coordenadas
 es la retícula de puntos (72 unidades por pulgada); los tres backends inyectan la escala
 cm→pt (`display_size`) en su matriz de dibujo, y SVG declara además su lienzo en `pt`
 —con `viewBox` de extensión igual al número de puntos— para no caer en el default de
-96 px/pulgada de CSS. Así una línea `width=1` mide 1/72" ≈ 0.35 mm y una fuente `size=8`
+96 px/pulgada de CSS. Así una línea `width=1` mide 1/72" ≈ 0.35 mm y una fuente `font_size=8`
 mide 8 pt en cualquier backend.
 
 **Esto no supone una resolución de 72 DPI.** La salida es vectorial y, por tanto,
@@ -188,6 +188,8 @@ vectoriales el DPI nunca entra en juego.
 
 Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posicionales son los parámetros geométricos propios de cada primitiva. El bloque `{ }` contiene la lista de puntos.
 
+**Regla de posición.** La magnitud que define la forma va **posicional y primero** —el radio de `circle`/`dot`, el par `rx, ry` (en ese orden) de `ellipse`— y su nombre es opcional (`circle(2)` ≡ `circle(r=2)`). Los calificadores que no se leen solos como números sueltos van **nombrados** (`from=`/`to=` de `arc`, `hatch_gap=`), para no volverlos crípticos.
+
 **Argumentos de estilo comunes (todos opcionales y nombrados):**
 - `color="blue"` / `color="#4080FF"` — color de trazo
 - `fill="red"` / `fill="#RRGGBB"` — color de relleno (activa relleno sólido)
@@ -199,7 +201,14 @@ Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posic
 #### Color, gris y contorno
 
 - **Color** se especifica con nombre (`"blue"`, `"red"`, `"cyan"`, …) o hex (`"#RRGGBB"`).
-- **Gris** es solo un color: usar `"gray"`, `"lightgray"` o un hex neutro como `"#808080"`. No hay un comando de gris separado. *(V1: `LGRAY`/`FGRAY g` → `color`/`fill` con el gris equivalente.)*
+- **Gris** es solo un color. Tres formas: un nombre (`"gray"`, `"lightgray"`), un hex neutro (`"#808080"`), o la función `gray(x)` con `x` de **0 (negro) a 1 (blanco)** —la convención de `setgray` de PostScript— cuando se necesita una escala fina sin memorizar hex:
+
+```text
+rectangle(fill=gray(0.9)) { 0 0  1 1 } % gris claro (90% blanco)
+rectangle(fill=gray(0.2)) { 0 0  1 1 } % gris oscuro
+```
+
+  No hay un comando de gris separado. *(V1: `LGRAY`/`FGRAY g` → `color`/`fill` con el gris equivalente; como `FGRAY g` medía el % de negro, `FGRAY g` → `gray(1 - g/100)`.)*
 - **Contorno de una forma rellena.** Por defecto una primitiva con `fill=` no dibuja su borde. Si además se da `color=`, se traza el contorno en ese color (convención tipo SVG):
 
 ```text
@@ -228,9 +237,9 @@ polygon(fill="cyan") {
 ### 4.3 circle — círculo; múltiples centros = múltiples círculos
 
 ```text
-circle(r=2)             { 5 5 }           % un círculo
-circle(r=0.3)           { 1 1  3 1  5 1 } % tres círculos
-circle(r=1, fill="red") { 0 0  10 0 }     % dos círculos rellenos
+circle(2)               { 5 5 }           % un círculo (r posicional; `r=2` también válido)
+circle(0.3)             { 1 1  3 1  5 1 } % tres círculos
+circle(1, fill="red")   { 0 0  10 0 }     % dos círculos rellenos
 ```
 
 El bloque `{ }` contiene pares `x y` de centros. Por cada par se dibuja un círculo.
@@ -244,14 +253,14 @@ rectangle(fill="gray") { 1 1  9 7 }  % esquina inferior-izquierda, esquina super
 ### 4.5 arc
 
 ```text
-arc(r=3, from=0, to=180) { 5 5 }   % semicírculo superior, centro (5,5)
-arc(rx=4, ry=2, from=0, to=360) { 5 5 }  % elipse
+arc(3, from=0, to=180) { 5 5 }   % semicírculo superior, centro (5,5); r posicional, ángulos nombrados
+arc(rx=4, ry=2, from=0, to=360) { 5 5 }  % arco elíptico completo
 ```
 
 ### 4.6 dot — punto sólido relleno
 
 ```text
-dot(r=0.15) { 2 3  4 3  6 3 }   % tres puntos
+dot(0.15) { 2 3  4 3  6 3 }   % tres puntos (r posicional)
 ```
 
 ### 4.7 bezier — curva de Bézier cúbica
@@ -266,17 +275,17 @@ Los puntos son: posición inicial, control 1, control 2, posición final. Segmen
 
 ```text
 text(x, y) { "Texto normal" }
-text(x, y, color="red", size=14) { "Título" }
-text(x, y, align="center") { "$\alpha + \beta = \gamma$" }
+text(x, y, color="red", font_size=14) { "Título" }
+text(x, y, align="center", valign="middle") { "$\alpha + \beta = \gamma$" }
 ```
 
-El argumento `align` puede ser `"left"` (default), `"center"`, `"right"`. La forma sin coordenadas, `text { "..." }`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
+El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). La forma sin coordenadas, `text { "..." }`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
 
 ### 4.9 ellipse — elipse completa
 
 ```text
-ellipse(rx=4, ry=2) { 5 5 }              % elipse centrada en (5,5)
-ellipse(rx=4, ry=2) { 2 2  8 2 }         % múltiples centros = múltiples elipses
+ellipse(4, 2) { 5 5 }              % elipse centrada en (5,5); rx, ry posicionales (x, y)
+ellipse(4, 2) { 2 2  8 2 }         % múltiples centros = múltiples elipses
 ```
 
 `ellipse` es una conveniencia para la elipse cerrada completa; equivale a `arc(rx, ry, from=0, to=360)`. Para arcos elípticos parciales se usa `arc` con `from`/`to` (§4.5). *(V1: `EL rx ry`.)*
@@ -380,7 +389,7 @@ polygon(hatch=0, hatch_gap=3)  { 0 0  5 0  5 5  0 5 } % trama horizontal, paso 3
 
 - `hatch=` — ángulo de la trama en grados: `0`, `45`, `90` o `135`.
 - `hatch_gap=` — separación entre líneas en puntos (opcional; default según el motor).
-- `color=` traza además el contorno de la región, igual que con `fill` (§4).
+- `color=` fija el color de las **líneas de la trama** (que son trazos) y, si se da, dibuja además el contorno de la región en ese mismo color (§4). Sin `color=`, la trama usa el color de trazo vigente del bloque (negro por default). *(V1: `FCOLOR c` + `FPATRN` → `color "c"` + `hatch a`; el `FCOLOR` de la trama es el color de trazo, no un relleno sólido.)*
 
 *(V1: `FPATRN n`, donde el índice `n` codifica ángulo y densidad de forma combinada; `n` negativo añadía el contorno.)*
 
@@ -494,9 +503,11 @@ Todos usan la forma `palabra valor(es)`. Los nombres **coinciden** con los argum
 | `dash "dashed"` / `dash [10,2]` | patrón de línea | §4.10 |
 | `cap "round"` / `join "round"` | extremos / uniones de trazo | §4.10 |
 | `hatch a` / `hatch_gap g` | relleno con trama | §4.11 |
-| `size h` | tamaño de texto en pt | §14 |
-| `align "center"` | alineación de texto | §4.8 |
+| `font_size h` | tamaño de texto en pt (mismo keyword en documento y en bloque) | §14 |
+| `align "center"` / `valign "middle"` | alineación horizontal / vertical de texto | §4.8 |
 | `translate dx dy` / `rotate a` / `scale s` / `shear hx hy` | transformación local | §11 |
+
+`font_size` no es un keyword aparte del de documento (§3): es el **mismo**, y el `font_size` de documento es simplemente el del ámbito más externo. Igual que `world_window`, se redefine en un bloque anidado y se restaura al salir (§16). Un solo tamaño de texto, absoluto en pt.
 
 ### 7.4 Precedencia
 
@@ -815,7 +826,7 @@ text { "Tercera línea" }
 
 Los generadores (§13) toman `moveto` como punto de partida y `step` como avance entre elementos. Definir la pluma y el avance una vez evita repetir coordenadas en cada marca, número o repetición.
 
-> **Principio de diseño.** `moveto`/`step` son el mecanismo de *bajo nivel* heredado del motor (la matriz de pluma). Para las tareas comunes —ejes y retículas— se recomiendan las construcciones declarativas `axis` y `grid` (§13.5–§13.6), que esconden por completo la pluma. La meta de V3 es que el modelo de pluma sea un detalle de implementación, no la API que el usuario maneja a diario.
+> **Principio de diseño.** `moveto`/`step` son el mecanismo de *bajo nivel* heredado del motor (la matriz de pluma). Para las tareas comunes —ejes y retículas— se recomiendan las construcciones declarativas `axis` y `grid` (§13.5–§13.6), que esconden por completo la pluma. Además, los generadores (§13) aceptan `at=(x,y)` y `advance=(dx,dy)` en la propia llamada, evitando el trío `moveto`/`step`/generador cuando basta un avance por traslación. La meta de V3 es que el modelo de pluma sea un detalle de implementación, no la API que el usuario maneja a diario.
 
 ---
 
@@ -831,12 +842,16 @@ Los generadores producen series de elementos repetidos a partir de la posición 
 moveto(0, 0)
 step(translate=(2, 0))
 ticks(6, mark=(0, 0.3))
+
+% forma compacta equivalente: posición y avance en la propia llamada
+ticks(6, mark=(0, 0.3), at=(0, 0), advance=(2, 0))
 ```
 
 Genera `count` marcas; cada marca es un segmento dado por el vector `mark=(dx,dy)`, dibujado en la posición de pluma, que avanza con `step` en cada repetición. *(V1: `TICKS n dx dy`, con la pluma y `MTPP`.)*
 
 - `count` — número de marcas (posicional).
 - `mark=(dx,dy)` — vector que define longitud y dirección de cada marca.
+- `at=(x,y)` / `advance=(dx,dy)` — opcionales: fijan la posición inicial y el avance en la propia llamada, en lugar de `moveto`/`step`. `advance` es la traslación de posición entre marcas (equivale a `step(translate=…)`).
 
 ### 13.2 numbers — etiquetas numéricas
 
@@ -844,11 +859,14 @@ Genera `count` marcas; cada marca es un segmento dado por el vector `mark=(dx,dy
 moveto(0, -0.5)
 step(translate=(2, 0))
 numbers(from=0, by=2, count=6, decimals=0)   % 0  2  4  6  8  10
+
+% forma compacta equivalente (posición y avance en la llamada):
+numbers(from=0, by=2, count=6, decimals=0, at=(0, -0.5), advance=(2, 0))
 ```
 
-Genera `count` etiquetas numéricas, empezando en `from` e incrementando `by` en cada paso, con `decimals` decimales, en el estilo de texto actual (§14), posicionadas en la pluma y avanzando con `step`. *(V1: `GNNUM i0 inc n decimals`.)*
+Genera `count` etiquetas numéricas, empezando en `from` e incrementando `by` en cada paso, con `decimals` decimales, en el estilo de texto actual (§14), posicionadas en la pluma y avanzando con `step`. Opcionalmente, `at=(x,y)` y `advance=(dx,dy)` fijan la posición inicial y el avance en la propia llamada, sin `moveto`/`step`. *(V1: `GNNUM i0 inc n decimals`.)*
 
-> Nota: `by` es el incremento del **valor numérico**; `step` es el avance de la **posición**. Son independientes.
+> Nota: hay dos ejes independientes. `by` es el incremento del **valor numérico** impreso; `advance` (o `step`) es la traslación de la **posición** entre etiquetas. Se usa `advance` —no `step`— en la llamada, precisamente para no confundirlos.
 
 ### 13.3 Eje completo, a bajo nivel (ejemplo)
 
@@ -905,6 +923,29 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 
 *(V1: combinación manual de `TICKS` + `GNNUM` + `LNST`/`PL`; ver el desglose de bajo nivel en §13.3.)*
 
+> ⚠️ **Propuesta para estudiar (obligatorios / optativos).** La meta es que el caso común
+> pida el mínimo. Distinción propuesta:
+>
+> **Obligatorio:**
+> - El **anclaje geométrico**: los dos extremos físicos del bloque `{ p1 p2 }` — *salvo* que el
+>   eje esté dentro de un marco de datos (§13.7), donde el borde se elige con `edge="bottom" |
+>   "top" | "left" | "right"` y el bloque se omite.
+> - El **rango numérico** `from`/`to` — *salvo* dentro de un marco de datos, donde se **heredan**
+>   de la ventana (§16) y no se repiten.
+>
+> **Optativo (con default útil):**
+> - `step` **automático** si se omite: elegir un paso "redondo" (de la familia 1·10ᵏ, 2·10ᵏ,
+>   5·10ᵏ) que produzca ~5–8 marcas en el rango, al estilo de un localizador de ejes. Esto quita
+>   el parámetro más tedioso del caso común.
+> - `decimals` **derivado del paso** si se omite (un paso de 0.1 ⇒ 1 decimal).
+> - `ticks="out"`, `labels=true`, `tick_size`, `label_gap`, `title` — como en la tabla.
+>
+> **Candidatos nuevos a considerar:**
+> - `minor=n` — subdivisiones menores (marcas sin etiqueta) entre marcas mayores.
+> - `at=v` — posición del eje cruzado (p. ej. dibujar el eje X a la altura del cero, `at=0`).
+> - `scale="log"` — eje logarítmico (marcas y etiquetas en décadas).
+> - `format="%.1f"` / notación científica — formato de etiqueta más allá de `decimals`.
+
 ### 13.6 grid — retícula
 
 `grid` dibuja una retícula sobre el rectángulo dado por el bloque (esquina inferior-izquierda, esquina superior-derecha), con líneas verticales y horizontales a intervalos regulares.
@@ -915,6 +956,85 @@ grid(xstep=2, ystep=2, dash="dotted")      { 0 0  10 8 } % retícula punteada
 ```
 
 **Argumentos:** `xstep` / `ystep` (intervalos en unidades de usuario), más los atributos de estilo comunes (`color`, `width`, `dash`). Útil como fondo de una gráfica antes de trazar datos y ejes.
+
+### 13.7 Graficar datos: el marco de datos (⚠️ propuesta para estudiar)
+
+> Esta sección es un **borrador de diseño** para discutir mañana. El caso guía es
+> `examples/v1/fig2-3.mg` (capacidad calorífica del diamante vs. temperatura).
+
+**El problema.** En V1, para meter una curva en una caja de ejes el autor **pre-escala los
+datos a mano**. En fig2-3 la temperatura relativa va de 0 a 1.0, pero el autor la multiplicó
+×10 para ocupar la caja física `0..10` y luego etiquetó `0.1..1.0` por separado (`GNNUM 0.1
+0.1 10 1`). Ese doble trabajo —escalar la geometría y rotular el rango real— es exactamente lo
+que un eje declarativo debe eliminar.
+
+**La idea: reutilizar la ventana anidada (§16) como *marco de datos*.** Un plot no necesita un
+mecanismo nuevo: un bloque con su propia `world_window` **en unidades de datos** ya define el
+mapeo datos→caja física. Dentro de ese bloque, la curva y los puntos se dan **en coordenadas de
+datos** (sin ×10), y los ejes decoran los bordes heredando el rango de la ventana.
+
+Dos particularidades de un plot frente a una figura geométrica:
+
+1. **Es anisótropo por naturaleza.** Los dos ejes miden magnitudes sin relación (temperatura vs.
+   capacidad), así que el marco usa `stretch=true` (escala independiente por eje, §3.1/§16), no
+   la escala isométrica *meet* del resto del lenguaje. Un marco de datos **activa `stretch` por
+   default**.
+2. **El rango de datos ≠ el rango de dibujo.** La ventana de datos puede tener un margen respecto
+   a la caja física (para que la curva no toque el marco), como el `WW -1 11 -1 7` de fig2-3.
+
+**fig2-3 con marco de datos** (compárese con las ~40 instrucciones estilo ensamblador del V1):
+
+```text
+display_size 12 8
+world_window -1 11  -1 7            % lienzo físico exterior
+
+{                                   % ── marco de datos ──
+    world_window 0 1  0 6  stretch=true   % (xmin xmax ymin ymax) EN DATOS
+
+    % Curva: en coordenadas de datos, sin pre-escalar ×10
+    width 4
+    dash "dashed"
+    polyline { 0 0  0.076 0 }                       % tramo recto inicial
+    bezier   { 0.076 0  0.266 0.025  0.179 5.07  0.998 5.45 }
+
+    % Puntos experimentales (en datos)
+    width 2
+    dot(0.1) { 0.160 0.73  0.194 1.14  0.210 1.36  0.944 5.55 }
+
+    % Ejes: rango heredado de la ventana; solo se da la decoración.
+    % 'edge' elige el borde y omite el bloque de extremos (§13.5, propuesta).
+    axis(edge="bottom", step=0.1, title="relative temperature")
+    axis(edge="left",   step=1,   title="heat capacity")
+}
+```
+
+Aquí `axis` no repite `from`/`to`: los toma de la ventana del marco (`0..1` en x, `0..6` en y).
+La temperatura relativa se grafica **tal cual** (0.160, 0.194, …), y las etiquetas salen `0.1,
+0.2, …, 1.0` solas — el ×10 desaparece.
+
+**Relación con `fit` (§10.2).** El marco de datos y `fit` son el **mismo mecanismo** a distinta
+granularidad: `fit(Curva, stretch=true) { caja }` hace con una **struct reutilizable** (que trae
+su propia ventana en datos) lo que la ventana anidada hace *inline*. Para una curva de un solo
+uso, la ventana inline es más ligera; para una curva reutilizable o un panel repetido (fig4-10),
+`fit` sobre una struct es lo natural.
+
+**Azúcar opcional `plot { }` (a decidir).** Si el patrón "ventana de datos + dos ejes" es
+frecuente, un constructo `plot` podría empaquetarlo: la caja física en el bloque, los rangos como
+argumentos, `stretch` por default, y ejes con una línea:
+
+```text
+plot(x=(0,1), y=(0,6)) { -1 11  -1 7 } {   % rangos de datos ; caja física
+    xaxis(step=0.1, title="relative temperature")
+    yaxis(step=1,   title="heat capacity")
+    bezier   { ... }        % en datos
+    dot(0.1) { ... }        % en datos
+}
+```
+
+Queda abierto si el doble bloque (rango + caja / contenido) es aceptable o si conviene que `plot`
+tome solo el contenido y derive la caja de la ventana vigente. **Recomendación:** especificar
+primero el marco de datos con ventana anidada (no cuesta nada, reutiliza §16), y decidir el
+azúcar `plot` al traducir fig2-3 y fig4-10 (§22.6), cuando se vea cuánta repetición ahorra.
 
 ---
 
@@ -1012,15 +1132,16 @@ text(3, 3) { "$\sum_{n=0}^{\infty} a_n x^n$" }
 
 ```text
 text(x, y)                              % posición, fuente y tamaño del contexto
-text(x, y, size=12)                     % tamaño en puntos
+text(x, y, font_size=12)                % tamaño en puntos
 text(x, y, font="italic")               % fuente base: "roman", "italic", "bold",
                                         %   "italic-bold", "sanserif", "courier"
-text(x, y, align="center", color="red") % alineación y color
+text(x, y, align="center", color="red") % alineación horizontal y color
+text(x, y, valign="middle")             % alineación vertical
 ```
 
 La fuente base determina el punto de partida del markup interno; los `/b`, `/i`, etc. dentro del string son relativos a ella.
 
-> ⚠️ **Pendiente:** alineación vertical (baseline / centro / caja). Por ahora se asume baseline.
+La alineación vertical se controla con `valign`: `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Es ortogonal a `align` (horizontal), así que ambos se combinan y se fijan por separado, también como estado (§7.3).
 
 ---
 
@@ -1110,7 +1231,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Atributos heredados vs. explícitos** | ✓ Resuelto | Semántica de estado y bloques en §7: argumento explícito en la primitiva > estado del bloque interno > estado del bloque externo |
 | **`both_sides` en placements** | ⚠️ Abierto | El parámetro V1 `sc < 0` activa ambos lados de forma implícita. En V3 es `both_sides=true`, pero el significado geométrico exacto (perpendicular vs. especular) necesita documentarse |
 | **Texto: fuentes y estilos** | ✓ Resuelto | El markup interno del string (`/b`, `/i`, `$...$`, `\alpha`, `^{}`, `_{}`) lo maneja `parse_text()` sin cambios. Los argumentos de `text` cubren fuente base, tamaño y color (ver §14) |
-| **Texto: alineación vertical** | ⚠️ Abierto | ¿Baseline? ¿Centro vertical? ¿Caja del texto? Por ahora se asume baseline |
+| **Texto: alineación vertical** | ✓ Resuelto | Definido en §4.8/§7.3: `valign` (`"baseline"` default, `"top"`, `"middle"`, `"bottom"`), ortogonal a `align` (horizontal) y fijable como estado |
 | **Alcance (scope) de structs** | ✓ Resuelto | Definido en §15: nombres globales, no redefinibles, `include` antes del uso |
 | **Manejo de errores** | ◑ Parcial | El compilador ya reporta `archivo:línea`. Falta la columna |
 | **Ejes y marcas (TICKS)** | ✓ Resuelto | Definido en §13: `ticks`, `numbers`, `trail` y el declarativo `axis` |
@@ -1126,6 +1247,9 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Texto bajo `transform`** | ⚠️ Abierto | Deseado: que el texto rote/escale con los `transform` activos (EPS lo permite). Falta definir si se transforma solo el punto de anclaje o también los glifos |
 | **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
 | **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
+| **Graficar datos: marco de datos, `axis` obligatorios/optativos, `plot`** | ⚠️ Abierto | Borrador en §13.7: la curva se da en coordenadas de datos dentro de una `world_window` anidada con `stretch` (marco de datos, §16), y `axis` decora los bordes heredando el rango (`edge=`). Propuestas de §13.5: `step` automático, `edge=`, `minor`/`at`/`scale="log"`/`format`. Falta decidir el azúcar `plot { }`. Caso guía: fig2-3 (§22.6) |
+| **Modelo de iteración unificado (`for` vs `repeat` vs generadores)** | ◇ Prospectivo | Los tres constructos dedicados están justificados por un núcleo *irreducible* a un `for` + pluma: `repeat` con `transform` **acumulado** (§17), `place` por **longitud de arco** sobre path (§10), y el **formateo numérico** de `numbers`/`ticks` (`by`/`decimals`, §13). Su parte *reducible* (el `repeat` sin acumulación, el mero recorrido de `ticks`) podría especificarse como azúcar sobre `for` para dejar un único modelo de ejecución. Decidir al abordar la gramática con **fig4-10** (§22.6); relacionado con el reset de pluma (abierto G3 de `rpstest.mg`) |
+| **Tamaño de texto relativo (tipo TeX)** | ◇ Prospectivo | `font_size` es absoluto (pt), un solo keyword en documento y bloque (§7.3). Un segundo eje `text_size` como **factor** relativo a la base (efectivo = `font_size × text_size`) se pospone hasta que existan calificadores nombrados que lo aprovechen; el corpus usa tamaños absolutos sin ratios redondos |
 | **Resolución geométrica (estilo MetaPost)** | ◇ Prospectivo | Describir relaciones en vez de calcular coordenadas: intersección de dos líneas, punto a una fracción de un path, punto medio. Convertiría "dibujar" en "describir"; es el siguiente salto de expresividad tras `axis`/`grid` |
 
 ---
@@ -1148,10 +1272,10 @@ LWIDTH w   → width <w*0.2>    # sentencia de estado (§7); LWIDTH 0 → width 
 LPATRN n   → dash "solid"|"dashed"|"dotted"|"dashdot"|"dashdotdot"   # §4.10
 LCOLOR c   → color "c"        # sentencia de estado
 FCOLOR c   → fill "c"
-FGRAY g    → fill gray_to_hex(g)
+FGRAY g    → fill gray(1 - g/100)   # % de negro → intensidad 0..1 (§4)
 FILL/NOFILL→ fill "c" / fill "none"
 TALIGN n   → align "left"|"center"|"right"
-THEIGHT h  → size h
+THEIGHT h  → font_size h
 TLLC dx dy → translate dx dy  # transformaciones también son sentencias (§11.1)
 RTLC a     → rotate a
 SCLC sx sy → scale sx sy
@@ -1195,10 +1319,10 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `LCOLOR` | `color=` | ✓ | §4 |
 | `FCOLOR` | `fill=` | ✓ | §4 |
 | `FILL` / `NOFILL` | `fill=` (presencia/ausencia) | ✓ | §4 |
-| `LGRAY` / `FGRAY` | gris en `color=`/`fill=` | ✓ | §4 |
+| `LGRAY` / `FGRAY` | gris en `color=`/`fill=` (`gray(x)`, `x` 0..1) | ✓ | §4 |
 | `FPATRN` | `hatch=` / `hatch_gap=` | ✓ | §4.11 |
 | `TSTYLE` | `font=` | ✓ | §14.3 |
-| `THEIGHT` / `TSIZE` | `size=` | ✓ | §4.8 |
+| `THEIGHT` / `TSIZE` | `font_size=` | ✓ | §4.8 |
 | `TALIGN` | `align=` | ✓ | §4.8 |
 
 ### Estructuras y placements

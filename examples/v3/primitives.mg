@@ -11,16 +11,17 @@
 % Con estas dimensiones, 1 equivale a 0.5 cm (el canvas mide 11 cm)
 display_size 11 11
 
-% Tamaño base de texto: 15 pt ≈ 0.5 cm   ⚠ (keyword de config aún por fijar, §19)
+% Tamaño base de texto: 15 pt ≈ 0.5 cm (font_size es absoluto, mismo keyword
+% en documento y en bloque, §7.3)
 font_size 15
 
 world_window -1.1 1.1 -1.1 1.1
 
-% Checar ancho de línea  (V1 LWIDTH 60 → 60 × 0.2 = 12 pt)
+% Ancho de línea en pt (V1 LWIDTH 60 → 60 × 0.2 = 12 pt)
 width 12
 polyline { 0.05 0.1  0.05 0.2 }
 
-% Checar tamaño de letra  (V1 LWIDTH 0 → hairline)
+% Línea hairline: en V3 no hay grosor dependiente del aparato, se da explícito
 width 0.1
 polyline { 0.1 0  0.1 0.1 }
 text(0, 0) { "M" }
@@ -29,23 +30,27 @@ text(0, 0) { "M" }
 polyline { -1 0  1 0 }
 polyline { 0 -1  0 0.95 }
 
-% Todo el texto que sigue va centrado (V1 TALIGN 1)
+% Todo el texto que sigue va centrado (V1 TALIGN 1). align (horizontal) y valign
+% (vertical) son ortogonales; aquí basta el horizontal (§4.8).
 align "center"
+
 text(0, 1) { "Primitivos gráficos" }
 
-{                              % acota size/width de la sección
-    size 10
+{                              % acota font_size/width de la sección
+    font_size 10
     width 0.8
 
     text(0.5, 0.75) { "Círculo y arcos" }
-    circle(r=0.2)               { 0.5 0.5 }
-    arc(r=0.25, from=0,  to=90) { 0.5 0.5 }
-    arc(r=0.3,  from=30, to=45) { 0.5 0.5 }   % V1 CR 0.3 15 30: a0=30, da=15
-    arc(r=0.3,  from=0,  to=-30){ 0.5 0.5 }
+    circle(0.2)               { 0.5 0.5 }   % r posicional
+    arc(0.25, from=0,  to=90) { 0.5 0.5 }   % r posicional, ángulos nombrados
+    arc(0.3,  from=30, to=45) { 0.5 0.5 }   % V1 CR 0.3 15 30: a0=30, da=15
+    arc(0.3,  from=0,  to=-30){ 0.5 0.5 }
 
     text(-0.5, 0.75) { "Elipse" }
-    ellipse(rx=0.2, ry=0.1) { -0.5 0.5 }
+    ellipse(0.2, 0.1) { -0.5 0.5 }          % rx, ry posicionales (x, y)
 
+    % Caracteres acentuados: el motor recodifica el vector de las fuentes
+    % estándar cuando el texto los contiene (§18).
     text(0.5, -0.2) { "Rectángulo" }
     rectangle { 0.5 -0.25  0.75 -0.6 }
 
@@ -55,18 +60,16 @@ text(0, 1) { "Primitivos gráficos" }
 
     {                          % los mismos, ahora tramados y desplazados
         translate -0.2 -0.15
+        % V1: FCOLOR -cyan + FPATRN -2. En V3 la trama son trazos: color= fija el
+        % color de sus líneas (y el contorno, si se quiere). FPATRN 2 = hatch 45°,
+        % gap 4 — mapeo 1:1 (ver fill_styles.mg).
         color "green"
-        % V1: FCOLOR -cyan + FPATRN -2 (trama, con contorno). FPATRN 2 = hatch 45°,
-        % gap 4 — mapeo 1:1 (ver fill_styles.mg). Al haber FPATRN activo el relleno
-        % es TRAMA, no cian sólido, así que no hay fill= sólido.
-        % ⚠ Abierto (§4.11): ¿de qué color son las líneas de trama cuando también
-        %   se dio FCOLOR? (¿color= de trazo, o el de relleno?).
         hatch 45
         hatch_gap 4
         polygon { -0.2 -0.5  -0.4073 -0.2147  -0.7427 -0.3237
                   -0.7427 -0.6763  -0.4073 -0.785 }
-        circle(r=0.2)           { 0.5 0.5 }
-        ellipse(rx=0.2, ry=0.1) { -0.5 0.5 }
+        circle(0.2)       { 0.5 0.5 }
+        ellipse(0.2, 0.1) { -0.5 0.5 }
         rectangle { 0.5 -0.6  0.75 -0.25 }
     }
 }
