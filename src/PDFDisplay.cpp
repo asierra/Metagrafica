@@ -254,10 +254,14 @@ void PDFDisplay::moveto_nopath(double x, double y) {
 void PDFDisplay::moveto(double x, double y) {
   mt.transform(x, y);
   cur_x = x; cur_y = y;
-  if (!dspstate.openpath) set_limits(x, y, x, y);
-  else adjust_limits(x, y, x, y);
-  ensurePatternGSave();
-  prepareDraw();
+  // En un path abierto el estado gráfico ya se fijó en setOpenPath(); libharu
+  // prohíbe cambiarlo en modo path-construction, así que aquí solo se extiende.
+  if (!dspstate.openpath) {
+    set_limits(x, y, x, y);
+    ensurePatternGSave();
+    prepareDraw();
+  } else
+    adjust_limits(x, y, x, y);
   HPDF_Page_MoveTo(page, x, y);
 }
 
@@ -327,9 +331,14 @@ void PDFDisplay::stroke() {
 
 void PDFDisplay::setOpenPath(bool op) {
   Display::setOpenPath(op);
-  if (op)
+  if (op) {
     set_limits(1e10, 1e10, -1e10, -1e10);  // reinicia bbox del path (como EPS)
-  else
+    // libharu prohíbe cambiar el estado gráfico (color, gsave) en modo
+    // path-construction, así que se fija UNA vez aquí, antes de acumular. Las
+    // primitivas dentro del path abierto lo omiten (solo extienden el path).
+    ensurePatternGSave();
+    prepareDraw();
+  } else
     stroke();
 }
 
@@ -340,11 +349,15 @@ void PDFDisplay::setOpenPath(bool op) {
 void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
   mt.transform(x1, y1);
   mt.transform(x2, y2);
-  if (!dspstate.openpath) set_limits(x1, y1, x2, y2);
-  else adjust_limits(x1, y1, x2, y2);
-  ensurePatternGSave();
-  prepareDraw();
+  if (!dspstate.openpath) {
+    set_limits(x1, y1, x2, y2);
+    ensurePatternGSave();
+    prepareDraw();
+  } else
+    adjust_limits(x1, y1, x2, y2);
   HPDF_Page_Rectangle(page, x1, y1, x2-x1, y2-y1);
+  // En un path abierto solo se acumula; el cierre y relleno ocurren en CLPT.
+  if (dspstate.openpath) return;
   if (dspstate.fill && dspstate.fillpattern > 0) {
     hatchCurrentPath();
     if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
@@ -378,10 +391,12 @@ void PDFDisplay::arc(double x, double y, double w, double h,
   }
 
   double aw = fabs(w), ah = fabs(h);
-  if (!dspstate.openpath) set_limits(x - aw, y - ah, x + aw, y + ah);
-  else adjust_limits(x - aw, y - ah, x + aw, y + ah);
-  ensurePatternGSave();
-  prepareDraw();
+  if (!dspstate.openpath) {
+    set_limits(x - aw, y - ah, x + aw, y + ah);
+    ensurePatternGSave();
+    prepareDraw();
+  } else
+    adjust_limits(x - aw, y - ah, x + aw, y + ah);
   arc_bezier(page, x, y, aw, ah, sa, ea);
   stroke();
 }

@@ -14,7 +14,7 @@ EXDIR="$ROOT/examples/v1"
 GOLD="$ROOT/test/golden"
 
 FORMATS="eps svg"
-EXAMPLES="bzsinepaths-examples bzsinepaths fig2-3 fig6-1 fill_styles line_patterns primitives rpstest"
+EXAMPLES="bzsinepaths-examples bzsinepaths fig2-1 fig2-3 fig6-1 fill_styles line_patterns primitives rpstest"
 
 export LC_ALL=C
 

@@ -16,7 +16,7 @@ make clean
 ./bin/mg examples/v1/primitives.mg       # → primitives.eps
 ./bin/mg examples/v1/fig2-3.mg out.svg   # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden-file regression (EPS+SVG). MUST be ok=16 fail=0
+bash test/run.sh check    # golden-file regression (EPS+SVG). MUST be ok=18 fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
