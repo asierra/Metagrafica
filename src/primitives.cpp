@@ -69,6 +69,19 @@ void Rectangle::draw(Display &g) {
   }
 }
 
+
+void Polybar::draw(Display &g) {
+  // Cada punto del path es el centro superior de una barra; se expande a un
+  // rectángulo desde la base común (0) usando la primitiva rect() existente.
+  double half = width / 2.0;
+  for (const auto &p : path) {
+    if (horizontal)
+      g.rect(0.0, p.y - half, p.x, p.y + half);   // crece en x desde 0
+    else
+      g.rect(p.x - half, 0.0, p.x + half, p.y);    // crece en y desde 0
+  }
+}
+
 void Arc::draw(Display &g) {
   for (const auto &p : path) {
     g.arc(p.x, p.y, rx, ry, ai, af);

@@ -49,7 +49,8 @@ enum GraphicsItemType {
   GI_BEZIER,
   GI_TICKS,
   GI_DOT,
-  GI_CONCATENATEPATH
+  GI_CONCATENATEPATH,
+  GI_POLYBAR           // los valores nuevos van AL FINAL: hay código que depende de los ordinales
 };
 
 enum AttributeType {
@@ -148,7 +149,6 @@ struct point {
 };
 
 
-class GraphicsItem;
 using Path = std::vector<point>;
 
 // Abstract output device
@@ -198,6 +198,20 @@ public:
   void draw(Display &) override;
 };
 
+
+class Polybar : public GraphicsItemWithPath {
+public:
+  Polybar(GraphicsItemType t=GI_POLYBAR) : GraphicsItemWithPath(t) { }
+
+  void draw(Display &) override;
+
+  void setWidth(double w) { width = w; }
+  void setHorizontal(bool h) { horizontal = h; }
+
+private:
+  double width = 1.0;
+  bool horizontal = false;
+};
 
 /* 
    A rectangle is defined by a pair of points: the left lower point and the right upper point.

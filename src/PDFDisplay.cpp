@@ -347,15 +347,30 @@ void PDFDisplay::setOpenPath(bool op) {
 /* ------------------------------------------------------------------ */
 
 void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
-  mt.transform(x1, y1);
-  mt.transform(x2, y2);
+  // Las 4 esquinas en coords de mundo, transformadas individualmente: soporta
+  // rotación/shear (§4.4). El orden preserva el sentido (esquina invertida refleja).
+  double px[4] = {x1, x2, x2, x1};
+  double py[4] = {y1, y1, y2, y2};
+  for (int i = 0; i < 4; i++)
+    mt.transform(px[i], py[i]);
+  double minx = px[0], maxx = px[0], miny = py[0], maxy = py[0];
+  for (int i = 1; i < 4; i++) {
+    if (px[i] < minx) minx = px[i];
+    if (px[i] > maxx) maxx = px[i];
+    if (py[i] < miny) miny = py[i];
+    if (py[i] > maxy) maxy = py[i];
+  }
   if (!dspstate.openpath) {
-    set_limits(x1, y1, x2, y2);
+    set_limits(minx, miny, maxx, maxy);
     ensurePatternGSave();
     prepareDraw();
   } else
-    adjust_limits(x1, y1, x2, y2);
-  HPDF_Page_Rectangle(page, x1, y1, x2-x1, y2-y1);
+    adjust_limits(minx, miny, maxx, maxy);
+  HPDF_Page_MoveTo(page, px[0], py[0]);
+  HPDF_Page_LineTo(page, px[1], py[1]);
+  HPDF_Page_LineTo(page, px[2], py[2]);
+  HPDF_Page_LineTo(page, px[3], py[3]);
+  HPDF_Page_ClosePath(page);
   // En un path abierto solo se acumula; el cierre y relleno ocurren en CLPT.
   if (dspstate.openpath) return;
   if (dspstate.fill && dspstate.fillpattern > 0) {

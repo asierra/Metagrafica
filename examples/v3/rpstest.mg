@@ -5,8 +5,8 @@
 % con at/advance) y §7 (estado).
 
 struct Cuadro() {
-    % polyline, no rectangle: EPS/PDF no rotan rectangle; SVG sí (§4.4/§19)
-    polyline { 0 0  1 0  1 1  0 1  0 0 }
+    % rectangle ya es transformable (rota/deforma como SVG, §4.4) → uso directo
+    rectangle { 0 0  1 1 }
 }
 
 % 1) Repetición simple: 3 copias avanzando en x. Posición y avance en la propia

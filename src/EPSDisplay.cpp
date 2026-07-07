@@ -346,33 +346,49 @@ void EPSDisplay::line(double x1, double y1, double x2, double y2) {
 }
 
 void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
-  mt.transform(x1, y1);
-  mt.transform(x2, y2);
-  if (!dspstate.openpath) {
-    fprintf(file, "newpath\n");
-    set_limits(x1,y1,x2,y2);
-  } else 
-    adjust_limits(x1,y1,x2,y2);
+  // Las 4 esquinas en coords de mundo, transformadas individualmente: soporta
+  // rotación/shear (§4.4). El orden preserva el sentido (esquina invertida refleja).
+  double px[4] = {x1, x2, x2, x1};
+  double py[4] = {y1, y1, y2, y2};
+  for (int i = 0; i < 4; i++)
+    mt.transform(px[i], py[i]);
+
+  // Bounding box en dispositivo (para %%BoundingBox y el barrido del tramado)
+  double minx = px[0], maxx = px[0], miny = py[0], maxy = py[0];
+  for (int i = 1; i < 4; i++) {
+    if (px[i] < minx) minx = px[i];
+    if (px[i] > maxx) maxx = px[i];
+    if (py[i] < miny) miny = py[i];
+    if (py[i] > maxy) maxy = py[i];
+  }
+  if (!dspstate.openpath)
+    set_limits(minx, miny, maxx, maxy);
+  else
+    adjust_limits(minx, miny, maxx, maxy);
+
+  char quad[256];
+  snprintf(quad, sizeof quad,
+           "newpath %f %f moveto %f %f lineto %f %f lineto %f %f lineto closepath\n",
+           px[0], py[0], px[1], py[1], px[2], py[2], px[3], py[3]);
+
   if (isFilled()) {
     save();
     if (dspstate.fillcolor > 0)
       setColor(dspstate.fillcolor);
-    else 
+    else
       setGray(dspstate.fillgray);
-    if (dspstate.fillpattern==0)
-      fprintf(file, "%f %f %f %f rectfill\n", x1, y1, x2 - x1, y2 - y1);
+    if (dspstate.fillpattern == 0)
+      fprintf(file, "%sfill\n", quad);
     else {
-      fprintf(file,
-              "%f %f %f %f rect\n", x1, y1, x2, y2);
+      fprintf(file, "%s", quad);
       useFillPattern();
       if (dspstate.outlinefill)
         fprintf(file, "stroke\n");
     }
     restore();
-  } 
-  if (!dspstate.fill || dspstate.outlinefill) {
-    fprintf(file, "%f %f %f %f rectstroke\n", x1, y1, x2 - x1, y2 - y1);
   }
+  if (!dspstate.fill || dspstate.outlinefill)
+    fprintf(file, "%sstroke\n", quad);
 }
 
 void EPSDisplay::useFillPattern() {

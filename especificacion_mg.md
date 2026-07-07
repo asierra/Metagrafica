@@ -105,7 +105,7 @@ PathExpr    ::= "{" PointList "}"                % path literal
               | "fitrect" "(" "&" ID ")" "{" PointList "}"
 
 PrimName    ::= "polyline" | "polygon" | "circle" | "rectangle"
-              | "arc" | "ellipse" | "dot" | "marker" | "bezier"
+              | "arc" | "ellipse" | "dot" | "marker" | "polybar" | "sine" | "bezier"
 
 ParamList   ::= Param ("," Param)*
 Param       ::= ID ["=" Expression]              % parámetros con default, p. ej. size=0.2
@@ -117,7 +117,8 @@ Array       ::= "[" [ ArrayElem ("," ArrayElem)* ] "]"   % p. ej. [10,2,1,2] o [
 ArrayElem   ::= Expression | STRING | Tuple
 TransformList ::= TransformCall TransformCall*   % composición: rotate(30) scale(0.95)
 TransformCall ::= ("translate" | "rotate" | "scale" | "shear") "(" ExpressionList ")"
-PointList   ::= (Expression Expression)*
+PointList   ::= Subpath (";" Subpath)*        % ';' separa subtrayectos disjuntos
+Subpath     ::= (Expression Expression)+
 
 Condition   ::= Comparison (("and" | "or") Comparison)*
 Comparison  ::= Expression RelOp Expression
@@ -197,6 +198,8 @@ Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posic
 
 **Regla de coordenadas.** Las coordenadas de posición van **siempre en el bloque `{ }`**, nunca en los paréntesis. La regla no tiene excepciones, incluido el texto: `text("etiqueta") { x y }` coloca la cadena igual que `circle(r) { x y }` coloca un círculo (§4.8). El paréntesis lleva *contenido y atributos* (qué se dibuja y con qué estilo); el bloque lleva *dónde* (uno o varios puntos). De esa ortogonalidad sale gratis la siembra múltiple: `circle(0.2) { 0 0  5 5 }` traza dos círculos y `text("×") { 0 0  5 5 }` estampa la misma etiqueta en dos puntos.
 
+**Subtrayectos (`;`).** Dentro del bloque de una primitiva de trazo (`polyline`, `polygon`, `bezier`, `spline`), un `;` separa **subtrayectos disjuntos**: `polyline { a b ; c d }` dibuja dos trazos independientes con el mismo estilo, sin conectarlos —evita repetir la primitiva cuando varios trazos comparten estilo. En `polygon` cada subtrayecto se cierra y rellena por separado; para un relleno **combinado con huecos** (regla par-impar) se usa `compound` (§9.4), no `;`.
+
 **Argumentos de estilo comunes (todos opcionales y nombrados):**
 - `color="blue"` / `color="#4080FF"` — color de trazo
 - `fill="red"` / `fill="#RRGGBB"` — color de relleno (activa relleno sólido)
@@ -257,7 +260,9 @@ El bloque `{ }` contiene pares `x y` de centros. Por cada par se dibuja un círc
 rectangle(fill="gray") { 1 1  9 7 }  % esquina inferior-izquierda, esquina superior-derecha
 ```
 
-Se define por dos esquinas opuestas. **Bajo rotación o shear los backends aún no son consistentes** (pendiente, §19): SVG transforma las cuatro esquinas y produce el cuadrilátero girado correcto, pero EPS y PDF transforman solo las dos esquinas dadas y dibujan una caja **alineada a los ejes de dispositivo** entre ellas —una rotación de 45° da una caja recta equivocada, no un cuadrado girado. Bajo escala/traslación puras los tres coinciden. Hasta unificarlo, una struct que vaya a rotarse debe trazar su contorno con `polyline` (así lo hace `Cuadro` en `examples/v3/rpstest.mg`).
+Se define por dos esquinas opuestas y es una **forma transformable** (como el `<rect>` de SVG): bajo rotación, shear o escala anisótropa se dibuja transformando **las cuatro esquinas**, produciendo el cuadrilátero girado/deformado correcto —no una caja realineada a los ejes. Bajo traslación y escala uniforme queda el rectángulo de siempre. El orden de las esquinas se respeta: una esquina invertida **refleja** el contenido, igual que en `fit` (§10.2).
+
+*(Implementado en los tres backends: `SVGDisplay`, `EPSDisplay::rect` y `PDFDisplay::rect` emiten el path de 4 esquinas transformadas —trazo, relleno y clip del tramado §4.11.)*
 
 ### 4.5 arc
 
@@ -268,7 +273,7 @@ arc(rx=4, ry=2, from=0, to=360) { 5 5 }  % arco elíptico completo
 
 ### 4.6 dot y marker — marcadores de tamaño físico
 
-Ambos estampan un símbolo en cada posición del bloque. Son **marcadores de tamaño físico**: su **posición** la transforma el sistema de coordenadas vigente, pero su **tamaño** se emite en unidades de dispositivo y **no** lo afectan la ventana ni las transformaciones —a diferencia del radio de `circle`, que es cantidad de mundo (§3.2). Por eso son el primitivo correcto para marcar datos dentro de un marco `stretch` (§13.7): los símbolos caen donde deben y no se deforman por la anisotropía del marco.
+Ambos estampan un símbolo en cada posición del bloque. Son **marcadores de tamaño físico**: su **posición** la transforma el sistema de coordenadas vigente, pero su **tamaño** (el radio `r`) es una cantidad **física, en puntos (pt)** —como `line_width` y `font_size`, §3.2— y **no** lo afectan la ventana ni las transformaciones, a diferencia del radio de `circle`, que es cantidad de mundo. Por eso son el primitivo correcto para marcar datos dentro de un marco `stretch` (§13.7): los símbolos caen donde deben y no se deforman por la anisotropía del marco.
 
 **`dot(r)`** es el caso base: un disco de radio físico `r`. Por defecto relleno; con `color=` y sin `fill=`, un círculo **abierto** (convención §4). Se conserva por brevedad y compatibilidad.
 
@@ -445,6 +450,47 @@ polygon { 6 0  9 0  9 5  6 5 }
   El segundo valor posicional es el paso; equivale a fijarlo aparte con `hatch_gap 4`. Como el ángulo está limitado a cuatro valores, el paso nunca resulta ambiguo.
 
 *(V1: `FCOLOR c` + `FPATRN` → `color "c"` + `hatch a`; el `FCOLOR` de la trama es el color de trazo, no un relleno sólido. `FPATRN n` codificaba ángulo y densidad de forma combinada en el índice `n`; `n` negativo añadía el contorno.)*
+
+### 4.12 polybar — barras (histogramas)
+
+Dibuja una **barra** (rectángulo) por cada punto del bloque, desde una base común (0) hasta la altura dada. Cada punto es el **centro superior** de su barra. Pensada para histogramas y series de datos.
+
+```text
+polybar(width=0.8, fill="gray") { 1 40  2 55  3 30  4 70 }
+```
+
+- `width` — ancho geométrico de la barra en unidades de mundo, centrada sobre la x. **Obligatorio.**
+- `dir="horizontal"` — las barras crecen en x desde 0; entonces la x del bloque es la **longitud** y la y la **posición** vertical. Default: vertical.
+- Relleno, contorno y estilo siguen §4 (`fill`, `color`, `line_width`, `dash`, `hatch`), como cualquier forma cerrada.
+
+**Barras superpuestas** (dos series sobre las mismas x) = dos `polybar` con distinto `width`/`fill`/`dash`:
+
+```text
+{
+    line_width 1.5
+    polybar(width=0.8, fill="gray")  { 1 40  2 55  3 30  4 70 }
+    polybar(width=0.4, fill="black") { 1 35  2 60  3 25  4 65 }
+}
+```
+
+Internamente `polybar` expande cada punto a un `rectangle` (§4.4) usando el `rect()` del motor, así que **no requiere lógica nueva en los backends**, y las barras heredan que `rectangle` es transformable. *(V0: se usó en el primer artículo publicado —los histogramas de espectro, `docs/first_article.pdf` figs. 4–6.)*
+
+### 4.13 sine — segmento senoidal
+
+Dibuja una **onda senoidal** a lo largo del segmento base dado en el bloque, oscilando perpendicular a él. Pensada para funciones de onda, señales y curvas periódicas suaves, sin ensamblar aproximaciones bezier a mano.
+
+```text
+sine(half_cycles=3, amplitude=1.2) { 0 5  10 5 }   % 3 jorobas de seno sobre la base
+```
+
+- `half_cycles` — número de medios ciclos (jorobas) a lo largo de la base. **Obligatorio.** `sin(nπx)` ⇒ `half_cycles=n`.
+- `amplitude` — amplitud perpendicular, en unidades de mundo. **Obligatorio.**
+- `squared=true` — dibuja el **cuadrado** de la onda, `sin²` (una densidad `|ψ|²`): las jorobas quedan todas positivas, con forma de coseno levantado. Default `false`.
+- La base puede ser cualquier segmento (horizontal, vertical o inclinado); la onda oscila perpendicular. Estilo (`color`, `line_width`, `dash`) como cualquier trazo.
+
+Internamente `sine` se aproxima con curvas bezier (las mismas de `bzsinepaths`); el caso `squared` usa la aproximación de **coseno levantado** —el `&cos2pi` del V1—, no el seno. Pero eso es invisible: el autor solo da jorobas y amplitud.
+
+*(V1: se ensamblaba a mano con `BZ &sinpi`/`&sin2pi`/`&cos2pi` + `RPPT` (tile) + la pila de matrices de path `IDPT`/`TLPT`/`SCPT`. `sine` colapsa todo eso. Caso guía: fig4-10, los niveles del pozo infinito.)*
 
 ---
 
@@ -805,6 +851,7 @@ place(Tick, scale=0.2) { 0.1 0.2  0.3 0.5  0.7 0.8 }
 **Argumentos nombrados:**
 - `scale` — tamaño de la struct (default 1.0).
 - `shift` — desplazamiento del inicio como fracción del intervalo (default 0).
+- `count` — número de instancias repartidas uniformemente sobre el locus. Alternativa a `gap`: dar `count` fija `gap = longitud/count`. *(línea/arco)*
 - `gap` — espaciado entre instancias (default = escala). *(solo línea)*
 - `both_sides` — colocar también en el lado opuesto (default false).
 - `r`, `sweep`, `from` — radio, barrido angular total y ángulo inicial en grados. *(solo arco)*
@@ -826,13 +873,15 @@ fit(Panel, stretch=true) { 0 0  10 8 }  % deforma para llenar el rectángulo exa
 
 Por default preserva la proporción de la struct: escala uniforme al mayor tamaño que cabe en el rectángulo, con el contenido centrado (misma semántica *meet* de §3.1). Con `stretch=true` se deforma para ocupar el rectángulo exacto, que a veces es lo deseado.
 
-**V1:** `PWST` / `PVPT` (siempre deformaban al rectángulo).
+**El orden de las esquinas importa: refleja.** El bloque `{ p1 p2 }` mapea la caja de la struct a esas dos esquinas *en ese orden*; si un eje queda decreciente —p. ej. `{ .5 0  0 1 }`, con la x de `p1` mayor que la de `p2`— el contenido se **refleja** en ese eje. Es un idiom compacto para espejar un panel: `curvas3.mg` lo usa para armar un patrón de difracción simétrico a partir de media curva. *(Motor: `StructureRectangle::draw` vía `Matrix::to_rectangle`, que admite escala negativa.)*
+
+**V1:** `PWST` / `PVPT` (siempre deformaban al rectángulo; el orden de esquinas ya reflejaba).
 
 ### Cuadro comparativo V1 → V3
 
 | V1 | V3 | Semántica |
 |---|---|---|
-| `LNST sc [sh [n [gap]]] p1 p2` | `place(s, scale, shift, gap) { p1 p2 }` | Struct a lo largo de línea |
+| `LNST sc [sh [n [gap]]] p1 p2` | `place(s, scale, shift, count\|gap) { p1 p2 }` | Struct a lo largo de línea (V1 `n` → `count`) |
 | `ARCST sc r da ai [sh [n]] p` | `place(s, scale, r, sweep, from) { c }` | Struct a lo largo de arco |
 | `DPST name` / `&name path` | `place(s, scale) { &path }` | Struct a lo largo de path |
 | `PWST p1 p2` / `PVPT name p1 p2` | `fit(s, stretch=true) { p1 p2 }` | Struct ajustada a rectángulo (V1 deformaba; el default V3 preserva proporción) |
@@ -1373,7 +1422,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Regla de relleno en `compound`** | ✓ Resuelto | Definido en §9.4: `fill_rule="non-zero"` (default) / `"even-odd"` |
 | **Aspect ratio / no-deformación** | ✓ Resuelto | Definido en §3.1: escala uniforme (*meet*) + margen con `align=`; `stretch=true` para deformar; `fit` preserva proporción por default (§10.2); ventanas anidadas isométricas (§16) |
 | **Texto bajo `transform`** | ⚠️ Abierto | Deseado: que el texto rote/escale con los `transform` activos (EPS lo permite). Falta definir si se transforma solo el punto de anclaje o también los glifos |
-| **`rectangle` bajo rotación/shear** | ⚠️ Abierto | Inconsistencia de backend: SVG rota bien —transforma las 4 esquinas (`SVGDisplay::rect`)—, pero EPS/PDF transforman solo las 2 esquinas dadas y emiten una caja alineada a ejes (`EPSDisplay::rect`; `HPDF_Page_Rectangle`), así que una rotación las deforma. Solución: que EPS/PDF construyan el path de 4 esquinas transformadas, como SVG. Trivial para trazo/relleno sólido; el caso tramado necesita además rotar el clip del hatch (§4.11). Mientras tanto, las structs rotables trazan su contorno con `polyline` (§8, `rpstest.mg`) |
+| **`rectangle` bajo rotación/shear** | ✓ Resuelto | `rectangle` es forma transformable como SVG (§4.4): se transforman las 4 esquinas. **Implementado** en los tres backends —`EPSDisplay::rect` y `PDFDisplay::rect` emiten el path de 4 esquinas (trazo/relleno + clip de tramado); SVG ya lo hacía. Verificado: rotado coincide con SVG, no-rotado idéntico; goldens EPS re-bendecidos (ok=18) |
 | **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
 | **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
 | **Graficar datos: marco de datos, `axis` obligatorios/optativos, `plot`** | ⚠️ Abierto | Borrador en §13.7: la curva se da en coordenadas de datos dentro de una `world_window` anidada con `stretch` (marco de datos, §16), y `axis` decora los bordes heredando el rango (`edge=`). Propuestas de §13.5: `step` automático, `edge=`, `minor`/`at`/`scale="log"`/`format`. Falta decidir el azúcar `plot { }`. Caso guía: fig2-3 (§22.6) |
