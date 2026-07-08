@@ -259,6 +259,12 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     out.push_back(std::move(a));
     return true;
   }
+  if (name == "font_size") {                                        // §14: alto de texto en pt
+    auto a = std::make_unique<Attribute>();
+    a->set(AT_THEIGHT, (int)v.num);   // estado en el flujo (V1 THEIGHT): conmutable mid-doc
+    out.push_back(std::move(a));
+    return true;
+  }
   return false;   // dash/hatch/font/align/transform… → pendientes
 }
 
@@ -296,7 +302,6 @@ struct ConfigStmt : Stmt {
     auto n = [&](size_t i) { return args[i]->eval(s).num; };
     if (which == "display_size")      mg.setDimension(n(0), n(1));
     else if (which == "world_window") mg.setWindow(n(0), n(2), n(1) - n(0), n(3) - n(2));
-    else if (which == "font_size")    mg.setFontSize(n(0));
   }
 };
 
@@ -465,6 +470,12 @@ static point namedScale(Scope &s, const std::map<std::string, ExprPtr> &m, const
   Value v = it->second->eval(s);
   if (v.type == Value::LIST && v.items.size() >= 2) return point(v.items[0].num, v.items[1].num);
   return point(v.num, v.num);   // scale=s uniforme
+}
+static std::string namedStr(Scope &s, const std::map<std::string, ExprPtr> &m, const char *k) {
+  auto it = m.find(k);
+  if (it == m.end()) return "";
+  Value v = it->second->eval(s);
+  return v.type == Value::STRING ? v.str : "";
 }
 
 // Constructor de matriz para transform= (§17): rotate(a)/scale(a[,b])/translate(a,b)/
@@ -763,7 +774,37 @@ struct TextStmt : Stmt {
   }
 };
 
-static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window" || n == "font_size"; }
+// numbers (§13.2): serie de etiquetas numéricas. El valor arranca en `from` y
+// crece `by` por paso; `count` etiquetas con `decimals` decimales, envueltas por
+// `prefix`/`suffix` (cadenas literales). La POSICIÓN arranca en `at` y avanza
+// `advance` por paso (§13; forma compacta at/advance, sin pluma). Las etiquetas
+// heredan el estado de texto vigente, como text(). V1: GNNUM i0 inc n decimals.
+struct NumbersStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    double from = namedNum(s, named, "from", 0);
+    double by   = namedNum(s, named, "by", 1);
+    int    count = (int)namedNum(s, named, "count", 0);
+    int    dec  = (int)namedNum(s, named, "decimals", 0);
+    std::string prefix = namedStr(s, named, "prefix");
+    std::string suffix = namedStr(s, named, "suffix");
+    point at  = namedPoint(s, named, "at", 0, 0);
+    point adv = namedPoint(s, named, "advance", 0, 0);
+    char fmt[8];
+    std::snprintf(fmt, sizeof fmt, "%%.%df", dec < 0 ? 0 : dec);
+    for (int i = 0; i < count; i++) {
+      char num[64];
+      std::snprintf(num, sizeof num, fmt, from + i * by);
+      std::string label = prefix + num + suffix;
+      auto gs = std::make_unique<GraphicsState>();
+      gs->setPosition(point(at.x + i * adv.x, at.y + i * adv.y));
+      out.push_back(std::move(gs));
+      out.push_back(parse_text(label, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+    }
+  }
+};
+
+static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
          n == "dot" || n == "arc" || n == "ellipse" || n == "bezier";
@@ -867,6 +908,13 @@ static StmtPtr parseStatement(Lexer &lx) {
       }
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
+    return st;
+  }
+  if (name == "numbers") {                    // numbers(from=, by=, count=, …) (§13.2)
+    auto st = std::make_unique<NumbersStmt>();
+    if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras numbers");
+    std::vector<ExprPtr> pos;
+    parseArgList(lx, pos, st->named);
     return st;
   }
   if (lx.peek().type == T_LPAREN) return parseInvoke(lx, name);   // invocación: Nombre( … )
