@@ -258,7 +258,7 @@ static bool emitStyleAttr(const std::string &, const Value &, GraphicsItemList &
 // relleno). Emite en `attrs` los GraphicsItem que el llamador acota con push/pop.
 static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
                           GraphicsItemList &attrs) {
-  for (const char *k : {"color", "fill", "line_width"}) {
+  for (const char *k : {"color", "fill", "line_width", "dash"}) {
     auto it = named.find(k);
     if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
   }
@@ -320,7 +320,18 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     auto at = std::make_unique<Attribute>(); at->set(AT_TALIGN, a); out.push_back(std::move(at));
     return true;
   }
-  return false;   // dash/hatch/valign/transform… → pendientes
+  if (name == "dash") {                                             // §4.10: patrón de línea
+    int idx = 0;                                                    // solid/none/continuous → 0
+    if (v.type == Value::STRING) {
+      if (v.str == "dashed") idx = 2;                               // dashArrayForIndex: {4,2}
+      else if (v.str == "dotted") idx = 3;                          // {2,1.6}
+      else if (v.str == "dashdot" || v.str == "dash-dot") idx = 4;  // {4,2,1,2}
+      else if (v.str == "dashdotdot") idx = 5;                      // {4,2,2,2,2,2}
+    }
+    auto a = std::make_unique<Attribute>(); a->set(AT_LSTYLE, idx); out.push_back(std::move(a));
+    return true;
+  }
+  return false;   // hatch/valign/transform… → pendientes
 }
 
 struct Stmt {

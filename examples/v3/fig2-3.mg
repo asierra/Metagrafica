@@ -25,6 +25,7 @@ line_width 0.8
 dash "dashed"
 polyline { 0 0  0.076 0 }                                  % tramo recto inicial
 bezier   { 0.076 0  0.26602 0.0247  0.17879 5.0734  0.99809 5.4533 }
+dash "solid"                                               % V1 LPATRN 0: la trama solo aplica a la curva
 
 % ── Puntos experimentales ───────────────────────────────────────────────────
 % dot es marcador FÍSICO (§4.6): la posición la transforma el marco stretch, el
