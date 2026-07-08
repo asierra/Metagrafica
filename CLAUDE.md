@@ -11,12 +11,12 @@ The forward-looking design lives in `especificacion_mg.md`: §3.1 (isometric spa
 ## Build and test
 
 ```bash
-make                  # build bin/mg and man page
+make                  # build bin/mg (the V3 compiler) and man page
 make clean
-./bin/mg examples/v1/primitives.mg       # → primitives.eps
-./bin/mg examples/v1/fig2-3.mg out.svg   # backend by extension (.eps/.svg/.pdf)
+./bin/mg examples/v3/primitives.mg       # → primitives.eps
+./bin/mg examples/v3/fig2-3.mg out.svg   # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden-file regression (EPS+SVG). MUST be ok=18 fail=0
+bash test/run.sh check    # golden-file regression (EPS+SVG). MUST be ok=28 fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
@@ -32,7 +32,7 @@ The example corpus is split for the V1→V3 transition (see `examples/v1/README.
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
 - **`examples/v3/`** — V3-syntax staging (new grammar §1–§18). **Not compilable yet** — no V3 parser exists; these are spec fixtures / translation targets whose render must match the v1 reference.
 
-`test/run.sh` currently compiles `examples/v1/`; at cutover it moves to `examples/v3/`. The current `bin/mg` on `main` still parses V1 (V3 grammar not implemented yet).
+**Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila `examples/v3/`, con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1). `src/main.cpp`, `src/Parser.cpp`, `src/lexmg.cpp` (front-end V1) quedan en el árbol pero **fuera del build**; V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
 ## Architecture
 
