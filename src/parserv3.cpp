@@ -757,11 +757,27 @@ struct PlaceStmt : Stmt {
     if (coords.size() < 4) { evalError("place sobre línea requiere 2 puntos"); return; }
     point p1(coords[0]->eval(caller).num, coords[1]->eval(caller).num);
     point p2(coords[2]->eval(caller).num, coords[3]->eval(caller).num);
-    auto sr = std::make_unique<StructureLine>();
+
+    // count>1: reparte count instancias UNIFORMES a lo largo del segmento (§10.1).
+    // Cada instancia se posiciona directo del locus (sin acumular transformación,
+    // a diferencia de repeat §17) → más barato. Reusa StructurePath, que coloca la
+    // struct en cada punto del path orientándola a la tangente local.
+    if (count > 1) {
+      Path pth;
+      for (int i = 0; i < count; i++) {
+        double t = (double)i / (count - 1);              // extremos incluidos
+        pth.push_back(point(p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y)));
+      }
+      auto sp = std::make_unique<StructurePath>();
+      sp->setStructure(s); sp->setScale(scale); sp->setPath(std::move(pth)); sp->setOrient(true);
+      out.push_back(std::move(sp));
+      return;
+    }
+
+    auto sr = std::make_unique<StructureLine>();          // count≤1: marcador(es) + línea
     sr->setStructure(s); sr->setScale(scale, scale); sr->setPoints(p1, p2);
     sr->setShift(shift); sr->setGap(gap); sr->setBothSides(both);
     out.push_back(std::move(sr));
-    (void)count;   // count uniforme: pendiente (fig4-1), calibrar contra oráculo
   }
 };
 
