@@ -79,6 +79,8 @@ struct IdentExpr : Expr {
   explicit IdentExpr(std::string n) : name(std::move(n)) {}
   Value eval(Scope &sc) const override {
     if (name == "pi") return Value(M_PI);
+    if (name == "true")  return Value(1.0);      // booleanos como número (§6.1)
+    if (name == "false") return Value(0.0);
     if (Value *v = sc.find(name)) return *v;
     return evalError("variable no definida: ", name);
   }
@@ -93,11 +95,15 @@ struct UnExpr : Expr {           // solo '-' unario (§2)
   }
 };
 
-struct BinExpr : Expr {          // + - * / ^
+struct BinExpr : Expr {          // + - * / ^   y comparación/lógicos (§6.1)
   int op;
   ExprPtr l, r;
   BinExpr(int o, ExprPtr a, ExprPtr b) : op(o), l(std::move(a)), r(std::move(b)) {}
   Value eval(Scope &sc) const override {
+    // and/or con cortocircuito: no evalúa la rama derecha si no hace falta
+    // (permite guardas como `i < len(a) and a[i] > 0`). Booleano = número !=0.
+    if (op == T_AND) return Value(l->eval(sc).num != 0.0 && r->eval(sc).num != 0.0 ? 1.0 : 0.0);
+    if (op == T_OR)  return Value(l->eval(sc).num != 0.0 || r->eval(sc).num != 0.0 ? 1.0 : 0.0);
     double a = l->eval(sc).num, b = r->eval(sc).num;
     switch (op) {
       case T_PLUS:  return Value(a + b);
@@ -105,6 +111,12 @@ struct BinExpr : Expr {          // + - * / ^
       case T_STAR:  return Value(a * b);
       case T_SLASH: return Value(a / b);
       case T_CARET: return Value(std::pow(a, b));
+      case T_EQ:    return Value(a == b ? 1.0 : 0.0);
+      case T_NE:    return Value(a != b ? 1.0 : 0.0);
+      case T_LT:    return Value(a <  b ? 1.0 : 0.0);
+      case T_GT:    return Value(a >  b ? 1.0 : 0.0);
+      case T_LE:    return Value(a <= b ? 1.0 : 0.0);
+      case T_GE:    return Value(a >= b ? 1.0 : 0.0);
     }
     return evalError("operador binario desconocido");
   }

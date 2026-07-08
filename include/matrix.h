@@ -30,6 +30,11 @@ enum MatrixOperation {
   OPMMT, // Define
   OPMID, // Identity
   OPMCP, // Compose
+  // V3 (al final: no desplazar ordinales que usa V1). Apilan/restauran la matriz
+  // acumulada `mt` con una Matrix dada (marco T·R·S de una invocación con
+  // at/rotate/scale, §8). Igual que los placements: pushMatrix(m)/popMatrix().
+  OPMPUSH,
+  OPMPOP,
 };
 
 using DataMatrix = double[3][3];

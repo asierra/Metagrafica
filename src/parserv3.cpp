@@ -16,8 +16,14 @@
 
 // Motor reutilizado (árbol dibujable + backends)
 #include "structures.h"    // MetaGrafica, GraphicsItemList, point, Path, primitivas
+#include "text_parser.h"   // parse_text: markup de texto (super/subíndices, TeX, math)
+#include "mgflags.h"       // MGFlags: banderas de uso para el backend (reencode, cmmi…)
 #include "SVGDisplay.h"
 #include "EPSDisplay.h"
+
+// Banderas de uso recogidas durante la evaluación (parse_text las activa); se
+// vuelcan al Display antes de dibujar, igual que main.cpp V1 (g.flags = parser.flags).
+static MGFlags g_flags;
 
 // --- Interfaz al scanner generado por Flex (src/lexer.l) ---------------------
 extern int   yylex();
@@ -164,11 +170,42 @@ static ExprPtr parseTerm(Lexer &lx) {         // Unary (("*"|"/") Unary)*
   return e;
 }
 
-static ExprPtr parseExpression(Lexer &lx) {   // Term (("+"|"-") Term)*
+static ExprPtr parseAdditive(Lexer &lx) {     // Term (("+"|"-") Term)*
   ExprPtr e = parseTerm(lx);
   while (lx.peek().type == T_PLUS || lx.peek().type == T_MINUS) {
     int op = lx.next().type;
     e = ExprPtr(new BinExpr(op, std::move(e), parseTerm(lx)));
+  }
+  return e;
+}
+
+// Comparación (§6.1): Additive [ (== != < > <= >=) Additive ]. No asociativa
+// (un solo comparador; encadenar se hace con `and`).
+static bool isCmpOp(int t) {
+  return t == T_EQ || t == T_NE || t == T_LT || t == T_GT || t == T_LE || t == T_GE;
+}
+static ExprPtr parseComparison(Lexer &lx) {
+  ExprPtr e = parseAdditive(lx);
+  if (isCmpOp(lx.peek().type)) {
+    int op = lx.next().type;
+    e = ExprPtr(new BinExpr(op, std::move(e), parseAdditive(lx)));
+  }
+  return e;
+}
+static ExprPtr parseAnd(Lexer &lx) {          // Comparison ("and" Comparison)*
+  ExprPtr e = parseComparison(lx);
+  while (lx.peek().type == T_AND) {
+    lx.next();
+    e = ExprPtr(new BinExpr(T_AND, std::move(e), parseComparison(lx)));
+  }
+  return e;
+}
+// Entrada de expresión: `or` es el operador de menor precedencia (§6.1).
+static ExprPtr parseExpression(Lexer &lx) {   // And ("or" And)*
+  ExprPtr e = parseAnd(lx);
+  while (lx.peek().type == T_OR) {
+    lx.next();
+    e = ExprPtr(new BinExpr(T_OR, std::move(e), parseAnd(lx)));
   }
   return e;
 }
@@ -291,9 +328,158 @@ struct InvokeStmt : Stmt {
       else if (def->defaults[i])   local.vars[pn] = def->defaults[i]->eval(local);
       else                         local.vars[pn] = Value(0);
     }
+    // Modificadores de colocación (§8): at/rotate/scale → marco canónico fijo
+    // T·R·S (post-multiplicación: escala/gira en el marco local, luego traslada;
+    // el orden de escritura es irrelevante). Se evalúan en el ámbito del llamador.
+    // Nombres reservados: no son parámetros de la struct.
+    Matrix frame;
+    bool hasFrame = false;
+    auto ait = named.find("at"), rit = named.find("rotate"), sit = named.find("scale");
+    if (ait != named.end()) {
+      Value v = ait->second->eval(caller);
+      if (v.type == Value::LIST && v.items.size() >= 2) { frame.translate(v.items[0].num, v.items[1].num); hasFrame = true; }
+    }
+    if (rit != named.end()) { frame.rotate(rit->second->eval(caller).num); hasFrame = true; }
+    if (sit != named.end()) {
+      Value v = sit->second->eval(caller);
+      if (v.type == Value::LIST && v.items.size() >= 2) frame.scale(v.items[0].num, v.items[1].num);
+      else                                              frame.scale(v.num, v.num);
+      hasFrame = true;
+    }
+
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));  // aísla estado (como structure())
+    if (hasFrame) {
+      auto t = std::make_unique<Transform>();
+      t->setOperation(OPMPUSH); t->setMatrix(frame);
+      out.push_back(std::move(t));
+    }
     for (auto &st : def->body) st->exec(local, mg, out);
+    if (hasFrame) {
+      auto t = std::make_unique<Transform>();
+      t->setOperation(OPMPOP);
+      out.push_back(std::move(t));
+    }
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
+// Bucle (§6): for var = a to b [step s] { … }. La variable es local al bucle
+// (restaura el valor previo al salir: vive en un Scope hijo que se descarta).
+// El cuerpo es un BlockStmt → cada iteración apila/restaura el estado gráfico
+// y abre su propio ámbito léxico, igual que un bloque { } (§7.1). Inclusivo en
+// ambos extremos; step puede ser negativo (§6).
+struct ForStmt : Stmt {
+  std::string var;
+  ExprPtr start, end, step;      // step null = 1
+  StmtPtr body;                  // BlockStmt
+  void exec(Scope &parent, MetaGrafica &mg, GraphicsItemList &out) override {
+    double a = start->eval(parent).num;
+    double b = end->eval(parent).num;
+    double s = step ? step->eval(parent).num : 1.0;
+    if (s == 0.0) { evalError("step 0 en for (bucle infinito)"); return; }
+    Scope loop(&parent);         // aloja la variable del for; se descarta al salir
+    const double eps = 1e-9;
+    for (double v = a; s > 0 ? v <= b + eps : v >= b - eps; v += s) {
+      loop.vars[var] = Value(v);
+      body->exec(loop, mg, out);
+    }
+  }
+};
+
+// Condicional (§6.1): if cond { … } [else { … }] | [else if …]. Los cuerpos son
+// BlockStmt → ámbito léxico + estado gráfico como los bloques { } (§7.1). Su uso
+// principal es la condición de paro de structs recursivas (§8.1).
+struct IfStmt : Stmt {
+  ExprPtr cond;
+  StmtPtr thenB;                 // BlockStmt
+  StmtPtr elseB;                 // BlockStmt, IfStmt (else if), o null
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (cond->eval(s).num != 0.0) thenB->exec(s, mg, out);
+    else if (elseB)               elseB->exec(s, mg, out);
+  }
+};
+
+// --- Helpers para leer args nombrados (número, punto, escala) ----------------
+static double namedNum(Scope &s, const std::map<std::string, ExprPtr> &m, const char *k, double def) {
+  auto it = m.find(k);
+  return it == m.end() ? def : it->second->eval(s).num;
+}
+static point namedPoint(Scope &s, const std::map<std::string, ExprPtr> &m, const char *k, double dx, double dy) {
+  auto it = m.find(k);
+  if (it == m.end()) return point(dx, dy);
+  Value v = it->second->eval(s);
+  if (v.type == Value::LIST && v.items.size() >= 2) return point(v.items[0].num, v.items[1].num);
+  return point(dx, dy);
+}
+static point namedScale(Scope &s, const std::map<std::string, ExprPtr> &m, const char *k) {
+  auto it = m.find(k);
+  if (it == m.end()) return point(1, 1);
+  Value v = it->second->eval(s);
+  if (v.type == Value::LIST && v.items.size() >= 2) return point(v.items[0].num, v.items[1].num);
+  return point(v.num, v.num);   // scale=s uniforme
+}
+
+// Constructor de matriz para transform= (§17): rotate(a)/scale(a[,b])/translate(a,b)/
+// shear(a,b), yuxtapuestos y compuestos en orden de escritura (post-multiplicación).
+struct MatrixCtor { int op = OPMID; std::vector<ExprPtr> args; };
+static Matrix buildTransform(Scope &s, const std::vector<MatrixCtor> &ctors) {
+  Matrix m;   // identidad
+  for (const auto &c : ctors) {
+    double a0 = !c.args.empty() ? c.args[0]->eval(s).num : 0.0;
+    double a1 = c.args.size() > 1 ? c.args[1]->eval(s).num : a0;   // 1 arg → uniforme
+    switch (c.op) {
+      case OPMTL: m.translate(a0, a1); break;
+      case OPMRT: m.rotate(a0);        break;
+      case OPMSC: m.scale(a0, a1);     break;
+      case OPMSH: m.shear(a0, a1);     break;
+    }
+  }
+  return m;
+}
+
+// Repetición de structs (§17): repeat(Struct, count=N, [scale=], [rotate=], [at=],
+// [advance=], [transform=]). Instancia k = marco T(at+k·advance) · A^k · R_fijo · S_fijo,
+// con A = transform acumulado (MTRS de V1). scale/rotate fijos = iguales en toda copia
+// (MTST). Reutiliza OPMPUSH/OPMPOP como la invocación directa (§8).
+struct RepeatStmt : Stmt {
+  std::string structName;
+  std::map<std::string, ExprPtr> named;   // count, scale, rotate, at, advance
+  std::vector<MatrixCtor> xform;          // transform= (vacío = identidad)
+  void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    auto it = g_structs.find(structName);
+    if (it == g_structs.end()) { evalError("struct no definida (repeat): ", structName); return; }
+    StructDef *def = it->second.get();
+
+    int   count = (int)namedNum(caller, named, "count", 1);
+    point at    = namedPoint(caller, named, "at", 0, 0);
+    point adv   = namedPoint(caller, named, "advance", 0, 0);
+    double rot  = namedNum(caller, named, "rotate", 0);
+    point scl   = namedScale(caller, named, "scale");
+    Matrix A    = buildTransform(caller, xform);        // acumulado por paso
+
+    // Ámbito de la struct con sus parámetros en el valor por defecto (repeat no
+    // pasa args propios de la struct; hijo del GLOBAL, léxico como la invocación).
+    Scope local(caller.root());
+    for (size_t i = 0; i < def->params.size(); i++)
+      local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
+
+    Matrix Ak;   // A^k, empieza en identidad
+    for (int k = 0; k < count; k++) {
+      // Orden verificado contra el oráculo (rpstest caso 3): el transform
+      // ACUMULADO A^k es el más interno (transforma la geometría cruda primero),
+      // luego el marco FIJO R·S (canónico §8), y por fuera la traslación.
+      Matrix M;
+      M.translate(at.x + k * adv.x, at.y + k * adv.y);   // T (posición + avance)
+      M.rotate(rot);                                     // R fijo
+      M.scale(scl.x, scl.y);                             // S fijo
+      M *= Ak;                                           // A^k innermost → M = T·R·S·A^k
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
+      for (auto &st : def->body) st->exec(local, mg, out);
+      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+      Ak = Ak * A;
+    }
   }
 };
 
@@ -328,6 +514,28 @@ struct PrimStmt : Stmt {
   }
 };
 
+// Texto (§4.8): text("s") { p1 p2 … } estampa la cadena en cada coordenada.
+// El contenido pasa por parse_text (mismo markup que V1); una llamada por punto
+// porque el GraphicsItem resultante es no-copiable (siembra múltiple, §4).
+struct TextStmt : Stmt {
+  ExprPtr content;
+  std::map<std::string, ExprPtr> named;   // align/font… → slice posterior (ignorados)
+  std::vector<ExprPtr> coords;            // coordenadas (Term), en pares x y
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    Value c = content->eval(s);
+    std::string str;
+    if (c.type == Value::STRING) str = c.str;
+    else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", c.num); str = buf; }
+    for (size_t i = 0; i + 1 < coords.size(); i += 2) {
+      point p(coords[i]->eval(s).num, coords[i + 1]->eval(s).num);
+      auto gs = std::make_unique<GraphicsState>();
+      gs->setPosition(p);                                  // GS_PLUMEPOSITION
+      out.push_back(std::move(gs));
+      out.push_back(parse_text(str, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+    }
+  }
+};
+
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window" || n == "font_size"; }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
@@ -336,16 +544,32 @@ static bool isPrim(const std::string &n) {
 
 static StmtPtr parseBlock(Lexer &);        // adelantadas (mutuamente recursivas)
 static StmtPtr parseStructDef(Lexer &);
+static StmtPtr parseFor(Lexer &);
+static StmtPtr parseIf(Lexer &);
+static StmtPtr parseRepeat(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 
-// Lista de args ( … ): posicionales (Expression) y nombrados (ID = Expression).
+// Un nombre de atributo puede coincidir con una palabra de control: `to`/`step`
+// son keywords (for i = a to b) pero también nombres nombrados (arc(from=, to=)).
+// Dentro de (…) se desambigua por contexto: keyword seguida de '=' = nombre.
+static bool attrNameHere(const Lexer &lx, std::string &out) {
+  int tt = lx.peek().type;
+  if (lx.peek(1).type != T_ASSIGN) return false;
+  if (tt == T_IDENTIFIER) { out = lx.peek().str; return true; }
+  if (tt == T_TO)   { out = "to";   return true; }
+  if (tt == T_STEP) { out = "step"; return true; }
+  return false;
+}
+
+// Lista de args ( … ): posicionales (Expression) y nombrados (nombre = Expression).
 // Asume que '(' ya se consumió; consume hasta ')'.
 static void parseArgList(Lexer &lx, std::vector<ExprPtr> &pos,
                          std::map<std::string, ExprPtr> &named) {
   if (lx.peek().type != T_RPAREN) {
     do {
-      if (lx.peek().type == T_IDENTIFIER && lx.peek(1).type == T_ASSIGN) {
-        std::string k = lx.next().str; lx.next();
+      std::string k;
+      if (attrNameHere(lx, k)) {
+        lx.next(); lx.next();                 // nombre y '='
         named[k] = parseExpression(lx);
       } else {
         pos.push_back(parseExpression(lx));
@@ -359,6 +583,8 @@ static StmtPtr parseStatement(Lexer &lx) {
   const Tok &t = lx.peek();
   if (t.type == T_LBRACE) return parseBlock(lx);      // bloque anónimo (§7.1)
   if (t.type == T_STRUCT) return parseStructDef(lx);  // struct Nombre(...) { … }
+  if (t.type == T_FOR)    return parseFor(lx);        // for v = a to b [step s] { … }
+  if (t.type == T_IF)     return parseIf(lx);         // if cond { … } [else { … }]
   if (t.type != T_IDENTIFIER) parseError(lx, "un comando, asignación, struct o '{'");
   std::string name = t.str;
 
@@ -383,6 +609,23 @@ static StmtPtr parseStatement(Lexer &lx) {
     st->name = name;
     if (lx.accept(T_LPAREN)) parseArgList(lx, st->pos, st->named);   // args (Expression)
     if (lx.accept(T_LBRACE)) {                  // { coords }  (Term; ';' subtrayecto ign. en slice 2; newline se salta)
+      while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+        if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+        st->coords.push_back(parseTerm(lx));
+      }
+      if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+    }
+    return st;
+  }
+  if (name == "repeat") return parseRepeat(lx);   // repeat(Struct, count=…, …) (§17)
+  if (name == "text") {                       // text("s") { coords }  (§4.8)
+    auto st = std::make_unique<TextStmt>();
+    if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras text");
+    std::vector<ExprPtr> pos;
+    parseArgList(lx, pos, st->named);          // 1er posicional = contenido; resto nombrado
+    if (pos.empty()) parseError(lx, "el contenido del texto");
+    st->content = std::move(pos[0]);
+    if (lx.accept(T_LBRACE)) {
       while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
         if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
         st->coords.push_back(parseTerm(lx));
@@ -443,6 +686,87 @@ static StmtPtr parseStructDef(Lexer &lx) {
   return stmt;
 }
 
+static StmtPtr parseFor(Lexer &lx) {
+  lx.next();                                   // 'for'
+  if (lx.peek().type != T_IDENTIFIER) parseError(lx, "la variable del for");
+  auto st = std::make_unique<ForStmt>();
+  st->var = lx.next().str;
+  if (!lx.accept(T_ASSIGN)) parseError(lx, "'=' en el for");
+  st->start = parseExpression(lx);
+  if (!lx.accept(T_TO)) parseError(lx, "'to' en el for");
+  st->end = parseExpression(lx);
+  if (lx.accept(T_STEP)) st->step = parseExpression(lx);
+  while (lx.accept(T_NEWLINE)) {}              // '{' puede ir en la línea siguiente
+  if (lx.peek().type != T_LBRACE) parseError(lx, "'{' del cuerpo del for");
+  st->body = parseBlock(lx);                   // BlockStmt: estado + ámbito por iteración
+  return st;
+}
+
+static StmtPtr parseIf(Lexer &lx) {
+  lx.next();                                   // 'if'
+  auto st = std::make_unique<IfStmt>();
+  st->cond = parseExpression(lx);
+  while (lx.accept(T_NEWLINE)) {}              // '{' puede ir en la línea siguiente
+  if (lx.peek().type != T_LBRACE) parseError(lx, "'{' del cuerpo del if");
+  st->thenB = parseBlock(lx);
+  // else opcional: puede llevar newlines entre el '}' y el 'else'. Si no hay
+  // else, restaura la posición para que el newline siga siendo terminador.
+  size_t save = lx.pos;
+  while (lx.accept(T_NEWLINE)) {}
+  if (lx.accept(T_ELSE)) {
+    while (lx.accept(T_NEWLINE)) {}
+    if (lx.peek().type == T_IF)          st->elseB = parseIf(lx);      // else if …
+    else if (lx.peek().type == T_LBRACE) st->elseB = parseBlock(lx);
+    else parseError(lx, "'{' o 'if' tras else");
+  } else {
+    lx.pos = save;
+  }
+  return st;
+}
+
+// transform= (§17): secuencia de constructores de matriz yuxtapuestos
+// (rotate(a) scale(b) …), compuestos en orden de escritura. Se detiene al ver
+// algo que no sea uno de los cuatro constructores (típicamente ',' o ')').
+static int ctorOp(const std::string &fn) {
+  if (fn == "translate") return OPMTL;
+  if (fn == "rotate")    return OPMRT;
+  if (fn == "scale")     return OPMSC;
+  if (fn == "shear")     return OPMSH;
+  return -1;
+}
+static void parseTransformValue(Lexer &lx, std::vector<MatrixCtor> &out) {
+  while (lx.peek().type == T_IDENTIFIER) {
+    int op = ctorOp(lx.peek().str);
+    if (op < 0) break;
+    lx.next();
+    if (!lx.accept(T_LPAREN)) parseError(lx, "'(' en el constructor de transform");
+    MatrixCtor c; c.op = op;
+    if (lx.peek().type != T_RPAREN) {
+      c.args.push_back(parseExpression(lx));
+      while (lx.accept(T_COMMA)) c.args.push_back(parseExpression(lx));
+    }
+    if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+    out.push_back(std::move(c));
+  }
+  if (out.empty()) parseError(lx, "un constructor de transform (rotate/scale/translate/shear)");
+}
+
+static StmtPtr parseRepeat(Lexer &lx) {
+  if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras repeat");
+  auto st = std::make_unique<RepeatStmt>();
+  if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct a repetir");
+  st->structName = lx.next().str;               // 1er argumento: nombre (sin evaluar)
+  while (lx.accept(T_COMMA)) {                   // resto: argumentos nombrados
+    std::string k;
+    if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (count=, scale=, transform=, …)");
+    lx.next(); lx.next();                        // nombre y '='
+    if (k == "transform") parseTransformValue(lx, st->xform);
+    else                  st->named[k] = parseExpression(lx);
+  }
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  return st;
+}
+
 static StmtPtr parseInvoke(Lexer &lx, const std::string &name) {
   auto st = std::make_unique<InvokeStmt>();
   st->name = name;
@@ -483,8 +807,8 @@ int main(int argc, char **argv) {
 
   std::string out = argv[2];
   bool svg = out.size() > 4 && out.compare(out.size() - 4, 4, ".svg") == 0;
-  if (svg) { SVGDisplay g(out); mg->draw(g); }
-  else     { EPSDisplay g(out); mg->draw(g); }
+  if (svg) { SVGDisplay g(out); g.flags = g_flags; mg->draw(g); }
+  else     { EPSDisplay g(out); g.flags = g_flags; mg->draw(g); }
   std::printf("render -> %s\n", out.c_str());
   return 0;
 }

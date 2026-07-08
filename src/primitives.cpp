@@ -152,6 +152,12 @@ void Transform::draw(Display &g) {
     case OPMCP:
       g.compose(mt, predefmat);
       break;
+    case OPMPUSH:
+      g.pushMatrix(mt);          // mt (miembro) = marco T·R·S de la invocación
+      break;
+    case OPMPOP:
+      g.popMatrix();
+      break;
     case OPMMT:
       break;
   }
