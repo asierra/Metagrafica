@@ -21,6 +21,7 @@
 #include "mgflags.h"       // MGFlags: banderas de uso para el backend (reencode, cmmi…)
 #include "SVGDisplay.h"
 #include "EPSDisplay.h"
+#include "PDFDisplay.h"
 
 // Banderas de uso recogidas durante la evaluación (parse_text las activa); se
 // vuelcan al Display antes de dibujar, igual que main.cpp V1 (g.flags = parser.flags).
@@ -1642,9 +1643,10 @@ int main(int argc, char **argv) {
   std::unique_ptr<MetaGrafica> mg(buildFromSource(ss.str()));
 
   std::string out = argv[2];
-  bool svg = out.size() > 4 && out.compare(out.size() - 4, 4, ".svg") == 0;
-  if (svg) { SVGDisplay g(out); g.flags = g_flags; mg->draw(g); }
-  else     { EPSDisplay g(out); g.flags = g_flags; mg->draw(g); }
+  auto ext = [&](const char *e) { return out.size() > 4 && out.compare(out.size() - 4, 4, e) == 0; };
+  if (ext(".svg"))      { SVGDisplay g(out); g.flags = g_flags; mg->draw(g); }
+  else if (ext(".pdf")) { PDFDisplay g(out); mg->draw(g); }
+  else                  { EPSDisplay g(out); g.flags = g_flags; mg->draw(g); }
   std::printf("render -> %s\n", out.c_str());
   return 0;
 }

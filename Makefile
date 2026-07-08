@@ -55,17 +55,19 @@ $(OBJDIR)/haru:
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-$(BINDIR)/mg: $(OBJS) $(HARU_OBJS) | $(BINDIR)
-	$(CXX) -o $@ -g $(OBJS) $(HARU_OBJS) $(LDFLAGS) $(LIBS) -lz
-
-# --- Parser V3 (en desarrollo): renderer aislado, NO toca bin/mg -------------
-# Enlaza el lexer+parser V3 con el subconjunto de objetos del motor reutilizado.
-V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o structure.o \
+# --- Cutover (§22.6): bin/mg ES el compilador V3 -----------------------------
+# Objetos del motor reutilizados por el parser V3 (incluye PDF/haru para paridad
+# de backends con el V1). El front-end V1 (main.cpp, Parser.cpp, lexmg.cpp) queda
+# fuera del binario; sigue congelado en la rama v1-legacy.
+V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o PDFDisplay.o structure.o \
 	matrix.o primitives.o text.o text_parser.o splines.o)
 
-v3test: $(BINDIR)/v3test
-$(BINDIR)/v3test: $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(INCDIR)/ast.h $(INCDIR)/tokens.h | $(BINDIR)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) -o $@ $(LDFLAGS) $(LIBS)
+$(BINDIR)/mg: $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) $(INCDIR)/ast.h $(INCDIR)/tokens.h | $(BINDIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) -o $@ $(LDFLAGS) $(LIBS) -lz
+
+# Alias histórico: v3test == mg (mismo compilador V3).
+v3test: $(BINDIR)/mg | $(BINDIR)
+	cp -f $(BINDIR)/mg $(BINDIR)/v3test
 
 install: $(BINDIR)/mg $(MANDIR)/mg.1
 	install -m 755 $(BINDIR)/mg $(PREFIX)/bin

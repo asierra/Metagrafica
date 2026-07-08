@@ -10,11 +10,13 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MG="$ROOT/bin/mg"
-EXDIR="$ROOT/examples/v1"
+EXDIR="$ROOT/examples/v3"
 GOLD="$ROOT/test/golden"
 
 FORMATS="eps svg"
-EXAMPLES="bzsinepaths-examples bzsinepaths fig2-1 fig2-3 fig6-1 fill_styles line_patterns primitives rpstest"
+# Corpus V3 (post-cutover, §22.6): bin/mg ES el compilador V3. La red golden es
+# la salida del propio renderer V3 (regresión), no el oráculo V1 de migración.
+EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10 fill_styles line_patterns primitives rpstest sines"
 
 export LC_ALL=C
 
