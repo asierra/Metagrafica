@@ -556,6 +556,76 @@ struct FitStmt : Stmt {
   }
 };
 
+// Construye un objeto Structure (motor) desde un StructDef, para que place lo
+// replique con StructureLine/Arc (mismo código que generó el oráculo V1). El
+// cuerpo se ejecuta con params por defecto; si el struct tiene ventana local
+// != unidad, se hornea la normalización ventana→unidad como OPMPUSH/OPMPOP.
+static int g_structSeq = 0;
+static Structure *buildStructure(StructDef *def, MetaGrafica &mg, Scope &caller) {
+  Scope local(caller.root());
+  for (size_t i = 0; i < def->params.size(); i++)
+    local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
+  GraphicsItemList prlist;
+  Box w = structBox(caller, def);
+  bool needN = (w.x != 0.0 || w.y != 0.0 || w.dx != 1.0 || w.dy != 1.0);
+  if (needN) {
+    Matrix N; N.scale(1.0 / w.dx, 1.0 / w.dy); N.translate(-w.x, -w.y);   // ventana→unidad
+    auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(N);
+    prlist.push_back(std::move(t));
+  }
+  for (auto &st : def->body) st->exec(local, mg, prlist);
+  if (needN) { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); prlist.push_back(std::move(t)); }
+  auto s = std::make_unique<Structure>();
+  std::string nm = "__" + def->name + "_" + std::to_string(g_structSeq++);
+  s->setName(nm, mg.structure_map);
+  s->setGraphicsItems(std::move(prlist));
+  Structure *ptr = s.get();
+  mg.structure_map[nm] = std::move(s);
+  return ptr;
+}
+
+// place (§10.1): repite una struct a lo largo de un locus, orientándola con la
+// tangente. Locus inferido: 2 puntos = línea; args de arco (r/from/to) = arco;
+// (3+ puntos / &path = path, diferido). Reusa StructureLine/StructureArc del
+// motor. count reparte N instancias uniformes sobre el locus (línea/arco).
+struct PlaceStmt : Stmt {
+  std::string structName;
+  std::map<std::string, ExprPtr> named;   // scale, shift, count, gap, both_sides, r, from, to
+  std::vector<ExprPtr> coords;
+  void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    auto it = g_structs.find(structName);
+    if (it == g_structs.end()) { evalError("struct no definida (place): ", structName); return; }
+    Structure *s = buildStructure(it->second.get(), mg, caller);
+
+    double scale = namedNum(caller, named, "scale", 1.0);
+    double shift = namedNum(caller, named, "shift", 1.0);   // default: instancia en el 2º punto (§10.1)
+    double gap   = namedNum(caller, named, "gap", 0.0);
+    int    count = (int)namedNum(caller, named, "count", 1);
+    bool   both  = named.count("both_sides") && named.at("both_sides")->eval(caller).num != 0.0;
+
+    if (named.count("r")) {                                // locus = arco
+      double r = namedNum(caller, named, "r", 1);
+      double from = namedNum(caller, named, "from", 0), to = namedNum(caller, named, "to", 360);
+      point c(coords.size() > 1 ? coords[0]->eval(caller).num : 0,
+              coords.size() > 1 ? coords[1]->eval(caller).num : 0);
+      auto sr = std::make_unique<StructureArc>();
+      sr->setStructure(s); sr->setScale(scale, scale); sr->setRadius(r);
+      sr->setAngles(from, to); sr->setPoint(c); sr->setShift(shift); sr->setBothSides(both);
+      out.push_back(std::move(sr));
+      return;
+    }
+    // locus = línea (2 puntos)
+    if (coords.size() < 4) { evalError("place sobre línea requiere 2 puntos"); return; }
+    point p1(coords[0]->eval(caller).num, coords[1]->eval(caller).num);
+    point p2(coords[2]->eval(caller).num, coords[3]->eval(caller).num);
+    auto sr = std::make_unique<StructureLine>();
+    sr->setStructure(s); sr->setScale(scale, scale); sr->setPoints(p1, p2);
+    sr->setShift(shift); sr->setGap(gap); sr->setBothSides(both);
+    out.push_back(std::move(sr));
+    (void)count;   // count uniforme: pendiente (fig4-1), calibrar contra oráculo
+  }
+};
+
 struct PrimStmt : Stmt {
   std::string name;
   std::vector<ExprPtr> pos;               // args posicionales
@@ -622,6 +692,7 @@ static StmtPtr parseFor(Lexer &);
 static StmtPtr parseIf(Lexer &);
 static StmtPtr parseRepeat(Lexer &);
 static StmtPtr parseFit(Lexer &);
+static StmtPtr parsePlace(Lexer &);
 static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 
@@ -696,6 +767,7 @@ static StmtPtr parseStatement(Lexer &lx) {
   }
   if (name == "repeat") return parseRepeat(lx);   // repeat(Struct, count=…, …) (§17)
   if (name == "fit")    return parseFit(lx);      // fit(Struct[, stretch=]) { rect } (§10.2)
+  if (name == "place")  return parsePlace(lx);    // place(Struct, …) { locus } (§10.1)
   if (name == "text") {                       // text("s") { coords }  (§4.8)
     auto st = std::make_unique<TextStmt>();
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras text");
@@ -867,6 +939,27 @@ static StmtPtr parseFit(Lexer &lx) {
   }
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
   if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del rectángulo de fit");
+  while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+    if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+    st->coords.push_back(parseTerm(lx));
+  }
+  if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+  return st;
+}
+
+static StmtPtr parsePlace(Lexer &lx) {
+  if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras place");
+  auto st = std::make_unique<PlaceStmt>();
+  if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct a colocar");
+  st->structName = lx.next().str;
+  while (lx.accept(T_COMMA)) {                   // scale/shift/count/gap/both_sides/r/from/to
+    std::string k;
+    if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (scale=, count=, r=, …)");
+    lx.next(); lx.next();
+    st->named[k] = parseExpression(lx);
+  }
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del locus de place");
   while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
     if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
     st->coords.push_back(parseTerm(lx));
