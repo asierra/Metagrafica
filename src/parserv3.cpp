@@ -505,6 +505,7 @@ struct PrimStmt : Stmt {
     std::unique_ptr<GraphicsItem> item;
     if (name == "polyline") { auto p = std::make_unique<Polyline>(GI_POLYLINE); p->setPath(path); item = std::move(p); }
     else if (name == "polygon") { auto p = std::make_unique<Polyline>(GI_POLYGON); p->setPath(path); item = std::move(p); }
+    else if (name == "bezier") { auto p = std::make_unique<Polyline>(GI_BEZIER); p->setPath(path); item = std::move(p); }   // path = p0 c1 c2 p1 [c1 c2 p2…]; Polyline::draw agrupa de 3 en 3 → curveto
     else if (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
     else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); }
     else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
@@ -539,7 +540,7 @@ struct TextStmt : Stmt {
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window" || n == "font_size"; }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
-         n == "dot" || n == "arc" || n == "ellipse";
+         n == "dot" || n == "arc" || n == "ellipse" || n == "bezier";
 }
 
 static StmtPtr parseBlock(Lexer &);        // adelantadas (mutuamente recursivas)
