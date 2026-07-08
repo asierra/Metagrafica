@@ -24,8 +24,8 @@ struct Fig1() {
 
     % cotas (reglillas de dimensión) — ⚠ params por calibrar
     line_width 0.1
-    ticks(count=23, step=(0,0.2), size=2) { 2 1.95 }
-    ticks(count=23, step=(0,0.2), size=2) { 6 1.95 }
+    ticks(23, mark=(2, 0), at=(2, 1.95), advance=(0, 0.2))
+    ticks(23, mark=(2, 0), at=(6, 1.95), advance=(0, 0.2))
     % líderes punteados hacia las cotas (V1 GNPATH+DOT)
     polyline(dash="dotted") { 3 1.95  6 1.95 }
     polyline(dash="dotted") { 7 1.95  9 1.95 }
@@ -69,8 +69,8 @@ struct Fig2() {
     polyline { 4 0.75 4.25 0.75 ;  4.25 0.83 5.8 0.83 ;  5.75 0.75 6 0.75 }
 
     line_width 0.1
-    ticks(count=17, step=(0,0.2), size=2) { 2 1.95 }
-    ticks(count=23, step=(0,0.2), size=2) { 6 1.95 }
+    ticks(17, mark=(2, 0), at=(2, 1.95), advance=(0, 0.2))
+    ticks(23, mark=(2, 0), at=(6, 1.95), advance=(0, 0.2))
     polyline(dash="dotted") { 3 1.95  7 1.95 }
 
     polyline(dash="dashed") { 0 7  2 7 }

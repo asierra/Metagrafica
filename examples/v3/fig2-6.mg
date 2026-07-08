@@ -66,9 +66,9 @@ polyline { 8 1.25  8.9 1.25  7.19 -0.0552 }
 
 % Rayos catódicos (V1 TICKS punteados) — ⚠ params por calibrar
 line_width 0.2
-ticks(count=10, step=(0.24, 0), size=0.1) { 0.76 0.8 }
-ticks(count=4,  step=(4.7, 0),  size=0.1) { 1 1.1 }
-ticks(count=2,  step=(3.2, 0),  size=0.1) { 5.7 1.2 }
+ticks(10, mark=(0, 0.1), at=(0.76, 0.8), advance=(0.24, 0))
+ticks(4,  mark=(0, 0.1), at=(1, 1.1),    advance=(4.7, 0))
+ticks(2,  mark=(0, 0.1), at=(5.7, 1.2),  advance=(3.2, 0))
 
 % Flechas de haz: sobre arco (both_sides) y sobre línea. Antes ARCST/LNST con
 % 5 números; ahora place con from/to nombrados (como `arc`, §4.5) y both_sides.
