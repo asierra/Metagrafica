@@ -234,6 +234,23 @@ static int colorFromValue(const Value &v) {
   return v.type == Value::STRING ? get_color(v.str) : (int)v.num;
 }
 
+// Traduce (ángulo, paso) de un tramado (§4.11) al índice FPATRN 1..10 del motor.
+// La spec restringe el ángulo a {0,45,90,135} y las densidades a gap ∈ {4,2,1} pt
+// (mapeo 1:1 con V1, §4.11); patternFor() codifica exactamente eso:
+//   idx = 1 + densidad*4 + ángulo/45,  densidad(gap 4→0, 2→1, 1→2).
+// Devuelve 0 si el par no es representable con la tabla actual (gap arbitrario o
+// idx>10, p.ej. 90°/135° con gap 1): tramado custom = follow-up (HatchLine libre).
+static int hatchIndex(double angle, double gap) {
+  int a = ((int)std::lround(angle) % 180 + 180) % 180;   // 0..179
+  if (a % 45 != 0) return 0;                             // ángulo no estándar
+  int an = a / 45;                                       // 0,1,2,3 → 0/45/90/135
+  int g = (int)std::lround(gap);
+  int d = (g == 4) ? 0 : (g == 2) ? 1 : (g == 1) ? 2 : -1;
+  if (d < 0) return 0;                                   // paso no estándar
+  int idx = 1 + d * 4 + an;
+  return idx <= 10 ? idx : 0;
+}
+
 // Emite el/los GraphicsItem de un atributo de estilo (color/fill/line_width).
 // Compartido por la sentencia de estado (§7) y el atributo por-primitiva (§7.5).
 // El color acepta cadena (nombre/hex) o número (RGB directo, p.ej. gray()).
@@ -751,11 +768,22 @@ struct PrimStmt : Stmt {
     if (!item) return;
 
     // Atributos de estilo por-primitiva (§7.5): fill/color/line_width acotados a
-    // esta primitiva (push/pop de estado alrededor). El resto (hatch/dash…) → pendiente.
+    // esta primitiva (push/pop de estado alrededor). dash… → pendiente.
     GraphicsItemList attrs;
     for (const char *k : {"color", "fill", "line_width"}) {
       auto it = named.find(k);
       if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
+    }
+    // Tramado (§4.11): hatch=ángulo [+ hatch_gap=paso] → índice FPATRN + activar fill.
+    if (named.count("hatch")) {
+      double a = named.at("hatch")->eval(s).num;
+      double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
+      int idx = hatchIndex(a, gap);
+      if (idx > 0) {
+        g_flags.using_hatcher = true;   // EPS emite el prólogo hatch* solo si está activo
+        auto at = std::make_unique<Attribute>(); at->set(AT_FPATRN, idx); attrs.push_back(std::move(at));
+        attrs.push_back(std::make_unique<GraphicsState>(GS_FILL));
+      }
     }
     // fill= y color= juntos = contornear el relleno (§4).
     if (named.count("fill") && named.count("color"))
