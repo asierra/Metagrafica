@@ -271,7 +271,13 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     if (ff != FN_NOFACE) { auto a = std::make_unique<Attribute>(); a->set(AT_TSTYLE, ff); out.push_back(std::move(a)); }
     return true;
   }
-  return false;   // dash/hatch/align/transform… → pendientes
+  if (name == "align") {                                            // §4.8: horizontal (left/center/right)
+    int a = 0;                                                      // 0=left(start) default
+    if (v.type == Value::STRING) { if (v.str == "center") a = 1; else if (v.str == "right") a = 2; }
+    auto at = std::make_unique<Attribute>(); at->set(AT_TALIGN, a); out.push_back(std::move(at));
+    return true;
+  }
+  return false;   // dash/hatch/valign/transform… → pendientes
 }
 
 struct Stmt {
