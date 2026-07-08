@@ -753,6 +753,19 @@ struct PlaceStmt : Stmt {
       out.push_back(std::move(sr));
       return;
     }
+    // locus = path (3+ puntos): coloca la struct en cada punto, orientada a la
+    // tangente local (§10.1). Mismo StructurePath que count=, pero los puntos los
+    // da el bloque directamente (no se interpolan). Precede al caso línea/count.
+    if (coords.size() >= 6) {
+      Path pth;
+      for (size_t i = 0; i + 1 < coords.size(); i += 2)
+        pth.push_back(point(coords[i]->eval(caller).num, coords[i + 1]->eval(caller).num));
+      auto sp = std::make_unique<StructurePath>();
+      sp->setStructure(s); sp->setScale(scale); sp->setPath(std::move(pth)); sp->setOrient(true);
+      out.push_back(std::move(sp));
+      return;
+    }
+
     // locus = línea (2 puntos)
     if (coords.size() < 4) { evalError("place sobre línea requiere 2 puntos"); return; }
     point p1(coords[0]->eval(caller).num, coords[1]->eval(caller).num);
