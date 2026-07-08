@@ -280,6 +280,19 @@ struct ConfigStmt : Stmt {
   }
 };
 
+// Directorio del archivo principal (para resolver includes relativos).
+static std::string g_baseDir;
+
+// include "archivo.mg" (§15): trae las structs/definiciones de otro archivo al
+// espacio global. Se lee y parsea en tiempo de parseo (parseInclude); su cuerpo
+// se ejecuta aquí en orden, antes de que el archivo principal lo use.
+struct IncludeStmt : Stmt {
+  std::vector<StmtPtr> prog;
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    for (auto &st : prog) st->exec(s, mg, out);
+  }
+};
+
 // Bloque anónimo (§7.1): apila/restaura el estado gráfico (gsave/grestore) y
 // abre un ámbito léxico hijo para las variables.
 struct BlockStmt : Stmt {
@@ -609,6 +622,7 @@ static StmtPtr parseFor(Lexer &);
 static StmtPtr parseIf(Lexer &);
 static StmtPtr parseRepeat(Lexer &);
 static StmtPtr parseFit(Lexer &);
+static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 
 // Un nombre de atributo puede coincidir con una palabra de control: `to`/`step`
@@ -647,6 +661,7 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (t.type == T_STRUCT) return parseStructDef(lx);  // struct Nombre(...) { … }
   if (t.type == T_FOR)    return parseFor(lx);        // for v = a to b [step s] { … }
   if (t.type == T_IF)     return parseIf(lx);         // if cond { … } [else { … }]
+  if (t.type == T_INCLUDE) return parseInclude(lx);   // include "archivo.mg" (§15)
   if (t.type != T_IDENTIFIER) parseError(lx, "un comando, asignación, struct o '{'");
   std::string name = t.str;
 
@@ -868,20 +883,49 @@ static StmtPtr parseInvoke(Lexer &lx, const std::string &name) {
   return st;
 }
 
+// Parsea un flujo ya tokenizado en una lista de sentencias (sin ejecutar).
+static std::vector<StmtPtr> parseProgram(Lexer &lx) {
+  std::vector<StmtPtr> prog;
+  while (lx.peek().type != T_EOF) {
+    if (lx.accept(T_NEWLINE)) continue;          // saltar líneas en blanco/separadores
+    prog.push_back(parseStatement(lx));
+  }
+  return prog;
+}
+
+// Lee un archivo completo, lo tokeniza y lo parsea (para include). El Lexer es
+// local: las sentencias copian sus lexemas, así que puede destruirse al salir.
+static std::vector<StmtPtr> parseFile(const std::string &path) {
+  std::ifstream in(path);
+  if (!in) { std::fprintf(stderr, "include: no se pudo abrir %s\n", path.c_str()); return {}; }
+  std::stringstream ss;
+  ss << in.rdbuf();
+  Lexer lx;
+  lx.tokenize(ss.str().c_str());
+  return parseProgram(lx);
+}
+
+static StmtPtr parseInclude(Lexer &lx) {
+  lx.next();                                     // 'include'
+  if (lx.peek().type != T_STRING) parseError(lx, "el nombre de archivo (cadena) tras include");
+  std::string fname = lx.next().str;
+  std::string path = g_baseDir.empty() ? fname : g_baseDir + "/" + fname;
+  auto st = std::make_unique<IncludeStmt>();
+  st->prog = parseFile(path);                    // parseo recursivo (permite includes anidados)
+  return st;
+}
+
 // --- Driver: fuente V3 -> MetaGrafica ---------------------------------------
 static MetaGrafica *buildFromSource(const std::string &src) {
   Lexer lx;
   lx.tokenize(src.c_str());
+  std::vector<StmtPtr> prog = parseProgram(lx);
   auto *mg = new MetaGrafica();
   mg->setName("mgv3");
   mg->setDepth(64);
   Scope scope;
   GraphicsItemList items;
-  while (lx.peek().type != T_EOF) {
-    if (lx.accept(T_NEWLINE)) continue;          // saltar líneas en blanco/separadores
-    StmtPtr st = parseStatement(lx);
-    st->exec(scope, *mg, items);
-  }
+  for (auto &st : prog) st->exec(scope, *mg, items);
   mg->setGraphicsItems(std::move(items));
   return mg;
 }
@@ -895,6 +939,11 @@ int main(int argc, char **argv) {
   if (!in) { std::fprintf(stderr, "no se pudo abrir %s\n", argv[1]); return 1; }
   std::stringstream ss;
   ss << in.rdbuf();
+
+  // Directorio del archivo principal: resuelve los include relativos (§15).
+  std::string inpath = argv[1];
+  size_t slash = inpath.find_last_of('/');
+  if (slash != std::string::npos) g_baseDir = inpath.substr(0, slash);
 
   std::unique_ptr<MetaGrafica> mg(buildFromSource(ss.str()));
 
