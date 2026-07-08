@@ -251,6 +251,32 @@ static int hatchIndex(double angle, double gap) {
   return idx <= 10 ? idx : 0;
 }
 
+static bool emitStyleAttr(const std::string &, const Value &, GraphicsItemList &);   // adelantada
+
+// Estilo por-primitiva (§7.5) compartido por PrimStmt y compound (§9.4):
+// color/fill/line_width + tramado (hatch/hatch_gap, §4.11) + contorno (color con
+// relleno). Emite en `attrs` los GraphicsItem que el llamador acota con push/pop.
+static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
+                          GraphicsItemList &attrs) {
+  for (const char *k : {"color", "fill", "line_width"}) {
+    auto it = named.find(k);
+    if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
+  }
+  if (named.count("hatch")) {                    // §4.11: hatch=ángulo [+ hatch_gap]
+    double a = named.at("hatch")->eval(s).num;
+    double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
+    int idx = hatchIndex(a, gap);
+    if (idx > 0) {
+      g_flags.using_hatcher = true;
+      auto at = std::make_unique<Attribute>(); at->set(AT_FPATRN, idx); attrs.push_back(std::move(at));
+      attrs.push_back(std::make_unique<GraphicsState>(GS_FILL));
+    }
+  }
+  // color= junto a un relleno (fill= o hatch) = contornear (§4).
+  if (named.count("color") && (named.count("fill") || named.count("hatch")))
+    attrs.push_back(std::make_unique<GraphicsState>(GS_OUTLINEFILL));
+}
+
 // Emite el/los GraphicsItem de un atributo de estilo (color/fill/line_width).
 // Compartido por la sentencia de estado (§7) y el atributo por-primitiva (§7.5).
 // El color acepta cadena (nombre/hex) o número (RGB directo, p.ej. gray()).
@@ -816,27 +842,10 @@ struct PrimStmt : Stmt {
     else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
     if (!item) return;
 
-    // Atributos de estilo por-primitiva (§7.5): fill/color/line_width acotados a
-    // esta primitiva (push/pop de estado alrededor). dash… → pendiente.
+    // Atributos de estilo por-primitiva (§7.5): color/fill/line_width/hatch,
+    // acotados a esta primitiva (push/pop de estado alrededor). dash… → pendiente.
     GraphicsItemList attrs;
-    for (const char *k : {"color", "fill", "line_width"}) {
-      auto it = named.find(k);
-      if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
-    }
-    // Tramado (§4.11): hatch=ángulo [+ hatch_gap=paso] → índice FPATRN + activar fill.
-    if (named.count("hatch")) {
-      double a = named.at("hatch")->eval(s).num;
-      double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
-      int idx = hatchIndex(a, gap);
-      if (idx > 0) {
-        g_flags.using_hatcher = true;   // EPS emite el prólogo hatch* solo si está activo
-        auto at = std::make_unique<Attribute>(); at->set(AT_FPATRN, idx); attrs.push_back(std::move(at));
-        attrs.push_back(std::make_unique<GraphicsState>(GS_FILL));
-      }
-    }
-    // fill= y color= juntos = contornear el relleno (§4).
-    if (named.count("fill") && named.count("color"))
-      attrs.push_back(std::make_unique<GraphicsState>(GS_OUTLINEFILL));
+    emitPrimStyle(named, s, attrs);
     if (attrs.empty()) { out.push_back(std::move(item)); return; }
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     for (auto &a : attrs) out.push_back(std::move(a));
@@ -1079,6 +1088,26 @@ struct AxisStmt : Stmt {
   }
 };
 
+// compound (§9.4): une varias primitivas de trazo en UN path (V1 OPPT…CLPT). Se
+// abre el path (GS_OPENPATH: las sub-primitivas acumulan sin trazar por separado),
+// se ejecutan las sub-primitivas, y al cerrar (GS_CLOSEPATH) el path acumulado se
+// rellena/traza con el estilo del compound (color/fill/hatch). fill_rule="even-odd"
+// → pendiente (default non-zero; ningún ejemplo lo usa aún).
+struct CompoundStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  std::vector<StmtPtr> body;               // sub-primitivas (polyline/arc/…)
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    GraphicsItemList attrs;
+    emitPrimStyle(named, s, attrs);
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    for (auto &a : attrs) out.push_back(std::move(a));
+    out.push_back(std::make_unique<GraphicsState>(GS_OPENPATH));
+    for (auto &st : body) st->exec(s, mg, out);
+    out.push_back(std::make_unique<GraphicsState>(GS_CLOSEPATH));   // cierra → rellena/traza
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
 // Sentencia de transformación local (§11.1) → operación de matriz, o -1 si no lo es.
 static int transformOp(const std::string &n) {
@@ -1206,6 +1235,18 @@ static StmtPtr parseStatement(Lexer &lx) {
     auto st = std::make_unique<TicksStmt>();
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras ticks");
     parseArgList(lx, st->pos, st->named);
+    return st;
+  }
+  if (name == "compound") {                    // compound(…) { sub-primitivas } (§9.4)
+    auto st = std::make_unique<CompoundStmt>();
+    if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+    if (lx.accept(T_LBRACE)) {
+      while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+        if (lx.accept(T_NEWLINE)) continue;
+        st->body.push_back(parseStatement(lx));
+      }
+      if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+    }
     return st;
   }
   if (name == "axis") {                        // axis(from=, to=, step=, …) { p1 p2 } (§13.5)
