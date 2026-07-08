@@ -646,6 +646,53 @@ struct PlaceStmt : Stmt {
   }
 };
 
+// sine (§4.13): onda senoidal aproximada por bezier a lo largo de la base p1→p2,
+// oscilando perpendicular. Se expande a un Polyline(GI_BEZIER) (sin clase de
+// motor). Puntos de control = los de V1 (bzsinepaths.mg) → coincide con el oráculo.
+// Núcleo: phase=0 (jorobas &sinpi con signo alterno) + squared (bumps sin²,
+// &cos2pi invertido). phase!=0 y half_cycles fraccionario: diferidos (plan_sine.md).
+struct SineStmt : Stmt {
+  std::map<std::string, ExprPtr> named;   // half_cycles, amplitude, phase, squared
+  std::vector<ExprPtr> coords;            // 2 puntos = base
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    double n = namedNum(s, named, "half_cycles", 1);
+    double A = namedNum(s, named, "amplitude", 1);
+    double phase = namedNum(s, named, "phase", 0);
+    bool squared = named.count("squared") && named.at("squared")->eval(s).num != 0.0;
+    if (coords.size() < 4) { evalError("sine requiere una base (2 puntos)"); return; }
+    if (n <= 0) return;
+    if (phase != 0.0)
+      std::fprintf(stderr, "sine: phase!=0 aún no implementado (ver plan_sine.md); se dibuja phase=0\n");
+
+    point p1(coords[0]->eval(s).num, coords[1]->eval(s).num);
+    point p2(coords[2]->eval(s).num, coords[3]->eval(s).num);
+    double dx = p2.x - p1.x, dy = p2.y - p1.y, L = std::sqrt(dx * dx + dy * dy);
+    if (L == 0.0) return;
+    double ux = dx / L, uy = dy / L, vx = -uy, vy = ux;   // base y perpendicular (+90°)
+    double w = L / n;                                     // ancho de una joroba (unidades de base)
+    int ni = (int)(n + 0.5);                              // nº entero de jorobas (fraccionario diferido)
+    auto W = [&](double lx, double ly) {                 // local (base, perp) → mundo
+      return point(p1.x + lx * ux + ly * vx, p1.y + lx * uy + ly * vy);
+    };
+
+    Path path;
+    path.push_back(W(0.0, 0.0));                          // moveto (arranque)
+    for (int k = 0; k < ni; k++) {
+      double x0 = k * w;
+      if (squared) {                                      // bump sin²(πt): &cos2pi invertido (todas +)
+        path.push_back(W(x0 + 0.1825 * w, 0)); path.push_back(W(x0 + 0.3175 * w, A)); path.push_back(W(x0 + 0.5 * w, A));
+        path.push_back(W(x0 + 0.6825 * w, A)); path.push_back(W(x0 + 0.8175 * w, 0)); path.push_back(W(x0 + 1.0 * w, 0));
+      } else {                                            // joroba &sinpi, signo alterno (pico = A)
+        double cy = ((k % 2 == 0) ? 1.0 : -1.0) * A * 1.335;
+        path.push_back(W(x0 + 0.41 * w, cy)); path.push_back(W(x0 + 0.59 * w, cy)); path.push_back(W(x0 + 1.0 * w, 0));
+      }
+    }
+    auto p = std::make_unique<Polyline>(GI_BEZIER);
+    p->setPath(path);
+    out.push_back(std::move(p));
+  }
+};
+
 struct PrimStmt : Stmt {
   std::string name;
   std::vector<ExprPtr> pos;               // args posicionales
@@ -729,6 +776,7 @@ static StmtPtr parseIf(Lexer &);
 static StmtPtr parseRepeat(Lexer &);
 static StmtPtr parseFit(Lexer &);
 static StmtPtr parsePlace(Lexer &);
+static StmtPtr parseSine(Lexer &);
 static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 
@@ -804,6 +852,7 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (name == "repeat") return parseRepeat(lx);   // repeat(Struct, count=…, …) (§17)
   if (name == "fit")    return parseFit(lx);      // fit(Struct[, stretch=]) { rect } (§10.2)
   if (name == "place")  return parsePlace(lx);    // place(Struct, …) { locus } (§10.1)
+  if (name == "sine")   return parseSine(lx);     // sine(half_cycles=, …) { base } (§4.13)
   if (name == "text") {                       // text("s") { coords }  (§4.8)
     auto st = std::make_unique<TextStmt>();
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras text");
@@ -996,6 +1045,27 @@ static StmtPtr parsePlace(Lexer &lx) {
   }
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
   if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del locus de place");
+  while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+    if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+    st->coords.push_back(parseTerm(lx));
+  }
+  if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+  return st;
+}
+
+static StmtPtr parseSine(Lexer &lx) {
+  if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras sine");
+  auto st = std::make_unique<SineStmt>();
+  if (lx.peek().type != T_RPAREN) {             // args nombrados: half_cycles=, amplitude=, …
+    do {
+      std::string k;
+      if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (half_cycles=, amplitude=, …)");
+      lx.next(); lx.next();
+      st->named[k] = parseExpression(lx);
+    } while (lx.accept(T_COMMA));
+  }
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  if (!lx.accept(T_LBRACE)) parseError(lx, "'{' de la base de sine");
   while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
     if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
     st->coords.push_back(parseTerm(lx));
