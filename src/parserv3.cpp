@@ -298,7 +298,22 @@ struct StructDef {
   std::vector<std::string> params;
   std::vector<ExprPtr> defaults;   // paralelo a params; null si no hay default
   std::vector<StmtPtr> body;
+  // Ventana local (world_window DENTRO del cuerpo): define la caja de coordenadas
+  // que place/fit normalizan al locus/rectángulo (§10, §16). 4 exprs
+  // [xmin xmax ymin ymax]; vacío = caja unitaria (sin normalizar).
+  std::vector<ExprPtr> localWindow;
 };
+
+// Caja de coordenadas de un struct (origen + tamaño) para place/fit.
+struct Box { double x = 0, y = 0, dx = 1, dy = 1; };
+static Box structBox(Scope &s, const StructDef *def) {
+  if (def->localWindow.size() == 4) {
+    double a = def->localWindow[0]->eval(s).num, b = def->localWindow[1]->eval(s).num;
+    double c = def->localWindow[2]->eval(s).num, d = def->localWindow[3]->eval(s).num;
+    return Box{a, c, b - a, d - c};
+  }
+  return Box{0, 0, 1, 1};
+}
 // Registro global (§15: nombres globales). Posee las definiciones.
 static std::map<std::string, std::unique_ptr<StructDef>> g_structs;
 
@@ -483,6 +498,51 @@ struct RepeatStmt : Stmt {
   }
 };
 
+// fit (§10.2): ajusta una struct a un rectángulo (NO repite). Mapea la caja de
+// coordenadas del struct (su world_window local, o unidad) al rectángulo del
+// bloque. stretch=true deforma al rectángulo exacto; default = escala uniforme
+// (meet) centrada. El orden de las esquinas refleja (escala con signo, como
+// Matrix::to_rectangle). Inline con OPMPUSH/OPMPOP, como repeat/invocación.
+struct FitStmt : Stmt {
+  std::string structName;
+  ExprPtr stretchE;                       // stretch= (null = proporcional/meet)
+  std::vector<ExprPtr> coords;            // 4 Terms = 2 esquinas del rectángulo
+  void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    auto it = g_structs.find(structName);
+    if (it == g_structs.end()) { evalError("struct no definida (fit): ", structName); return; }
+    StructDef *def = it->second.get();
+    if (coords.size() < 4) { evalError("fit requiere un rectángulo (2 puntos)"); return; }
+    double x1 = coords[0]->eval(caller).num, y1 = coords[1]->eval(caller).num;
+    double x2 = coords[2]->eval(caller).num, y2 = coords[3]->eval(caller).num;
+    Box w = structBox(caller, def);
+    bool stretch = stretchE && stretchE->eval(caller).num != 0.0;
+    double tdx = x2 - x1, tdy = y2 - y1;   // firmados: el orden de esquinas refleja
+
+    Matrix M;
+    if (stretch) {
+      M.translate(x1, y1);
+      M.scale(tdx / w.dx, tdy / w.dy);     // window → rectángulo exacto
+      M.translate(-w.x, -w.y);
+    } else {
+      double sx = tdx / w.dx, sy = tdy / w.dy;
+      double s = (std::fabs(sx) < std::fabs(sy)) ? std::fabs(sx) : std::fabs(sy);
+      double ssx = (sx < 0 ? -s : s), ssy = (sy < 0 ? -s : s);   // uniforme, con signo
+      double ox = x1 + (tdx - ssx * w.dx) / 2, oy = y1 + (tdy - ssy * w.dy) / 2;  // centrado
+      M.translate(ox, oy);
+      M.scale(ssx, ssy);
+      M.translate(-w.x, -w.y);
+    }
+    Scope local(caller.root());
+    for (size_t i = 0; i < def->params.size(); i++)
+      local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
+    for (auto &st : def->body) st->exec(local, mg, out);
+    { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
 struct PrimStmt : Stmt {
   std::string name;
   std::vector<ExprPtr> pos;               // args posicionales
@@ -548,6 +608,7 @@ static StmtPtr parseStructDef(Lexer &);
 static StmtPtr parseFor(Lexer &);
 static StmtPtr parseIf(Lexer &);
 static StmtPtr parseRepeat(Lexer &);
+static StmtPtr parseFit(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 
 // Un nombre de atributo puede coincidir con una palabra de control: `to`/`step`
@@ -619,6 +680,7 @@ static StmtPtr parseStatement(Lexer &lx) {
     return st;
   }
   if (name == "repeat") return parseRepeat(lx);   // repeat(Struct, count=…, …) (§17)
+  if (name == "fit")    return parseFit(lx);      // fit(Struct[, stretch=]) { rect } (§10.2)
   if (name == "text") {                       // text("s") { coords }  (§4.8)
     auto st = std::make_unique<TextStmt>();
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras text");
@@ -679,6 +741,14 @@ static StmtPtr parseStructDef(Lexer &lx) {
   if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del cuerpo de la struct");
   while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
     if (lx.accept(T_NEWLINE)) continue;
+    // world_window dentro del cuerpo = ventana LOCAL del struct (§16): la captura
+    // place/fit para normalizar; NO fija la ventana del documento ni va al cuerpo.
+    if (lx.peek().type == T_IDENTIFIER && lx.peek().str == "world_window" &&
+        lx.peek(1).type != T_ASSIGN) {
+      lx.next();
+      for (int i = 0; i < 4; i++) def->localWindow.push_back(parseTerm(lx));
+      continue;
+    }
     def->body.push_back(parseStatement(lx));
   }
   if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
@@ -765,6 +835,28 @@ static StmtPtr parseRepeat(Lexer &lx) {
     else                  st->named[k] = parseExpression(lx);
   }
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  return st;
+}
+
+static StmtPtr parseFit(Lexer &lx) {
+  if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras fit");
+  auto st = std::make_unique<FitStmt>();
+  if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct a ajustar");
+  st->structName = lx.next().str;
+  while (lx.accept(T_COMMA)) {                   // argumentos nombrados (stretch=…)
+    std::string k;
+    if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (stretch=)");
+    lx.next(); lx.next();
+    ExprPtr v = parseExpression(lx);
+    if (k == "stretch") st->stretchE = std::move(v);
+  }
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del rectángulo de fit");
+  while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+    if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+    st->coords.push_back(parseTerm(lx));
+  }
+  if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
   return st;
 }
 
