@@ -1084,13 +1084,25 @@ axis(from=0, to=8, step=1, ticks="out", labels=true) { 0 0  0 8 }
 | `from`, `to` | — | valores numéricos en el extremo inicial y final |
 | `step` | — | intervalo de valor entre marcas/etiquetas |
 | `start` | `from` | valor de la **primera** marca/etiqueta; sirve para omitir el origen (`start=0.1`) |
-| `ticks` | `"out"` | dirección de las marcas: `"out"`, `"in"`, `"both"`, `"none"` (relativas a la línea) |
-| `tick_size` | pequeño | longitud de las marcas en unidades de usuario |
+| `ticks` | `"out"` | dirección de las marcas: `"out"`, `"in"`, `"both"`, `"none"`, `"grid"` (relativas a la línea; `"grid"` las alarga a través del campo, §13.6) |
+| `tick_size` | pequeño | longitud de las marcas, **cantidad física en pt** (§3.2) |
 | `labels` | `true` | mostrar etiquetas numéricas |
 | `decimals` | `0` | decimales en las etiquetas |
-| `label_gap` | auto | distancia de las etiquetas a la línea |
+| `label_gap` | auto | distancia de las etiquetas a la línea, **cantidad física en pt** |
+| `field` | ventana | (solo `ticks="grid"`) largo perpendicular del barrido; default = rango de la ventana |
 | `title` | — | rótulo del eje (texto, admite markup matemático §14) |
 | `title_font`, `title_size` | ambiente | fuente/tamaño del título, para cuando difieren de las etiquetas |
+
+> **`tick_size` y `label_gap` son físicos (pt), no de mundo.** Como `line_width`,
+> `font_size` y los marcadores (§4.6), no los deforma la ventana ni el `stretch`: en un
+> marco de datos anisótropo (§13.7) las marcas y etiquetas quedan a la misma distancia
+> física en ambos ejes, sin compensar la escala por eje. El lado ("out") se deriva de la
+> tangente de la línea: eje ~horizontal → abajo, ~vertical → izquierda.
+>
+> **`ticks="grid"`** convierte las marcas del eje en líneas que barren el campo, a los
+> mismos valores del `step`: el efecto de la fig 2.3 original (donde la retícula eran
+> "ticks largos") sin un `grid` aparte. El largo perpendicular se hereda de la ventana, o
+> se fija con `field=`.
 
 Las **marcas y etiquetas** van en `start, start+step, …` hasta `to` (`start` default = `from`). Las **etiquetas** heredan el estado de texto vigente (`font`, `font_size`, `align`, §7.3); solo el **título** admite override propio (`title_font`/`title_size`), porque suele diferir —p. ej. números en itálica y título en romana, como en fig2-3.
 
