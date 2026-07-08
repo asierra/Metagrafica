@@ -300,8 +300,27 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
 struct Stmt {
   virtual ~Stmt() {}
   virtual void exec(Scope &, MetaGrafica &, GraphicsItemList &) = 0;
+  // true solo en las sentencias de transformación local (§11.1): apilan una
+  // matriz de mundo (OPMPUSH) que el bloque/struct contenedor debe desapilar.
+  virtual bool isTransform() const { return false; }
 };
 using StmtPtr = std::unique_ptr<Stmt>;
+
+// Nº de sentencias de transformación DIRECTAS en un cuerpo: el bloque/struct que
+// lo ejecuta emite ese número de OPMPOP al final para restaurar la matriz (§11.1).
+// Las anidadas (dentro de for/if/{}) las restaura su propio contenedor.
+static int countTransforms(const std::vector<StmtPtr> &body) {
+  int n = 0;
+  for (const auto &s : body) if (s->isTransform()) n++;
+  return n;
+}
+static void popTransforms(int n, GraphicsItemList &out) {
+  for (int i = 0; i < n; i++) {
+    auto t = std::make_unique<Transform>();
+    t->setOperation(OPMPOP);
+    out.push_back(std::move(t));
+  }
+}
 
 // Argumento de sentencia de estado: número (Term) o cadena (color).
 struct SArg { bool isStr = false; ExprPtr num; std::string str; };
@@ -313,6 +332,34 @@ struct StateStmt : Stmt {
     if (args.empty()) return;
     Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
     emitStyleAttr(name, v, out);
+  }
+};
+
+// Transformación local como sentencia de estado (§11.1): translate/rotate/scale/
+// shear. Post-multiplica la matriz de mundo (OPMPUSH) → afecta a lo que sigue en
+// el bloque; el contenedor la desapila al salir (countTransforms/popTransforms).
+// La rotación es alrededor del origen del marco vigente (matriz), no de la pluma.
+struct TransformStmt : Stmt {
+  int mop;                    // OPMTL/OPMRT/OPMSC/OPMSH
+  std::vector<ExprPtr> args;
+  bool isTransform() const override { return true; }
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    auto n = [&](size_t i) { return i < args.size() ? args[i]->eval(s).num : 0.0; };
+    Matrix m;
+    switch (mop) {
+      case OPMTL: m.translate(n(0), n(1)); break;
+      case OPMRT: m.rotate(n(0)); break;
+      case OPMSC: {
+        double sx = n(0), sy = args.size() >= 2 ? n(1) : sx;
+        if (sx != sy) g_flags.using_ellipse = true;   // círculo bajo escala anisótropa → elipse
+        m.scale(sx, sy);
+        break;
+      }
+      case OPMSH: g_flags.using_ellipse = true; m.shear(n(0), n(1)); break;
+    }
+    auto t = std::make_unique<Transform>();
+    t->setOperation(OPMPUSH); t->setMatrix(m);
+    out.push_back(std::move(t));
   }
 };
 
@@ -359,6 +406,7 @@ struct BlockStmt : Stmt {
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     Scope child(&parent);                  // reads suben al padre; writes son locales
     for (auto &st : body) st->exec(child, mg, out);
+    popTransforms(countTransforms(body), out);   // restaura transforms locales (§11.1)
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
 };
@@ -440,6 +488,7 @@ struct InvokeStmt : Stmt {
       out.push_back(std::move(t));
     }
     for (auto &st : def->body) st->exec(local, mg, out);
+    popTransforms(countTransforms(def->body), out);   // transforms locales del cuerpo (§11.1)
     if (hasFrame) {
       auto t = std::make_unique<Transform>();
       t->setOperation(OPMPOP);
@@ -1031,6 +1080,14 @@ struct AxisStmt : Stmt {
 };
 
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
+// Sentencia de transformación local (§11.1) → operación de matriz, o -1 si no lo es.
+static int transformOp(const std::string &n) {
+  if (n == "translate") return OPMTL;
+  if (n == "rotate")    return OPMRT;
+  if (n == "scale")     return OPMSC;
+  if (n == "shear")     return OPMSH;
+  return -1;
+}
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
          n == "dot" || n == "arc" || n == "ellipse" || n == "bezier";
@@ -1175,6 +1232,27 @@ static StmtPtr parseStatement(Lexer &lx) {
     }
     return st;
   }
+  // Transformación local como sentencia (§11.1): translate/rotate/scale/shear sin
+  // paréntesis, args por espacio hasta fin de línea. Con paréntesis sería el
+  // constructor de valor de transform= (§17), que no aparece en posición de sentencia.
+  int top = transformOp(name);
+  if (top >= 0 && lx.peek().type != T_LPAREN) {
+    auto st = std::make_unique<TransformStmt>();
+    st->mop = top;
+    // Aridad FIJA (no "hasta newline"): la spec §11.1 permite varias sentencias
+    // por línea (`translate 5 5  rotate 30  Flecha(...)`), así que cada transform
+    // consume solo sus argumentos. scale: 1, con 2º opcional si sigue un número.
+    if (top == OPMSC) {
+      st->args.push_back(parseTerm(lx));
+      int t = lx.peek().type;
+      if (t == T_NUMBER || t == T_MINUS) st->args.push_back(parseTerm(lx));
+    } else {
+      int arity = (top == OPMRT) ? 1 : 2;      // rotate=1; translate/shear=2
+      for (int i = 0; i < arity; i++) st->args.push_back(parseTerm(lx));
+    }
+    return st;
+  }
+
   if (lx.peek().type == T_LPAREN) return parseInvoke(lx, name);   // invocación: Nombre( … )
 
   // Resto: sentencia de estado (color, line_width, …), argumentos hasta el
