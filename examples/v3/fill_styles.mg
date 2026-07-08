@@ -27,10 +27,12 @@ for i = 0 to 9 {
 }
 
 % --- FGRAY: grises con gray(x), x de 0 (negro) a 1 (blanco) ---
-% V1 FGRAY g medía % de negro → gray(1 - g/100). Aquí el gris se COMPUTA del índice.
+% El oráculo (V1 FGRAY 10..90, izq→der) va de OSCURO a claro: FGRAY g → gray(g/100),
+% así que FGRAY 10 = gray(0.1) (#191919) y FGRAY 90 = gray(0.9). El gris se computa
+% del índice: i=0..8 → gray(0.1)..gray(0.9).
 for i = 0 to 8 {
     x = i * 0.1
-    rectangle(fill = gray(0.9 - i*0.1)) { x .3  (x+0.1) .4 }   % FGRAY 10..90
+    rectangle(fill = gray(0.1 + i*0.1)) { x .3  (x+0.1) .4 }   % FGRAY 10..90
 }
 rectangle(fill=gray(0), color=gray(0)) { .9 .3  1 .4 }       % FGRAY -100: negro, contorneado
 
@@ -39,17 +41,17 @@ rectangle(fill=gray(0), color=gray(0)) { .9 .3  1 .4 }       % FGRAY -100: negro
 fills = ["black", "blue", "brown", "cyan", "green", "magenta", "orange", "red", "white", "yellow"]
 for i = 0 to 9 {
     x = i * 0.1
-    rectangle(fill = fills[i]) { x .6  (x+0.1) .7 }
+    % el blanco (i=8) se contornea para que se vea sobre el fondo (V1: FCOLOR -white)
+    if i == 8 { rectangle(fill="white", color="black") { x .6  (x+0.1) .7 } }
+    else      { rectangle(fill=fills[i])              { x .6  (x+0.1) .7 } }
 }
-% el blanco (i=8) se contornea encima para que se vea sobre el fondo blanco
-rectangle(fill="white", color="black") { .8 .6  .9 .7 }
 
 % --- Títulos ---
 font_size 12
 text("Different ways to fill areas") { 0 .85 }
 font_size 10
-text("FCOLOR") { 0 .73 }
 text("FGRAY")  { 0 .43 }
+text("FCOLOR") { 0 .73 }
 text("FPATRN") { 0 .13 }
 font_size 8
 text("An hyphen or negative value indicates to outline") { 0 .8 }
