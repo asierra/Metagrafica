@@ -780,8 +780,8 @@ struct SineStmt : Stmt {
     bool squared = named.count("squared") && named.at("squared")->eval(s).num != 0.0;
     if (coords.size() < 4) { evalError("sine requiere una base (2 puntos)"); return; }
     if (n <= 0) return;
-    if (phase != 0.0)
-      std::fprintf(stderr, "sine: phase!=0 aún no implementado (ver plan_sine.md); se dibuja phase=0\n");
+    if (phase != 0.0 && squared)
+      std::fprintf(stderr, "sine: phase!=0 con squared aún no implementado; se dibuja phase=0\n");
 
     point p1(coords[0]->eval(s).num, coords[1]->eval(s).num);
     point p2(coords[2]->eval(s).num, coords[3]->eval(s).num);
@@ -793,6 +793,36 @@ struct SineStmt : Stmt {
     auto W = [&](double lx, double ly) {                 // local (base, perp) → mundo
       return point(p1.x + lx * ux + ly * vx, p1.y + lx * uy + ly * vy);
     };
+
+    // phase≠0 (no squared): descomposición en CUARTOS de ciclo (§4.13, plan_sine.md).
+    // Cada cuarto (90°) es una cúbica derivada de &sinpi2; la fase (múltiplo de 90°)
+    // rota el cuarto de arranque. half_cycles=n → 2n cuartos. phase=90 = coseno
+    // (arranca en el máximo). fig6-1 (WKB).
+    if (phase != 0.0 && !squared) {
+      // {C1x,C1y, C2x,C2y, Px,Py, startY} por cuarto (x∈[0,1] del cuarto; y = seno)
+      static const double Q[4][7] = {
+        {0.417,  0.6667, 0.693,  1.0,    1.0,  1.0,  0.0},   // Q0 sube 0→+1
+        {0.307,  1.0,    0.583,  0.6667, 1.0,  0.0,  1.0},   // Q1 baja +1→0
+        {0.417, -0.6667, 0.693, -1.0,    1.0, -1.0,  0.0},   // Q2 baja 0→−1
+        {0.307, -1.0,    0.583, -0.6667, 1.0,  0.0, -1.0},   // Q3 sube −1→0
+      };
+      int startQ = (int)std::lround(phase / 90.0) % 4;
+      if (startQ < 0) startQ += 4;
+      double wq = L / (2.0 * ni);                          // ancho de un cuarto
+      Path qp;
+      qp.push_back(W(0.0, Q[startQ][6] * A));              // moveto en la y inicial del 1er cuarto
+      for (int i = 0; i < 2 * ni; i++) {
+        const double *q = Q[(startQ + i) % 4];
+        double base = i * wq;
+        qp.push_back(W(base + q[0] * wq, q[1] * A));
+        qp.push_back(W(base + q[2] * wq, q[3] * A));
+        qp.push_back(W(base + q[4] * wq, q[5] * A));
+      }
+      auto pq = std::make_unique<Polyline>(GI_BEZIER);
+      pq->setPath(qp);
+      out.push_back(std::move(pq));
+      return;
+    }
 
     Path path;
     path.push_back(W(0.0, 0.0));                          // moveto (arranque)
