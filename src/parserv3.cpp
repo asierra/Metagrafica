@@ -804,6 +804,29 @@ struct NumbersStmt : Stmt {
   }
 };
 
+// ticks (§13.1): genera `count` marcas; cada una es un segmento mark=(dx,dy)
+// dibujado en la posición de pluma, que avanza `advance` por paso (forma
+// compacta at/advance, sin pluma). V1: TICKS n dx dy. Motor: Polyline(GI_TICKS)
+// con path = [mark, pos0, pos1, …]; Polyline::draw traza pos→pos+mark por marca.
+struct TicksStmt : Stmt {
+  std::vector<ExprPtr> pos;                // count posicional (§13.1)
+  std::map<std::string, ExprPtr> named;
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    int count = pos.empty() ? (int)namedNum(s, named, "count", 0) : (int)pos[0]->eval(s).num;
+    point mark = namedPoint(s, named, "mark", 0, 0);
+    point at   = namedPoint(s, named, "at", 0, 0);
+    point adv  = namedPoint(s, named, "advance", 0, 0);
+    if (count <= 0) return;
+    Path p;
+    p.push_back(mark);                                // path[0] = vector de marca
+    for (int i = 0; i < count; i++)
+      p.push_back(point(at.x + i * adv.x, at.y + i * adv.y));
+    auto pl = std::make_unique<Polyline>(GI_TICKS);
+    pl->setPath(p);
+    out.push_back(std::move(pl));
+  }
+};
+
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
@@ -915,6 +938,12 @@ static StmtPtr parseStatement(Lexer &lx) {
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras numbers");
     std::vector<ExprPtr> pos;
     parseArgList(lx, pos, st->named);
+    return st;
+  }
+  if (name == "ticks") {                       // ticks(count, mark=, at=, advance=) (§13.1)
+    auto st = std::make_unique<TicksStmt>();
+    if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras ticks");
+    parseArgList(lx, st->pos, st->named);
     return st;
   }
   if (lx.peek().type == T_LPAREN) return parseInvoke(lx, name);   // invocación: Nombre( … )
