@@ -831,6 +831,46 @@ struct TicksStmt : Stmt {
   }
 };
 
+// grid (§13.6): retícula sobre el rectángulo dado por el bloque (esquina
+// inf-izq, esquina sup-der), con líneas verticales cada xstep y horizontales
+// cada ystep (inclusivo en ambos extremos, incluye la línea del cero). El
+// estilo (color/line_width) queda acotado a la retícula (push/pop). Cada haz
+// es un Polyline(GI_TICKS) cuyo mark barre todo el alto/ancho del rectángulo
+// (V1: TICKS con dx/dy = tamaño del campo).
+struct GridStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  std::vector<ExprPtr> coords;              // 2 puntos: (x0 y0) (x1 y1)
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    if (coords.size() < 4) return;
+    double x0 = coords[0]->eval(s).num, y0 = coords[1]->eval(s).num;
+    double x1 = coords[2]->eval(s).num, y1 = coords[3]->eval(s).num;
+    double xstep = namedNum(s, named, "xstep", 0);
+    double ystep = namedNum(s, named, "ystep", 0);
+    GraphicsItemList attrs;
+    for (const char *k : {"color", "line_width"}) {
+      auto it = named.find(k);
+      if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
+    }
+    bool wrap = !attrs.empty();
+    if (wrap) {
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      for (auto &a : attrs) out.push_back(std::move(a));
+    }
+    const double eps = 1e-9;
+    if (xstep > 0) {                        // verticales: mark = alto del campo
+      Path p; p.push_back(point(0, y1 - y0));
+      for (double x = x0; x <= x1 + eps; x += xstep) p.push_back(point(x, y0));
+      auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(p); out.push_back(std::move(pl));
+    }
+    if (ystep > 0) {                        // horizontales: mark = ancho del campo
+      Path p; p.push_back(point(x1 - x0, 0));
+      for (double y = y0; y <= y1 + eps; y += ystep) p.push_back(point(x0, y));
+      auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(p); out.push_back(std::move(pl));
+    }
+    if (wrap) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
@@ -950,6 +990,18 @@ static StmtPtr parseStatement(Lexer &lx) {
     auto st = std::make_unique<TicksStmt>();
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras ticks");
     parseArgList(lx, st->pos, st->named);
+    return st;
+  }
+  if (name == "grid") {                        // grid(xstep=, ystep=, …) { rect } (§13.6)
+    auto st = std::make_unique<GridStmt>();
+    if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+    if (lx.accept(T_LBRACE)) {
+      while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+        if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+        st->coords.push_back(parseTerm(lx));
+      }
+      if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+    }
     return st;
   }
   if (lx.peek().type == T_LPAREN) return parseInvoke(lx, name);   // invocación: Nombre( … )
