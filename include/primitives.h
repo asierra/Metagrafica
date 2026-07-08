@@ -74,6 +74,11 @@ enum GraphicsStateType {
   GS_PLUMEPOSITION,
   GS_SAVE,
   GS_RESTORE,
+  // V3 (al final del enum: no desplazar ordinales). Apilan/restauran el estado
+  // de dibujo COMPLETO (color/grosor/fill/…) para el ámbito de estado de los
+  // bloques §7.1. GS_SAVE/GS_RESTORE (arriba) solo tocan la matriz MTST.
+  GS_PUSHSTATE,
+  GS_POPSTATE,
 };
 
 /// Predefined Matrices
@@ -257,10 +262,15 @@ public:
 
   void draw(Display &) override;
   
-  void set(AttributeType t, int v) { atype = t; value = v; }
+  void set(AttributeType t, int v) { atype = t; value = v; has_f = false; }
+  // Variante flotante (V3): p. ej. line_width en pt, sin la cuantización a 0.2 pt
+  // de V1. Si has_f, Attribute::draw usa fvalue en vez de value.
+  void setF(AttributeType t, double v) { atype = t; fvalue = v; has_f = true; }
 
 private:
   int value = 0;
+  double fvalue = 0.0;
+  bool has_f = false;
   AttributeType atype = AT_LWIDTH;
 };
 

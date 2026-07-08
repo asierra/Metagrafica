@@ -103,7 +103,8 @@ void Attribute::draw(Display &g) {
     g.setLineStyle(value);         // LPATRN n: el índice se resuelve a dash_array en la base
     break;
   case AT_LWIDTH:
-    g.setLineWidth(value * 0.2f);  // LWIDTH n: n está en unidades de 0.2 pt (V1) -> pt
+    // V1: n en unidades de 0.2 pt. V3 (has_f): pt directo, sin cuantizar.
+    g.setLineWidth(has_f ? fvalue : value * 0.2f);
     break;
   case AT_LGRAY:
     g.setLineGray(value/100.0);
@@ -181,6 +182,12 @@ void GraphicsState::draw(Display &g) {
   case GS_RESTORE:
     g.popMatrix(MTST);
     //printf("restore\n");
+    break;
+  case GS_PUSHSTATE:
+    g.pushDrawState();
+    break;
+  case GS_POPSTATE:
+    g.popDrawState();
     break;
   }
 }

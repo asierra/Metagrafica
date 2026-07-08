@@ -251,6 +251,11 @@ public:
   // Contabilidad de matrices, común a todos los backends
   void pushMatrix(Matrix &m)             { mtstack.push(mt); mt *= m; }
   void pushMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) { mtstack.push(mtst); mt *= mtst; } }
+  // V3: apila/restaura el estado de dibujo COMPLETO (color, grosor, fill, …),
+  // igual que structure(), para el ámbito de estado de los bloques (§7.1).
+  void pushDrawState() { dsstack.push(dspstate); }
+  void popDrawState() { if (!dsstack.empty()) { dspstate = dsstack.top(); dsstack.pop(); } }
+
   void saveMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) mtstack.push(mtst); }
   void popMatrix() {
     if (mtstack.empty()) {

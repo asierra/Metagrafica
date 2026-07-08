@@ -36,6 +36,10 @@ $(MANDIR)/mg.1.pdf: $(MANDIR)/mg.1.md
 $(SRCDIR)/lexmg.cpp: $(SRCDIR)/mgpp.l
 	flex -o $@ $<
 
+# Lexer V3 (en desarrollo): src/lexer.l -> src/lexv3.cpp
+$(SRCDIR)/lexv3.cpp: $(SRCDIR)/lexer.l
+	flex -o $@ $<
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
@@ -54,6 +58,15 @@ $(BINDIR):
 $(BINDIR)/mg: $(OBJS) $(HARU_OBJS) | $(BINDIR)
 	$(CXX) -o $@ -g $(OBJS) $(HARU_OBJS) $(LDFLAGS) $(LIBS) -lz
 
+# --- Parser V3 (en desarrollo): renderer aislado, NO toca bin/mg -------------
+# Enlaza el lexer+parser V3 con el subconjunto de objetos del motor reutilizado.
+V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o structure.o \
+	matrix.o primitives.o text.o text_parser.o splines.o)
+
+v3test: $(BINDIR)/v3test
+$(BINDIR)/v3test: $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(INCDIR)/ast.h $(INCDIR)/tokens.h | $(BINDIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) -o $@ $(LDFLAGS) $(LIBS)
+
 install: $(BINDIR)/mg $(MANDIR)/mg.1
 	install -m 755 $(BINDIR)/mg $(PREFIX)/bin
 	install $(MANDIR)/mg.1 ${MANPREFIX}/man1/
@@ -63,7 +76,7 @@ uninstall:
 	rm ${MANPREFIX}/man1/mg.1
 
 clean:
-	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp
+	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp $(SRCDIR)/lexv3.cpp
 # DO NOT DELETE
 
 $(OBJDIR)/Display.o: $(INCDIR)/Display.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h

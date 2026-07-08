@@ -19,18 +19,18 @@ world_window -0.1 1.1 -0.08 0.92
 line_width 0.2
 
 % --- FPATRN: 10 tramas (V1 FILL + FPATRN 1..10) ---
-% Ángulo cíclico con el operador %; paso por familias desde una lista (§5).
+% Ángulo cíclico con mod(); paso por familias desde una lista (§5).
 gaps = [4, 4, 4, 4, 2, 2, 2, 2, 1, 1]
 for i = 0 to 9 {
     x = i * 0.1
-    rectangle(hatch = (i % 4) * 45, hatch_gap = gaps[i]) { x 0  x+0.1 .1 }
+    rectangle(hatch = mod(i, 4) * 45, hatch_gap = gaps[i]) { x 0  (x+0.1) .1 }
 }
 
 % --- FGRAY: grises con gray(x), x de 0 (negro) a 1 (blanco) ---
 % V1 FGRAY g medía % de negro → gray(1 - g/100). Aquí el gris se COMPUTA del índice.
 for i = 0 to 8 {
     x = i * 0.1
-    rectangle(fill = gray(0.9 - i*0.1)) { x .3  x+0.1 .4 }   % FGRAY 10..90
+    rectangle(fill = gray(0.9 - i*0.1)) { x .3  (x+0.1) .4 }   % FGRAY 10..90
 }
 rectangle(fill=gray(0), color=gray(0)) { .9 .3  1 .4 }       % FGRAY -100: negro, contorneado
 
@@ -39,7 +39,7 @@ rectangle(fill=gray(0), color=gray(0)) { .9 .3  1 .4 }       % FGRAY -100: negro
 fills = ["black", "blue", "brown", "cyan", "green", "magenta", "orange", "red", "white", "yellow"]
 for i = 0 to 9 {
     x = i * 0.1
-    rectangle(fill = fills[i]) { x .6  x+0.1 .7 }
+    rectangle(fill = fills[i]) { x .6  (x+0.1) .7 }
 }
 % el blanco (i=8) se contornea encima para que se vea sobre el fondo blanco
 rectangle(fill="white", color="black") { .8 .6  .9 .7 }
