@@ -161,6 +161,14 @@ struct CallExpr : Expr {         // función builtin: sin(x), mod(a,b), len(l)�
     if (fn == "atan2" && need(2)) return Value(std::atan2(a[0].num, a[1].num));
     if (fn == "mod"   && need(2)) return Value(std::fmod(a[0].num, a[1].num));
     if (fn == "len"   && need(1)) return Value((double)a[0].items.size());
+    // gray(g): color gris como entero RGB. g∈[0,1], 0=negro, 1=blanco (§4).
+    // Sirve donde iría un color (fill=/color=): esos aceptan número (RGB directo)
+    // o cadena (nombre/hex). Fuera de rango se satura.
+    if (fn == "gray" && need(1)) {
+      double g = a[0].num < 0 ? 0 : (a[0].num > 1 ? 1 : a[0].num);
+      int c = (int)(g * 255 + 1e-9);   // trunca (como el motor); eps absorbe el error fp (0.2→51, no 50)
+      return Value((double)((c << 16) | (c << 8) | c));
+    }
     return evalError("llamada inválida a función ", fn);
   }
 };

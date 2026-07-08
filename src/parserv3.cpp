@@ -227,6 +227,40 @@ static int get_color(const std::string &c) {
   auto it = map_color.find(c);
   return it == map_color.end() ? 0 : it->second;
 }
+// Un color puede darse como cadena (nombre/hex) o como número (RGB directo, p.ej.
+// el resultado de gray()/un entero 0xRRGGBB).
+static int colorFromValue(const Value &v) {
+  return v.type == Value::STRING ? get_color(v.str) : (int)v.num;
+}
+
+// Emite el/los GraphicsItem de un atributo de estilo (color/fill/line_width).
+// Compartido por la sentencia de estado (§7) y el atributo por-primitiva (§7.5).
+// El color acepta cadena (nombre/hex) o número (RGB directo, p.ej. gray()).
+// Devuelve true si reconoció el atributo.
+static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemList &out) {
+  if (name == "color") {
+    if (v.type == Value::STRING && v.str == "none") return true;   // sin trazo: pendiente
+    auto a = std::make_unique<Attribute>();
+    a->set(AT_LCOLOR, colorFromValue(v));
+    out.push_back(std::move(a));
+    return true;
+  }
+  if (name == "fill") {
+    if (v.type == Value::STRING && v.str == "none") { out.push_back(std::make_unique<GraphicsState>(GS_NOFILL)); return true; }
+    auto a = std::make_unique<Attribute>();
+    a->set(AT_FCOLOR, colorFromValue(v));
+    out.push_back(std::move(a));
+    out.push_back(std::make_unique<GraphicsState>(GS_FILL));        // activar relleno (§4)
+    return true;
+  }
+  if (name == "line_width") {
+    auto a = std::make_unique<Attribute>();
+    a->setF(AT_LWIDTH, v.num);                                      // pt directo (§4.10)
+    out.push_back(std::move(a));
+    return true;
+  }
+  return false;   // dash/hatch/font/align/transform… → pendientes
+}
 
 struct Stmt {
   virtual ~Stmt() {}
@@ -241,23 +275,9 @@ struct StateStmt : Stmt {
   std::string name;
   std::vector<SArg> args;
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
-    if (name == "color" && !args.empty() && args[0].isStr) {
-      if (args[0].str == "none") return;                 // sin trazo: pendiente
-      auto a = std::make_unique<Attribute>();
-      a->set(AT_LCOLOR, get_color(args[0].str));
-      out.push_back(std::move(a));
-    } else if (name == "fill" && !args.empty() && args[0].isStr) {
-      if (args[0].str == "none") { out.push_back(std::make_unique<GraphicsState>(GS_NOFILL)); return; }
-      auto a = std::make_unique<Attribute>();
-      a->set(AT_FCOLOR, get_color(args[0].str));
-      out.push_back(std::move(a));
-      out.push_back(std::make_unique<GraphicsState>(GS_FILL));   // activar relleno (§4)
-    } else if (name == "line_width" && !args.empty() && !args[0].isStr) {
-      auto a = std::make_unique<Attribute>();
-      a->setF(AT_LWIDTH, args[0].num->eval(s).num);      // pt directo (§4.10)
-      out.push_back(std::move(a));
-    }
-    // dash/hatch/font/transform… → slice posterior (se ignoran por ahora)
+    if (args.empty()) return;
+    Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
+    emitStyleAttr(name, v, out);
   }
 };
 
@@ -654,7 +674,23 @@ struct PrimStmt : Stmt {
     else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
     else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
     else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
-    if (item) out.push_back(std::move(item));
+    if (!item) return;
+
+    // Atributos de estilo por-primitiva (§7.5): fill/color/line_width acotados a
+    // esta primitiva (push/pop de estado alrededor). El resto (hatch/dash…) → pendiente.
+    GraphicsItemList attrs;
+    for (const char *k : {"color", "fill", "line_width"}) {
+      auto it = named.find(k);
+      if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
+    }
+    // fill= y color= juntos = contornear el relleno (§4).
+    if (named.count("fill") && named.count("color"))
+      attrs.push_back(std::make_unique<GraphicsState>(GS_OUTLINEFILL));
+    if (attrs.empty()) { out.push_back(std::move(item)); return; }
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    for (auto &a : attrs) out.push_back(std::move(a));
+    out.push_back(std::move(item));
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
 };
 

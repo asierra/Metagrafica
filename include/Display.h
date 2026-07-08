@@ -173,6 +173,7 @@ public:
   
   bool isFilled() const { return dspstate.fill; }
   void setFilled(bool m) { dspstate.fill = m; }
+  void setOutlineFill(bool m) { dspstate.outlinefill = m; }
   
   // Traduce el índice de patrón (V1: LPATRN n) al arreglo on/off en puntos.
   // Única fuente de verdad para los cinco patrones clásicos; V2 la reutiliza

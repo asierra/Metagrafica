@@ -195,5 +195,8 @@ void GraphicsState::draw(Display &g) {
   case GS_POPSTATE:
     g.popDrawState();
     break;
+  case GS_OUTLINEFILL:
+    g.setOutlineFill(true);
+    break;
   }
 }

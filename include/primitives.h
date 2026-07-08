@@ -79,6 +79,9 @@ enum GraphicsStateType {
   // bloques §7.1. GS_SAVE/GS_RESTORE (arriba) solo tocan la matriz MTST.
   GS_PUSHSTATE,
   GS_POPSTATE,
+  // Contornea un relleno (fill + trazo del borde): §4 "contorno = presencia de
+  // color=". Antes solo se lograba con valor de relleno negativo (falla en negro).
+  GS_OUTLINEFILL,
 };
 
 /// Predefined Matrices
