@@ -409,7 +409,8 @@ double text_width(TextState ts, string s) {
 
 void Text::draw(Display &g) {
   g.setRelFontSize(textstate.font_size);
-  g.setFontFace(textstate.font_face);
+  if (textstate.font_face != FN_NOFACE)   // FN_NOFACE = hereda la cara ambiente (§7.3)
+    g.setFontFace(textstate.font_face);
   g.text(text);
 }
 

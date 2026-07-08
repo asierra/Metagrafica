@@ -266,7 +266,12 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     out.push_back(std::move(a));
     return true;
   }
-  return false;   // dash/hatch/font/align/transform… → pendientes
+  if (name == "font") {                                             // §14.3: cara base (roman/italic/…)
+    FontFace ff = get_font_face_from_string(v.type == Value::STRING ? v.str : "", g_flags.using_fontcmmi);
+    if (ff != FN_NOFACE) { auto a = std::make_unique<Attribute>(); a->set(AT_TSTYLE, ff); out.push_back(std::move(a)); }
+    return true;
+  }
+  return false;   // dash/hatch/align/transform… → pendientes
 }
 
 struct Stmt {
@@ -804,7 +809,7 @@ struct NumbersStmt : Stmt {
       auto gs = std::make_unique<GraphicsState>();
       gs->setPosition(point(at.x + i * adv.x, at.y + i * adv.y));
       out.push_back(std::move(gs));
-      out.push_back(parse_text(label, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+      out.push_back(parse_text(label, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));  // hereda font ambiente
     }
   }
 };
@@ -956,7 +961,7 @@ struct AxisStmt : Stmt {
         point q = posOf(v); char num[64]; std::snprintf(num, sizeof num, fmt, v);
         auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(q.x + g.x, q.y + g.y));
         out.push_back(std::move(gs));
-        out.push_back(parse_text(num, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+        out.push_back(parse_text(num, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));  // hereda font ambiente
       }
     }
 
@@ -967,6 +972,11 @@ struct AxisStmt : Stmt {
       point t = physOut(labelGap * 3.0);
       point tp(m.x + t.x, m.y + t.y);
       double ang = horiz ? 0.0 : std::atan2(uy, ux) * 57.29577951308232;   // rad→grados
+      std::string titleFont = namedStr(s, named, "title_font");
+      // Cara del título: title_font la hornea en el Text (override propio, §13.5);
+      // sin él, FN_NOFACE → hereda la ambiente. title_size se aísla con push/pop.
+      FontFace tff = titleFont.empty() ? FN_NOFACE
+                     : get_font_face_from_string(titleFont, g_flags.using_fontcmmi);
       bool wrap = titleSize > 0;
       if (wrap) {
         out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
@@ -979,7 +989,7 @@ struct AxisStmt : Stmt {
         tr->setOperation(OPMRT); tr->setRotation(ang); tr->setPredefinedMatrix(MTLC);
         out.push_back(std::move(tr));
       }
-      out.push_back(parse_text(title, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+      out.push_back(parse_text(title, tff, g_flags.using_reencode, g_flags.using_fontcmmi));
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVRESTORE));
       if (wrap) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
