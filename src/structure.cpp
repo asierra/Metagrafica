@@ -173,6 +173,7 @@ void MetaGrafica::draw(Display &g) {
   if (dcmx > 0)
     g.setDimension(dcmx, dcmy);
   g.setWindow(wwx, wwy, wwdx, wwdy);
+  g.setStretchMode(stretch);
   if (fontsize > 0)
     g.setFontSize(fontsize);
   g.start();

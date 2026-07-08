@@ -298,10 +298,14 @@ struct AssignStmt : Stmt {
 struct ConfigStmt : Stmt {
   std::string which;
   std::vector<ExprPtr> args;
+  ExprPtr stretchE;                        // world_window ... stretch= (null = meet)
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &) override {
     auto n = [&](size_t i) { return args[i]->eval(s).num; };
     if (which == "display_size")      mg.setDimension(n(0), n(1));
-    else if (which == "world_window") mg.setWindow(n(0), n(2), n(1) - n(0), n(3) - n(2));
+    else if (which == "world_window") {
+      mg.setWindow(n(0), n(2), n(1) - n(0), n(3) - n(2));
+      mg.setStretch(stretchE && stretchE->eval(s).num != 0.0);    // §13.7 marco de datos
+    }
   }
 };
 
@@ -896,8 +900,10 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (isConfig(name)) {
     auto st = std::make_unique<ConfigStmt>();
     st->which = name;
-    int n = (name == "display_size") ? 2 : (name == "world_window") ? 4 : 1;
+    int n = (name == "display_size") ? 2 : 4;   // world_window: 4 valores
     for (int i = 0; i < n; i++) st->args.push_back(parseTerm(lx));   // valores por espacio -> Term
+    std::string k;                              // world_window ... stretch=true (§13.7)
+    if (attrNameHere(lx, k) && k == "stretch") { lx.next(); lx.next(); st->stretchE = parseExpression(lx); }
     return st;
   }
   if (isPrim(name)) {

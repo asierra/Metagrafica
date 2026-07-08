@@ -212,6 +212,10 @@ public:
   void setFontSize(double d) { fontsize = d; }
 //  int getFontSize() { return fontsize; }
 
+  /// stretch=true: marco de datos (§13.7), escala por-eje. Se propaga al
+  /// Display en draw(). Default false = isométrico *meet*.
+  void setStretch(bool b) { stretch = b; }
+
 private:
   /// Profundidad maxima de recursion
   int maxDepth;
@@ -219,6 +223,8 @@ private:
   double dcmx, dcmy;
   /// Ventana de mundo; default el cuadrado unitario (V1 sin WW)
   double wwx = 0, wwy = 0, wwdx = 1, wwdy = 1;
+  /// Marco de datos (§13.7): escala por-eje en vez de meet. Default false.
+  bool stretch = false;
   /// Font size in points
   double fontsize;
 };

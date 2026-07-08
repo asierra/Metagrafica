@@ -167,6 +167,11 @@ public:
     wwx = x0; wwy = y0; wwdx = dx; wwdy = dy;
   }
 
+  /// stretch=true: escala por-eje al rectángulo exacto (marco de datos §13.7);
+  /// default false = escala isométrica *meet* (§3.1). El front-end V1 lo dejaba
+  /// en false; el V3 lo activa desde world_window ... stretch=true.
+  void setStretchMode(bool b) { stretch_mode = b; }
+
   void setPlumePosition(point &p) { pp = p; }
   void getPlumePosition(point &p) { p = pp; }
   virtual void setOpenPath(bool op) { dspstate.openpath = op; }
