@@ -198,5 +198,11 @@ void GraphicsState::draw(Display &g) {
   case GS_OUTLINEFILL:
     g.setOutlineFill(true);
     break;
+  case GS_DEVSAVE:
+    g.save();
+    break;
+  case GS_DEVRESTORE:
+    g.restore();
+    break;
   }
 }

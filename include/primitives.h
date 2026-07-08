@@ -82,6 +82,12 @@ enum GraphicsStateType {
   // Contornea un relleno (fill + trazo del borde): §4 "contorno = presencia de
   // color=". Antes solo se lograba con valor de relleno negativo (falla en negro).
   GS_OUTLINEFILL,
+  // save/restore del DISPOSITIVO (gsave/grestore EPS; grupo <g> SVG): cierra las
+  // transformaciones MTLC intermedias (p.ej. rotación de texto). Lo usa axis para
+  // acotar el título rotado. Distinto de GS_SAVE/RESTORE (pila MTST) y de
+  // GS_PUSHSTATE/POPSTATE (estado de dibujo).
+  GS_DEVSAVE,
+  GS_DEVRESTORE,
 };
 
 /// Predefined Matrices

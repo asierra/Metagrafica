@@ -960,18 +960,27 @@ struct AxisStmt : Stmt {
       }
     }
 
-    // 4. título (título vertical aún sin rotar → 2º corte)
+    // 4. título. Eje vertical → texto girado con el ángulo de la línea (MTLC),
+    //    acotado con save/restore del dispositivo para cerrar el grupo de rotación.
     if (!title.empty()) {
       point m(p1.x + 0.5 * dx, p1.y + 0.5 * dy);
       point t = physOut(labelGap * 3.0);
+      point tp(m.x + t.x, m.y + t.y);
+      double ang = horiz ? 0.0 : std::atan2(uy, ux) * 57.29577951308232;   // rad→grados
       bool wrap = titleSize > 0;
       if (wrap) {
         out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
         auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)titleSize); out.push_back(std::move(a));
       }
-      auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(m.x + t.x, m.y + t.y));
-      out.push_back(std::move(gs));
+      if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVSAVE));
+      auto gs = std::make_unique<GraphicsState>(); gs->setPosition(tp); out.push_back(std::move(gs));
+      if (ang != 0.0) {
+        auto tr = std::make_unique<Transform>();
+        tr->setOperation(OPMRT); tr->setRotation(ang); tr->setPredefinedMatrix(MTLC);
+        out.push_back(std::move(tr));
+      }
       out.push_back(parse_text(title, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+      if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVRESTORE));
       if (wrap) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
   }
