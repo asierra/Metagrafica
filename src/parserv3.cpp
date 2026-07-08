@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
 #include <string>
 #include <vector>
 #include <map>
@@ -871,6 +872,111 @@ struct GridStmt : Stmt {
   }
 };
 
+// axis (§13.5): eje declarativo = línea + marcas + etiquetas + título. El bloque
+// da los dos extremos físicos { p1 p2 }; los argumentos, el rango numérico y la
+// decoración. pos(v) = p1 + (v-from)/(to-from)·(p2-p1). La orientación de marcas
+// y etiquetas se deriva de la tangente de la línea; el LADO "out" por heurística:
+// eje ~horizontal → abajo, ~vertical → izquierda (cubre X/Y). tick_size y
+// label_gap son FÍSICOS (pt), inmunes a la ventana/stretch (como line_width,
+// §3.2): se convierten a unidades de usuario con la escala device de mg.
+// ticks: "out"|"in"|"both"|"none"|"grid" (grid barre el campo, §13.6-como-eje).
+// Título vertical SIN rotar aún (2º corte). title_font (roman/italic) pendiente
+// del estado font §7.3; title_size sí se aplica (AT_THEIGHT). V1: TICKS+GNNUM+PL.
+struct AxisStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  std::vector<ExprPtr> coords;              // 2 puntos: p1 p2
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (coords.size() < 4) return;
+    point p1(coords[0]->eval(s).num, coords[1]->eval(s).num);
+    point p2(coords[2]->eval(s).num, coords[3]->eval(s).num);
+    double from = namedNum(s, named, "from", 0), to = namedNum(s, named, "to", 1);
+    double step = namedNum(s, named, "step", 1);
+    double startv = named.count("start") ? namedNum(s, named, "start", from) : from;
+    std::string tdir = namedStr(s, named, "ticks"); if (tdir.empty()) tdir = "out";
+    bool labels = named.count("labels") ? namedNum(s, named, "labels", 1) != 0.0 : true;
+    int decimals = (int)namedNum(s, named, "decimals", 0);
+    std::string title = namedStr(s, named, "title");
+    double titleSize = namedNum(s, named, "title_size", 0);
+    double tickSize = namedNum(s, named, "tick_size", 3.0);   // pt
+    double labelGap = namedNum(s, named, "label_gap", 8.0);   // pt
+
+    double dx = p2.x - p1.x, dy = p2.y - p1.y, L = std::sqrt(dx * dx + dy * dy);
+    if (L <= 0 || step == 0) return;
+    double ux = dx / L, uy = dy / L;
+    bool horiz = std::fabs(ux) >= std::fabs(uy);
+    double px = uy, py = -ux;                 // una perpendicular; ajusta el lado "out"
+    if (horiz) { if (py > 0) { px = -px; py = -py; } }   // abajo (y<0)
+    else       { if (px > 0) { px = -px; py = -py; } }   // izquierda (x<0)
+
+    // Escala física: cm por unidad de usuario en cada eje (meet o stretch).
+    double dcx, dcy; mg.getDimension(dcx, dcy);
+    double wx, wy, wdx, wdy; mg.getWindow(wx, wy, wdx, wdy);
+    double scx = dcx / wdx, scy = dcy / wdy;
+    if (!mg.getStretch()) { double m = scx < scy ? scx : scy; scx = scy = m; }
+    const double PT_PER_CM = 72.0 / 2.54;
+    auto physOut = [&](double pt) {           // offset físico (pt) en dirección out → usuario
+      double cm = pt / PT_PER_CM;
+      return point(px * (cm / scx), py * (cm / scy));
+    };
+    auto posOf = [&](double v) {
+      double t = (to == from) ? 0 : (v - from) / (to - from);
+      return point(p1.x + t * dx, p1.y + t * dy);
+    };
+    const double eps = 1e-9;
+
+    // 1. línea del eje
+    { auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
+      pp.push_back(p1); pp.push_back(p2); pl->setPath(pp); out.push_back(std::move(pl)); }
+
+    // 2. marcas
+    if (tdir == "grid") {                     // barren el campo perpendicular (ventana o field=)
+      double field = named.count("field") ? namedNum(s, named, "field", 0) : (horiz ? wdy : wdx);
+      double base  = horiz ? wy : wx;
+      Path pp; pp.push_back(horiz ? point(0, field) : point(field, 0));
+      for (double v = startv; v <= to + eps; v += step) {
+        point q = posOf(v); pp.push_back(horiz ? point(q.x, base) : point(base, q.y));
+      }
+      auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(pp); out.push_back(std::move(pl));
+    } else if (tdir != "none") {
+      point o = physOut(tickSize), mark = o, off(0, 0);
+      if (tdir == "in")        mark = point(-o.x, -o.y);
+      else if (tdir == "both") { off = point(-o.x, -o.y); mark = point(2 * o.x, 2 * o.y); }
+      Path pp; pp.push_back(mark);
+      for (double v = startv; v <= to + eps; v += step) {
+        point q = posOf(v); pp.push_back(point(q.x + off.x, q.y + off.y));
+      }
+      auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(pp); out.push_back(std::move(pl));
+    }
+
+    // 3. etiquetas numéricas (heredan el estado de texto vigente, §14)
+    if (labels) {
+      point g = physOut(labelGap);
+      char fmt[8]; std::snprintf(fmt, sizeof fmt, "%%.%df", decimals < 0 ? 0 : decimals);
+      for (double v = startv; v <= to + eps; v += step) {
+        point q = posOf(v); char num[64]; std::snprintf(num, sizeof num, fmt, v);
+        auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(q.x + g.x, q.y + g.y));
+        out.push_back(std::move(gs));
+        out.push_back(parse_text(num, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+      }
+    }
+
+    // 4. título (título vertical aún sin rotar → 2º corte)
+    if (!title.empty()) {
+      point m(p1.x + 0.5 * dx, p1.y + 0.5 * dy);
+      point t = physOut(labelGap * 3.0);
+      bool wrap = titleSize > 0;
+      if (wrap) {
+        out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+        auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)titleSize); out.push_back(std::move(a));
+      }
+      auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(m.x + t.x, m.y + t.y));
+      out.push_back(std::move(gs));
+      out.push_back(parse_text(title, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+      if (wrap) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    }
+  }
+};
+
 static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
@@ -990,6 +1096,18 @@ static StmtPtr parseStatement(Lexer &lx) {
     auto st = std::make_unique<TicksStmt>();
     if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras ticks");
     parseArgList(lx, st->pos, st->named);
+    return st;
+  }
+  if (name == "axis") {                        // axis(from=, to=, step=, …) { p1 p2 } (§13.5)
+    auto st = std::make_unique<AxisStmt>();
+    if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+    if (lx.accept(T_LBRACE)) {
+      while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+        if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+        st->coords.push_back(parseTerm(lx));
+      }
+      if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+    }
     return st;
   }
   if (name == "grid") {                        // grid(xstep=, ystep=, …) { rect } (§13.6)

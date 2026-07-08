@@ -215,6 +215,10 @@ public:
   /// stretch=true: marco de datos (§13.7), escala por-eje. Se propaga al
   /// Display en draw(). Default false = isométrico *meet*.
   void setStretch(bool b) { stretch = b; }
+  bool getStretch() const { return stretch; }
+  void getWindow(double &x, double &y, double &dx, double &dy) const {
+    x = wwx; y = wwy; dx = wwdx; dy = wwdy;
+  }
 
 private:
   /// Profundidad maxima de recursion
