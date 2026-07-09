@@ -40,7 +40,7 @@ static const char *ps_dot = R"(
   gsave
   [] 0 setdash
   1 setlinecap
-  rad setlinewidth
+  rad 2 mul setlinewidth   % rad = RADIO (§4.6): diámetro del disco = 2*rad
   newpath x y moveto 0 0 rlineto stroke
   grestore
   end

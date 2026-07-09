@@ -33,7 +33,7 @@ struct Detector() {
 % ── Dispositivo ──────────────────────────────────────────────────────────────
 world_window -1 11 -1 3
 
-dot(4) { -0.5 1  -0.5 1.5 }                    % terminales
+dot(1.0) { -0.5 1  -0.5 1.5 }                    % terminales
 
 line_width 0.2
 polyline { -0.5 1 0.4 1 0.4 1.15 0.55 1.25 0.4 1.35 0.4 1.5 -0.5 1.5 ;

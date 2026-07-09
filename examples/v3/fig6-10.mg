@@ -19,7 +19,7 @@ struct Fig1() {
 
     % interruptor (contactos + palanca)
     line_width 0.2
-    dot(3) { 4.25 0.75  5.75 0.75 }
+    dot(0.75) { 4.25 0.75  5.75 0.75 }
     polyline { 4 0.75 4.25 0.75 5.6875 1.325 ;  5.75 0.75 6 0.75 }
 
     % cotas (reglillas de dimensión) — ⚠ params por calibrar
@@ -65,7 +65,7 @@ struct Fig2() {
     world_window 0 10 0 7
 
     line_width 0.2
-    dot(3) { 4.25 0.75  5.75 0.75 }
+    dot(0.75) { 4.25 0.75  5.75 0.75 }
     polyline { 4 0.75 4.25 0.75 ;  4.25 0.83 5.8 0.83 ;  5.75 0.75 6 0.75 }
 
     line_width 0.1

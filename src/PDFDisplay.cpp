@@ -420,7 +420,7 @@ void PDFDisplay::dot(double x, double y, double r) {
   mt.transform(x, y);
   HPDF_Page_GSave(page);
   applyFillColor();            // en PAGE_DESCRIPTION, antes del path
-  HPDF_Page_Circle(page, x, y, r / 2.0f);
+  HPDF_Page_Circle(page, x, y, r);   // r = RADIO del marcador (§4.6)
   HPDF_Page_Fill(page);
   HPDF_Page_GRestore(page);
 }

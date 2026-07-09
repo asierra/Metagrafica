@@ -420,12 +420,12 @@ void SVGDisplay::rect(double x1, double y1, double x2, double y2) {
 }
 
 void SVGDisplay::dot(double x, double y, double r) {
-    // "dot" en EPS/PDF usa r como diámetro (radio = r/2) y toma el color de
-    // línea actual, no un negro fijo.
+    // r = RADIO del marcador en unidades de dispositivo (§4.6); toma el color de
+    // línea actual. La posición la transforma el marco; el tamaño NO (físico).
     mt.transform(x, y);
     char colorBuf[10];
     sprintf(colorBuf, "#%06X", dspstate.linecolor);
-    fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"%s\" />\n", x, y, r / 2.0f, colorBuf);
+    fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"%s\" />\n", x, y, r, colorBuf);
 }
 
 // -------------------------------------------------------------

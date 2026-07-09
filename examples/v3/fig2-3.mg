@@ -29,11 +29,11 @@ dash "solid"                                               % V1 LPATRN 0: la tra
 
 % ── Puntos experimentales ───────────────────────────────────────────────────
 % dot es marcador FÍSICO (§4.6): la posición la transforma el marco stretch, el
-% tamaño NO → círculos redondos en su sitio. color= (sin fill) = abierto, como
-% los CR 0.1 del V1. El tamaño es físico EN PT (§4.6); el CR 0.1 del V1 medía
-% 0.1 cm de radio ≈ 2.8 pt, así que el "0.1" aquí es provisional. ⚠ calibrar el
-% valor (y radio-vs-diámetro) contra el oráculo cuando exista el parser V3.
-dot(0.1, color="black") {
+% tamaño NO → círculos redondos en su sitio. El argumento es el RADIO en pt
+% (§4.6). El V1 usaba CR 0.1 = círculo de 0.1 cm de radio ≈ 2.83 pt; aquí se
+% aproxima con un marcador físico de ese radio (V1 CR era geométrico y bajo
+% stretch salía elíptico, esto es redondo por diseño).
+dot(2.83, color="black") {
     0.16011 0.7290  0.19421 1.1410  0.21008 1.3624  0.22753 1.5638
     0.24370 1.8089  0.26464 2.0984  0.30605 2.6922  0.35098 3.3768
     0.38756 3.6056  0.65876 5.3581  0.80844 5.3956  0.94408 5.5524
