@@ -716,6 +716,7 @@ struct FitStmt : Stmt {
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
     for (auto &st : def->body) st->exec(local, mg, out);
+    popTransforms(countTransforms(def->body), out);   // transforms locales del cuerpo (§11.1): sin esto se fugan al fit hermano siguiente
     { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
@@ -739,6 +740,7 @@ static Structure *buildStructure(StructDef *def, MetaGrafica &mg, Scope &caller)
     prlist.push_back(std::move(t));
   }
   for (auto &st : def->body) st->exec(local, mg, prlist);
+  popTransforms(countTransforms(def->body), prlist);   // §11.1: cierra los transforms del cuerpo antes de la ventana→unidad
   if (needN) { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); prlist.push_back(std::move(t)); }
   auto s = std::make_unique<Structure>();
   std::string nm = "__" + def->name + "_" + std::to_string(g_structSeq++);
