@@ -88,8 +88,11 @@ std::string SVGDisplay::fillColorHex() {
 // Una familia: el tile es una línea HORIZONTAL repetida verticalmente cada
 // `gap`, orientada con patternTransform="rotate(...)" — rotar el tile completo
 // (línea + lattice cuadrado) preserva la periodicidad para CUALQUIER ángulo
-// (§4.11 fase 2), no solo los 4 de la tabla FPATRN. El ángulo se ajusta con
-// -90 por el signo del flip global scale(1,-1), igual que el prólogo EPS.
+// (§4.11 fase 2), no solo los 4 de la tabla FPATRN. El <pattern> vive en el
+// marco lógico Y-up del <g scale(1,-1)> global, igual que los paths: una línea
+// base (1,0) rotada por R queda con dirección (cos R, sin R). Para igualar a
+// EPS/PDF —cuya línea apunta a (cos(90-a), sin(90-a))— hace falta R = 90 - a.
+// (El viejo a-90 reflejaba en Y: hatch 45° salía \ en vez de /.)
 //
 // Varias familias (crosshatch, fase 3): patternTransform no sirve para dos
 // ángulos a la vez, así que el tile se arma sin rotación con las diagonales
@@ -117,7 +120,7 @@ std::string SVGDisplay::ensureHatchPattern(const FillPattern &fp) {
                 "width=\"%f\" height=\"%f\" patternTransform=\"rotate(%f)\">"
                 "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" "
                 "stroke-width=\"%f\"/></pattern></defs>\n",
-                id.c_str(), h.gap, h.gap, h.angle - 90.0, h.gap, color.c_str(), sw);
+                id.c_str(), h.gap, h.gap, 90.0 - h.angle, h.gap, color.c_str(), sw);
         return id;
     }
 
