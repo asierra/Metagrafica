@@ -19,6 +19,7 @@ MANDIR = man
 HARUDIR = third_party/libharu
 HARU_SRCS = $(wildcard $(HARUDIR)/src/*.c)
 HARU_OBJS = $(patsubst $(HARUDIR)/src/%.c, $(OBJDIR)/haru/%.o, $(HARU_SRCS))
+HARU_LIB = $(OBJDIR)/haru/libharu.a
 
 SRCS = $(addprefix $(SRCDIR)/, Display.cpp EPSDisplay.cpp PDFDisplay.cpp SVGDisplay.cpp main.cpp structure.cpp matrix.cpp \
 	primitives.cpp lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp)
@@ -46,6 +47,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 $(OBJDIR)/haru/%.o: $(HARUDIR)/src/%.c | $(OBJDIR)/haru
 	$(CC) -c $(HARU_CFLAGS) $< -o $@
 
+$(HARU_LIB): $(HARU_OBJS)
+	$(AR) rcs $@ $(HARU_OBJS)
+
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
@@ -63,8 +67,8 @@ $(BINDIR):
 V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o PDFDisplay.o structure.o \
 	matrix.o primitives.o text.o text_parser.o splines.o)
 
-$(BINDIR)/mg: $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) $(INCDIR)/ast.h $(INCDIR)/tokens.h $(INCDIR)/parserv3.h | $(BINDIR)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) -o $@ $(LDFLAGS) $(LIBS) -lz
+$(BINDIR)/mg: $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_LIB) $(INCDIR)/ast.h $(INCDIR)/tokens.h $(INCDIR)/parserv3.h | $(BINDIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) -o $@ -L$(OBJDIR)/haru -lharu $(LDFLAGS) $(LIBS) -lz
 
 # Alias histórico: v3test == mg (mismo compilador V3).
 v3test: $(BINDIR)/mg | $(BINDIR)
