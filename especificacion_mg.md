@@ -241,6 +241,12 @@ polyline(color="black", line_width=1) {
 }
 ```
 
+Con `closed=true` la polilínea **cierra su trayecto** (une el último punto con el primero) sin repetir la coordenada inicial. A diferencia de repetir el punto a mano, el cierre es real para los backends (`closepath`), de modo que la costura es una esquina limpia y no un traslape. Es el modo de dibujar un **contorno cerrado sin relleno** (un `polygon` siempre rellena, §4.2). El default es `closed=false`.
+
+```text
+polyline(closed=true) { 0 0   5 0   5 5   0 5 } % cuadrilátero cerrado, solo contorno
+```
+
 ### 4.2 polygon — polígono cerrado
 
 ```text
@@ -435,7 +441,12 @@ En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **tram
 - `hatch` — ángulo de la trama en grados; **obligatorio**, restringido a los cuatro valores que provee el motor: `0`, `45`, `90` o `135`.
 - `hatch_gap` — separación entre líneas en **puntos**; **opcional** (default según el motor). Es una cantidad física (pt), no escala con `world_window` (§3.2), porque el tramado se barre en el espacio de dispositivo ya transformado a pt (`EPSDisplay::rect` aplica la matriz antes de emitir; SVG teja un `<pattern>` en userSpace de pt). Por eso las tres densidades de V1 (`FPATRN`) equivalen a `hatch_gap` de **4, 2 y 1 pt**, mapeo 1:1 sin calibración.
 
-No hay más: la trama son **trazos**, así que su **color** y su **grosor** salen del estado de trazo vigente (`color` y `line_width`, §4.10) —no existe un `hatch_color` ni un `hatch_width` aparte. Si se da `color=`, además se dibuja el contorno de la región en ese mismo color (§4); sin `color=`, la trama usa el color de trazo del bloque (negro por default).
+No hay más: la trama es una forma de **relleno**, así que sus líneas toman el **color de relleno** (`fill`, §4; negro por default si no se fijó). Su **grosor** sale del estado de trazo (`line_width`, §4.10). No existe un `hatch_color` ni un `hatch_width` aparte.
+
+**Contorno de la región.** Como en el modelo de estado (§7) *siempre* hay un color de trazo vigente, la presencia de `color=` no puede servir de disparador del contorno ahí. El contorno se controla así:
+
+- **Registro por-primitiva** (§4): dar `color=` junto al relleno traza el borde en ese color, como en cualquier forma rellena.
+- **Registro de estado**: la sentencia `outlinefill` activa el contorneo de los rellenos del bloque (`outlinefill` o `outlinefill true` = on; `outlinefill false` = off). El borde se traza con el `color`/`line_width` vigentes.
 
 **Dos registros** (la distinción general de §7.5):
 
@@ -449,15 +460,17 @@ polygon(hatch=0, hatch_gap=3) { 0 0  5 0  5 5  0 5 } % trama horizontal, paso 3 
 - **Sentencia de estado** (posicional, rige hasta el fin del bloque, §7) — el ángulo y el paso opcional caben en una sola línea, igual que `translate dx dy`:
 
 ```text
+fill "cyan"       % color de las líneas de la trama
 hatch 45          % solo ángulo; el paso toma el default
 hatch 45 4        % ángulo 45, paso 4 pt
-polygon { 0 0  5 0  5 5  0 5 }   % ambos con esa trama
+outlinefill       % además, contornea la región (color/line_width vigentes)
+polygon { 0 0  5 0  5 5  0 5 }   % trama cyan + contorno
 polygon { 6 0  9 0  9 5  6 5 }
 ```
 
-  El segundo valor posicional es el paso; equivale a fijarlo aparte con `hatch_gap 4`. Como el ángulo está limitado a cuatro valores, el paso nunca resulta ambiguo.
+  El segundo valor posicional de `hatch` es el paso; equivale a fijarlo aparte con `hatch_gap 4`. Como el ángulo está limitado a cuatro valores, el paso nunca resulta ambiguo.
 
-*(V1: `FCOLOR c` + `FPATRN` → `color "c"` + `hatch a`; el `FCOLOR` de la trama es el color de trazo, no un relleno sólido. `FPATRN n` codificaba ángulo y densidad de forma combinada en el índice `n`; `n` negativo añadía el contorno.)*
+*(V1: `FCOLOR c` + `FPATRN` → `fill "c"` + `hatch a`; el `FCOLOR` era el color de relleno y la trama lo hereda. `FPATRN n` codificaba ángulo y densidad en el índice `n`; el `n` negativo que añadía el contorno se reemplaza por `color=` (por-primitiva) o `outlinefill` (estado).)*
 
 ### 4.12 polybar — barras (histogramas)
 
@@ -546,7 +559,19 @@ El elemento extraído **conserva su tipo**: `fills[i]` es una cadena y sirve don
 
 Los paréntesis agrupan como de costumbre. `^` es un operador simple. **El módulo es la función `mod(a, b)`, no un operador `%`**: `%` es el carácter de **comentario** de MetaGráfica, así que no puede reusarse como operador.
 
-**Funciones y constante:** `sin(x)`, `cos(x)`, `tan(x)`, `sqrt(x)`, `abs(x)`, `atan2(y, x)`, `mod(a, b)`, `len(lista)`, y `pi`. El conjunto se mantiene deliberadamente pequeño; se ampliará (redondeo, `min`/`max`, transcendentales como `exp`/`ln`…) **solo cuando el corpus lo exija** —para no cargar el lenguaje con funciones especulativas.
+**Concatenación de cadenas.** Con al menos un operando de cadena, `+` **concatena** en vez de sumar; un número se convierte a texto en formato mínimo (`%g`: entero sin punto, decimales solo si los hay). Sirve para armar etiquetas a partir de variables sin una `text` por elemento:
+
+```text
+names = ["solid", "dashed", "dotted"]
+text("Pattern " + names[i] + " (#" + i + ")") { 1 y }   % "Pattern dashed (#1)"
+text("x = " + (3*2.5)) { 1 5 }                           % "x = 7.5"
+```
+
+(Para un número con un número de decimales fijo dentro de una serie, `numbers` con `prefix`/`suffix` (§13.2) sigue siendo la vía; `+` da el formato mínimo por default.)
+
+**Funciones y constante:** `sin(x)`, `cos(x)`, `tan(x)`, `sqrt(x)`, `abs(x)`, `atan2(y, x)`, `mod(a, b)`, `len(lista)`, `str(x[, decimals])`, y `pi`. El conjunto se mantiene deliberadamente pequeño; se ampliará (redondeo, `min`/`max`, transcendentales como `exp`/`ln`…) **solo cuando el corpus lo exija** —para no cargar el lenguaje con funciones especulativas.
+
+`str(x)` convierte un número a cadena en formato mínimo (entero sin punto, decimales solo si los hay), igual que la conversión implícita al concatenar con `+`; `str(x, decimals)` fija el número de decimales (`str(0.2*i, 2)` → `"0.40"`). Útil para armar etiquetas con texto+número (`text("Width " + str(0.2*i, 2))`); complementa el `decimals` de `numbers` (§13.2) cuando el número va suelto en una cadena, no en una serie de rótulos.
 
 ---
 
@@ -1250,8 +1275,10 @@ El contenido del string soporta el siguiente markup, procesado en parse time:
 #### Modo matemático
 
 ```text
-$...$    activa la fuente CMMI (Computer Modern Math Italic) para el bloque
+$...$    activa la fuente CMMI (Computer Modern Math Italic) y el modo matemático
 ```
+
+Dentro de `$...$` operan los sub/superíndices `_`/`^` (ver abajo). **Fuera** de `$...$` esos caracteres son **literales**, de modo que prosa como `line_width` o `x^y` no se convierte en subíndice/superíndice inesperado; para un script hay que entrar a modo matemático.
 
 ```text
 text("$\alpha + \beta = \gamma$") { 5 3 }
@@ -1275,6 +1302,8 @@ Operadores y símbolos: `\infty \partial \nabla \int \sum \prod \pm \times \div 
 Funciones: `\sin \cos \tan \cot \sec \csc` (se renderizan en fuente romana recta)
 
 #### Sub y superíndices
+
+Solo activos **dentro de modo matemático** (`$...$`); fuera, `_` y `^` son literales.
 
 ```text
 ^x       superíndice de un carácter
