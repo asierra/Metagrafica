@@ -257,6 +257,19 @@ static int hatchIndex(double angle, double gap) {
 
 static bool emitStyleAttr(const std::string &, const Value &, GraphicsItemList &);   // adelantada
 
+// §4.11: emite los atributos de una trama (ángulo + paso en pt) → índice FPATRN y
+// activa el relleno. Compartido por el atributo por-primitiva (emitPrimStyle) y la
+// sentencia de estado (StateStmt), para que ambos registros se comporten idéntico.
+// Si el par no es representable con la tabla del motor (hatchIndex → 0) no emite nada.
+static void emitHatch(double angle, double gap, GraphicsItemList &out) {
+  int idx = hatchIndex(angle, gap);
+  if (idx <= 0) return;
+  g_flags.using_hatcher = true;
+  auto at = std::make_unique<Attribute>(); at->set(AT_FPATRN, idx);
+  out.push_back(std::move(at));
+  out.push_back(std::make_unique<GraphicsState>(GS_FILL));
+}
+
 // Estilo por-primitiva (§7.5) compartido por PrimStmt y compound (§9.4):
 // color/fill/line_width + tramado (hatch/hatch_gap, §4.11) + contorno (color con
 // relleno). Emite en `attrs` los GraphicsItem que el llamador acota con push/pop.
@@ -269,12 +282,7 @@ static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
   if (named.count("hatch")) {                    // §4.11: hatch=ángulo [+ hatch_gap]
     double a = named.at("hatch")->eval(s).num;
     double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
-    int idx = hatchIndex(a, gap);
-    if (idx > 0) {
-      g_flags.using_hatcher = true;
-      auto at = std::make_unique<Attribute>(); at->set(AT_FPATRN, idx); attrs.push_back(std::move(at));
-      attrs.push_back(std::make_unique<GraphicsState>(GS_FILL));
-    }
+    emitHatch(a, gap, attrs);
   }
   // color= junto a un relleno (fill= o hatch) = contornear (§4).
   if (named.count("color") && (named.count("fill") || named.count("hatch")))
@@ -321,6 +329,7 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
   if (name == "align") {                                            // §4.8: horizontal (left/center/right)
     int a = 0;                                                      // 0=left(start) default
     if (v.type == Value::STRING) { if (v.str == "center") a = 1; else if (v.str == "right") a = 2; }
+    if (a != 0) g_flags.using_textalign = true;   // EPS: activa el prólogo /cshow /rshow (si no, cae en el operador cshow real de PS y truena typecheck)
     auto at = std::make_unique<Attribute>(); at->set(AT_TALIGN, a); out.push_back(std::move(at));
     return true;
   }
@@ -337,7 +346,8 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
   if (name == "dash") {                                             // §4.10: patrón de línea
     int idx = 0;                                                    // solid/none/continuous → 0
     if (v.type == Value::STRING) {
-      if (v.str == "dashed") idx = 2;                               // dashArrayForIndex: {4,2}
+      if (v.str == "longdashed") idx = 1;                               // dashArrayForIndex: {4,2}
+      else if (v.str == "dashed") idx = 2;
       else if (v.str == "dotted") idx = 3;                          // {2,1.6}
       else if (v.str == "dashdot" || v.str == "dash-dot") idx = 4;  // {4,2,1,2}
       else if (v.str == "dashdotdot") idx = 5;                      // {4,2,2,2,2,2}
@@ -380,7 +390,22 @@ struct StateStmt : Stmt {
   std::string name;
   std::vector<SArg> args;
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    if (name == "outlinefill") {              // §4.11: contornea los rellenos del bloque
+      // Como siempre hay color de trazo, el contorno no puede inferirse de `color=`
+      // (eso solo aplica al registro por-primitiva, §4); aquí es explícito.
+      // `outlinefill` / `outlinefill true` = on; `outlinefill false` = off.
+      bool on = args.empty() || (args[0].isStr ? args[0].str != "false"
+                                                : args[0].num->eval(s).num != 0.0);
+      out.push_back(std::make_unique<GraphicsState>(on ? GS_OUTLINEFILL : GS_NOOUTLINEFILL));
+      return;
+    }
     if (args.empty()) return;
+    if (name == "hatch") {                    // §4.11: hatch <ángulo> [paso] (posicionales)
+      double a = args[0].isStr ? 0.0 : args[0].num->eval(s).num;
+      double gap = (args.size() > 1 && !args[1].isStr) ? args[1].num->eval(s).num : 4.0;
+      emitHatch(a, gap, out);
+      return;
+    }
     Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
     emitStyleAttr(name, v, out);
   }
@@ -936,6 +961,10 @@ struct PrimStmt : Stmt {
     else isPoly = false;
 
     if (isPoly) {
+      // §4.1: closed=true cierra cada subtrayecto (closepath) sin repetir el
+      // punto inicial. Default false = polilínea abierta. En polygon es redundante
+      // (el relleno ya cierra); solo cambia algo si se pide explícitamente.
+      bool closed = named.count("closed") && named.at("closed")->eval(s).num != 0.0;
       size_t start = 0;
       auto flush = [&](size_t end) {
         Path path = evalPath(s, start, end);
@@ -943,6 +972,7 @@ struct PrimStmt : Stmt {
         if (path.empty()) return;
         auto p = std::make_unique<Polyline>(poly);
         p->setPath(std::move(path));
+        p->setClosed(closed);
         items.push_back(std::move(p));
       };
       for (size_t b : breaks) flush(b);
@@ -953,7 +983,7 @@ struct PrimStmt : Stmt {
       if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
       else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); }
       else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
-      else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
+      else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
       if (item) items.push_back(std::move(item));
     }
