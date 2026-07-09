@@ -411,6 +411,13 @@ void Text::draw(Display &g) {
   g.setRelFontSize(textstate.font_size);
   if (textstate.font_face != FN_NOFACE)   // FN_NOFACE = hereda la cara ambiente (§7.3)
     g.setFontFace(textstate.font_face);
+  // valign para texto SIMPLE (parse_text devuelve un Text pelón, sin TextLine):
+  // desplaza la pluma una vez antes de emitir. En texto compuesto este Text se
+  // dibuja desde TextLine::draw, que ya puso valign a 0 (aplica el desplazamiento
+  // a la línea entera), así que aquí no se duplica. No se restaura: es estado
+  // persistente y cada text() se reposiciona con un moveto absoluto propio.
+  if (g.getTextValign() > 0)
+    g.rmoveto(0, g.valignShift());
   g.text(text);
 }
 
@@ -418,10 +425,15 @@ void TextLine::draw(Display &g) {
   double vdesp;
 
   int text_align = g.getTextAlign();
-  if (text_align > 0) {
-    int x = width() * g.getFontSize() / (3 - text_align);
-    g.rmoveto(-x, 0);
+  int text_valign = g.getTextValign();
+  if (text_align > 0 || text_valign > 0) {
+    // dx solo cuando hay alineación horizontal: con align=0 (left) el factor
+    // width*fs/(3-align) NO es cero (=width*fs/3), colaría un corrimiento espurio
+    // si valign viene solo. dy (valign) sale del helper centralizado del Display.
+    double dx = (text_align > 0) ? width() * g.getFontSize() / (3 - text_align) : 0.0;
+    g.rmoveto(-dx, g.valignShift());
     g.setTextAlign(0);
+    g.setTextValign(0);   // se puso a 0 para que los Text hijos no re-apliquen valign
   }
   for (const auto &text : textline) {
     TextState ts = text->getState();
@@ -437,6 +449,8 @@ void TextLine::draw(Display &g) {
   }
   if (text_align > 0)
     g.setTextAlign(text_align);
+  if (text_valign > 0)
+    g.setTextValign(text_valign);   // estado persistente: vale para los text() siguientes
 }
 
 double TextLine::width() {

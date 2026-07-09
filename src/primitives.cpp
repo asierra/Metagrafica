@@ -126,6 +126,9 @@ void Attribute::draw(Display &g) {
   case AT_TALIGN:
     g.setTextAlign(value);
     break;
+  case AT_TVALIGN:
+    g.setTextValign(value);
+    break;
   case AT_TSTYLE:
     g.setFontFace((FontFace)value);
     break;

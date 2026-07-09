@@ -324,6 +324,16 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     auto at = std::make_unique<Attribute>(); at->set(AT_TALIGN, a); out.push_back(std::move(at));
     return true;
   }
+  if (name == "valign") {
+    int a = 0;  // baseline
+    if (v.type == Value::STRING) {
+        if (v.str == "top") a = 1;
+        else if (v.str == "middle") a = 2;
+        else if (v.str == "bottom") a = 3;
+    }
+    auto at = std::make_unique<Attribute>(); at->set(AT_TVALIGN, a); out.push_back(std::move(at));
+    return true;
+}
   if (name == "dash") {                                             // §4.10: patrón de línea
     int idx = 0;                                                    // solid/none/continuous → 0
     if (v.type == Value::STRING) {
@@ -892,6 +902,7 @@ struct PrimStmt : Stmt {
   std::vector<ExprPtr> pos;               // args posicionales
   std::map<std::string, ExprPtr> named;   // args nombrados
   std::vector<ExprPtr> coords;            // coordenadas (Term), en pares x y
+  std::vector<size_t> breaks;             // índices en coords donde ';' abre subtrayecto
 
   double namedOr(Scope &s, const char *k, double def) const {
     auto it = named.find(k);
@@ -901,30 +912,62 @@ struct PrimStmt : Stmt {
     return i < pos.size() ? pos[i]->eval(s).num : def;
   }
 
-  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+  // Evalúa las coords [from, to) a un Path (pares x y).
+  Path evalPath(Scope &s, size_t from, size_t to) const {
     Path path;
-    for (size_t i = 0; i + 1 < coords.size(); i += 2)
+    for (size_t i = from; i + 1 < to; i += 2)
       path.push_back(point(coords[i]->eval(s).num, coords[i + 1]->eval(s).num));
+    return path;
+  }
 
-    std::unique_ptr<GraphicsItem> item;
-    if (name == "polyline") { auto p = std::make_unique<Polyline>(GI_POLYLINE); p->setPath(path); item = std::move(p); }
-    else if (name == "polygon") { auto p = std::make_unique<Polyline>(GI_POLYGON); p->setPath(path); item = std::move(p); }
-    else if (name == "bezier") { auto p = std::make_unique<Polyline>(GI_BEZIER); p->setPath(path); item = std::move(p); }   // path = p0 c1 c2 p1 [c1 c2 p2…]; Polyline::draw agrupa de 3 en 3 → curveto
-    else if (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
-    else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); }
-    else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
-    else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
-    else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
-    if (!item) return;
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    // polyline/polygon/bezier admiten subtrayectos disjuntos separados por ';'
+    // (§4): un item por subtrayecto, mismo estilo (distinto de compound, §9.4,
+    // que combina en un solo relleno par-impar). El resto de primitivas ignora
+    // los ';' (no aplican: rectangle=pares, dot=posiciones, circle/arc=centros).
+    std::vector<std::unique_ptr<GraphicsItem>> items;
+    GraphicsItemType poly = GI_POLYLINE;
+    bool isPoly = true;
+    if      (name == "polyline") poly = GI_POLYLINE;
+    else if (name == "polygon")  poly = GI_POLYGON;
+    else if (name == "bezier")   poly = GI_BEZIER;   // path = p0 c1 c2 p1 [c1 c2 p2…]; Polyline::draw agrupa de 3 en 3 → curveto
+    else isPoly = false;
+
+    if (isPoly) {
+      size_t start = 0;
+      auto flush = [&](size_t end) {
+        Path path = evalPath(s, start, end);
+        start = end;
+        if (path.empty()) return;
+        auto p = std::make_unique<Polyline>(poly);
+        p->setPath(std::move(path));
+        items.push_back(std::move(p));
+      };
+      for (size_t b : breaks) flush(b);
+      flush(coords.size());
+    } else {
+      Path path = evalPath(s, 0, coords.size());
+      std::unique_ptr<GraphicsItem> item;
+      if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
+      else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); }
+      else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
+      else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
+      else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
+      if (item) items.push_back(std::move(item));
+    }
+    if (items.empty()) return;
 
     // Atributos de estilo por-primitiva (§7.5): color/fill/line_width/hatch,
     // acotados a esta primitiva (push/pop de estado alrededor). dash… → pendiente.
     GraphicsItemList attrs;
     emitPrimStyle(named, s, attrs);
-    if (attrs.empty()) { out.push_back(std::move(item)); return; }
+    if (attrs.empty()) {
+      for (auto &it : items) out.push_back(std::move(it));
+      return;
+    }
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     for (auto &a : attrs) out.push_back(std::move(a));
-    out.push_back(std::move(item));
+    for (auto &it : items) out.push_back(std::move(it));
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
 };
@@ -1270,9 +1313,10 @@ static StmtPtr parseStatement(Lexer &lx) {
     auto st = std::make_unique<PrimStmt>();
     st->name = name;
     if (lx.accept(T_LPAREN)) parseArgList(lx, st->pos, st->named);   // args (Expression)
-    if (lx.accept(T_LBRACE)) {                  // { coords }  (Term; ';' subtrayecto ign. en slice 2; newline se salta)
+    if (lx.accept(T_LBRACE)) {                  // { coords }  (Term; ';' abre subtrayecto §4; newline se salta)
       while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
-        if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+        if (lx.accept(T_SEMICOLON)) { st->breaks.push_back(st->coords.size()); continue; }
+        if (lx.accept(T_NEWLINE)) continue;
         st->coords.push_back(parseTerm(lx));
       }
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");

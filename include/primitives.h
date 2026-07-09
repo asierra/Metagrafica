@@ -64,6 +64,7 @@ enum AttributeType {
   AT_THEIGHT,
   AT_TALIGN,
   AT_TSTYLE,
+  AT_TVALIGN,
 };
 
 enum GraphicsStateType {

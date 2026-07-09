@@ -58,6 +58,7 @@ struct DisplayState {
   double fontSize = 10;
   FontFace fontFace = FN_NOFACE;
   int text_align = 0;
+  int text_valign = 0;
   double textgray = 0.0;
 
   // objects should be filled?
@@ -248,6 +249,22 @@ public:
 
   void setTextAlign(int a) { dspstate.text_align = a; }
   int getTextAlign() const { return dspstate.text_align; }
+  void setTextValign(int a) { dspstate.text_valign = a; }
+  int getTextValign() const { return dspstate.text_valign; }
+
+  // Desplazamiento vertical de la pluma (unidades de dispositivo, y hacia arriba)
+  // para materializar valign: mueve el ancla del texto respecto de la línea base.
+  // Fracciones de la altura de fuente calibradas a ojo (no métricas reales), como
+  // el centrado horizontal de §4.8. Fuente única de las constantes: la usan tanto
+  // la ruta de texto compuesto (TextLine::draw) como la de texto simple (Text::draw).
+  double valignShift() const {
+    switch (dspstate.text_valign) {
+    case 1: return -0.70 * dspstate.fontSize;   // top: el texto cuelga bajo la pluma
+    case 2: return -0.30 * dspstate.fontSize;   // middle: centro ≈ media altura de caja
+    case 3: return  0.20 * dspstate.fontSize;   // bottom: la base sube, el pie en la pluma
+    default: return 0.0;                         // 0 = baseline (sin desplazamiento)
+    }
+  }
 
   void setMGContext(MetaGrafica* mg) { mg_context = mg; }
 
