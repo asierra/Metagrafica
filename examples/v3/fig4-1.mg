@@ -32,16 +32,16 @@ struct Marco() {
 }
 
 % ── Haz de flechas de electrones ─────────────────────────────────────────────
-% V1: MKST arrowr + LNST .02 0 9 : .01 .1 .3 .1  → 9 flechas iguales a lo largo
-% de la línea (.01,.1)→(.3,.1), escala .02.
+% Dos haces VERTICALES de 9 flechas (Arrowr apunta a la derecha), a la izquierda
+% de cada pantalla (x≈0.05 antes de la rendija en 0.3; x≈0.95 antes de la doble
+% rendija en 1.6). repeat = traslación pura hacia arriba (advance), sin rotar —
+% más simple y directo que el place a lo largo de una línea. La ventana es la del
+% panel (0..2.2) → se fija a todo el ancho, no a 1.3.
 struct Flechas() {
     world_window 0 2.2 0 1
     line_width 0.2
-    % place por count=9 (§10.1). El tamaño (scale=0.02) es cantidad de mundo, así
-    % que se deforma con el fit del panel — pero eso REPRODUCE el V1 (LNST .02 bajo
-    % PWST), que es lo que muestra el oráculo. El marcador FÍSICO (dot/marker) es
-    % para datos nuevos (fig2-3), NO para reproducir esta colocación decorativa V1.
-    place(Arrowr, scale=0.02, count=9) { 0.01 0.1  0.3 0.1 }
+    repeat(Arrowr, scale=0.02, count=9, at=(0.24, 0.1), advance=(0, 0.1))
+    repeat(Arrowr, scale=0.02, count=9, at=(1.52, 0.1), advance=(0, 0.1))
 }
 
 % Curva simétrica rotada 90° y colocada, lista para fit en el panel (V1 FG1/FG2).
@@ -56,7 +56,7 @@ struct FigAB() {
     line_width 0.4
     fit(Fg1, stretch=true) { 0.35 0  0.9 1 }    % patrón de una rendija
     fit(Fg2, stretch=true) { 1.6  0  2.2 1 }    % patrón de doble rendija
-    fit(Flechas, stretch=true) { 0 0  1.3 1 }   % ⚠ rect del haz por confirmar
+    fit(Flechas, stretch=true) { 0 0  2.2 1 }   % ⚠ rect del haz por confirmar
 }
 
 % ── Paneles inferiores c) d): aparato + detectores ───────────────────────────
@@ -67,7 +67,7 @@ struct FigCD() {
     polyline { 0.9 0.45 0.5 0.45 0.5 0.55 0.9 0.55 ;      % detector izq.
                2.2 0.3 1.8 0.3 1.8 0.4 2.2 0.4 ;          % detectores der.
                2.2 0.7 1.8 0.7 1.8 0.6 2.2 0.6 }
-    fit(Flechas, stretch=true) { 0 0  1.3 1 }
+    fit(Flechas, stretch=true) { 0 0  2.2 1 }
 }
 
 % ── Composición: dos bandas horizontales + etiquetas ─────────────────────────
