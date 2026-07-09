@@ -32,21 +32,6 @@ ellipsedict /mtrx matrix put
 } def
 )";
 
-static const char *ps_dot = R"(
-/dot { 3 dict begin
-  /rad exch def
-  /y exch def
-  /x exch def
-  gsave
-  [] 0 setdash
-  1 setlinecap
-  rad 2 mul setlinewidth   % rad = RADIO (§4.6): diámetro del disco = 2*rad
-  newpath x y moveto 0 0 rlineto stroke
-  grestore
-  end
-} def
-)";
-
 static const char *ps_simpletextalign = R"(
 /cshow
 { /mystring exch def
@@ -280,8 +265,6 @@ void EPSDisplay::start() {
           (int)(dvx + 0.5), (int)(dvy + 0.5));
   if (flags.using_ellipse)
     fprintf(file, "%s", ps_ellipse);
-  if (flags.using_dot)
-    fprintf(file, "%s", ps_dot);
   if (flags.using_textalign)
     fprintf(file, "%s", ps_simpletextalign);
   if (flags.using_reencode)
@@ -531,8 +514,12 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
 }
 
 void EPSDisplay::dot(double x, double y, double r) {
+  // r = RADIO del marcador (§4.6). Se dibuja como círculo y stroke() decide
+  // relleno (disco) o contorno (círculo abierto) según el estado, igual que arc:
+  // dot(r)=disco; dot(r,color=c) sin fill=abierto.
   mt.transform(x, y);
-  fprintf(file, "%f %f %f dot\n", x, y, r);                   
+  fprintf(file, "newpath %f %f %f 0 360 arc\n", x, y, r);
+  stroke();
 }
 
 void EPSDisplay::stroke() {

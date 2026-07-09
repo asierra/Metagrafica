@@ -417,11 +417,20 @@ void PDFDisplay::arc(double x, double y, double w, double h,
 }
 
 void PDFDisplay::dot(double x, double y, double r) {
+  // r = RADIO del marcador (§4.6). Relleno (disco) o contorno (círculo abierto)
+  // según el estado: dot(r)=disco; dot(r,color=c) sin fill=abierto.
   mt.transform(x, y);
   HPDF_Page_GSave(page);
-  applyFillColor();            // en PAGE_DESCRIPTION, antes del path
-  HPDF_Page_Circle(page, x, y, r);   // r = RADIO del marcador (§4.6)
-  HPDF_Page_Fill(page);
+  if (dspstate.fill) {
+    applyFillColor();            // en PAGE_DESCRIPTION, antes del path
+    HPDF_Page_Circle(page, x, y, r);
+    HPDF_Page_Fill(page);
+  } else {
+    applyStrokeColor();
+    HPDF_Page_SetLineWidth(page, dspstate.line_width_pt);
+    HPDF_Page_Circle(page, x, y, r);
+    HPDF_Page_Stroke(page);
+  }
   HPDF_Page_GRestore(page);
 }
 

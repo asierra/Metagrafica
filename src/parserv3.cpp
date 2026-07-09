@@ -951,7 +951,7 @@ struct PrimStmt : Stmt {
       Path path = evalPath(s, 0, coords.size());
       std::unique_ptr<GraphicsItem> item;
       if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
-      else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); g_flags.using_dot = true; }   // el backend EPS necesita emitir el prólogo /dot
+      else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); }
       else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
@@ -959,10 +959,21 @@ struct PrimStmt : Stmt {
     }
     if (items.empty()) return;
 
-    // Atributos de estilo por-primitiva (§7.5): color/fill/line_width/hatch,
-    // acotados a esta primitiva (push/pop de estado alrededor). dash… → pendiente.
+    // Atributos de estilo por-primitiva (§7.5): color/fill/line_width/hatch/dash,
+    // acotados a esta primitiva (push/pop de estado alrededor).
     GraphicsItemList attrs;
     emitPrimStyle(named, s, attrs);
+    // dot: relleno por defecto = disco (§4.6). `color=` SIN `fill=` = círculo
+    // ABIERTO (trazo en color de línea): se apaga el relleno. `dot(r)` a secas =
+    // disco negro; `fill=` ya activó el relleno en emitPrimStyle.
+    if (name == "dot") {
+      if (named.count("color") && !named.count("fill")) {
+        attrs.push_back(std::make_unique<GraphicsState>(GS_NOFILL));
+      } else if (!named.count("fill")) {
+        auto a = std::make_unique<Attribute>(); a->set(AT_FCOLOR, 0); attrs.push_back(std::move(a));   // negro
+        attrs.push_back(std::make_unique<GraphicsState>(GS_FILL));
+      }
+    }
     if (attrs.empty()) {
       for (auto &it : items) out.push_back(std::move(it));
       return;

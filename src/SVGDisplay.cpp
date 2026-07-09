@@ -420,12 +420,20 @@ void SVGDisplay::rect(double x1, double y1, double x2, double y2) {
 }
 
 void SVGDisplay::dot(double x, double y, double r) {
-    // r = RADIO del marcador en unidades de dispositivo (§4.6); toma el color de
-    // línea actual. La posición la transforma el marco; el tamaño NO (físico).
+    // r = RADIO del marcador en unidades de dispositivo (§4.6). La posición la
+    // transforma el marco; el tamaño NO (físico). Relleno (disco) o contorno
+    // (círculo abierto) según el estado de relleno (§4.6): dot(r)=disco;
+    // dot(r,color=c) sin fill=abierto (trazo en color de línea).
     mt.transform(x, y);
     char colorBuf[10];
-    sprintf(colorBuf, "#%06X", dspstate.linecolor);
-    fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"%s\" />\n", x, y, r, colorBuf);
+    if (dspstate.fill) {
+        sprintf(colorBuf, "#%06X", dspstate.fillcolor);
+        fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"%s\" />\n", x, y, r, colorBuf);
+    } else {
+        sprintf(colorBuf, "#%06X", dspstate.linecolor);
+        fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\" />\n",
+                x, y, r, colorBuf, dspstate.line_width_pt);
+    }
 }
 
 // -------------------------------------------------------------
