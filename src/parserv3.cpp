@@ -1016,13 +1016,30 @@ struct PrimStmt : Stmt {
 // porque el GraphicsItem resultante es no-copiable (siembra múltiple, §4).
 struct TextStmt : Stmt {
   ExprPtr content;
-  std::map<std::string, ExprPtr> named;   // align/font… → slice posterior (ignorados)
+  std::map<std::string, ExprPtr> named;   // §7.5: estilo por-primitiva (font_size/size, font, align, valign, color)
   std::vector<ExprPtr> coords;            // coordenadas (Term), en pares x y
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
     Value c = content->eval(s);
     std::string str;
     if (c.type == Value::STRING) str = c.str;
     else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", c.num); str = buf; }
+
+    // Estilo por-primitiva (§7.5), acotado a este text() con push/pop de estado
+    // (como PrimStmt); sin esto los parámetros nombrados se parsean pero se
+    // ignoran. En el contexto de text(), `size` es alias de `font_size`. `color`
+    // tiñe el texto (color de trazo, que es con el que `show` pinta). `font=` por
+    // cara de fuente queda pendiente: pisaría con parse_text(FN_DEFAULT).
+    GraphicsItemList attrs;
+    for (const char *k : {"font_size", "size", "color", "align", "valign"}) {
+      auto it = named.find(k);
+      if (it != named.end())
+        emitStyleAttr(std::string(k) == "size" ? "font_size" : k, it->second->eval(s), attrs);
+    }
+    bool scoped = !attrs.empty();
+    if (scoped) {
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      for (auto &a : attrs) out.push_back(std::move(a));
+    }
     for (size_t i = 0; i + 1 < coords.size(); i += 2) {
       point p(coords[i]->eval(s).num, coords[i + 1]->eval(s).num);
       auto gs = std::make_unique<GraphicsState>();
@@ -1030,6 +1047,8 @@ struct TextStmt : Stmt {
       out.push_back(std::move(gs));
       out.push_back(parse_text(str, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
     }
+    if (scoped)
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
 };
 
