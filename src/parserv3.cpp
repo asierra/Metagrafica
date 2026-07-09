@@ -238,35 +238,31 @@ static int colorFromValue(const Value &v) {
   return v.type == Value::STRING ? get_color(v.str) : (int)v.num;
 }
 
-// Traduce (ángulo, paso) de un tramado (§4.11) al índice FPATRN 1..10 del motor.
-// La spec restringe el ángulo a {0,45,90,135} y las densidades a gap ∈ {4,2,1} pt
-// (mapeo 1:1 con V1, §4.11); patternFor() codifica exactamente eso:
-//   idx = 1 + densidad*4 + ángulo/45,  densidad(gap 4→0, 2→1, 1→2).
-// Devuelve 0 si el par no es representable con la tabla actual (gap arbitrario o
-// idx>10, p.ej. 90°/135° con gap 1): tramado custom = follow-up (HatchLine libre).
-static int hatchIndex(double angle, double gap) {
-  int a = ((int)std::lround(angle) % 180 + 180) % 180;   // 0..179
-  if (a % 45 != 0) return 0;                             // ángulo no estándar
-  int an = a / 45;                                       // 0,1,2,3 → 0/45/90/135
-  int g = (int)std::lround(gap);
-  int d = (g == 4) ? 0 : (g == 2) ? 1 : (g == 1) ? 2 : -1;
-  if (d < 0) return 0;                                   // paso no estándar
-  int idx = 1 + d * 4 + an;
-  return idx <= 10 ? idx : 0;
-}
-
 static bool emitStyleAttr(const std::string &, const Value &, GraphicsItemList &);   // adelantada
 
-// §4.11: emite los atributos de una trama (ángulo + paso en pt) → índice FPATRN y
-// activa el relleno. Compartido por el atributo por-primitiva (emitPrimStyle) y la
-// sentencia de estado (StateStmt), para que ambos registros se comporten idéntico.
-// Si el par no es representable con la tabla del motor (hatchIndex → 0) no emite nada.
-static void emitHatch(double angle, double gap, GraphicsItemList &out) {
-  int idx = hatchIndex(angle, gap);
-  if (idx <= 0) return;
+// §4.11: construye el FillPattern de un tramado a partir del valor de `hatch`
+// (sobrecargado, como `dash`): número = ángulo libre de UNA familia; cadena =
+// estilo nombrado (à la Asymptote) — "hatch"→45°, "hatchback"→135°,
+// "crosshatch"→45°+135° (dos familias). Estilo desconocido → sin trama (vector
+// vacío, silencioso, igual que el hatchIndex→0 de la tabla FPATRN anterior).
+static FillPattern buildHatchPattern(const Value &v, double gap) {
+  if (v.type == Value::STRING) {
+    if (v.str == "hatch")           return { HatchLine{45.0, gap} };
+    if (v.str == "hatchback")       return { HatchLine{135.0, gap} };
+    if (v.str == "crosshatch")      return { HatchLine{45.0, gap}, HatchLine{135.0, gap} };
+    return {};
+  }
+  return { HatchLine{v.num, gap} };
+}
+
+// §4.11: emite el HatchAttr (FillPattern completo) + activa el relleno.
+// Compartido por el atributo por-primitiva (emitPrimStyle) y la sentencia de
+// estado (StateStmt), para que ambos registros se comporten idéntico.
+static void emitHatch(const Value &v, double gap, GraphicsItemList &out) {
+  FillPattern fp = buildHatchPattern(v, gap);
+  if (fp.empty()) return;
   g_flags.using_hatcher = true;
-  auto at = std::make_unique<Attribute>(); at->set(AT_FPATRN, idx);
-  out.push_back(std::move(at));
+  out.push_back(std::make_unique<HatchAttr>(fp));
   out.push_back(std::make_unique<GraphicsState>(GS_FILL));
 }
 
@@ -279,10 +275,10 @@ static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
     auto it = named.find(k);
     if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
   }
-  if (named.count("hatch")) {                    // §4.11: hatch=ángulo [+ hatch_gap]
-    double a = named.at("hatch")->eval(s).num;
+  if (named.count("hatch")) {   // §4.11: hatch=ángulo|"estilo" [+ hatch_gap]
+    Value hv = named.at("hatch")->eval(s);
     double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
-    emitHatch(a, gap, attrs);
+    emitHatch(hv, gap, attrs);
   }
   // color= junto a un relleno (fill= o hatch) = contornear (§4).
   if (named.count("color") && (named.count("fill") || named.count("hatch")))
@@ -355,7 +351,7 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     auto a = std::make_unique<Attribute>(); a->set(AT_LSTYLE, idx); out.push_back(std::move(a));
     return true;
   }
-  return false;   // hatch/valign/transform… → pendientes
+  return false;   // hatch (manejado aparte por emitHatch) / transform… → pendientes
 }
 
 struct Stmt {
@@ -400,10 +396,10 @@ struct StateStmt : Stmt {
       return;
     }
     if (args.empty()) return;
-    if (name == "hatch") {                    // §4.11: hatch <ángulo> [paso] (posicionales)
-      double a = args[0].isStr ? 0.0 : args[0].num->eval(s).num;
+    if (name == "hatch") {          // §4.11: hatch <ángulo>|"estilo" [paso] (posicionales)
+      Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
       double gap = (args.size() > 1 && !args[1].isStr) ? args[1].num->eval(s).num : 4.0;
-      emitHatch(a, gap, out);
+      emitHatch(v, gap, out);
       return;
     }
     Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);

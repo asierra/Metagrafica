@@ -22,10 +22,10 @@ std::string SVGDisplay::getStyleAttributes() {
     // Relleno: solo si el estado de dibujo tiene fill activo (igual que
     // EPSDisplay/PDFDisplay, que consultan dspstate.fill antes de rellenar).
     if (dspstate.fill) {
-        if (dspstate.fillpattern > 0) {
+        if (!dspstate.hatch.empty()) {
             // Relleno con patrón de tramado: se referencia un <pattern> nativo
             // (emitido perezosamente en <defs>) en vez de un color plano.
-            std::string id = ensureHatchPattern(dspstate.fillpattern);
+            std::string id = ensureHatchPattern(dspstate.hatch);
             style << "fill=\"url(#" << id << ")\" ";
         } else if (dspstate.fillcolor != 0) {
             sprintf(colorBuf, "#%06X", dspstate.fillcolor);
@@ -82,37 +82,54 @@ std::string SVGDisplay::fillColorHex() {
     return std::string(buf);
 }
 
-// Emite (una sola vez por combinación índice+color) un <pattern> de tramado y
+// Emite (una sola vez por combinación patrón+color) un <pattern> de tramado y
 // devuelve su id, para referenciarlo con fill="url(#id)".
 //
-// Estrategia: el patrón se construye siempre con una línea HORIZONTAL repetida
-// verticalmente cada `gap`, y se orienta con patternTransform="rotate(...)".
-// Así una sola construcción cubre los cuatro ángulos. El descriptor común
-// (Display::patternFor) da ángulo y separación; el ángulo se ajusta con -90 y
-// el signo del flip global scale(1,-1): hatch0=vertical, hatch90=horizontal,
-// hatch45/135 diagonales, igual que el prólogo del EPSDisplay.
-std::string SVGDisplay::ensureHatchPattern(int idx) {
-    FillPattern fp = patternFor(idx);
+// Una familia: el tile es una línea HORIZONTAL repetida verticalmente cada
+// `gap`, orientada con patternTransform="rotate(...)" — rotar el tile completo
+// (línea + lattice cuadrado) preserva la periodicidad para CUALQUIER ángulo
+// (§4.11 fase 2), no solo los 4 de la tabla FPATRN. El ángulo se ajusta con
+// -90 por el signo del flip global scale(1,-1), igual que el prólogo EPS.
+//
+// Varias familias (crosshatch, fase 3): patternTransform no sirve para dos
+// ángulos a la vez, así que el tile se arma sin rotación con las diagonales
+// de un cuadrado de lado gap*sqrt(2) — geometría exacta para 45°+135°, que es
+// como el parser construye "crosshatch" (buildHatchPattern).
+std::string SVGDisplay::ensureHatchPattern(const FillPattern &fp) {
     if (fp.empty()) return "";
 
     std::string color = fillColorHex();
-    char idbuf[48];
-    sprintf(idbuf, "mgpat_%d_%s", idx, color.c_str());
-    std::string id(idbuf);
+    std::ostringstream idss;
+    idss << "mgpat";
+    for (const HatchLine &h : fp)
+        idss << "_" << (long)std::lround(h.angle * 1000) << "_" << (long)std::lround(h.gap * 1000);
+    idss << "_" << color;
+    std::string id = idss.str();
     if (emitted_patterns.count(id)) return id;
     emitted_patterns.insert(id);
 
-    // Los 10 patrones actuales son una sola familia de líneas. El rayado
-    // cruzado/punteado (varias familias o `dashes`) queda pendiente (Paso 4).
-    const HatchLine &h = fp[0];
     double sw = strokeWidth();
 
+    if (fp.size() == 1) {
+        const HatchLine &h = fp[0];
+        fprintf(file,
+                "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
+                "width=\"%f\" height=\"%f\" patternTransform=\"rotate(%f)\">"
+                "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" "
+                "stroke-width=\"%f\"/></pattern></defs>\n",
+                id.c_str(), h.gap, h.gap, h.angle - 90.0, h.gap, color.c_str(), sw);
+        return id;
+    }
+
+    double gap = fp[0].gap;
+    double d = gap * sqrt(2.0);
     fprintf(file,
             "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
-            "width=\"%f\" height=\"%f\" patternTransform=\"rotate(%f)\">"
-            "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" "
-            "stroke-width=\"%f\"/></pattern></defs>\n",
-            id.c_str(), h.gap, h.gap, h.angle - 90.0f, h.gap, color.c_str(), sw);
+            "width=\"%f\" height=\"%f\">"
+            "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"%f\" stroke=\"#%s\" stroke-width=\"%f\"/>"
+            "<line x1=\"0\" y1=\"%f\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" stroke-width=\"%f\"/>"
+            "</pattern></defs>\n",
+            id.c_str(), d, d, d, d, color.c_str(), sw, d, d, color.c_str(), sw);
     return id;
 }
 

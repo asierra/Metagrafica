@@ -46,111 +46,6 @@ static const char *ps_simpletextalign = R"(
 } def 
 )";
 
-static const char *ps_hatchers = R"(
-/rect { 4 dict begin
-  /y2 exch def /x2 exch def /y1 exch def /x1 exch def
-  newpath
-  x1 y1 moveto
-  x1 y2 lineto
-  x2 y2 lineto
-  x2 y1 lineto
-  closepath
-  end
-} def
-
-/hatch0 { 5 dict begin
-  /y2 exch def /x2 exch def /y1 exch def /x1 exch def /wgap exch def
-  gsave
-  clip
-  newpath
-  {
-    x1 wgap add
-    /x1 exch def
-    x1 x2 gt {exit} if
-    x1 y1 moveto
-    x1 y2 lineto
-  } loop
-  stroke
-  grestore
-  end
-} def
-
-/hatch45 { 5 dict begin
-  /yu exch def /xr exch def /yl exch def /xl exch def /gap exch def
-  yu /y1 exch def
-  xl /x2 exch def
-  gsave
-  clip
-  newpath
-  {   y1 yl gt
-      {	  y1 gap sub /y1 exch def
-	  xl /x1 exch def
-	  y1 yl le
-	  {   yl y1 sub x1 add /x1 exch def
-	      yl /y1 exch def
-	  } if
-      }{  yl /y1 exch def
-          x1 gap add /x1 exch def
-      } ifelse
-      x1 xr gt {exit} if
-      x2 gap add xr lt { x2 gap add /x2 exch def }{ xr /x2 exch def } ifelse
-      x2 x1 sub y1 add /y2 exch def
-      x1 y1 moveto
-      x2 y2 lineto
-  } loop
-  stroke
-  grestore
-  end
-} def
-
-/hatch90 { 5 dict begin
-  /y2 exch def /x2 exch def /y1 exch def /x1 exch def /wgap exch def
-  gsave
-  clip
-  newpath
-  {
-    y1 y2 gt {exit} if
-    x1 y1 moveto
-    x2 y1 lineto
-    y1 wgap add
-    /y1 exch def
-  } loop
-  stroke
-  grestore
-  end
-} def
-
-/hatch135 { 5 dict begin
-  /yu exch def /xr exch def /yl exch def /xl exch def /gap exch def
-  yl /y1 exch def
-  xl /x2 exch def
-  gsave
-  clip
-  newpath
-  {   y1 yu lt
-      {	  y1 gap add /y1 exch def
-	  xl /x1 exch def
-	  y1 yu ge
-	  {   y1 yu sub x1 add /x1 exch def
-	      yu /y1 exch def
-	  } if
-      }{  yu /y1 exch def
-          x1 gap add /x1 exch def
-      } ifelse
-      x1 xr gt {exit} if
-      x2 gap add xr lt { x2 gap add /x2 exch def }{ xr /x2 exch def } ifelse
-      x1 x2 sub y1 add /y2 exch def
-      x1 y1 moveto
-      x2 y2 lineto
-  } loop
-  stroke
-  grestore
-  end
-} def
-
-
-)";
-
 static const char *ps_reencode = R"(
 /STARTDIFFENC { mark } bind def
 /ENDDIFFENC { 
@@ -269,8 +164,6 @@ void EPSDisplay::start() {
     fprintf(file, "%s", ps_simpletextalign);
   if (flags.using_reencode)
     fprintf(file, "%s", ps_reencode);
-  if (flags.using_hatcher)
-    fprintf(file, "%s", ps_hatchers);
   if (flags.using_fontcmmi) {
     fprintf(file, "%s", font_cmmi1.c_str());
     fprintf(file, "%s", font_cmmi2.c_str());
@@ -360,7 +253,7 @@ void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
       setColor(dspstate.fillcolor);
     else
       setGray(dspstate.fillgray);
-    if (dspstate.fillpattern == 0)
+    if (dspstate.hatch.empty())
       fprintf(file, "%sfill\n", quad);
     else {
       fprintf(file, "%s", quad);
@@ -375,12 +268,39 @@ void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
     fprintf(file, "%sstroke\n", quad);
 }
 
+// §4.11 fase 2: barrido genérico por ángulo (mismo método que
+// PDFDisplay::hatchCurrentPath, no 4 procs PS fijos): centro + diagonal del
+// bbox del path activo (xmin..ymax, ya en dispositivo), líneas paralelas cada
+// `gap` a lo largo de esa diagonal, recortadas por el `clip` al path real.
+// Un solo gsave/clip envolviendo TODAS las familias (en vez de uno por
+// hatch<N> como antes): stroke() vacía el path corriente, así que un segundo
+// `clip` por familia recortaría contra un path vacío y perdería la trama
+// (bug latente del esquema anterior, nunca visible con una sola familia).
 void EPSDisplay::useFillPattern() {
-  // El descriptor del patrón (ángulo + separación por familia de líneas) vive
-  // en la base Display; aquí solo se traduce a las rutinas hatch* del prólogo.
-  for (const HatchLine &h : patternFor(dspstate.fillpattern))
-    fprintf(file, "%f %f %f %f %f hatch%d\n",
-            h.gap, xmin, ymin, xmax, ymax, (int)h.angle);
+  if (dspstate.hatch.empty()) return;
+  fprintf(file, "gsave clip\n");
+  double cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
+  double ddx = xmax - xmin, ddy = ymax - ymin;
+  double D = sqrt(ddx * ddx + ddy * ddy);
+  if (D <= 0) D = 1;
+  for (const HatchLine &h : dspstate.hatch) {
+    if (h.gap <= 0) continue;
+    // Dirección visual de las líneas = 90 - ángulo (misma convención que PDF):
+    // ángulo 0 = vertical, 90 = horizontal, 45/135 = diagonales.
+    double th = (90.0 - h.angle) * M_PI / 180.0;
+    double ux = cos(th), uy = sin(th);   // a lo largo de la línea
+    double px = -uy, py = ux;            // perpendicular: paso entre líneas
+    int N = (int)(D / (2 * h.gap)) + 1;
+    fprintf(file, "newpath\n");
+    for (int k = -N; k <= N; k++) {
+      double ox = cx + k * h.gap * px, oy = cy + k * h.gap * py;
+      fprintf(file, "%f %f moveto %f %f lineto\n",
+              ox - (D / 2) * ux, oy - (D / 2) * uy,
+              ox + (D / 2) * ux, oy + (D / 2) * uy);
+    }
+    fprintf(file, "stroke\n");
+  }
+  fprintf(file, "grestore\n");
 }
 
 void EPSDisplay::text(string s) {
@@ -539,9 +459,9 @@ void EPSDisplay::stroke() {
       setColor(dspstate.fillcolor);
     else 
       setGray(dspstate.fillgray);
-    if (dspstate.fillpattern == 0)
+    if (dspstate.hatch.empty())
       fprintf(file, "closepath fill\n");
-    else 
+    else
       useFillPattern();
     restore();
   }

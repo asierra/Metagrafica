@@ -436,10 +436,15 @@ no genera `cap`/`join` salvo que se pidan explícitamente.)*
 
 ### 4.11 Patrones de relleno (`hatch`)
 
-En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **trama** de líneas paralelas. La trama tiene exactamente **dos parámetros**:
+En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **trama** de líneas paralelas. `hatch` está **sobrecargado**, exactamente en paralelo a `dash` (§4.10, que acepta un alias de cadena o un índice):
 
-- `hatch` — ángulo de la trama en grados; **obligatorio**, restringido a los cuatro valores que provee el motor: `0`, `45`, `90` o `135`.
-- `hatch_gap` — separación entre líneas en **puntos**; **opcional** (default según el motor). Es una cantidad física (pt), no escala con `world_window` (§3.2), porque el tramado se barre en el espacio de dispositivo ya transformado a pt (`EPSDisplay::rect` aplica la matriz antes de emitir; SVG teja un `<pattern>` en userSpace de pt). Por eso las tres densidades de V1 (`FPATRN`) equivalen a `hatch_gap` de **4, 2 y 1 pt**, mapeo 1:1 sin calibración.
+- **Número** = ángulo (en grados) de **una** familia de líneas, **libre** (cualquier valor, no restringido a una tabla).
+- **Cadena** = **estilo nombrado** (catálogo mínimo, à la Asymptote — se amplía solo cuando el corpus lo exija):
+  - `"hatch"` → una familia a **45°**.
+  - `"hatchback"` → una familia a **135°** (diagonal invertida).
+  - `"crosshatch"` → **dos** familias, 45°+135° (rejilla).
+
+`hatch_gap` — separación perpendicular entre líneas en **puntos**; **opcional** (default 4 pt). Es una cantidad física (pt), no escala con `world_window` (§3.2), porque el tramado se barre en el espacio de dispositivo ya transformado a pt (`EPSDisplay::rect`/`useFillPattern` aplican la matriz antes de emitir; SVG teja un `<pattern>` en userSpace de pt). Las tres densidades de V1 (`FPATRN`) equivalían a `hatch_gap` de **4, 2 y 1 pt**; ese mapeo sigue funcionando pero `hatch_gap` ya no está limitado a esos tres valores.
 
 No hay más: la trama es una forma de **relleno**, así que sus líneas toman el **color de relleno** (`fill`, §4; negro por default si no se fijó). Su **grosor** sale del estado de trazo (`line_width`, §4.10). No existe un `hatch_color` ni un `hatch_width` aparte.
 
@@ -453,24 +458,26 @@ No hay más: la trama es una forma de **relleno**, así que sus líneas toman el
 - **Atributo** (en paréntesis, nombrado) — aplica a una sola primitiva:
 
 ```text
-polygon(hatch=45)             { 0 0  5 0  5 5  0 5 } % trama diagonal a 45°
-polygon(hatch=0, hatch_gap=3) { 0 0  5 0  5 5  0 5 } % trama horizontal, paso 3 pt
+polygon(hatch=30)                        { 0 0  5 0  5 5  0 5 } % una familia, ángulo libre 30°
+polygon(hatch="hatch", hatch_gap=3)      { 0 0  5 0  5 5  0 5 } % 45°, paso 3 pt
+polygon(hatch="hatchback")               { 0 0  5 0  5 5  0 5 } % 135°
+polygon(hatch="crosshatch", hatch_gap=2) { 0 0  5 0  5 5  0 5 } % rejilla 45°+135°, paso 2 pt
 ```
 
-- **Sentencia de estado** (posicional, rige hasta el fin del bloque, §7) — el ángulo y el paso opcional caben en una sola línea, igual que `translate dx dy`:
+- **Sentencia de estado** (posicional, rige hasta el fin del bloque, §7) — nombre o ángulo, y el paso opcional caben en una sola línea, igual que `translate dx dy`:
 
 ```text
-fill "cyan"       % color de las líneas de la trama
-hatch 45          % solo ángulo; el paso toma el default
-hatch 45 4        % ángulo 45, paso 4 pt
-outlinefill       % además, contornea la región (color/line_width vigentes)
+fill "cyan"           % color de las líneas de la trama
+hatch "crosshatch"    % estilo nombrado; el paso toma el default
+hatch 30 2            % ángulo libre 30°, paso 2 pt
+outlinefill           % además, contornea la región (color/line_width vigentes)
 polygon { 0 0  5 0  5 5  0 5 }   % trama cyan + contorno
 polygon { 6 0  9 0  9 5  6 5 }
 ```
 
-  El segundo valor posicional de `hatch` es el paso; equivale a fijarlo aparte con `hatch_gap 4`. Como el ángulo está limitado a cuatro valores, el paso nunca resulta ambiguo.
+  El segundo valor posicional de `hatch` es el paso; equivale a fijarlo aparte con `hatch_gap 4`.
 
-*(V1: `FCOLOR c` + `FPATRN` → `fill "c"` + `hatch a`; el `FCOLOR` era el color de relleno y la trama lo hereda. `FPATRN n` codificaba ángulo y densidad en el índice `n`; el `n` negativo que añadía el contorno se reemplaza por `color=` (por-primitiva) o `outlinefill` (estado).)*
+*(V1: `FCOLOR c` + `FPATRN` → `fill "c"` + `hatch a`; el `FCOLOR` era el color de relleno y la trama lo hereda. `FPATRN n` codificaba ángulo y densidad en el índice `n`, restringido a 4 ángulos × 3 densidades; el `n` negativo que añadía el contorno se reemplaza por `color=` (por-primitiva) o `outlinefill` (estado). El índice sigue vivo solo como entrada del front-end V1 congelado.)*
 
 ### 4.12 polybar — barras (histogramas)
 
@@ -665,7 +672,7 @@ Todos usan la forma `palabra valor(es)`. Los nombres **coinciden** con los argum
 | `line_width w` | grosor de línea en pt | §4.10 |
 | `dash "dashed"` / `dash [10,2]` | patrón de línea | §4.10 |
 | `cap "round"` / `join "round"` | extremos / uniones de trazo | §4.10 |
-| `hatch a [g]` | relleno con trama: ángulo `a` (obligatorio) y paso `g` (opcional); o `hatch_gap g` aparte | §4.11 |
+| `hatch a [g]` / `hatch "estilo" [g]` | relleno con trama: ángulo libre `a` o estilo nombrado (`"hatch"`/`"hatchback"`/`"crosshatch"`), paso `g` opcional; o `hatch_gap g` aparte | §4.11 |
 | `font "italic"` | fuente base del texto (`"roman"`, `"italic"`, `"bold"`, …, §14.3) | §14.3 |
 | `font_size h` | tamaño de texto en pt (mismo keyword en documento y en bloque) | §14 |
 | `align "center"` / `valign "middle"` | alineación horizontal / vertical de texto | §4.8 |

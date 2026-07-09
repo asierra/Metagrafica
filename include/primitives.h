@@ -50,7 +50,8 @@ enum GraphicsItemType {
   GI_TICKS,
   GI_DOT,
   GI_CONCATENATEPATH,
-  GI_POLYBAR           // los valores nuevos van AL FINAL: hay código que depende de los ordinales
+  GI_POLYBAR,
+  GI_HATCHATTR         // los valores nuevos van AL FINAL: hay código que depende de los ordinales
 };
 
 enum AttributeType {
@@ -168,6 +169,21 @@ struct point {
 
 
 using Path = std::vector<point>;
+
+/**
+   Descriptor de patrón de relleno (tramado), independiente del dispositivo.
+   Sigue el modelo del formato .pat de AutoCAD: un patrón es una o más familias
+   de líneas paralelas. Una sola familia = rayado simple; dos = rayado cruzado;
+   con `dashes` no vacío = líneas punteadas/de guiones. Cada backend traduce
+   este descriptor a su mecanismo nativo (EPS/PDF: clip + líneas; SVG: <pattern>).
+ */
+struct HatchLine {
+  double angle = 0.0;          // dirección de las líneas (grados)
+  double gap   = 0.0;          // separación perpendicular entre líneas (pt)
+  double ox = 0.0, oy = 0.0;   // origen/fase de la familia
+  std::vector<double> dashes;  // vacío = línea continua
+};
+using FillPattern = std::vector<HatchLine>;
 
 // Abstract output device
 class Display;
@@ -293,6 +309,20 @@ private:
   double fvalue = 0.0;
   bool has_f = false;
   AttributeType atype = AT_LWIDTH;
+};
+
+// §4.11: transporta un FillPattern completo (una o más familias de tramado).
+// Attribute solo carga int/float y no puede cargar el vector de HatchLine, así
+// que hatch= (§7.5) y la sentencia de estado `hatch` (§7) emiten esto en vez de
+// un Attribute(AT_FPATRN, idx). AT_FPATRN sigue vivo solo para el front-end V1.
+class HatchAttr : public GraphicsItem {
+public:
+  HatchAttr(FillPattern fp) : GraphicsItem(GI_HATCHATTR), pattern(std::move(fp)) {}
+
+  void draw(Display &) override;
+
+private:
+  FillPattern pattern;
 };
 
 class Transform : public GraphicsItem {

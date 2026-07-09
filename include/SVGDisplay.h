@@ -84,9 +84,9 @@ class SVGDisplay: public Display {
   double strokeWidth();
   // Color de relleno como hex de 6 dígitos (sin '#'), desde fillcolor/fillgray.
   std::string fillColorHex();
-  // Garantiza que exista un <pattern> de tramado para el índice/color actual
-  // (lo emite en un <defs> la primera vez) y devuelve su id. "" si idx<=0.
-  std::string ensureHatchPattern(int idx);
+  // Garantiza que exista un <pattern> de tramado para este patrón/color (lo
+  // emite en un <defs> la primera vez) y devuelve su id. "" si fp está vacío.
+  std::string ensureHatchPattern(const FillPattern &fp);
 
   std::string filename;
   FILE *file = nullptr;

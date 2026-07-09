@@ -63,26 +63,13 @@ struct DisplayState {
 
   // objects should be filled?
   bool fill = false;
-  int fillpattern = 0;
+  // §4.11: familias de tramado activas (una o más HatchLine); vacío = relleno
+  // sólido. Reemplaza el índice entero FPATRN (ver Display::setHatch).
+  FillPattern hatch;
   bool outlinefill = false;
   double fillgray = 0.0;
   int fillcolor = 0;
 };
-
-/**
-   Descriptor de patrón de relleno, independiente del dispositivo. Sigue el
-   modelo del formato .pat de AutoCAD: un patrón es una o más familias de
-   líneas paralelas. Una sola familia = rayado simple; dos = rayado cruzado;
-   con `dashes` no vacío = líneas punteadas/de guiones. Cada backend traduce
-   este descriptor a su mecanismo nativo (EPS/PDF: clip + líneas; SVG: <pattern>).
- */
-struct HatchLine {
-  double angle = 0.0f;          // dirección de las líneas (grados)
-  double gap   = 0.0f;          // separación perpendicular entre líneas (pt)
-  double ox = 0.0f, oy = 0.0f;  // origen/fase de la familia
-  std::vector<double> dashes;   // vacío = línea continua
-};
-using FillPattern = std::vector<HatchLine>;
 
 /**
    Abstract base class for physical output.
@@ -216,14 +203,16 @@ public:
   // negativo activaba el contorno; en V3 el contorno es estado explícito
   // (GS_OUTLINEFILL/GS_NOOUTLINEFILL, §4.11) o la convención color= por-primitiva.
   // Reintroducir el signo aquí clobbea ese estado según el orden de emisión.
-  virtual void setFillPattern(int fp) {
-    dspstate.fillpattern = abs(fp);
-  }
 
-  // Traduce el índice de patrón al descriptor común. idx 0 (o negativo) =
-  // relleno sólido → devuelve vector vacío. La tabla actual son 10 patrones
-  // de rayado unidireccional (4 ángulos x 3 densidades); reproduce byte a byte
-  // la aritmética ENTERA del EPSDisplay original.
+  // §4.11: fija el patrón de tramado activo (una o más familias), ya construido
+  // por el parser (HatchAttr). Reemplaza el setFillPattern(int) por índice: el
+  // patrón viaja completo, sin pasar por una tabla restringida.
+  void setHatch(const FillPattern &fp) { dspstate.hatch = fp; }
+
+  // Traduce el índice FPATRN clásico al descriptor común. idx 0 (o negativo) =
+  // relleno sólido → devuelve vector vacío. Solo lo usa Attribute::draw
+  // (AT_FPATRN) para el front-end V1 congelado; V3 construye el FillPattern
+  // directamente (parserv3.cpp) y nunca pasa por aquí.
   virtual FillPattern patternFor(int idx) {
     FillPattern fp;
     if (idx <= 0) return fp;

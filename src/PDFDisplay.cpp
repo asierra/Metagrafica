@@ -153,7 +153,7 @@ void PDFDisplay::prepareDraw() {
    actual, así que el recorte debe quedar contenido entre GSave/GRestore que
    envuelven toda la construcción del path. */
 void PDFDisplay::ensurePatternGSave() {
-  if (dspstate.fill && dspstate.fillpattern > 0 && !clip_pending) {
+  if (dspstate.fill && !dspstate.hatch.empty() && !clip_pending) {
     HPDF_Page_GSave(page);
     clip_pending = true;
   }
@@ -182,7 +182,7 @@ void PDFDisplay::hatchCurrentPath() {
     HPDF_Page_SetGrayStroke(page, dspstate.fillgray);
   }
 
-  FillPattern fp = patternFor(dspstate.fillpattern);
+  const FillPattern &fp = dspstate.hatch;
   double cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
   double ddx = xmax - xmin, ddy = ymax - ymin;
   double D = sqrtf(ddx * ddx + ddy * ddy);  // diagonal: cubre el bbox a cualquier ángulo
@@ -329,7 +329,7 @@ void PDFDisplay::stroke() {
   // En PDF fill y stroke son colores independientes: se usa FillStroke
   // en lugar del truco gsave/fill/grestore del driver EPS.
   if (dspstate.fill) {
-    if (dspstate.fillpattern > 0) {
+    if (!dspstate.hatch.empty()) {
       hatchCurrentPath();
       if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
       return;
@@ -393,7 +393,7 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
   HPDF_Page_ClosePath(page);
   // En un path abierto solo se acumula; el cierre y relleno ocurren en CLPT.
   if (dspstate.openpath) return;
-  if (dspstate.fill && dspstate.fillpattern > 0) {
+  if (dspstate.fill && !dspstate.hatch.empty()) {
     hatchCurrentPath();
     if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
   } else if (dspstate.fill && dspstate.outlinefill)
