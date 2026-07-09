@@ -18,6 +18,9 @@ Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper.
 
 #include <stdio.h>
 
+#include <stack>
+#include <utility>
+
 #include "Display.h"
 #include "mgflags.h"
 
@@ -92,13 +95,25 @@ class EPSDisplay: public Display {
   FILE *file = nullptr;
   FILE *logfile = nullptr;
 
-  // Caché del estado de fuente REALMENTE emitido al dispositivo (findfont…setfont).
-  // Vive fuera de dspstate a propósito: push/popDrawState (§7) restauran el estado
-  // LÓGICO, pero no des-emiten el setfont ya escrito. Si el guard de setFontFace
-  // comparara contra dspstate (que el pop restaura), quedaría desincronizado con el
-  // dispositivo y no re-emitiría la fuente al salir de un bloque con font_size local.
+  // Caché del estado de fuente REALMENTE emitido al dispositivo (findfont…setfont),
+  // para que setFontFace no re-emita un setfont idéntico. La FUENTE es parte del
+  // estado gráfico de PostScript: cada gsave/grestore la salva/restaura. Por eso
+  // el caché se apila en lockstep con gsave (pushDevFont) y se restaura con
+  // grestore (popDevFont) en save/restore y push/popDrawState: si no, tras un
+  // grestore que revierte la fuente del dispositivo el caché quedaría obsoleto y
+  // el guard omitiría el setfont del siguiente texto (que saldría con la fuente
+  // vieja). El gsave/grestore crudo de useFillPattern no cambia la fuente, así
+  // que queda balanceado sin tocar el caché.
   FontFace dev_face = FN_NOFACE;
   double dev_size = -1.0;
+  std::stack<std::pair<FontFace, double>> dev_font_stack;
+  void pushDevFont() { dev_font_stack.push({dev_face, dev_size}); }
+  void popDevFont() {
+    if (dev_font_stack.empty()) return;
+    dev_face = dev_font_stack.top().first;
+    dev_size = dev_font_stack.top().second;
+    dev_font_stack.pop();
+  }
 };
 
 #endif

@@ -487,9 +487,9 @@ void EPSDisplay::setOpenPath(bool op) {
   }
 }
 
-void EPSDisplay::save() { fprintf(file, "gsave\n"); }
+void EPSDisplay::save() { pushDevFont(); fprintf(file, "gsave\n"); }
 
-void EPSDisplay::restore() { fprintf(file, "grestore\n"); }
+void EPSDisplay::restore() { fprintf(file, "grestore\n"); popDevFont(); }
 
 // Ámbito de estado (§7.1/§7.5): además del estado lógico, envuelve el ámbito en
 // gsave/grestore para que el estado de DISPOSITIVO emitido dentro (setlinewidth,
@@ -498,12 +498,14 @@ void EPSDisplay::restore() { fprintf(file, "grestore\n"); }
 // de mundo/§11.1 son software (mt); el CTM de dispositivo es identidad aquí, y cada
 // primitiva completa su path+stroke dentro del ámbito (no cruza el gsave/grestore).
 void EPSDisplay::pushDrawState() {
+  pushDevFont();
   fprintf(file, "gsave\n");
   Display::pushDrawState();
 }
 
 void EPSDisplay::popDrawState() {
   fprintf(file, "grestore\n");
+  popDevFont();
   Display::popDrawState();
 }
 
