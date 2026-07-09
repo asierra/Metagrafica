@@ -27,8 +27,13 @@ public:
   void start() override;
   void end() override;
   void stroke() override;
+
+  void closepath() override;
   void save() override;
   void restore() override;
+
+  void pushDrawState() override;
+  void popDrawState() override;
 
   void setLineWidth(double) override;
   void setLineColor(int lc) override;

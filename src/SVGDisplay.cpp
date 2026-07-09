@@ -390,6 +390,12 @@ void SVGDisplay::arc(double x, double y, double w, double h, double startAng, do
     stroke();
 }
 
+void SVGDisplay::closepath() {
+    if (dspstate.openpath) return;
+    if (path_builder.tellp() == 0) return;
+    path_builder << "Z ";
+}
+
 void SVGDisplay::stroke() {
     if (dspstate.openpath) return;
     if (path_builder.tellp() == 0) return; // No hay nada que dibujar

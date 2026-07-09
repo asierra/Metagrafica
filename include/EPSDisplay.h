@@ -35,8 +35,13 @@ class EPSDisplay: public Display {
   void start() override;
   void end() override;
   void stroke() override;
+
+  void closepath() override;
   void save() override;
   void restore() override;
+
+  void pushDrawState() override;
+  void popDrawState() override;
 
   void setLineWidth(double) override;
   void setLineColor(int lc) override;
@@ -86,6 +91,14 @@ class EPSDisplay: public Display {
   std::string filename;
   FILE *file = nullptr;
   FILE *logfile = nullptr;
+
+  // Caché del estado de fuente REALMENTE emitido al dispositivo (findfont…setfont).
+  // Vive fuera de dspstate a propósito: push/popDrawState (§7) restauran el estado
+  // LÓGICO, pero no des-emiten el setfont ya escrito. Si el guard de setFontFace
+  // comparara contra dspstate (que el pop restaura), quedaría desincronizado con el
+  // dispositivo y no re-emitiría la fuente al salir de un bloque con font_size local.
+  FontFace dev_face = FN_NOFACE;
+  double dev_size = -1.0;
 };
 
 #endif

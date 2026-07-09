@@ -365,11 +365,12 @@ void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
     else {
       fprintf(file, "%s", quad);
       useFillPattern();
-      if (dspstate.outlinefill)
-        fprintf(file, "stroke\n");
     }
     restore();
   }
+  // El contorno se traza aquí, fuera del gsave, en el color de LÍNEA (no el de
+  // relleno). Antes había un stroke extra tras useFillPattern dentro del gsave,
+  // que contorneaba en el color de relleno: redundante y del color equivocado.
   if (!dspstate.fill || dspstate.outlinefill)
     fprintf(file, "%sstroke\n", quad);
 }
@@ -415,10 +416,17 @@ void EPSDisplay::setFontSize(double fz)
 
 void EPSDisplay::setFontFace(FontFace face) {
   //printf("face %d %d\n", face, dspstate.fontFace);
-  if (face==dspstate.fontFace)
-    return;
+  Display::setFontFace(face);   // estado lógico (lo restaura push/popDrawState)
 
-  Display::setFontFace(face);
+  // El guard compara contra el estado de DISPOSITIVO (dev_face/dev_size), no contra
+  // dspstate: así, tras salir de un bloque con font_size local (pop restaura el
+  // tamaño lógico pero el setfont emitido sigue en el tamaño del bloque), la próxima
+  // fuente se re-emite. Se compara tamaño además de cara por la misma razón.
+  double size = getFontSize() * relfontsize;
+  if (face == dev_face && size == dev_size)
+    return;
+  dev_face = face;
+  dev_size = size;
 
   string font;
   string prefix = "/";
@@ -542,6 +550,12 @@ void EPSDisplay::stroke() {
   }
 }
 
+void EPSDisplay::closepath() {
+  if (dspstate.openpath)
+    return;
+  fprintf(file, "closepath\n");
+}
+
 void EPSDisplay::setOpenPath(bool op) {
   Display::setOpenPath(op);
   if (dspstate.openpath)  {
@@ -556,6 +570,22 @@ void EPSDisplay::setOpenPath(bool op) {
 void EPSDisplay::save() { fprintf(file, "gsave\n"); }
 
 void EPSDisplay::restore() { fprintf(file, "grestore\n"); }
+
+// Ámbito de estado (§7.1/§7.5): además del estado lógico, envuelve el ámbito en
+// gsave/grestore para que el estado de DISPOSITIVO emitido dentro (setlinewidth,
+// setdash, color, fuente) se restaure al salir. Sin esto, un `line_width=`/`dash=`
+// por-primitiva se filtra al exterior en EPS. Seguro: la semilla y los transforms
+// de mundo/§11.1 son software (mt); el CTM de dispositivo es identidad aquí, y cada
+// primitiva completa su path+stroke dentro del ámbito (no cruza el gsave/grestore).
+void EPSDisplay::pushDrawState() {
+  fprintf(file, "gsave\n");
+  Display::pushDrawState();
+}
+
+void EPSDisplay::popDrawState() {
+  fprintf(file, "grestore\n");
+  Display::popDrawState();
+}
 
 void EPSDisplay::applyDash() {
   if (dspstate.dash_array.empty()) {

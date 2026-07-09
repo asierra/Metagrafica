@@ -49,8 +49,11 @@ void Polyline::draw(Display &g) {
   }
   // Los ticks ya hicieron su propio stroke por cada marca dentro del bucle;
   // un stroke final aquí no tendría path y en libharu dispara GMODE.
-  if (type!=GI_TICKS)
+  if (type!=GI_TICKS) {
+    if (closed)          // §4.1: cierra la costura antes del trazo (polilínea cerrada)
+      g.closepath();
     g.stroke();
+  }
   if (type==GI_POLYGON && !filled)
     g.setFilled(false);
 }
@@ -200,6 +203,9 @@ void GraphicsState::draw(Display &g) {
     break;
   case GS_OUTLINEFILL:
     g.setOutlineFill(true);
+    break;
+  case GS_NOOUTLINEFILL:
+    g.setOutlineFill(false);
     break;
   case GS_DEVSAVE:
     g.save();

@@ -211,6 +211,21 @@ void PDFDisplay::hatchCurrentPath() {
 void PDFDisplay::save()    { HPDF_Page_GSave(page);    }
 void PDFDisplay::restore() { HPDF_Page_GRestore(page); }
 
+// Ámbito de estado (§7.1/§7.5): envuelve el ámbito en q/Q (GSave/GRestore) para que
+// el estado de dispositivo emitido dentro (SetLineWidth/SetDash/color/fuente) se
+// restaure al salir, igual que en EPS. Sin esto un `line_width=`/`dash=` por-primitiva
+// se filtraría al exterior. GSave/GRestore son legales aquí: GS_PUSHSTATE/POPSTATE se
+// emiten entre primitivas (modo page-description), nunca dentro de un path.
+void PDFDisplay::pushDrawState() {
+  HPDF_Page_GSave(page);
+  Display::pushDrawState();
+}
+
+void PDFDisplay::popDrawState() {
+  HPDF_Page_GRestore(page);
+  Display::popDrawState();
+}
+
 void PDFDisplay::applyDash() {
   const std::vector<double> &d = dspstate.dash_array;
   if (d.empty()) {
@@ -327,6 +342,11 @@ void PDFDisplay::stroke() {
   } else {
     HPDF_Page_Stroke(page);
   }
+}
+
+void PDFDisplay::closepath() {
+  if (dspstate.openpath) return;
+  HPDF_Page_ClosePath(page);
 }
 
 void PDFDisplay::setOpenPath(bool op) {

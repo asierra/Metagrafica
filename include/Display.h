@@ -129,6 +129,12 @@ public:
 
   virtual void stroke()=0;
 
+  // Cierra el subtrayecto en construcción (une el último punto con el inicial).
+  // Lo usa la polilínea cerrada (§4.1, closed=true) antes del stroke final, para
+  // que la costura sea una esquina real y no un traslape. El relleno (polygon)
+  // ya cierra por su cuenta en stroke(), así que no la necesita.
+  virtual void closepath()=0;
+
   // Transformaciones: la rama MTST es contabilidad común de la máquina de
   // estado; la rama MTLC se delega al hook device* de cada backend. Otros
   // valores de PredefinedMatrix no tienen efecto aquí (los maneja el parser).
@@ -187,10 +193,11 @@ public:
   // (en el motor V1, LPATRN 1 nunca se distinguió de LPATRN 0).
   static std::vector<double> dashArrayForIndex(int idx) {
     switch (idx) {
+      case 1:  return {8, 2};
       case 2:  return {4, 2};
-      case 3:  return {2, 1.6f};
+      case 3:  return {1, 1};
       case 4:  return {4, 2, 1, 2};
-      case 5:  return {4, 2, 2, 2, 2, 2};
+      case 5:  return {4, 2, 1, 2, 1, 2};
       default: return {};
     }
   }
@@ -205,8 +212,11 @@ public:
   void setLineGray(double lg) { dspstate.linegray = lg; }
   virtual void setLineColor(int lc) { dspstate.linecolor = lc; }
 
+  // Nota: estos setters ya NO tocan outlinefill. En V1 un valor de relleno
+  // negativo activaba el contorno; en V3 el contorno es estado explícito
+  // (GS_OUTLINEFILL/GS_NOOUTLINEFILL, §4.11) o la convención color= por-primitiva.
+  // Reintroducir el signo aquí clobbea ese estado según el orden de emisión.
   virtual void setFillPattern(int fp) {
-    dspstate.outlinefill = (fp < 0);
     dspstate.fillpattern = abs(fp);
   }
 
@@ -223,14 +233,12 @@ public:
     return fp;
   }
   
-  void setFillGray(double fg) { 
-    dspstate.outlinefill = (fg < 0);
+  void setFillGray(double fg) {
     dspstate.fillgray = fabs(fg);
     dspstate.fillcolor = 0;
   }
 
-  void setFillColor(int fc) { 
-    dspstate.outlinefill = (fc < 0);
+  void setFillColor(int fc) {
     dspstate.fillcolor = abs(fc);
     dspstate.fillgray = 0.0;
   }
@@ -275,9 +283,15 @@ public:
   void pushMatrix(Matrix &m)             { mtstack.push(mt); mt *= m; }
   void pushMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) { mtstack.push(mtst); mt *= mtst; } }
   // V3: apila/restaura el estado de dibujo COMPLETO (color, grosor, fill, …),
-  // igual que structure(), para el ámbito de estado de los bloques (§7.1).
-  void pushDrawState() { dsstack.push(dspstate); }
-  void popDrawState() { if (!dsstack.empty()) { dspstate = dsstack.top(); dsstack.pop(); } }
+  // igual que structure(), para el ámbito de estado de los bloques (§7.1) y de los
+  // atributos por-primitiva (§7.5). Restaura el estado LÓGICO (dspstate). Los
+  // backends que además emiten estado al DISPOSITIVO de forma ansiosa (EPS
+  // setlinewidth/setdash, PDF SetLineWidth/SetDash) SOBREESCRIBEN estos métodos
+  // para envolver el ámbito en gsave/grestore (q/Q), y así el estado de dispositivo
+  // también se restaure al salir —si no, un `line_width=`/`dash=` por-primitiva se
+  // filtraría al exterior en EPS/PDF aunque no en SVG (que relee dspstate por path).
+  virtual void pushDrawState() { dsstack.push(dspstate); }
+  virtual void popDrawState() { if (!dsstack.empty()) { dspstate = dsstack.top(); dsstack.pop(); } }
 
   void saveMatrix(PredefinedMatrix pdmt) { if (pdmt == MTST) mtstack.push(mtst); }
   void popMatrix() {

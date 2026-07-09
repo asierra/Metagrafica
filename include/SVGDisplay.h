@@ -39,6 +39,8 @@ class SVGDisplay: public Display {
   void start() override;
   void end() override;
   void stroke() override;
+
+  void closepath() override;
   void save() override;
   void restore() override;
 

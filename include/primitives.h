@@ -89,6 +89,9 @@ enum GraphicsStateType {
   // GS_PUSHSTATE/POPSTATE (estado de dibujo).
   GS_DEVSAVE,
   GS_DEVRESTORE,
+  // Apaga el contorneo de relleno (§4.11): gemelo de GS_OUTLINEFILL, como
+  // GS_NOFILL lo es de GS_FILL. Lo emite la sentencia de estado `outlinefill false`.
+  GS_NOOUTLINEFILL,
 };
 
 /// Predefined Matrices
@@ -210,7 +213,15 @@ class Polyline : public GraphicsItemWithPath {
 public:
   Polyline(GraphicsItemType t=GI_POLYLINE) : GraphicsItemWithPath(t) { }
 
+  // §4.1: polilínea cerrada (closed=true). El trazo une el último punto con el
+  // primero vía closepath, sin repetir la coordenada. No aplica a polygon (que
+  // ya cierra por el relleno) ni a ticks.
+  void setClosed(bool c) { closed = c; }
+
   void draw(Display &) override;
+
+private:
+  bool closed = false;
 };
 
 
