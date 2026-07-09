@@ -1,7 +1,8 @@
-// Parser V3 (descenso recursivo). Slice 1: expresiones (§5).
-// Nombre distinto de Parser.cpp (V1) para convivir en cualquier filesystem.
-// El V1 sigue siendo el motor activo (bin/mg + red golden) hasta el cutover;
-// entonces se retira Parser.cpp y, si se quiere, este archivo pasa a Parser.cpp.
+// Parser V3 (descenso recursivo). Compila la gramática V3 (§1-§18) a un árbol
+// MetaGrafica. Post-cutover (§22.6): es el ÚNICO front-end de bin/mg (Parser.cpp
+// V1 sigue en el árbol solo como referencia/insumo de mg1to2.py, fuera del
+// build). El entry point (main()) vive en src/main.cpp; este archivo expone
+// buildFromSource()/g_baseDir/g_flags vía include/parserv3.h.
 
 #include <cstdio>
 #include <cstdlib>
@@ -22,10 +23,12 @@
 #include "SVGDisplay.h"
 #include "EPSDisplay.h"
 #include "PDFDisplay.h"
+#include "parserv3.h"       // buildFromSource()/g_baseDir/g_flags: interfaz pública para main.cpp
 
-// Banderas de uso recogidas durante la evaluación (parse_text las activa); se
-// vuelcan al Display antes de dibujar, igual que main.cpp V1 (g.flags = parser.flags).
-static MGFlags g_flags;
+// Definición de las globales declaradas `extern` en parserv3.h. Banderas de uso
+// recogidas durante la evaluación (parse_text las activa); se vuelcan al Display
+// antes de dibujar, igual que main.cpp V1 (g.flags = parser.flags).
+MGFlags g_flags;
 
 // --- Interfaz al scanner generado por Flex (src/lexer.l) ---------------------
 extern int   yylex();
@@ -423,8 +426,9 @@ struct ConfigStmt : Stmt {
   }
 };
 
-// Directorio del archivo principal (para resolver includes relativos).
-static std::string g_baseDir;
+// Directorio del archivo principal (para resolver includes relativos, §15).
+// Definición de la global declarada `extern` en parserv3.h; main.cpp la fija.
+std::string g_baseDir;
 
 // include "archivo.mg" (§15): trae las structs/definiciones de otro archivo al
 // espacio global. Se lee y parsea en tiempo de parseo (parseInclude); su cuerpo
@@ -1610,8 +1614,9 @@ static StmtPtr parseInclude(Lexer &lx) {
   return st;
 }
 
-// --- Driver: fuente V3 -> MetaGrafica ---------------------------------------
-static MetaGrafica *buildFromSource(const std::string &src) {
+// --- Driver: fuente V3 -> MetaGrafica ----------------------------------------
+// Declarada en parserv3.h; main.cpp (entry point) es el único llamador.
+MetaGrafica *buildFromSource(const std::string &src) {
   Lexer lx;
   lx.tokenize(src.c_str());
   std::vector<StmtPtr> prog = parseProgram(lx);
@@ -1623,30 +1628,4 @@ static MetaGrafica *buildFromSource(const std::string &src) {
   for (auto &st : prog) st->exec(scope, *mg, items);
   mg->setGraphicsItems(std::move(items));
   return mg;
-}
-
-int main(int argc, char **argv) {
-  if (argc < 3) {
-    std::fprintf(stderr, "uso: %s entrada.mg salida.(svg|eps)\n", argv[0]);
-    return 1;
-  }
-  std::ifstream in(argv[1]);
-  if (!in) { std::fprintf(stderr, "no se pudo abrir %s\n", argv[1]); return 1; }
-  std::stringstream ss;
-  ss << in.rdbuf();
-
-  // Directorio del archivo principal: resuelve los include relativos (§15).
-  std::string inpath = argv[1];
-  size_t slash = inpath.find_last_of('/');
-  if (slash != std::string::npos) g_baseDir = inpath.substr(0, slash);
-
-  std::unique_ptr<MetaGrafica> mg(buildFromSource(ss.str()));
-
-  std::string out = argv[2];
-  auto ext = [&](const char *e) { return out.size() > 4 && out.compare(out.size() - 4, 4, e) == 0; };
-  if (ext(".svg"))      { SVGDisplay g(out); g.flags = g_flags; mg->draw(g); }
-  else if (ext(".pdf")) { PDFDisplay g(out); mg->draw(g); }
-  else                  { EPSDisplay g(out); g.flags = g_flags; mg->draw(g); }
-  std::printf("render -> %s\n", out.c_str());
-  return 0;
 }

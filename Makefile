@@ -56,14 +56,15 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 # --- Cutover (§22.6): bin/mg ES el compilador V3 -----------------------------
+# main.cpp es el entry point V3 (parserv3.h: buildFromSource/g_baseDir/g_flags).
 # Objetos del motor reutilizados por el parser V3 (incluye PDF/haru para paridad
-# de backends con el V1). El front-end V1 (main.cpp, Parser.cpp, lexmg.cpp) queda
-# fuera del binario; sigue congelado en la rama v1-legacy.
+# de backends con el V1). El front-end V1 (Parser.cpp, lexmg.cpp) queda fuera
+# del binario; sigue congelado en la rama v1-legacy.
 V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o PDFDisplay.o structure.o \
 	matrix.o primitives.o text.o text_parser.o splines.o)
 
-$(BINDIR)/mg: $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) $(INCDIR)/ast.h $(INCDIR)/tokens.h | $(BINDIR)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) -o $@ $(LDFLAGS) $(LIBS) -lz
+$(BINDIR)/mg: $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) $(INCDIR)/ast.h $(INCDIR)/tokens.h $(INCDIR)/parserv3.h | $(BINDIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_OBJS) -o $@ $(LDFLAGS) $(LIBS) -lz
 
 # Alias histórico: v3test == mg (mismo compilador V3).
 v3test: $(BINDIR)/mg | $(BINDIR)
