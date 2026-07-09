@@ -315,11 +315,18 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       break;
     }
   int v_end, it=0, iend = input.size();
+  // Modo matemático: '_'/'^' (sub/superíndice) solo operan entre '$…$'; fuera son
+  // caracteres literales (así prosa como line_width no se parte en subíndice).
+  bool math_mode = false;
   while (it < iend) {
     unsigned char c = input[it];
     switch(c) {
     case '_':
-    case '^': 
+    case '^':
+      if (!math_mode) {           // fuera de $…$: carácter literal
+        accum.push_back(c);
+        break;
+      }
       textflush();
       tspush();
       it++;
@@ -380,10 +387,10 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         textflush();
         tspush();
         text_state.font_face = FN_TEX_CMMI;
-        //tex_mode_on = true;
+        math_mode = true;
       } else {
         textflush();
-        //tex_mode_on = false;
+        math_mode = false;
         tspop();
       }
       break;

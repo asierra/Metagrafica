@@ -25,6 +25,16 @@ struct Value {
   Value(const std::string &s) : type(STRING), str(s) {}
 };
 
+// Representación textual de un Value, para la concatenación con '+' (§6.1) y el
+// estampado de text(). Un número se formatea con %g (entero sin punto, decimales
+// mínimos), igual que TextStmt cuando el contenido evalúa a número.
+inline std::string valueToStr(const Value &v) {
+  if (v.type == Value::STRING) return v.str;
+  char buf[64];
+  std::snprintf(buf, sizeof buf, "%g", v.num);
+  return buf;
+}
+
 // Reporte de error de evaluación (sin excepciones): imprime y sigue con 0.
 inline Value evalError(const char *msg, const std::string &extra = "") {
   std::fprintf(stderr, "Error de evaluación: %s%s\n", msg, extra.c_str());
@@ -104,7 +114,12 @@ struct BinExpr : Expr {          // + - * / ^   y comparación/lógicos (§6.1)
     // (permite guardas como `i < len(a) and a[i] > 0`). Booleano = número !=0.
     if (op == T_AND) return Value(l->eval(sc).num != 0.0 && r->eval(sc).num != 0.0 ? 1.0 : 0.0);
     if (op == T_OR)  return Value(l->eval(sc).num != 0.0 || r->eval(sc).num != 0.0 ? 1.0 : 0.0);
-    double a = l->eval(sc).num, b = r->eval(sc).num;
+    Value lv = l->eval(sc), rv = r->eval(sc);
+    // '+' con al menos un operando de cadena = concatenación (§6.1); el número se
+    // formatea con %g. Los demás operadores son numéricos.
+    if (op == T_PLUS && (lv.type == Value::STRING || rv.type == Value::STRING))
+      return Value(valueToStr(lv) + valueToStr(rv));
+    double a = lv.num, b = rv.num;
     switch (op) {
       case T_PLUS:  return Value(a + b);
       case T_MINUS: return Value(a - b);
@@ -161,6 +176,16 @@ struct CallExpr : Expr {         // función builtin: sin(x), mod(a,b), len(l)�
     if (fn == "atan2" && need(2)) return Value(std::atan2(a[0].num, a[1].num));
     if (fn == "mod"   && need(2)) return Value(std::fmod(a[0].num, a[1].num));
     if (fn == "len"   && need(1)) return Value((double)a[0].items.size());
+    // str(x): número→cadena en formato mínimo (reusa valueToStr). str(x, dec):
+    // con dec decimales fijos. Útil para etiquetas concatenadas con '+'; complementa
+    // el `decimals` de numbers (§13.2) cuando se arma texto suelto.
+    if (fn == "str" && need(1)) return Value(valueToStr(a[0]));
+    if (fn == "str" && need(2)) {
+      int dec = (int)a[1].num;
+      char buf[64];
+      std::snprintf(buf, sizeof buf, "%.*f", dec < 0 ? 0 : dec, a[0].num);
+      return Value(std::string(buf));
+    }
     // gray(g): color gris como entero RGB. g∈[0,1], 0=negro, 1=blanco (§4).
     // Sirve donde iría un color (fill=/color=): esos aceptan número (RGB directo)
     // o cadena (nombre/hex). Fuera de rango se satura.
