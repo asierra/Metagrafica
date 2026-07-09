@@ -1027,8 +1027,7 @@ struct TextStmt : Stmt {
     // Estilo por-primitiva (§7.5), acotado a este text() con push/pop de estado
     // (como PrimStmt); sin esto los parámetros nombrados se parsean pero se
     // ignoran. En el contexto de text(), `size` es alias de `font_size`. `color`
-    // tiñe el texto (color de trazo, que es con el que `show` pinta). `font=` por
-    // cara de fuente queda pendiente: pisaría con parse_text(FN_DEFAULT).
+    // tiñe el texto (color de trazo, que es con el que `show` pinta).
     GraphicsItemList attrs;
     for (const char *k : {"font_size", "size", "color", "align", "valign"}) {
       auto it = named.find(k);
@@ -1040,12 +1039,26 @@ struct TextStmt : Stmt {
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
       for (auto &a : attrs) out.push_back(std::move(a));
     }
+    // `font=` (cara de fuente, §14.3): no va por el estado del Display sino como
+    // cara INICIAL de parse_text (queda horneada en el Text; Text::draw la emite
+    // salvo FN_NOFACE). Default FN_DEFAULT (Times) cuando no se da o es inválida,
+    // idéntico al comportamiento previo. El markup interno del string ($…$, /i…)
+    // sigue pudiendo cambiarla desde ahí.
+    FontFace tface = FN_DEFAULT;
+    auto fit = named.find("font");
+    if (fit != named.end()) {
+      Value fv = fit->second->eval(s);
+      if (fv.type == Value::STRING) {
+        FontFace f = get_font_face_from_string(fv.str, g_flags.using_fontcmmi);
+        if (f != FN_NOFACE) tface = f;
+      }
+    }
     for (size_t i = 0; i + 1 < coords.size(); i += 2) {
       point p(coords[i]->eval(s).num, coords[i + 1]->eval(s).num);
       auto gs = std::make_unique<GraphicsState>();
       gs->setPosition(p);                                  // GS_PLUMEPOSITION
       out.push_back(std::move(gs));
-      out.push_back(parse_text(str, FN_DEFAULT, g_flags.using_reencode, g_flags.using_fontcmmi));
+      out.push_back(parse_text(str, tface, g_flags.using_reencode, g_flags.using_fontcmmi));
     }
     if (scoped)
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));

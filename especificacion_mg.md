@@ -331,11 +331,12 @@ La cadena y los atributos van en los paréntesis; la posición va en el bloque, 
 ```text
 text("Texto normal") { x y }
 text("Título", color="red", font_size=14) { x y }
+text("Nota", font="italic", size=10) { x y }               % font= cara; size = alias de font_size
 text("$\alpha + \beta = \gamma$", align="center", valign="middle") { x y }
 text("etiqueta") { 0 0  5 5  10 0 }   % la misma cadena en varios puntos
 ```
 
-El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). La forma sin bloque (o con bloque vacío), `text("...")`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
+Los atributos por-primitiva de `text()` son `font_size` (alias `size`), `font` (cara: `"roman"`/`"italic"`/`"bold"`/`"sanserif"`/`"courier"`…, §14.3), `color`, `align` y `valign`; todos combinan entre sí y con el markup interno del string. El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). La forma sin bloque (o con bloque vacío), `text("...")`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
 
 ### 4.9 ellipse — elipse completa
 
