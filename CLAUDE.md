@@ -36,7 +36,7 @@ The example corpus is split for the V1→V3 transition (see `examples/v1/README.
 
 ## Architecture
 
-Pipeline: `.mg` → **MGLexer** (`src/mgpp.l`) → **Parser** (`src/Parser.cpp`) → in-memory tree (`MetaGrafica`) → **Display** backend → EPS/SVG/PDF.
+Pipeline (V3, post-cutover): `.mg` → **lexer** (`src/lexer.l` → `src/lexv3.cpp`) → **Parser V3** (`src/parserv3.cpp`: descenso recursivo → AST de `Stmt` → `exec` emite `GraphicsItem`s) → in-memory tree (`MetaGrafica`) → **Display** backend → EPS/SVG/PDF. *(El pipeline V1 —`src/mgpp.l` → `src/Parser.cpp`— sigue en el árbol como referencia/insumo del traductor, pero fuera del build; ver `plan_mg1to2.md`.)*
 
 - **`GraphicsItem`** (`include/primitives.h`) — abstract base of every drawable; hierarchy is non-copyable (use-count bookkeeping in `StructureUser`). `Path` = `std::vector<point>`.
 - **`Structure` / `MetaGrafica`** (`include/structures.h`) — named reusable groups; `MetaGrafica` is the document (dimensions `$D` in cm, world window `WW`, font size). `StructureLine/Arc/Path/Rectangle` place structs geometrically.
@@ -55,7 +55,7 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 ### Adding a new primitive
 
-1. Token in `src/mgpp.l` (`keyword_map` in `init_tables()`); 2. `GI_*` enum + subclass in `include/primitives.h`; 3. handle in `Parser::parsePrimitive()` or a `parse*` helper; 4. `draw(Display&)` calling `Display` virtuals; 5. implement those in the three backends.
+1. `GI_*` enum + subclass in `include/primitives.h`; 2. despacho por nombre en `parserv3.cpp` (`isPrim()` + `PrimStmt`, o un `Stmt`/`parse*` propio para sintaxis con bloque, p. ej. `axis`/`compound`); 3. `draw(Display&)` calling `Display` virtuals; 4. implement those in the three backends. *(V3 despacha las primitivas por su nombre-cadena en `parseStatement`, no por token del lexer; solo hace falta tocar `src/lexer.l` para símbolos/operadores nuevos, no para comandos.)*
 
 ## Roadmap state (2026-07-06)
 
