@@ -54,10 +54,10 @@ fit(PanelRho, stretch=true) { 22 0  32 19 }
 % ── Etiquetas (explícitas; posiciones por calibrar) ──────────────────────────
 % Energías Eₙ = n²·E₁ y funciones/densidades, en cada nivel n² de cada columna.
 font "italic"
-text("E_1")    { 3 1 }    text("$\varphi_1$") { 14 1 }    text("$\rho_1$") { 25 1 }
-text("4E_1")   { 3 4 }    text("$\varphi_2$") { 14 4 }    text("$\rho_2$") { 25 4 }
-text("9E_1")   { 3 9 }    text("$\varphi_3$") { 14 9 }    text("$\rho_3$") { 25 9 }
-text("16E_1")  { 3 16 }   text("$\varphi_4$") { 14 16 }   text("$\rho_4$") { 25 16 }
+text("$E_1$")    { 3 1 }    text("$\varphi_1$") { 14 1 }    text("$\rho_1$") { 25 1 }
+text("4$E_1$")   { 3 4 }    text("$\varphi_2$") { 14 4 }    text("$\rho_2$") { 25 4 }
+text("9$E_1$")   { 3 9 }    text("$\varphi_3$") { 14 9 }    text("$\rho_3$") { 25 9 }
+text("16$E_1$")  { 3 16 }   text("$\varphi_4$") { 14 16 }   text("$\rho_4$") { 25 16 }
 
 font "roman"
 text("a)") { 5 -2 }

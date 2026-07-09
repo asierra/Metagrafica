@@ -58,16 +58,19 @@ text("Primitivos gráficos") { 0 1 }
     rectangle { 0.5 -0.25  0.75 -0.6 }
 
     text("Polígono") { -0.5 -0.2 }
-    polygon { -0.2 -0.5  -0.4073 -0.2147  -0.7427 -0.3237
+    % Para cerrar una ruta, usar el parámetro close
+    polyline(closed=true) { -0.2 -0.5  -0.4073 -0.2147  -0.7427 -0.3237
               -0.7427 -0.6763  -0.4073 -0.785 }
 
     {                          % los mismos, ahora tramados y desplazados
         translate -0.2 -0.15
-        % V1: FCOLOR -cyan + FPATRN -2. En V3 la trama son trazos: color fija el
-        % color de sus líneas (y el contorno, si se quiere). FPATRN 2 = hatch 45°,
-        % gap 4 — mapeo 1:1 (ver fill_styles.mg). Forma de sentencia: ángulo
-        % (obligatorio) y paso (opcional) en una línea, "hatch <ángulo> [paso]".
-        color "green"
+        % V1: FCOLOR -cyan + FPATRN -2. En V3 la trama es relleno: sus líneas toman
+        % el color de RELLENO (fill, cyan); color (verde) es el del contorno, que se
+        % dibuja al pedir outlinefill (§4.11). FPATRN 2 = hatch 45°, gap 4 — mapeo 1:1
+        % (ver fill_styles.mg). Sentencia: "hatch <ángulo> [paso]".
+        color "green"      % color del contorno (con outlinefill)
+        fill "cyan"        % color de las líneas de la trama
+        outlinefill        % contornea la región
         hatch 45 4
         polygon { -0.2 -0.5  -0.4073 -0.2147  -0.7427 -0.3237
                   -0.7427 -0.6763  -0.4073 -0.785 }

@@ -7,7 +7,7 @@ polyline { 0 -2.5 0 2.75 }
 
 text("") { }
 
-text("\hbar{/bk}_0") { 0 -2 } 
+text("\hbar{/bk}$_0$") { 0 -2 }
 text("$x_0 2x_\gamma x^{2x}\delta$") { 0 -1.5 } 
 text("Un subíndice $x_0$ y un superíndice $x^2$") { 0 -1 } 
 

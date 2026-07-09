@@ -42,5 +42,5 @@ sine(half_cycles=2, amplitude=0.35) { 7 0.3  7 2 }       % vertical
 % --- Etiquetas ---
 color "black"
 text("phi = sin(n pi x),  n = 1..4") { 1 9.6 }
-text("rho = |phi|^2  (squared=true)") { 1 5.1 }
+text("rho = |phi|$^2$  (squared=true)") { 1 5.1 }
 text("base diagonal / vertical") { 0.3 0.05 }
