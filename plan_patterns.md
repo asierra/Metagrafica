@@ -1,277 +1,219 @@
-# Plan: rellenos de área (patrones de tramado) y resolución
+# Plan: patrones de relleno (tramado) — modelo nombrado, ángulo libre, crosshatch
 
-Diseño de una solución general para los rellenos de área en los tres backends
-(EPS, PDF, SVG), y discusión de una propiedad global de **resolución (dpi)** que
-afecta también al proyecto de splines.
+Evolución del sistema de tramado de área en los tres backends (EPS, PDF, SVG):
+de la representación por **índice entero** (legado FPATRN de V1, restringida) al
+modelo **`hatch` sobrecargado** (nombre o número), con **ángulo/gap libres** y
+**estilos nombrados** (`hatch`/`hatchback`/`crosshatch`), en paralelo a cómo
+`dash` acepta alias.
 
-Estado del documento: **en progreso**. Pasos 0 y 1 hechos (ver §4.5); dpi
-descartado por ahora (§5).
-
----
-
-## 1. Cómo están hechos los rellenos hoy
-
-El modelo de relleno vive en `DisplayState` (`include/Display.h`) y es común a
-los tres backends:
-
-| Campo | Significado |
-|---|---|
-| `fill` (bool) | ¿se rellena el área? |
-| `fillcolor` / `fillgray` | color sólido de relleno |
-| `fillpattern` (int, 0 = sólido) | índice de patrón de tramado |
-| `outlinefill` (bool) | además de rellenar, dibujar el contorno |
-| `max_fillpattern` | tope por backend |
-
-El parser normaliza el índice con `value % (max_fillpattern+1)`, así que si un
-backend declara `max_fillpattern = 0`, cualquier patrón cae a relleno sólido.
-
-### EPSDisplay (único completo)
-
-1. **Sólido** (`fillpattern == 0`): `rectfill` para rectángulos, `closepath fill`
-   para paths arbitrarios (`EPSDisplay.cpp`, `rect()` y `stroke()`).
-2. **Tramado** (`fillpattern` 1–10): `useFillPattern()` (`EPSDisplay.cpp:377`)
-   deriva de forma puramente aritmética:
-   - ángulo = `((pattern-1)*45) % 180` → cicla 0/45/90/135
-   - separación = `4/(1+(pattern-1)/4)` (en **puntos**) → se aprieta cada 4 patrones
-
-   y emite `hatchN`. En el prólogo PostScript (`ps_hatchers`, `EPSDisplay.cpp:63`)
-   cada `hatchN` hace: `gsave → clip` (recorta al path actual) `→ dibuja líneas
-   paralelas` que barren el *bounding box* del path `→ stroke → grestore`.
-   El bbox se rastrea a mano con `set_limits`/`adjust_limits` en cada primitiva
-   (`xmin..ymax`, `EPSDisplay.h:75`).
-
-   Resultado: 10 patrones = 4 ángulos × ~3 densidades, **solo rayado
-   unidireccional** (ni cruzado, ni puntos).
-
-### PDFDisplay
-
-Sólido funciona nativo (`HPDF_Page_Fill` / `HPDF_Page_FillStroke`,
-`PDFDisplay.cpp:230`). Patrones **desactivados**: `max_fillpattern = 0`.
-
-### SVGDisplay
-
-Sólido funciona (`fill="#rrggbb"`, `getStyleAttributes()`). Patrones **no
-implementados**, y además **no** fija `max_fillpattern`, así que hereda el `10`
-del constructor base ⇒ si el `.mg` pide un patrón, SVG lo ignora y rellena sólido
-en silencio. **Bug latente** a corregir junto con esto.
+Estado del documento: **plan aprobado, listo para delegar.** La base index-based
+está terminada (ver §1); lo nuevo es §3 (fases 1–4). Decisiones cerradas por
+Alejandro (2026-07-09): sobrecargar `hatch`, relajar el ángulo, catálogo estilo
+Asymptote.
 
 ---
 
-## 2. Qué ofrece cada lenguaje de salida
+## 1. Estado actual (punto de partida — TERMINADO)
 
-| | Relleno sólido | Patrones / tramado |
-|---|---|---|
-| **EPS** | `fill` | `clip` + líneas (ya hecho) |
-| **PDF (libharu)** | `HPDF_Page_Fill` ✅ | libharu **no** expone tiling patterns (`/PatternType 1`) en su API pública. Solo queda: `HPDF_Page_Clip()` + dibujar las líneas — **el mismo truco que EPS** |
-| **SVG** | `fill` ✅ | **`<pattern>` nativo** en `<defs>`, referenciado con `fill="url(#hatchN)"`. El navegador teja y recorta solo. Es lo idiomático y lo mejor de los tres |
+El tramado ya funciona en **los tres backends** como **rayado de una sola familia**,
+representado por un **índice entero** `dspstate.fillpattern` (0 = sólido):
 
-Conclusiones:
-- **PDF no tiene atajo nativo usable** (libharu se queda corto) ⇒ reutiliza la
-  geometría de EPS (clip + líneas).
-- **SVG sí tiene mecanismo nativo** (`<pattern>`), mucho más limpio que clip+líneas.
+- **Modelo común** en `DisplayState` (`include/Display.h`): `fill` (bool),
+  `fillcolor`/`fillgray`, **`fillpattern` (int)**, `outlinefill` (bool). El bbox del
+  path (`xmin..ymax` + `set_limits`/`adjust_limits`) vive en la base `Display` y lo
+  alimentan los tres backends.
+- **Resolución del índice**: `Display::patternFor(int idx)` (`Display.h:~223`)
+  devuelve un `FillPattern` = `std::vector<HatchLine>` a partir de una tabla
+  **aritmética restringida** (ángulo ∈ {0,45,90,135}, gap ∈ {4,2,1} pt → idx 1..10;
+  el 1:1 con `FPATRN` de V1). `HatchLine{angle, gap, ox, oy, dashes}` ya admite
+  **ángulo y gap arbitrarios** y `dashes`; `FillPattern` admite **varias familias**.
+- **Render por backend** (los tres **iteran** `patternFor(...)`):
+  - **EPS** — `useFillPattern()` (`EPSDisplay.cpp:378`) emite una llamada
+    `hatch<ángulo>` por familia; el prólogo `ps_hatchers` (`EPSDisplay.cpp:~49`)
+    tiene **4 procedimientos fijos** `hatch0/hatch45/hatch90/hatch135`, cada uno
+    `gsave→clip→líneas paralelas sobre el bbox→stroke→grestore`.
+  - **SVG** — `ensureHatchPattern(int idx)` (`SVGDisplay.cpp:94`) emite
+    perezosamente un `<pattern id="mgpat_<idx>_<color>" patternUnits="userSpaceOnUse"
+    patternTransform="rotate(angle-90)">` con **una sola** `<line>` horizontal
+    (`fp[0]`), dedup por id en `emitted_patterns`. **Solo una familia** (el propio
+    código lo anota como pendiente).
+  - **PDF** — `hatchCurrentPath()` (`PDFDisplay.cpp:185`) itera `fp`, usa el operador
+    `W` (clip sin consumir path) + dibuja las líneas sobre el bbox; libharu no expone
+    tiling patterns, por eso el mismo truco clip+líneas que EPS. `ensurePatternGSave()`
+    abre el GSave en PAGE_DESCRIPTION (libharu prohíbe GSave en PATH_OBJECT).
+- **Parser** (`src/parserv3.cpp`): `emitHatch(angle, gap, out)` llama
+  `hatchIndex(angle, gap)` → índice FPATRN, y emite `Attribute(AT_FPATRN, idx)` +
+  `GS_FILL`. Lo usan el atributo por-primitiva (`emitPrimStyle`, `hatch=`/`hatch_gap=`)
+  y la sentencia de estado (`StateStmt::exec`, `hatch <áng> [gap]`).
 
----
+**El cuello de botella**: la representación es un **`int`**. `Attribute` solo carga
+`int value` (+ `double fvalue`), así que no puede transportar un `FillPattern` ni una
+tupla (estilo, ángulo, gap). Y `patternFor` restringe ángulo/gap a la tabla FPATRN.
+Todo el plan nuevo consiste en **sustituir esa representación entera por un
+`FillPattern`** que viaje por el pipeline, dejando intacta la capa de render (que ya
+sabe dibujar N familias a ángulo arbitrario).
 
-## 3. Referencias reconocidas de dibujo técnico
-
-Dos capas: la **convención semántica** (qué material/región significa cada
-tramado) y el **formato concreto** (cómo se define un patrón).
-
-### Convención semántica
-- **ISO 128-50** (*Basic conventions for representing areas on cuts and
-  sections*): rayado con línea fina continua, preferentemente a **45°**, con
-  separación proporcional al tamaño del área; **partes adyacentes se distinguen
-  cambiando ángulo o separación**. Es justo la lógica que imita `useFillPattern`.
-- **ASME/ANSI Y14.2** (*Line Conventions and Lettering*): define el *section
-  lining*; símbolo genérico = 45° equiespaciado, con símbolos por material.
-- **DIN 201 / DIN ISO 128**: versión alemana.
-- **Architectural Graphic Standards** (Ramsey & Sleeper, AIA): símbolos de
-  materiales en arquitectura (hormigón, ladrillo, madera…).
-- **FGDC Geologic Map Symbolization** (USGS): ~700 patrones litológicos
-  normalizados. Excesivo para el caso de MG, mencionado por completitud.
-
-### Formato concreto (lo adoptable para MG)
-- **Formato `.pat` de AutoCAD**: estándar *de facto* de la industria; gramática de
-  texto simple y documentada. Cada patrón es una lista de familias de líneas:
-
-  ```
-  *ANSI31, ANSI Iron/Brick/Stone masonry
-  45, 0,0, 0,.125
-  ```
-  Por cada línea: `ángulo, x-origen,y-origen, Δx,Δy [, guion1,guion2...]`. Con eso
-  se expresan rayado simple, cruzado (dos entradas), punteado (con dashes), etc.
-  AutoCAD trae `ANSI31–ANSI38` (materiales) y un juego `ISO*` alineado con ISO 128.
+*(Nota: el front-end V1 está congelado en `v1-legacy`; `patternFor`/`hatchIndex`/tabla
+FPATRN quedan muertos para V3 y se pueden borrar en la Fase 4.)*
 
 ---
 
-## 4. Solución general propuesta
+## 2. Objetivo (modelo nuevo)
 
-Separar *qué es un patrón* (independiente del dispositivo) de *cómo se pinta*
-(por backend). Encaja con el refactor "Etapa 1" ya planeado (subir estado común a
-la base `Display`).
+`hatch` **sobrecargado**, exactamente en paralelo a `dash` (que acepta alias o
+—en la spec— arreglo explícito):
 
-### 4.1 Descriptor de patrón estilo `.pat` en la base `Display`
+- **Número** = ángulo de **una** familia: `hatch=30` (ahora **libre**, sin restringir
+  a {0,45,90,135}).
+- **Cadena** = **estilo nombrado**:
+  - `"hatch"`      → una familia a **45°**.
+  - `"hatchback"`  → una familia a **135°** (−45°).
+  - `"crosshatch"` → **dos** familias (45° + 135°).
+- **`hatch_gap`** = separación en pt (**libre**, sin restringir a {4,2,1}).
+- **Color** de las líneas = `fill`; **grosor** = `line_width` (§4.11, ya decidido).
 
-En vez de la fórmula aritmética actual, modelar el patrón como una lista de
-familias de líneas (estructura `.pat`):
+Formas (idénticas a `dash`): atributo por-primitiva y sentencia de estado.
 
-```cpp
-struct HatchLine {
-  float angle;          // grados
-  float ox, oy;         // origen de la familia
-  float dx, dy;         // desplazamiento entre líneas paralelas
-  std::vector<float> dashes;  // vacío = línea continua; >0 = punteado/guiones
-};
-using FillPattern = std::vector<HatchLine>;   // >1 entrada ⇒ cruzado/combinado
-
-FillPattern Display::patternFor(int idx);     // tabla común a los 3 backends
+```text
+polygon(hatch="crosshatch", hatch_gap=3) { … }   % rejilla, paso 3 pt
+polygon(hatch="hatchback")               { … }   % diagonal inversa (135°)
+polygon(hatch=30)                        { … }   % una familia a 30° (ángulo libre)
+hatch "crosshatch"                                % estado
+hatch 30 2                                        % estado: ángulo 30, gap 2
 ```
 
-Ventajas:
-1. Cubre rayado simple, **cruzado** y **punteado** con la misma estructura.
-2. Traducible sin pérdida a los tres backends (ver 4.3).
-3. Da una tabla con nombres reconocidos (ANSI31, etc.) en vez de índices sin
-   significado.
-4. Un solo lugar donde ampliar el catálogo.
-
-### 4.2 Subir el bounding box a la base
-
-`xmin/xmax/ymin/ymax` + `set_limits`/`adjust_limits` son geometría pura de
-dispositivo; moverlos a `Display` para que PDF los reutilice. EPS ya los tiene;
-SVG no los necesita (el `<pattern>` teja y recorta solo). Va en la misma línea
-que la Etapa 1 del rediseño de `Display`.
-
-### 4.3 `fillWithPattern(const FillPattern&)` por backend
-
-- **EPS**: dejar el prólogo `hatch*` + clip. Cada `HatchLine` → un `hatch` con su
-  ángulo/gap. (Retrocompatibilidad: ver 4.4.)
-- **PDF**: `GSave → construir path → Clip → EndPath → dibujar las líneas de cada
-  familia dentro del bbox → GRestore`. Copia directa de la geometría de EPS;
-  libharu soporta `HPDF_Page_Clip`.
-- **SVG**: emitir perezosamente un `<pattern id="...">` en `<defs>` la primera vez
-  que se usa cada combinación (una `<line>` por familia) y poner
-  `fill="url(#...)"` en la figura. No necesita bbox ni clip.
-
-### 4.4 Mapeo de los 10 patrones actuales (EPS idéntico)
-
-Los 10 patrones actuales se expresan como entradas de **una sola** `HatchLine`.
-`angle(p) = ((p-1)*45) % 180` y `gap(p) = 4/(1 + (p-1)/4)` — **ojo: el código
-original usa división ENTERA** (`4/(1+…)` con operandos int), verificado en el
-golden `examples/fill_styles.eps`:
-
-| idx | ángulo | gap (pt) |
-|----|-------|---------|
-| 0 | — | — (sólido) |
-| 1 | 0   | 4 |
-| 2 | 45  | 4 |
-| 3 | 90  | 4 |
-| 4 | 135 | 4 |
-| 5 | 0   | 2 |
-| 6 | 45  | 2 |
-| 7 | 90  | 2 |
-| 8 | 135 | 2 |
-| 9 | 0   | 1 |
-| 10| 45  | 1 |
-
-`patternFor()` debe reproducir esa aritmética entera literal para que EPS quede
-byte-idéntico.
-
-**Verificación:** capturar `.eps` de referencia de los ejemplos con patrones antes
-de tocar nada, y comprobar `diff` byte a byte tras extraer `patternFor`/bbox a la
-base. La salida EPS **no debe cambiar**.
-
-### 4.5 Orden de implementación recomendado
-
-0. ✅ **HECHO** — Capturada salida de referencia (`.eps`) de `fill_styles.mg`;
-   salida determinista comprobada.
-1. ✅ **HECHO** — `HatchLine`/`FillPattern` + `patternFor()` y el bbox
-   (`set_limits`/`adjust_limits`, `xmin..ymax`) subidos a la base `Display`;
-   `EPSDisplay::useFillPattern()` reescrito para consumir `patternFor()`.
-   Verificado: **todos los `.eps` de examples byte-idénticos**.
-2. ✅ **HECHO — SVG**: patrones con `<pattern patternUnits="userSpaceOnUse"
-   patternTransform="rotate(angle-90)">` + una `<line>` horizontal, emitido
-   perezosamente en `<defs>` (dedup por índice+color vía `emitted_patterns`).
-   Una sola construcción cubre los 4 ángulos (el `-90` y el signo salen del flip
-   global `scale(1,-1)`). Funciona en cualquier forma (elipse/círculo/polígono/
-   rect) y respeta `outlinefill`. Verificado visualmente contra EPS con
-   `fill_styles.mg` y `primitives.mg` (Inkscape). `max_fillpattern` ya valía 10
-   (heredado); el bug real era que se ignoraba el patrón, ya corregido.
-   BUG PREEXISTENTE corregido de paso: `SVGDisplay::deviceTranslate` emitía el
-   translate en unidades normalizadas en vez de puntos (faltaba `*dvx,*dvy` como
-   en EPSDisplay), así que las figuras trasladadas con TLLC caían encima de las
-   originales (en `primitives` el círculo/elipse/rect/polígono rellenos tapaban
-   sus contornos negros). Ahora coincide con EPS.
-3. ✅ **HECHO — PDF**: `max_fillpattern` 0→10. Patrones vía clip+líneas (libharu
-   no expone patrones de mosaico): `ensurePatternGSave()` abre el GSave en
-   PAGE_DESCRIPTION antes del path (libharu prohíbe GSave en PATH_OBJECT y q/Q no
-   preservan el path); `hatchCurrentPath()` usa el operador `W` (no consume el
-   path): `W S` = contorno + recorte (outlinefill), `W n` = solo recorte, y luego
-   dibuja las líneas sobre el bbox (diagonal completa, centradas) que el recorte
-   trima a la forma. Bbox subido a la base en el Paso 1; PDF ahora llama
-   set_limits/adjust_limits en moveto/lineto/curveto/rect/arc y resetea en
-   setOpenPath. Verificado vs EPS (fill_styles, primitives): patrones, densidades,
-   outlinefill y recorte en curvas coinciden.
-   NOTA: `fig2-3.pdf` emite 30 errores libharu (INVALID_GMODE) — PREEXISTENTE
-   (mismo conteo antes de estos cambios, verificado con git stash), ajeno a
-   patrones; no usa FPATRN.
-4. ⏭️ **SIGUIENTE (opcional)** — ampliar el catálogo: rayado cruzado y punteado,
-   aprovechando que `HatchLine` ya lleva `dashes`/`ox,oy` y `FillPattern` admite
-   varias familias. Los tres backends ya consumen `patternFor()`.
+Catálogo mínimo (hatch/hatchback/crosshatch, à la Asymptote); ampliar
+(hlines/vlines/ladrillo/punteado) solo cuando el corpus lo exija.
 
 ---
 
-## 5. Discusión: propiedad global de resolución (dpi)
+## 3. Plan de implementación (fases delegables)
 
-Idea de Alejandro: añadir a MetaGráfica una propiedad `dpi` (como ya hay
-dimensiones en cm) para manejar densidades de separación y también la subdivisión
-de splines.
+Cada fase es **verificable de forma independiente** (build limpio + los 14 ejemplos
+a EPS/SVG/PDF + `gs -dNOPAUSE -dBATCH -sDEVICE=nullpage` sin error). El harness
+golden está en pausa (migración examples/v3→examples/), así que la verificación es
+por render + GS + inspección dirigida del SVG/PDF, no golden.
 
-### 5.1 El fondo es correcto, el nombre merece matiz
+### Fase 1 — Plomería: mover la representación de `int` a `FillPattern` (SIN cambio de salida)
 
-El pipeline actual (EPS/PDF/SVG) es **vectorial y resolución-independiente**:
-`cm → puntos` es exacto (`cm_to_point = 28.346…`), no hay "puntos por pulgada"
-en ningún lado. **dpi es un concepto de trama** (píxeles por pulgada). En salida
-vectorial no hay píxeles, así que:
+Objetivo: que el patrón viaje como `FillPattern` y se guarde en `dspstate`, con la
+salida **byte-equivalente** a hoy (misma tabla restringida por ahora).
 
-- Para **separación de patrones** la cantidad natural y consistente con las
-  dimensiones en cm es una **longitud física** (p. ej. 0.5 mm entre líneas) o una
-  **densidad** (líneas/cm). Es lo que hace el formato `.pat` (deltas en unidades
-  de dibujo). Usar dpi aquí sería la abstracción equivocada: implicaría una
-  rejilla de trama inexistente. *(Nota: hoy el gap está en puntos, ya es longitud
-  física, solo falta exponerlo en unidades del usuario.)*
+1. **`dspstate`** (`include/Display.h`): añadir `FillPattern hatch;`. Mantener
+   `int fillpattern` **solo como bandera** ("hay trama" = `fillpattern != 0`) o
+   sustituir sus usos por `!dspstate.hatch.empty()` (decidir en implementación;
+   preferible la bandera para tocar menos).
+2. **`Display::setHatch(const FillPattern&)`** (nuevo): fija `dspstate.hatch` y la
+   bandera. (Análogo a `setLineStyle`, pero recibe el patrón ya construido, no un
+   índice.)
+3. **Nuevo `GraphicsItem` `HatchAttr`** (`include/primitives.h` + `src/primitives.cpp`):
+   subclase que carga un `FillPattern` y en `draw(Display&)` llama `g.setHatch(fp)`.
+   Necesario porque `Attribute` (int/float) no puede cargar el payload. Añadir
+   `GI_HATCHATTR` al enum (al final, no desplazar ordinales) si el despacho lo pide;
+   `HatchAttr` implementa su propio `draw`, no pasa por `Attribute::draw`.
+4. **Parser** (`emitHatch` en `parserv3.cpp`): en vez de `Attribute(AT_FPATRN, idx)`,
+   construir el `FillPattern` (por ahora, la misma familia 45°/gap que hoy vía
+   `hatchIndex`→tabla, o directamente `{HatchLine{angle, gap}}`) y emitir un
+   `HatchAttr(fp)` + `GS_FILL`. `emitPrimStyle` y `StateStmt::exec` no cambian de
+   forma (siguen llamando a `emitHatch`).
+5. **Backends**: `useFillPattern`(EPS)/`ensureHatchPattern`(SVG)/`hatchCurrentPath`(PDF)
+   leen `dspstate.hatch` en lugar de `patternFor(dspstate.fillpattern)`. (Mínimo:
+   sustituir la fuente del `for (const HatchLine& …)`.)
+6. **VERIFICAR**: `fill_styles.mg` y `primitives.mg` renderizan **igual que antes**
+   (mismo tramado, mismos ángulos/densidades) en los 3 backends. Es un swap de
+   representación; la geometría no cambia.
 
-- Para **subdivisión de splines** (`splines()` en `splines.cpp` usa un `intervals`
-  **fijo** por tramo → demasiados puntos en curvas chicas, pocos en grandes) lo
-  correcto es una **tolerancia de planitud** (máxima desviación de la cuerda,
-  también una longitud). Nótese que `splines_to_bezier` + `curveto` **no necesita
-  subdividir**: el dispositivo rasteriza la curva nativa. La subdivisión solo hace
-  falta cuando hay que producir una polilínea.
+### Fase 2 — Ángulo libre (una familia)
 
-### 5.2 Dónde sí es dpi la cantidad correcta
+Objetivo: `hatch=<ángulo cualquiera>` renderiza correctamente en los 3 backends.
 
-dpi pasa a ser de primera clase el día que exista un **backend de trama**
-(PNG/bitmap): ahí dpi = píxeles por pulgada es exactamente lo que se necesita.
-También es un *handle* cómodo para responder "¿qué detalle es imperceptible?":
-1 px a dpi dado da un tamaño mínimo de rasgo, útil como **default** para la
-tolerancia de planitud de splines y para densidades por omisión.
+7. **EPS — punto más delicado.** Reemplazar los 4 procs fijos `hatch0/45/90/135` del
+   prólogo (`ps_hatchers`) por **un `hatch` genérico parametrizado por ángulo**:
+   `... gap xmin ymin xmax ymax angle hatch` → `gsave` → `clip` → rotar el sistema
+   (`angle rotate`) → barrer líneas paralelas que cubran el bbox rotado → `stroke` →
+   `grestore`. Cuidar que el barrido cubra el bbox tras la rotación (usar la diagonal
+   como extensión, como ya hace PDF). `useFillPattern()` pasa el ángulo de cada
+   `HatchLine`.
+8. **SVG** (`ensureHatchPattern`): llavear el `id` por **(ángulo, gap, color)** en vez
+   de `idx` (línea `sprintf(idbuf,"mgpat_%d_%s",...)`) — p. ej. `mgpat_<angʹ>_<gapʹ>_<color>`
+   redondeando a enteros/entero-milésimas para el id. El `patternTransform="rotate(angle-90)"`
+   ya sirve para **una** familia a cualquier ángulo; solo hay que dejar de derivar el
+   ángulo de la tabla.
+9. **PDF** (`hatchCurrentPath`): verificar que la matemática de dirección de línea
+   acepte ángulo arbitrario (probablemente ya, porque parte del ángulo del `HatchLine`
+   y clip+líneas es genérico). Ajustar si asume múltiplos de 45°.
+10. **VERIFICAR**: `polygon(hatch=30, hatch_gap=3)` a 30° en EPS (GS ok + ángulo
+    visible), SVG (`rotate` en el `<pattern>`), PDF (líneas a 30°). Comparar los tres.
 
-### 5.3 Recomendación
+### Fase 3 — Estilos nombrados + crosshatch (multi-familia)
 
-Añadir un global de **resolución de referencia (dpi)**, pero con rol acotado:
+Objetivo: `hatch="hatch"|"hatchback"|"crosshatch"` (y estado equivalente).
 
-1. Fuente de **defaults**: tolerancia de planitud de splines (≈ 1 px @ dpi) y
-   densidad de patrones por omisión.
-2. Parámetro **obligatorio** cuando exista un backend de trama.
-3. **No** ser la unidad en que el usuario expresa separaciones: eso queda en
-   longitud física (mm) o densidad (líneas/cm), consistente con las dimensiones
-   en cm y con el formato `.pat`.
+11. **Parser** (`emitHatch` / lectura del valor de `hatch`): distinguir **cadena vs
+    número**. Cadena → construir el `FillPattern` del alias:
+    `"hatch"`→`{HatchLine{45,gap}}`, `"hatchback"`→`{HatchLine{135,gap}}`,
+    `"crosshatch"`→`{HatchLine{45,gap}, HatchLine{135,gap}}`. Número → una familia a ese
+    ángulo (Fase 2). En `emitPrimStyle`, `hatch` puede llegar STRING o NUMBER (ver
+    `Value::type`). En `StateStmt::exec` (que ya trata `hatch` posicional) aceptar que
+    el primer arg sea cadena (`hatch "crosshatch"`) además de número (`hatch 30 2`).
+12. **SVG** (`ensureHatchPattern`): emitir **una `<line>` por familia** dentro del
+    tile. El truco de `patternTransform` único **no** sirve para 2 ángulos distintos:
+    para crosshatch, construir el tile con las 2 familias dibujadas **a su ángulo real**
+    (calcular extremos de cada línea dentro del tile cuadrado de lado `gap`), sin
+    `patternTransform`, o emitir dos `<pattern>` superpuestos. Preferible: un tile con
+    ambas familias. **EPS y PDF ya iteran `for (h : fp)`** → multi-familia sale casi
+    gratis ahí (cada familia = una llamada `hatch`/un barrido).
+13. **VERIFICAR**: `hatch="crosshatch"` y `"hatchback"` en los 3 backends; que
+    crosshatch se vea como rejilla en SVG (no una sola dirección).
 
-Así el pipeline vectorial sigue siendo resolución-independiente (una virtud) y el
-dpi queda donde de verdad aporta. Decisión de diseño pendiente de Alejandro.
+### Fase 4 — Cierre
 
-### 5.4 Enganche concreto con splines (independiente de patrones)
+14. **Spec §4.11** (`especificacion_mg.md`): reescribir para el modelo nombrado +
+    ángulo/gap libres; documentar el paralelo con `dash` (nombre o número); jubilar la
+    tabla FPATRN y la restricción de ángulos. Mantener la nota de que color=fill y
+    grosor=line_width.
+15. **`fill_styles.mg`**: añadir una fila mostrando `hatch`/`hatchback`/`crosshatch`
+    (y quizá un ángulo libre), rotulada con la concatenación/`str` ya disponibles.
+16. **Limpieza**: borrar `patternFor`/`hatchIndex`/`AT_FPATRN`/tabla FPATRN si quedaron
+    muertos (V1 congelado en v1-legacy). Actualizar la memoria del proyecto
+    (`project_mgv3_next.md`): marcar "hatch libre" (pendiente #2) como resuelto.
 
-Sustituir el `intervals` fijo de `splines()` por un cálculo adaptativo:
-`n_segmentos ≈ longitud_del_tramo / tolerancia`, donde `tolerancia` sale de la
-resolución de referencia. Además, quitar el `printf("spline new points…")` de
-depuración en `splines.cpp:77`.
+### Riesgos / notas para quien implemente
+- **EPS prólogo (paso 7)** es el mayor riesgo: pasar de 4 procs fijos a 1 genérico con
+  `rotate`. Aislable; verificar con GS y comparando ángulos contra SVG/PDF.
+- **SVG crosshatch (paso 12)**: el tile con 2 familias es geometría acotada pero no
+  trivial; cuidar el "wrap" de las líneas en los bordes del tile para que la rejilla
+  sea continua.
+- **PDF** es de verificación por vista (timestamps varían); basta con que no emita
+  errores libharu (INVALID_GMODE) nuevos y que las líneas salgan al ángulo pedido.
+  *(Preexistente: `fig2-3.pdf` emite ~30 INVALID_GMODE ajenos a patrones; no regresión.)*
+- Fase 1 **no cambia la salida** — es la red de seguridad; si algo se ve distinto ahí,
+  parar y revisar el swap antes de seguir.
+
+---
+
+## 4. Referencias (contexto, condensado)
+
+Convención semántica del rayado técnico: **ISO 128-50** (líneas finas continuas,
+preferente 45°, separación proporcional; partes adyacentes se distinguen por
+ángulo/separación) — es la lógica que el sistema imita; **ASME/ANSI Y14.2**
+(*section lining*), **DIN 201**. Formato concreto: el **`.pat` de AutoCAD** modela
+un patrón como lista de familias `ángulo, ox,oy, Δx,Δy [,dashes]` — exactamente la
+estructura de `HatchLine`/`FillPattern` que ya usa el motor (por eso crosshatch y
+punteado ya son representables). Para los **nombres user-facing** se eligió el juego
+minimalista de **Asymptote** (`hatch`/`hatchback`/`crosshatch`), no los índices
+ANSI31…, por coherencia con la simpleza de los alias de `dash`.
+
+---
+
+## 5. (Parqueado) Propiedad global de resolución (dpi)
+
+Idea separada de Alejandro, **no** en el camino crítico de patrones. El pipeline
+vectorial (EPS/PDF/SVG) es resolución-independiente (`cm→pt` exacto); **dpi es un
+concepto de trama**, así que la separación de patrones debe expresarse en **longitud
+física** (mm) o **densidad** (líneas/cm), no en dpi —hoy el `hatch_gap` ya está en pt
+(longitud física), solo falta —si se quiere— exponerlo en unidades de usuario. dpi
+pasaría a primera clase el día que exista un **backend de trama** (PNG), y como
+*default* de la tolerancia de planitud de splines (`splines.cpp` usa un `intervals`
+fijo; lo correcto sería subdividir por tolerancia de cuerda ≈ longitud/tol). Decisión
+de diseño pendiente; retomar cuando se aborde el backend de trama o los splines.
