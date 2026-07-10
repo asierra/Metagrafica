@@ -14,60 +14,26 @@ const string DIGIT = "0123456789";
 
 
 // Standar symbol font codes
-map<string, unsigned char> map_symbol = { 
-   {"alpha", 97}, {"beta", 98}, {"gamma", 103}, {"delta", 100},
-   {"zeta", 122}, {"eta", 104}, {"theta", 113}, {"iota", 105},
-   {"kappa", 107},{"lambda", 108}, {"mu", 109}, {"nu", 110},
-   {"xi", 120}, {"pi", 112}, {"rho", 114}, {"sigma", 115},
-   {"tau", 116}, {"upsilon", 117}, {"phi", 102}, {"chi", 99},
-   {"psi", 121}, {"omega", 119}, {"varepsilon", 101}, {"vartheta", 74},
-   {"varpi", 118}, {"varsigma", 86}, {"varphi", 106}, {"Gamma", 71},
-   {"Delta", 68},  {"Theta", 81}, {"Lambda", 76}, {"Xi", 88},
-   {"Pi", 80}, {"Sigma", 83}, {"Upsilon", 161}, {"Phi", 70},
-   {"Psi", 89}, {"Omega", 87}, {"aleph", 192}, {"wp", 195},
-   {"Re", 194}, {"Im", 193}, {"partial", 182}, {"infty", 165}, {"prime", 162},
-   {"nabla", 209}, {"bot", 94}, {"forall", 34}, {"exists", 36}, {"neg", 216},
-   {"sharp", 35}, {"clubsuit", 167}, {"diamondsuit", 168}, {"heartsuit", 169},
-   {"spadesuit", 170}, {"int", 242}, {"prod", 213}, {"sum", 229},
-   {"wedge", 217},   {"vee", 218},   {"cap", 199},   {"cup", 200},
-   {"diamond", 224},   {"bullet", 183},   {"div", 184},   {"oslash", 198},
-   {"otimes", 196},   {"oplus", 197},   {"pm", 177},   {"cdot", 215},
-   {"times", 180},   {"propto", 181},   {"mid", 124},   {"Leftrightarrow", 219},
-   {"Leftarrow", 220},   {"Rightarrow", 222},   {"leq", 163},   {"geq", 179},
-   {"approx", 187},   {"supset", 201},   {"subset", 204},   {"supseteq", 202},
-   {"subseteq", 205},   {"in", 206},   {"ni", 39},   {"leftrightarrow", 171},
-   {"leftarrow", 172},   {"rightarrow", 174},   {"sim", 126},   {"equiv", 186},
-   {"colon", 58},   {"uparrow", 173},   {"alpha", 97},   {"beta", 98},
-   {"gamma", 103},   {"delta", 100},   {"zeta", 122},   {"eta", 104},
-   {"theta", 113},   {"iota", 105},   {"kappa", 107},   {"lambda", 108},
-   {"mu", 109},   {"nu", 110},   {"xi", 120},   {"pi", 112},
-   {"rho", 114},   {"sigma", 115},   {"tau", 116},   {"upsilon", 117},
-   {"phi", 102},   {"chi", 99},   {"psi", 121},   {"omega", 119},
-   {"varepsilon", 101},   {"vartheta", 74},   {"varpi", 118},   {"varsigma", 86},
-   {"varphi", 106},   {"Gamma", 71},   {"Delta", 68},   {"Theta", 81},
-   {"Lambda", 76},   {"Xi", 88},   {"Pi", 80},   {"Sigma", 83},
-   {"Upsilon", 161},   {"Phi", 70},   {"Psi", 89},   {"Omega", 87},
-   {"aleph", 192},   {"wp", 195},   {"Re", 194},   {"Im", 193},
-   {"partial", 182},   {"infty", 165},   {"prime", 162},   {"nabla", 209},
-   {"bot", 94},   {"forall", 34},   {"exists", 36},   {"neg", 216},
-   {"sharp", 35},   {"clubsuit", 167},   {"diamondsuit", 168},   {"heartsuit", 169},
-   {"spadesuit", 170},   {"int", 242},   {"prod", 213},   {"sum", 229},
-   {"wedge", 217},   {"vee", 218},   {"cap", 199},   {"cup", 200},
-   {"diamond", 224},   {"bullet", 183},   {"div", 184},   {"oslash", 198},
-   {"otimes", 196},   {"oplus", 197},   {"pm", 177},   {"cdot", 215},
-   {"times", 180},   {"propto", 181},   {"mid", 124},   {"Leftrightarrow", 219},
-   {"Leftarrow", 220},   {"Rightarrow", 222},   {"leq", 163},   {"geq", 179},
-   {"approx", 187},   {"supset", 201},   {"subset", 204},   {"supseteq", 202},
-   {"subseteq", 205},   {"in", 206},   {"ni", 39},   {"leftrightarrow", 171},
-   {"leftarrow", 172},   {"rightarrow", 174},   {"sim", 126},   {"equiv", 186},
-   {"colon", 58},   {"uparrow", 173},   {"downarrow", 175},   {"Uparrow", 221},
-   {"Downarrow", 223},   {"rangle", 241},   {"langle", 225},   {"rceil", 249},
-   {"lceil", 233},   {"rfloor", 251},   {"lfloor", 235},   {"angle", 208},
-   {"therefore", 92},   {"neq", 185},   {"textdegree", 176},   {"cong", 64},
-   {"downarrow", 175},   {"Uparrow", 221},   {"Downarrow", 223},   {"rangle", 241},
-   {"langle", 225},   {"rceil", 249},   {"lceil", 233},   {"rfloor", 251},
-   {"lfloor", 235},   {"angle", 208},   {"therefore", 92},   {"neq", 185},
-   {"textdegree", 176},   {"cong", 64},   {"surd", 214}
+map<string, unsigned char> map_symbol = {
+   {"alpha", 97}, {"beta", 98}, {"gamma", 103}, {"delta", 100}, {"zeta", 122}, {"eta", 104},
+   {"theta", 113}, {"iota", 105}, {"kappa", 107}, {"lambda", 108}, {"mu", 109}, {"nu", 110},
+   {"xi", 120}, {"pi", 112}, {"rho", 114}, {"sigma", 115}, {"tau", 116}, {"upsilon", 117},
+   {"phi", 102}, {"chi", 99}, {"psi", 121}, {"omega", 119}, {"varepsilon", 101}, {"vartheta", 74},
+   {"varpi", 118}, {"varsigma", 86}, {"varphi", 106}, {"Gamma", 71}, {"Delta", 68}, {"Theta", 81},
+   {"Lambda", 76}, {"Xi", 88}, {"Pi", 80}, {"Sigma", 83}, {"Upsilon", 161}, {"Phi", 70},
+   {"Psi", 89}, {"Omega", 87}, {"aleph", 192}, {"wp", 195}, {"Re", 194}, {"Im", 193},
+   {"partial", 182}, {"infty", 165}, {"prime", 162}, {"nabla", 209}, {"bot", 94}, {"forall", 34},
+   {"exists", 36}, {"neg", 216}, {"sharp", 35}, {"clubsuit", 167}, {"diamondsuit", 168}, {"heartsuit", 169},
+   {"spadesuit", 170}, {"int", 242}, {"prod", 213}, {"sum", 229}, {"wedge", 217}, {"vee", 218},
+   {"cap", 199}, {"cup", 200}, {"diamond", 224}, {"bullet", 183}, {"div", 184}, {"oslash", 198},
+   {"otimes", 196}, {"oplus", 197}, {"pm", 177}, {"cdot", 215}, {"times", 180}, {"propto", 181},
+   {"mid", 124}, {"Leftrightarrow", 219}, {"Leftarrow", 220}, {"Rightarrow", 222}, {"leq", 163}, {"geq", 179},
+   {"approx", 187}, {"supset", 201}, {"subset", 204}, {"supseteq", 202}, {"subseteq", 205}, {"in", 206},
+   {"ni", 39}, {"leftrightarrow", 171}, {"leftarrow", 172}, {"rightarrow", 174}, {"sim", 126}, {"equiv", 186},
+   {"colon", 58}, {"uparrow", 173}, {"downarrow", 175}, {"Uparrow", 221}, {"Downarrow", 223}, {"rangle", 241},
+   {"langle", 225}, {"rceil", 249}, {"lceil", 233}, {"rfloor", 251}, {"lfloor", 235}, {"angle", 208},
+   {"therefore", 92}, {"neq", 185}, {"textdegree", 176}, {"cong", 64}, {"surd", 214}
+   
    };
 
 // TeX computer modern math font with hbar
@@ -155,9 +121,14 @@ string math_functions[] = {
   "cos", "cot", "csc", "sec", "sin", "tan"
 };
 
-string math_structs[] = {
-  "frac", "int", "prod", "sum"
-};
+// Reservado para futuros generadores de composición matemática (frac/int/prod/
+// sum) que armarían una fórmula a partir de varios trozos de texto — requeriría
+// una estructura de composición de texto. NO prioritario; y probablemente se
+// descarte si a futuro se embeben fragmentos rendereados por TeX. Se deja como
+// nota de intención, no como código muerto compilado.
+// string math_structs[] = {
+//   "frac", "int", "prod", "sum"
+// };
 
 string UTF8toISO8859_1(const char * in)
 {
@@ -165,7 +136,8 @@ string UTF8toISO8859_1(const char * in)
     if (in == NULL)
         return out;
 
-    unsigned int codepoint;
+    unsigned int codepoint = 0;   // inicializado: ante UTF-8 malformado (byte de
+                                  // continuación sin líder) no se usa sin definir
     while (*in != 0)
     {
         unsigned char ch = static_cast<unsigned char>(*in);
@@ -188,8 +160,12 @@ string UTF8toISO8859_1(const char * in)
             }
             else
             {
+              // Limitación del pipeline: el texto se maneja en ISO-8859-1
+              // (Latin-1), 1 byte/carácter, para la tabla ISOLatin1Encoding de
+              // PostScript. Un codepoint Unicode > 255 no cabe → se descarta con
+              // aviso. Los símbolos griegos/matemáticos NO pasan por aquí: se
+              // escriben como \comando y se resuelven vía map_symbol/map_tex_cmmi.
               fprintf(stderr, "Caracter fuera de límites %c\n", ch);
-                // do whatever you want for out-of-bounds characters
             }
         }
     }
@@ -389,6 +365,10 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       using_reencode = true;
       break;
     }
+  // v_end es int a propósito: cuando find_* devuelve string::npos (size_t máx) se
+  // asigna a int (→ -1) y luego `v_end == string::npos` vuelve a convertir -1 a
+  // size_t máx, así que la comparación funciona. Se deja como está (cambiarlo a
+  // size_t requeriría revisar `it = v_end - 1` y `v_end > it` con `it` int).
   int v_end, it=0, iend = input.size();
   // Modo matemático: '_'/'^' (sub/superíndice) solo operan entre '$…$'; fuera son
   // caracteres literales (así prosa como line_width no se parte en subíndice).
@@ -460,7 +440,10 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         add_symbol(0x3E, FN_TEX_CMMI);
         break;
     case '$':
-      if (text_state.font_face!=FN_TEX_CMMI) {
+      // Abrir/cerrar según la bandera math_mode que el propio `$` mantiene, NO
+      // según font_face: un cambio de fuente dentro de $…$ (p.ej. `$\alpha /r x$`)
+      // deja font_face != cmmi y el `$` de cierre se tomaría por apertura.
+      if (!math_mode) {
         textflush();
         tspush();
         text_state.font_face = FN_TEX_CMMI;
