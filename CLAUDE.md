@@ -99,14 +99,21 @@ Cerrado más tarde el 2026-07-09 (segunda tanda, commits `dd84925`..`8aa7fa5`):
   `color`, `align`, `valign` como estado acotado con push/pop; (3) `font=` (cara) como cara
   inicial de `parse_text`, horneada en el `Text`. Verificado en los tres backends.
 
-Siguiente concreto — **Fase 4 de patrones** (`plan_patterns.md`): la spec §4.11 y
-`fill_styles.mg` ya están al modelo nuevo; **falta la limpieza de código muerto**: `patternFor`
-/`AT_FPATRN`/`max_fillpattern` siguen vivos SOLO como camino del front-end V1 congelado
-(`Attribute::draw`); si se confirma que V3 nunca los toca, borrarlos. Otros pendientes:
-curvas de fig4-1 (paneles + escala, reescribir sin `rotate 90`); spline/smooth §9 (motor
-`splines.cpp` listo); `font=` por-primitiva en `numbers`/etiquetas de `axis` si se pide;
-traductor `mg1to2.py`. Wart conocido: `EPSDisplay::start` no chequea el fallo de `fopen`
-(segfaults si la ruta no es escribible).
+**Fase 4 de patrones CERRADA** (`plan_patterns.md`): la spec §4.11 y `fill_styles.mg`
+están al modelo nuevo, y la limpieza de código muerto está hecha —`patternFor`/`AT_FPATRN`
+/`max_fillpattern` borrados del compilador V3 (`Display.h`, `EPSDisplay`, `PDFDisplay`,
+`primitives.cpp`); solo sobreviven en `src/mgpp.l` y `src/Parser.cpp` (front-end V1,
+fuera del build) como referencia legible del traductor `mg1to2.py`. También arreglado el
+wart de `fopen`: `EPSDisplay::start` ahora reporta y `exit(1)` si la ruta no es escribible
+(antes segfault). Bug de contorno de `polygon` con `outlinefill` resuelto: `Polyline::draw`
+cierra la costura (`closepath`) para todo `GI_POLYGON`, no solo con `closed=true` (el
+`closepath fill` del relleno va dentro de gsave/grestore en EPS/PDF y no persiste).
+
+Siguiente concreto — curvas de **fig4-1** (paneles + escala, reescribir sin `rotate 90`;
+originalmente usó trucos por limitaciones de versiones previas — Alejandro está decidiendo
+el enfoque). Otros pendientes: spline/smooth §9 (motor `splines.cpp` listo); `font=`
+por-primitiva en `numbers`/etiquetas de `axis` si se pide; traductor `mg1to2.py`
+(`plan_mg1to2.md`).
 
 ## Code style
 

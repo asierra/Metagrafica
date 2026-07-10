@@ -76,7 +76,6 @@ static void arc_bezier(HPDF_Page page,
 PDFDisplay::PDFDisplay(string f) : filename(f) {
   dvx = 10;
   dvy = 10;
-  max_fillpattern = 10;  // patrones de tramado vía clip+líneas (hatchCurrentPath)
 }
 
 void PDFDisplay::start() {

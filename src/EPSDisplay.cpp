@@ -1,5 +1,6 @@
 #include "EPSDisplay.h"
 #include <math.h>
+#include <stdlib.h>
 
 using std::string;
 
@@ -144,7 +145,6 @@ static const char *ps_reencode = R"(
 EPSDisplay::EPSDisplay(string f) {
   dvx = 10;
   dvy = 10;
-  max_fillpattern = 10;
   filename = f;
 }
 
@@ -155,6 +155,10 @@ void EPSDisplay::start() {
   dvx = dvx * cm_to_point;
   dvy = dvy * cm_to_point;
   file = fopen(filename.c_str(), "w");
+  if (!file) {
+    fprintf(stderr, "no se pudo abrir %s\n", filename.c_str());
+    exit(1);
+  }
   fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n", filename.c_str());
   fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n%%%%EndComments\n",
           (int)(dvx + 0.5), (int)(dvy + 0.5));

@@ -123,13 +123,6 @@ void Attribute::draw(Display &g) {
   case AT_FCOLOR:
     g.setFillColor(value);
     break;
-  case AT_FPATRN:
-    // Solo alcanzable desde el front-end V1 (Parser.cpp, fuera del build);
-    // V3 emite HatchAttr directamente y nunca construye este Attribute.
-    if (value > g.max_fillpattern)
-      value = value % (g.max_fillpattern+1);
-    g.setHatch(g.patternFor(value));
-    break;
   case AT_THEIGHT:
     g.setFontSize((double)value);
     break;

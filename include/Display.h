@@ -79,7 +79,6 @@ public:
   Display() {
     dvx = 10;
     dvy = 10;
-    max_fillpattern = 10;
   }
 
   virtual ~Display() = default;
@@ -209,19 +208,7 @@ public:
   // patrón viaja completo, sin pasar por una tabla restringida.
   void setHatch(const FillPattern &fp) { dspstate.hatch = fp; }
 
-  // Traduce el índice FPATRN clásico al descriptor común. idx 0 (o negativo) =
-  // relleno sólido → devuelve vector vacío. Solo lo usa Attribute::draw
-  // (AT_FPATRN) para el front-end V1 congelado; V3 construye el FillPattern
-  // directamente (parserv3.cpp) y nunca pasa por aquí.
-  virtual FillPattern patternFor(int idx) {
-    FillPattern fp;
-    if (idx <= 0) return fp;
-    double angle = (double)(((idx - 1) * 45) % 180);
-    double gap   = (double)(4 / (1 + (idx - 1) / 4));  // división entera, a propósito
-    fp.push_back(HatchLine{angle, gap});
-    return fp;
-  }
-  
+
   void setFillGray(double fg) {
     dspstate.fillgray = fabs(fg);
     dspstate.fillcolor = 0;
@@ -300,9 +287,6 @@ public:
     mtst = mtstack.top();
     mtstack.pop();
   }
-
-  // Physical limitations for patterns
-  int max_fillpattern;
 
 protected:
   /// Semilla mundo→dispositivo (§3.1): p ↦ o + s·(p − wm). Los backends la

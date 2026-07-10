@@ -61,7 +61,6 @@ enum AttributeType {
   AT_LGRAY,
   AT_FCOLOR,
   AT_FGRAY,
-  AT_FPATRN,
   AT_THEIGHT,
   AT_TALIGN,
   AT_TSTYLE,
@@ -313,8 +312,7 @@ private:
 
 // §4.11: transporta un FillPattern completo (una o más familias de tramado).
 // Attribute solo carga int/float y no puede cargar el vector de HatchLine, así
-// que hatch= (§7.5) y la sentencia de estado `hatch` (§7) emiten esto en vez de
-// un Attribute(AT_FPATRN, idx). AT_FPATRN sigue vivo solo para el front-end V1.
+// que hatch= (§7.5) y la sentencia de estado `hatch` (§7) emiten esto.
 class HatchAttr : public GraphicsItem {
 public:
   HatchAttr(FillPattern fp) : GraphicsItem(GI_HATCHATTR), pattern(std::move(fp)) {}
