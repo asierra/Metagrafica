@@ -301,6 +301,10 @@ void tspush()
 
 void tspop()
 {
+  // Guardia contra entrada malformada: un `}` o `$` de más (sin su push) NO debe
+  // hacer top()/pop() sobre pila vacía (UB → segfault). Se ignora el pop huérfano.
+  if (tstack.empty())
+    return;
   text_state = tstack.top();
   tstack.pop();
   //printf("poping %s\n", text_state.str().c_str());
@@ -374,6 +378,11 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   text_line = nullptr;
   text_state = TextState();
   text_state.font_face = font_face;
+  // Estos acumuladores son globales de archivo (la máquina de estados no es
+  // reentrante): si una llamada previa quedó con la pila o el acumulador colgados
+  // (entrada malformada), hay que limpiarlos para no arrastrar estado a esta.
+  accum.clear();
+  while (!tstack.empty()) tstack.pop();
   string input = UTF8toISO8859_1(input_utf8.c_str());
   for (char & c : input) 
     if (c < 0) {
@@ -415,6 +424,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
             accum.push_back(code);
           } else {
             fprintf(stderr, "Error: Unrecognized variable <%s>.\n", variable.c_str());
+            tspop();   // balancea el tspush del sub/superíndice antes de salir
             break;
           }
         }
@@ -425,6 +435,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
           v_end = iend;
         if (it >= v_end){
           //printf("punto %d %d %c\n", it, v_end, input[it]);
+                  tspop();   // sub/superíndice vacío o al final: balancea el tspush
                   break;}
         accum = input.substr(it, v_end - it);
       }
@@ -501,7 +512,13 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   }
   if (accum.length() > 0)
     textflush();
-  
+
+  // Si nunca se descargó un chunk, text_line es nullptr (p.ej. contenido vacío
+  // como `$` o `$$`, solo delimitadores): no hay texto que devolver. Sin esta
+  // guardia, `text_line->length()` deshace un puntero nulo → segfault.
+  if (!text_line)
+    return std::move(text);   // text también es null aquí → texto vacío
+
   if (text_line->length() > 1) {
     textflush();
     return std::move(text_line);
