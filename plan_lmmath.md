@@ -36,7 +36,11 @@ TTF con cmap Unicode → CID TrueType Identity-H).
 - **2. PDF** — ✅ HECHO: `HPDF_UseUTFEncodings` + LM Math subset desde memoria; griego
   `FN_TEX_CMMI`→LM Math por Unicode (verificado visual: phi/varphi/eps/vareps/α/Ω correctos,
   CID TrueType embebido). Eliminados `cmmi_to_sym` y `font_cmmi_ttf.h`. Latino math→Times-Italic.
-- **3. EPS** — PENDIENTE: LM Math Type42 + emitir Unicode (reemplaza `font_cmmi.h`).
+- **3. EPS** — ✅ HECHO: `include/font_lmmath_eps.h` = Type42 de LM Math con `/Encoding`
+  byte-cmmi→glifo (construido por Unicode; resuelve el naming confuso de LM Math: byte 193
+  =φ recta=U+03D5=glifo `phi1`, byte 39=varphi=U+03C6=glifo `phi`). La emisión `(byte) show`
+  del EPS no cambió; `setFontFace` usa `/LMMath`. `font_cmmi.h` queda (traductor V1), sin uso
+  en el motor V3. Verificado visual: griego CM, coincide con PDF/SVG.
 - **4. SVG** — ✅ HECHO: `@font-face` `'MGMath'` (LM Math base64, emisión perezosa con
   `ensureMathFont()`); griego `FN_TEX_CMMI`→MGMath recto, latino/símbolos sin cambios.
   Verificado visual (inkscape): griego CM, coincide con PDF. Self-contained.

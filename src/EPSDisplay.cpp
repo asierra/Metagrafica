@@ -4,7 +4,7 @@
 
 using std::string;
 
-#include "font_cmmi.h"
+#include "font_lmmath_eps.h"
 
 
 string ps_creator = R"(%%Creator: MetaGrafica v4.0 2023
@@ -169,8 +169,9 @@ void EPSDisplay::start() {
   if (flags.using_reencode)
     fprintf(file, "%s", ps_reencode);
   if (flags.using_fontcmmi) {
-    fprintf(file, "%s", font_cmmi1.c_str());
-    fprintf(file, "%s", font_cmmi2.c_str());
+    // Type42 de Latin Modern Math (subset), con /Encoding a las posiciones de
+    // byte de map_tex_cmmi → griego CM idéntico a PDF/SVG (§14, plan_lmmath.md).
+    fprintf(file, "%s", font_lmmath_eps.c_str());
   }
   // Semilla mundo→dispositivo (§3.1): isométrica por default, en la base.
   pushWorldMatrix();
@@ -374,7 +375,7 @@ void EPSDisplay::setFontFace(FontFace face) {
     font = "/Symbol";
     break;
   case FN_TEX_CMMI:
-    font = "/cmmi10";
+    font = "/LMMath";
     break;
   case FN_SANSERIF:
     font = prefix+"Helvetica";
