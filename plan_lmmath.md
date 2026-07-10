@@ -44,7 +44,10 @@ TTF con cmap Unicode → CID TrueType Identity-H).
 - **4. SVG** — ✅ HECHO: `@font-face` `'MGMath'` (LM Math base64, emisión perezosa con
   `ensureMathFont()`); griego `FN_TEX_CMMI`→MGMath recto, latino/símbolos sin cambios.
   Verificado visual (inkscape): griego CM, coincide con PDF. Self-contained.
-- **5. Métricas** — PENDIENTE: anchos de avance de LM Math en `text.cpp` (cur_x SVG / alineación).
+- **5. Métricas** — ✅ HECHO: `cmmi_metrics_map` (`src/text.cpp`) regenerado con los anchos
+  de avance de LM Math (/1000em, del hmtx del subset) para los 41 bytes griegos; corrige
+  descuadres (Omega byte 172 faltaba → ancho 0; mayúsculas apretadas). Verificado: el
+  espaciado del griego en SVG coincide con PDF. Latino cmmi sin cambio (ver P2).
 
 ## PENDIENTE explícito (ya sabemos cómo hacerlo)
 
