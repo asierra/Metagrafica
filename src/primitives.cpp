@@ -50,7 +50,12 @@ void Polyline::draw(Display &g) {
   // Los ticks ya hicieron su propio stroke por cada marca dentro del bucle;
   // un stroke final aquí no tendría path y en libharu dispara GMODE.
   if (type!=GI_TICKS) {
-    if (closed)          // §4.1: cierra la costura antes del trazo (polilínea cerrada)
+    // §4.1: cierra la costura antes del trazo. Un polígono es cerrado por
+    // definición (su contorno une el último punto con el primero); en EPS/PDF
+    // el `closepath fill` del relleno va dentro de gsave/grestore y no persiste,
+    // así que el trazo de contorno (outlinefill) necesita su propio closepath o
+    // la costura queda abierta. La polilínea solo cierra con closed=true.
+    if (closed || type==GI_POLYGON)
       g.closepath();
     g.stroke();
   }
