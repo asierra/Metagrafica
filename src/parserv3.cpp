@@ -439,7 +439,15 @@ struct AssignStmt : Stmt {
   std::string name;
   ExprPtr val;
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &) override {
-    s.vars[name] = val->eval(s);
+    // Alcance tipo bloque (C/JS): si la variable ya existe en un ámbito ancestro,
+    // se modifica AHÍ; si no, se crea local. Así un `w = …` dentro de un if/else
+    // altera el `w` declarado afuera (no se necesita el else para dar un default).
+    // MG no tiene declaración explícita (let/var), así que la asignación es el
+    // único mecanismo y esta es la semántica intuitiva. (Las lecturas ya subían
+    // vía Scope::find.) Evalúa antes de asignar.
+    Value v = val->eval(s);
+    if (Value *p = s.find(name)) *p = std::move(v);
+    else                         s.vars[name] = std::move(v);
   }
 };
 
@@ -477,7 +485,7 @@ struct BlockStmt : Stmt {
   std::vector<StmtPtr> body;
   void exec(Scope &parent, MetaGrafica &mg, GraphicsItemList &out) override {
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
-    Scope child(&parent);                  // reads suben al padre; writes son locales
+    Scope child(&parent);                  // reads y writes suben al padre (AssignStmt); nombres nuevos = locales
     for (auto &st : body) st->exec(child, mg, out);
     popTransforms(countTransforms(body), out);   // restaura transforms locales (§11.1)
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
@@ -554,14 +562,33 @@ struct InvokeStmt : Stmt {
       hasFrame = true;
     }
 
+    // Ventana local (world_window del cuerpo): normaliza las coords del cuerpo a
+    // la caja unitaria, igual que fit/place/buildStructure. Va DENTRO del marco
+    // de colocación (device = … · frame · N · coord) para que el at/rotate/scale
+    // posicione la caja ya centrada/normalizada. Sin esto, la invocación directa
+    // ignoraba world_window (el detector de fig2-6 no se centraba ni agrandaba).
+    Box w = structBox(caller, def);
+    bool needN = (w.x != 0.0 || w.y != 0.0 || w.dx != 1.0 || w.dy != 1.0);
+
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));  // aísla estado (como structure())
     if (hasFrame) {
       auto t = std::make_unique<Transform>();
       t->setOperation(OPMPUSH); t->setMatrix(frame);
       out.push_back(std::move(t));
     }
+    if (needN) {
+      Matrix N; N.scale(1.0 / w.dx, 1.0 / w.dy); N.translate(-w.x, -w.y);   // ventana→unidad
+      auto t = std::make_unique<Transform>();
+      t->setOperation(OPMPUSH); t->setMatrix(N);
+      out.push_back(std::move(t));
+    }
     for (auto &st : def->body) st->exec(local, mg, out);
     popTransforms(countTransforms(def->body), out);   // transforms locales del cuerpo (§11.1)
+    if (needN) {
+      auto t = std::make_unique<Transform>();
+      t->setOperation(OPMPOP);
+      out.push_back(std::move(t));
+    }
     if (hasFrame) {
       auto t = std::make_unique<Transform>();
       t->setOperation(OPMPOP);

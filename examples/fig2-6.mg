@@ -56,7 +56,8 @@ line_width 0.4
 polyline { 5.7 1.15  5.7 0  0 0  0 2.5  5.7 2.5  5.7 1.35 }
 
 % Detector girado 37° y a escala (V1 SCST .1 .1 + RTST 37)
-Detector(at=(7, -0.2), scale=0.1, rotate=37)
+Detector(at=(7, -0.2), scale=0.2, rotate=37)
+dot(1.0) { 7 -0.2 }
 % Pila ajustada a su caja (V1 PWST)
 fit(Pila, stretch=true) { 2 -0.4  2.6 0 }
 
@@ -65,17 +66,27 @@ line_width 0.1
 polyline { 8 1.25  8.9 1.25  7.19 -0.0552 }
 
 % Rayos catódicos (V1 TICKS punteados) — ⚠ params por calibrar
+{
 line_width 0.2
-ticks(10, mark=(0, 0.1), at=(0.76, 0.8), advance=(0.24, 0))
-ticks(4,  mark=(0, 0.1), at=(1, 1.1),    advance=(4.7, 0))
-ticks(2,  mark=(0, 0.1), at=(5.7, 1.2),  advance=(3.2, 0))
+dash "dashed"
+for i = 0 to 9 {
+  y = 0.8 + i*0.1
+  % w se fija por defecto (8.9) y las ramas lo modifican: una asignación dentro
+  % de un if altera el w de afuera (alcance de bloque), así que el caso restante
+  % (i==4,5) no necesita un else. ⚠ fronteras y anchos por calibrar.
+  w = 8.9
+  if i < 3 or i > 6      { w = 1.0 }
+  else if i==3 or i==6   { w = 5.7 }
+  polyline { 0.76 y w y }
+}
+}
 
 % Flechas de haz: sobre arco (both_sides) y sobre línea. Antes ARCST/LNST con
 % 5 números; ahora place con from/to nombrados (como `arc`, §4.5) y both_sides.
 color "blue"
-place(Arrowr, scale=0.02, both_sides=true, r=2.39, from=197.35, to=237.35) { 8.9 1.25 }
+place(Arrowr, scale=0.04, both_sides=true, r=2.39, from=197.35, to=237.35) { 8.9 1.25 }
 color "black"
-place(Arrowr, scale=0.02) { 8.9 1.25  7.5 0.1816 }
+place(Arrowr, scale=0.04) { 8.9 1.25  7.5 0.1816 }
 
 % Arco del ángulo φ (V1 CR .7 38 180)
 arc(0.7, from=180, to=218) { 8.9 1.25 }

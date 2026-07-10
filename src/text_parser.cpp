@@ -439,8 +439,11 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   if (text_line->length() > 1) {
     textflush();
     return std::move(text_line);
-  } else if (text_line->length()==1 && text) {
-    text_line->addText(std::move(text));
+  } else if (text_line->length()==1) {
+    // El único chunk pudo quedar ya en text_line (p.ej. `$\phi$`: add_symbol lo
+    // descargó y el `$` de cierre lo movió con text=null). Devolvemos el
+    // text_line con lo que haya; si además quedó un `text` pendiente, lo unimos.
+    if (text) text_line->addText(std::move(text));
     return std::move(text_line);
   } else {
     //printf("simple texto %s\n", text->getText().c_str());

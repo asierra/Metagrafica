@@ -526,7 +526,9 @@ Internamente `sine` se aproxima con curvas bezier (las de `bzsinepaths`). Los de
 
 ## 5. Variables y expresiones
 
-Ámbito léxico. Las variables definidas fuera de un bloque son globales al archivo.
+Ámbito léxico. Las variables definidas fuera de un bloque son globales al archivo. El
+modelo completo de alcance (lectura, escritura y el matiz de las structs) se detalla en
+§5.3.
 
 ```text
 r_base = 5.5
@@ -581,6 +583,47 @@ text("x = " + (3*2.5)) { 1 5 }                           % "x = 7.5"
 
 `str(x)` convierte un número a cadena en formato mínimo (entero sin punto, decimales solo si los hay), igual que la conversión implícita al concatenar con `+`; `str(x, decimals)` fija el número de decimales (`str(0.2*i, 2)` → `"0.40"`). Útil para armar etiquetas con texto+número (`text("Width " + str(0.2*i, 2))`); complementa el `decimals` de `numbers` (§13.2) cuando el número va suelto en una cadena, no en una serie de rótulos.
 
+### 5.3 Alcance de variables (lectura, escritura y bloques)
+
+Los bloques (`{ }`, `for`, `if`, cuerpo de struct) anidan **ámbitos**. Para variables el
+modelo es el de C/JavaScript —los bloques **comparten** las variables del entorno que los
+contiene; solo un nombre nuevo crea una variable propia—:
+
+- **Lectura:** un nombre se busca en el ámbito actual y, si no está, se sube por los
+  ámbitos que lo contienen. Un bloque **ve** las variables de afuera.
+- **Escritura:** si la variable **ya existe** en un ámbito exterior, la asignación
+  **modifica esa**, no crea una copia; si **no existe** en ningún ancestro, se crea local
+  al bloque. MetaGráfica no tiene declaración explícita (`let`/`var`): la asignación es el
+  único mecanismo, y esta es la semántica intuitiva.
+
+La consecuencia útil: una variable con un **valor por defecto** afuera puede ajustarse
+dentro de una rama `if`/`else` y **conservar** ese cambio al salir. No hace falta un `else`
+para cubrir el caso restante:
+
+```text
+w = 8.9                       % valor por defecto
+if i < 3 or i > 6    { w = 1.0 }   % modifica la w de afuera
+else if i == 3       { w = 5.7 }
+polyline { 0.76 y  w y }      % usa el w resultante (1.0, 5.7 u 8.9)
+```
+
+**Importante — variables vs. estado gráfico.** El alcance de las *variables* (esta
+sección) es distinto del alcance del *estado gráfico* (`color`, `line_width`, `dash`,
+transformaciones; §7.1). El **estado** se aísla por bloque con `gsave`/`grestore`: un
+cambio dentro de un bloque **no** se filtra afuera. Una **variable**, en cambio, sí puede
+alcanzar hacia afuera al escribirse (regla de arriba). Son dos modelos deliberadamente
+distintos: el estado se restaura, los datos persisten.
+
+**Variables dentro de structs (nuevo, aún por explorar).** El cuerpo de una struct es hijo
+del ámbito **global**, no del llamador (§8, ámbito léxico). Con la regla de escritura, si
+una struct asigna a un nombre que **ya es una variable global** del documento, la
+**modifica**; si el nombre es nuevo, queda local a la invocación (y así las structs
+recursivas son seguras: cada llamada tiene sus parámetros y sus locales). Esto significa
+que una struct *puede* mutar globales —igual que un bloque cualquiera—. Es un modelo
+simple y de un solo mecanismo; queda como **terreno por explorar** si conviene que el borde
+de una struct sea además una *barrera de escritura* (locales por defecto, estilo función),
+lo que exigiría distinguir el ámbito de struct del de bloque. Por ahora: un solo modelo.
+
 ---
 
 ## 6. Control de flujo
@@ -611,6 +654,7 @@ if r > 2 {
 
 - Comparadores: `<`, `>`, `<=`, `>=`, `==`, `!=`; combinables con `and` / `or`.
 - El bloque tiene ámbito léxico, como `for` y los bloques `{ }` (§7.1); la rama `else` es opcional.
+- Una variable que ya existe afuera puede asignarse en una rama y **conservar** el cambio al salir (§5.3): permite fijar un valor por defecto y sobrescribirlo solo en ciertos casos, sin necesitar un `else`.
 - Su uso principal es la condición de paro en structs recursivas (§8.1); también permite variantes de una struct según sus parámetros.
 
 ---
@@ -631,7 +675,7 @@ Esto recupera la sencillez imperativa de V1 (`LCOLOR`, `LWIDTH`, `FILL`, `TLLC`�
 
 ### 7.1 Bloques y alcance
 
-Una llave `{ … }` en posición de sentencia abre un **bloque anónimo**: un ámbito que apila el estado gráfico al entrar y lo restaura al salir (un `gsave`/`grestore`). Los cambios de estado dentro del bloque **no se filtran** afuera.
+Una llave `{ … }` en posición de sentencia abre un **bloque anónimo**: un ámbito que apila el estado gráfico al entrar y lo restaura al salir (un `gsave`/`grestore`). Los cambios de estado dentro del bloque **no se filtran** afuera. (Esto rige el **estado gráfico**; el alcance de las **variables** es otro —una asignación sí puede alcanzar hacia afuera—, ver §5.3.)
 
 ```text
 color "black"
