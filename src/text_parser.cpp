@@ -85,6 +85,72 @@ map<string, unsigned char> map_tex_cmmi = {
   {"Omega", 172}, {"hbar", 199}
 };
 
+// -------------------------------------------------------------
+// Tabla nombre->Unicode y mapas byte->Unicode, COMPARTIDOS por los backends
+// (SVG, PDF y EPS). Se reutilizan las tablas nombre->byte de arriba
+// (map_symbol / map_tex_cmmi) junto con esta tabla nombre->Unicode, para no
+// transcribir bytes a mano. Las formas base y sus variantes (var*) se eligen
+// para que el glifo Unicode coincida EN FORMA con el que dibuja cmmi/LM Math
+// (convención TeX/unicode-math, que NO es la sugerida por los nombres Unicode):
+//   \epsilon = lunate ϵ (U+03F5)   \varepsilon = script ε (U+03B5)
+//   \phi     = recta  ϕ (U+03D5)   \varphi     = lazo   φ (U+03C6)
+static const std::map<std::string, unsigned int> kNameToUnicode = {
+    // Griego minúsculas
+    {"alpha",0x3B1},{"beta",0x3B2},{"gamma",0x3B3},{"delta",0x3B4},
+    {"epsilon",0x3F5},{"zeta",0x3B6},{"eta",0x3B7},{"theta",0x3B8},
+    {"iota",0x3B9},{"kappa",0x3BA},{"lambda",0x3BB},{"mu",0x3BC},
+    {"nu",0x3BD},{"xi",0x3BE},{"pi",0x3C0},{"rho",0x3C1},
+    {"sigma",0x3C3},{"tau",0x3C4},{"upsilon",0x3C5},{"phi",0x3D5},
+    {"chi",0x3C7},{"psi",0x3C8},{"omega",0x3C9},
+    {"varepsilon",0x3B5},{"vartheta",0x3D1},{"varpi",0x3D6},{"varrho",0x3F1},
+    {"varsigma",0x3C2},{"varphi",0x3C6},
+    // Griego mayúsculas
+    {"Gamma",0x393},{"Delta",0x394},{"Theta",0x398},{"Lambda",0x39B},
+    {"Xi",0x39E},{"Pi",0x3A0},{"Sigma",0x3A3},{"Upsilon",0x3A5},
+    {"Phi",0x3A6},{"Psi",0x3A8},{"Omega",0x3A9},
+    // Símbolos matemáticos
+    {"aleph",0x2135},{"wp",0x2118},{"Re",0x211C},{"Im",0x2111},
+    {"partial",0x2202},{"infty",0x221E},{"prime",0x2032},{"nabla",0x2207},
+    {"bot",0x22A5},{"forall",0x2200},{"exists",0x2203},{"neg",0xAC},
+    {"sharp",0x266F},{"clubsuit",0x2663},{"diamondsuit",0x2666},
+    {"heartsuit",0x2665},{"spadesuit",0x2660},{"int",0x222B},{"prod",0x220F},
+    {"sum",0x2211},{"wedge",0x2227},{"vee",0x2228},{"cap",0x2229},{"cup",0x222A},
+    {"diamond",0x22C4},{"bullet",0x2219},{"div",0xF7},{"oslash",0x2298},
+    {"otimes",0x2297},{"oplus",0x2295},{"pm",0xB1},{"cdot",0x22C5},
+    {"times",0xD7},{"propto",0x221D},{"mid",0x2223},{"Leftrightarrow",0x21D4},
+    {"Leftarrow",0x21D0},{"Rightarrow",0x21D2},{"leq",0x2264},{"geq",0x2265},
+    {"approx",0x2248},{"supset",0x2283},{"subset",0x2282},{"supseteq",0x2287},
+    {"subseteq",0x2286},{"in",0x2208},{"ni",0x220B},{"leftrightarrow",0x2194},
+    {"leftarrow",0x2190},{"rightarrow",0x2192},{"sim",0x223C},{"equiv",0x2261},
+    {"colon",0x3A},{"uparrow",0x2191},{"downarrow",0x2193},{"Uparrow",0x21D1},
+    {"Downarrow",0x21D3},{"rangle",0x232A},{"langle",0x2329},{"rceil",0x2309},
+    {"lceil",0x2308},{"rfloor",0x230B},{"lfloor",0x230A},{"angle",0x2220},
+    {"therefore",0x2234},{"neq",0x2260},{"textdegree",0xB0},{"cong",0x2245},
+    {"surd",0x221A},{"hbar",0x210F}};
+
+// Construye byte->Unicode para una fuente a partir de su tabla nombre->byte.
+static std::map<unsigned char, unsigned int>
+makeUnicodeMap(const std::map<std::string, unsigned char> &name2byte) {
+    std::map<unsigned char, unsigned int> m;
+    for (const auto &kv : name2byte) {
+        auto it = kNameToUnicode.find(kv.first);
+        if (it != kNameToUnicode.end())
+            m[kv.second] = it->second;
+    }
+    return m;
+}
+
+// Accesores con inicialización perezosa. Devuelven byte->Unicode para cada
+// fuente math; los backends los usan para traducir el byte del run a Unicode.
+const std::map<unsigned char, unsigned int> &symbolUnicode() {
+    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_symbol);
+    return m;
+}
+const std::map<unsigned char, unsigned int> &cmmiUnicode() {
+    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_tex_cmmi);
+    return m;
+}
+
 string math_functions[] = {
   "cos", "cot", "csc", "sec", "sin", "tan"
 };

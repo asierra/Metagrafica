@@ -87,6 +87,10 @@ class SVGDisplay: public Display {
   // Garantiza que exista un <pattern> de tramado para este patrón/color (lo
   // emite en un <defs> la primera vez) y devuelve su id. "" si fp está vacío.
   std::string ensureHatchPattern(const FillPattern &fp);
+  // Emite (una sola vez) el @font-face con Latin Modern Math embebida en base64,
+  // para que el griego matemático salga en Computer Modern en cualquier visor
+  // sin recursos externos. Se llama al dibujar el primer run griego.
+  void ensureMathFont();
 
   std::string filename;
   FILE *file = nullptr;
@@ -99,6 +103,7 @@ class SVGDisplay: public Display {
   std::stack<int> group_stack;     // Rastrea cuántas etiquetas <g> abrir por cada save()
   int current_open_groups = 0;     // Etiquetas <g> abiertas en el entorno actual
   std::set<std::string> emitted_patterns; // ids de <pattern> ya emitidos (dedup)
+  bool math_font_emitted = false;          // @font-face de LM Math ya emitido (perezoso)
 };
 
 #endif

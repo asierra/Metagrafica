@@ -1,4 +1,6 @@
 #include "SVGDisplay.h"
+#include "text_parser.h"
+#include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
 #include <cmath>
 #include <iomanip>
 
@@ -467,69 +469,9 @@ void SVGDisplay::dot(double x, double y, double r) {
 // El parser codifica letras griegas y símbolos matemáticos como bytes de las
 // fuentes Symbol (Adobe) o CMMI (TeX). SVG no dispone de esas fuentes, así que
 // se traducen a los puntos de código Unicode equivalentes, que cualquier fuente
-// del sistema renderiza. Se reutilizan las tablas nombre->byte del parser
-// (text_parser.cpp) junto con una tabla nombre->Unicode, para no transcribir
-// números de byte a mano.
+// del sistema renderiza. Los mapas byte->Unicode (symbolUnicode/cmmiUnicode)
+// viven ahora en text_parser.cpp y los comparten los tres backends.
 // -------------------------------------------------------------
-extern std::map<std::string, unsigned char> map_symbol;
-extern std::map<std::string, unsigned char> map_tex_cmmi;
-
-static const std::map<std::string, unsigned int> kNameToUnicode = {
-    // Griego minúsculas
-    {"alpha",0x3B1},{"beta",0x3B2},{"gamma",0x3B3},{"delta",0x3B4},
-    {"epsilon",0x3B5},{"zeta",0x3B6},{"eta",0x3B7},{"theta",0x3B8},
-    {"iota",0x3B9},{"kappa",0x3BA},{"lambda",0x3BB},{"mu",0x3BC},
-    {"nu",0x3BD},{"xi",0x3BE},{"pi",0x3C0},{"rho",0x3C1},
-    {"sigma",0x3C3},{"tau",0x3C4},{"upsilon",0x3C5},{"phi",0x3C6},
-    {"chi",0x3C7},{"psi",0x3C8},{"omega",0x3C9},
-    {"varepsilon",0x3B5},{"vartheta",0x3D1},{"varpi",0x3D6},{"varrho",0x3F1},
-    {"varsigma",0x3C2},{"varphi",0x3D5},
-    // Griego mayúsculas
-    {"Gamma",0x393},{"Delta",0x394},{"Theta",0x398},{"Lambda",0x39B},
-    {"Xi",0x39E},{"Pi",0x3A0},{"Sigma",0x3A3},{"Upsilon",0x3A5},
-    {"Phi",0x3A6},{"Psi",0x3A8},{"Omega",0x3A9},
-    // Símbolos matemáticos
-    {"aleph",0x2135},{"wp",0x2118},{"Re",0x211C},{"Im",0x2111},
-    {"partial",0x2202},{"infty",0x221E},{"prime",0x2032},{"nabla",0x2207},
-    {"bot",0x22A5},{"forall",0x2200},{"exists",0x2203},{"neg",0xAC},
-    {"sharp",0x266F},{"clubsuit",0x2663},{"diamondsuit",0x2666},
-    {"heartsuit",0x2665},{"spadesuit",0x2660},{"int",0x222B},{"prod",0x220F},
-    {"sum",0x2211},{"wedge",0x2227},{"vee",0x2228},{"cap",0x2229},{"cup",0x222A},
-    {"diamond",0x22C4},{"bullet",0x2219},{"div",0xF7},{"oslash",0x2298},
-    {"otimes",0x2297},{"oplus",0x2295},{"pm",0xB1},{"cdot",0x22C5},
-    {"times",0xD7},{"propto",0x221D},{"mid",0x2223},{"Leftrightarrow",0x21D4},
-    {"Leftarrow",0x21D0},{"Rightarrow",0x21D2},{"leq",0x2264},{"geq",0x2265},
-    {"approx",0x2248},{"supset",0x2283},{"subset",0x2282},{"supseteq",0x2287},
-    {"subseteq",0x2286},{"in",0x2208},{"ni",0x220B},{"leftrightarrow",0x2194},
-    {"leftarrow",0x2190},{"rightarrow",0x2192},{"sim",0x223C},{"equiv",0x2261},
-    {"colon",0x3A},{"uparrow",0x2191},{"downarrow",0x2193},{"Uparrow",0x21D1},
-    {"Downarrow",0x21D3},{"rangle",0x232A},{"langle",0x2329},{"rceil",0x2309},
-    {"lceil",0x2308},{"rfloor",0x230B},{"lfloor",0x230A},{"angle",0x2220},
-    {"therefore",0x2234},{"neq",0x2260},{"textdegree",0xB0},{"cong",0x2245},
-    {"surd",0x221A},{"hbar",0x210F}};
-
-// Construye byte->Unicode para una fuente a partir de su tabla nombre->byte.
-static std::map<unsigned char, unsigned int>
-makeUnicodeMap(const std::map<std::string, unsigned char> &name2byte) {
-    std::map<unsigned char, unsigned int> m;
-    for (const auto &kv : name2byte) {
-        auto it = kNameToUnicode.find(kv.first);
-        if (it != kNameToUnicode.end())
-            m[kv.second] = it->second;
-    }
-    return m;
-}
-
-// Accesores con inicialización perezosa (evita problemas de orden de
-// inicialización estática entre unidades de traducción: map_symbol vive en otra).
-static const std::map<unsigned char, unsigned int> &symbolUnicode() {
-    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_symbol);
-    return m;
-}
-static const std::map<unsigned char, unsigned int> &cmmiUnicode() {
-    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_tex_cmmi);
-    return m;
-}
 
 // Codifica un punto de código Unicode como UTF-8.
 static void appendUTF8(std::string &out, unsigned int cp) {
@@ -579,6 +521,51 @@ static void svgFontAttrs(FontFace f, const char *&family,
     }
 }
 
+// Codifica bytes en base64 estándar (para el data-URI del @font-face).
+static void appendBase64(std::string &out, const unsigned char *data, unsigned int len) {
+    static const char *T =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    unsigned int i = 0;
+    for (; i + 3 <= len; i += 3) {
+        unsigned int n = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+        out += T[(n >> 18) & 63]; out += T[(n >> 12) & 63];
+        out += T[(n >> 6) & 63];  out += T[n & 63];
+    }
+    if (len - i == 1) {
+        unsigned int n = data[i] << 16;
+        out += T[(n >> 18) & 63]; out += T[(n >> 12) & 63]; out += "==";
+    } else if (len - i == 2) {
+        unsigned int n = (data[i] << 16) | (data[i + 1] << 8);
+        out += T[(n >> 18) & 63]; out += T[(n >> 12) & 63];
+        out += T[(n >> 6) & 63];  out += "=";
+    }
+}
+
+// ¿El run FN_TEX_CMMI es griego? (todos sus bytes están en cmmiUnicode, es decir,
+// son glifos del subset LM Math). Los runs griegos son de un carácter; se
+// generaliza por robustez. Cadena vacía = no.
+static bool isCmmiGreekRun(const std::string &s) {
+    if (s.empty()) return false;
+    const std::map<unsigned char, unsigned int> &m = cmmiUnicode();
+    for (unsigned char c : s)
+        if (m.find(c) == m.end()) return false;
+    return true;
+}
+
+// Emite el @font-face con LM Math embebida (base64 data-URI), una sola vez, para
+// que el griego salga en Computer Modern sin recursos externos.
+void SVGDisplay::ensureMathFont() {
+    if (math_font_emitted) return;
+    math_font_emitted = true;
+    std::string b64;
+    b64.reserve((g_lmmath_ttf_len + 2) / 3 * 4);
+    appendBase64(b64, g_lmmath_ttf, g_lmmath_ttf_len);
+    fprintf(file,
+            "<defs><style type=\"text/css\">@font-face{font-family:'MGMath';"
+            "src:url(data:font/ttf;base64,%s) format('truetype');}</style></defs>\n",
+            b64.c_str());
+}
+
 std::string SVGDisplay::renderText(const std::string &s) {
     bool symbolic = (dspstate.fontFace == FN_SYMBOL ||
                      dspstate.fontFace == FN_TEX_CMMI);
@@ -617,6 +604,17 @@ void SVGDisplay::text(string s) {
 
     const char *family, *style, *weight;
     svgFontAttrs(dspstate.fontFace, family, style, weight);
+
+    // Griego matemático: si el run FN_TEX_CMMI son glifos del subset (están en
+    // cmmiUnicode), se dibuja con la LM Math embebida en forma RECTA (los glifos
+    // griegos de CM ya son la forma matemática; no aplicar italic evita
+    // faux-italic). El latino de math (bytes ASCII, no en el mapa) sigue en el
+    // serif del sistema itálico; FN_SYMBOL sin cambios (pendiente P1).
+    if (dspstate.fontFace == FN_TEX_CMMI && isCmmiGreekRun(s)) {
+        ensureMathFont();
+        family = "'MGMath'";
+        style = "normal";
+    }
 
     char colorBuf[10];
     sprintf(colorBuf, "#%06X", dspstate.linecolor);

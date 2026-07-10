@@ -90,8 +90,8 @@ private:
   // Current font handle and dirty flag
   HPDF_Font current_font = nullptr;
 
-  // Face name for embedded CMMI TTF (returned by HPDF_LoadTTFontFromMemory)
-  const char* cmmi_face = nullptr;
+  // Face name for embedded Latin Modern Math TTF (from HPDF_LoadTTFontFromMemory)
+  const char* lmmath_face = nullptr;
 };
 
 #endif

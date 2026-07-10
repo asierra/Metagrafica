@@ -7,13 +7,13 @@ MetaGrafica:  Human descriptive language to generate publication quality
     Version:  2024
 */
 #include "PDFDisplay.h"
+#include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
+#include "text_parser.h"       // cmmiUnicode(): byte cmmi -> Unicode
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 using std::string;
-
-static const char* CMMI_TTF_PATH = "/usr/share/fonts/truetype/lyx/cmmi10.ttf";
 
 static void hpdf_error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void*) {
   // El primer error deja el documento inválido: todo lo posterior falla en
@@ -88,20 +88,13 @@ void PDFDisplay::start() {
   HPDF_Page_SetWidth(page,  dvx);
   HPDF_Page_SetHeight(page, dvy);
 
-  // Embeber CMMI10 TTF (instalado por LyX) en el documento PDF
-  FILE* f = fopen(CMMI_TTF_PATH, "rb");
-  if (f) {
-    fseek(f, 0, SEEK_END);
-    long sz = ftell(f);
-    rewind(f);
-    HPDF_BYTE* buf = (HPDF_BYTE*)malloc(sz);
-    if (buf && (long)fread(buf, 1, sz, f) == sz)
-      cmmi_face = HPDF_LoadTTFontFromMemory(pdf, buf, (HPDF_UINT)sz, HPDF_TRUE);
-    free(buf);
-    fclose(f);
-  }
-  if (!cmmi_face)
-    fprintf(stderr, "Advertencia: no se pudo cargar %s\n", CMMI_TTF_PATH);
+  // Embeber Latin Modern Math (subset griego, vendorizado) y habilitar la ruta
+  // Unicode: el griego del modo matemático se dibuja por su codepoint Unicode con
+  // esta fuente Computer Modern, igual en cualquier host y coherente con EPS/SVG.
+  HPDF_UseUTFEncodings(pdf);
+  lmmath_face = HPDF_LoadTTFontFromMemory(pdf, g_lmmath_ttf, g_lmmath_ttf_len, HPDF_TRUE);
+  if (!lmmath_face)
+    fprintf(stderr, "Advertencia: no se pudo cargar Latin Modern Math vendorizado\n");
 
   // Semilla mundo→dispositivo (§3.1): isométrica por default, en la base.
   pushWorldMatrix();
@@ -457,58 +450,6 @@ void PDFDisplay::dot(double x, double y, double r) {
 /* Texto                                                                */
 /* ------------------------------------------------------------------ */
 
-/* Traduce byte codes de CMMI10 (TeX) al código equivalente en la fuente Symbol de PDF.
-   Retorna 0 si el byte corresponde a una letra latina (usar Times-Italic). */
-static unsigned char cmmi_to_sym(unsigned char c) {
-  switch (c) {
-  // Letras griegas minúsculas variantes (posiciones TeX especiales)
-  case 33: return 119;  // omega
-  case 34: return 101;  // varepsilon
-  case 35: return  74;  // vartheta
-  case 36: return 118;  // varpi
-  case 37: return 114;  // varrho (≈ rho)
-  case 38: return  86;  // varsigma
-  case 39: return 106;  // varphi
-  // Letras griegas mayúsculas
-  case 161: return  71; // Gamma
-  case 162: return  68; // Delta
-  case 163: return  81; // Theta
-  case 164: return  76; // Lambda
-  case 165: return  88; // Xi
-  case 166: return  80; // Pi
-  case 167: return  83; // Sigma
-  case 168: return  85; // Upsilon
-  case 169: return  70; // Phi
-  case 170: return  89; // Psi
-  case 172: return  87; // Omega
-  // Letras griegas minúsculas principales
-  case 174: return  97; // alpha
-  case 175: return  98; // beta
-  case 176: return 103; // gamma
-  case 177: return 100; // delta
-  case 178: return 101; // epsilon
-  case 179: return 122; // zeta
-  case 180: return 104; // eta
-  case 181: return 113; // theta
-  case 182: return 105; // iota
-  case 183: return 107; // kappa
-  case 184: return 108; // lambda
-  case 185: return 109; // mu
-  case 186: return 110; // nu
-  case 187: return 120; // xi
-  case 188: return 112; // pi
-  case 189: return 114; // rho
-  case 190: return 115; // sigma
-  case 191: return 116; // tau
-  case 192: return 117; // upsilon
-  case 193: return 102; // phi
-  case 194: return  99; // chi
-  case 195: return 121; // psi
-  case 199: return 104; // hbar (sin equivalente → 'h')
-  default:  return   0; // letra latina/dígito: pasar a Times-Italic
-  }
-}
-
 void PDFDisplay::setFontSize(double fz) {
   if (fz == dspstate.fontSize) return;
   Display::setFontSize(fz);
@@ -530,8 +471,9 @@ void PDFDisplay::setFontFace(FontFace face) {
   case FN_TIMES_ITALIC_BOLD: fname = "Times-BoldItalic";     break;
   case FN_SYMBOL:            fname = "Symbol";  encoding = nullptr; break;
   case FN_TEX_CMMI:
-    fname    = cmmi_face ? cmmi_face : "Times-Italic";
-    encoding = nullptr;
+    // Base latina del math itálico; el griego se resuelve por Unicode en text().
+    fname    = "Times-Italic";
+    encoding = "WinAnsiEncoding";
     break;
   case FN_SANSERIF:              fname = "Helvetica";             break;
   case FN_SANSERIF_ITALIC:       fname = "Helvetica-Oblique";     break;
@@ -551,15 +493,22 @@ void PDFDisplay::text(string s) {
 
   double size = dspstate.fontSize * relfontsize;
 
-  // Para FN_TEX_CMMI, un solo carácter puede ser griego (traducir a Symbol)
-  // o latino (usar Times-Italic como aproximación a math italic).
+  // FN_TEX_CMMI: el griego se traduce a su codepoint Unicode (cmmiUnicode) y se
+  // dibuja con Latin Modern Math por la ruta UTF-8 (mismos glifos CM que EPS/SVG);
+  // los latinos (no están en la tabla) caen a Times-Italic como aprox. de math
+  // itálico. (Los símbolos de map_symbol siguen en Symbol; pendiente P1 del plan.)
   HPDF_Font use_font = current_font;
   string s_out = s;
   if (dspstate.fontFace == FN_TEX_CMMI && s.size() == 1) {
-    unsigned char sym = cmmi_to_sym((unsigned char)s[0]);
-    if (sym != 0) {
-      use_font = HPDF_GetFont(pdf, "Symbol", nullptr);
-      s_out = string(1, (char)sym);
+    const auto &cu = cmmiUnicode();
+    auto it = cu.find((unsigned char)s[0]);
+    if (it != cu.end() && lmmath_face) {
+      unsigned int cp = it->second;      // griego/hbar: todos en U+0800..U+FFFF (3 bytes UTF-8)
+      s_out.clear();
+      s_out += (char)(0xE0 | (cp >> 12));
+      s_out += (char)(0x80 | ((cp >> 6) & 0x3F));
+      s_out += (char)(0x80 | (cp & 0x3F));
+      use_font = HPDF_GetFont(pdf, lmmath_face, "UTF-8");
     } else {
       use_font = HPDF_GetFont(pdf, "Times-Italic", "WinAnsiEncoding");
     }
