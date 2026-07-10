@@ -98,4 +98,4 @@ text("crystal")  { 9.3 1.75 }
 text("detector") { 7.8 -0.50 }
 text("$V$")      { 2.20 -1.0 }
 text("+")        { 2.55 -0.75 }
-text("$\phi$")   { 8 0.9 }
+text("$\varphi$")   { 8 0.9 }
