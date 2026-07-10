@@ -37,7 +37,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (los 14 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-10, fig6-1/6-10, fill_styles, line_patterns, primitives, rpstest, sines). Se movió aquí desde `examples/v3/` el 2026-07-09; Alejandro los está refinando a mano y sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3).
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (los 15 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-10, fig6-1/6-10, fill_styles, line_patterns, primitives, rpstest, sines, texto). Se movió aquí desde `examples/v3/` el 2026-07-09; Alejandro los está refinando a mano y sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3).
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compilaba `examples/v3/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); hoy el corpus vive en `examples/` y el harness está **en pausa** durante el refinamiento manual (ver "Build and test"). `src/main.cpp`, `src/Parser.cpp`, `src/lexmg.cpp` (front-end V1) quedan en el árbol pero **fuera del build**; V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -66,7 +66,7 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 ## Roadmap state (2026-07-09)
 
-El parser V3 (`src/parserv3.cpp`) compila los 14 ejemplos de `examples/` a EPS/SVG/PDF.
+El parser V3 (`src/parserv3.cpp`) compila los 15 ejemplos de `examples/` a EPS/SVG/PDF.
 Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
 (§8/§10/§17), generadores §13 (numbers/ticks/axis/grid), primitivas geométricas+bezier+
 sine, texto con markup, estado color/fill/line_width/dash/font/align/valign + atributos
@@ -79,13 +79,34 @@ color de relleno, el contorno es explícito); concatenación de cadenas con `+` 
 y varios arreglos EPS (font_size scoping, fuga de estado por-primitiva, cshow/ellipse,
 rect doble-stroke).
 
-Siguiente concreto — **patrones de relleno**: pasar `hatch` de índice entero (legado
-FPATRN restringido) a `FillPattern` en `dspstate`, con `hatch` sobrecargado (nombre|
-número), ángulo/gap libres y estilos `hatch`/`hatchback`/`crosshatch`. Plan detallado y
-delegable en `plan_patterns.md` (4 fases; empezar por la Fase 1, que no cambia la salida).
-Otros pendientes: curvas de fig4-1 (paneles + escala, reescribir sin `rotate 90`); spline/
-smooth §9 (motor `splines.cpp` listo); traductor `mg1to2.py`. Wart conocido:
-`EPSDisplay::start` no chequea el fallo de `fopen` (segfaults si la ruta no es escribible).
+Cerrado más tarde el 2026-07-09 (segunda tanda, commits `dd84925`..`8aa7fa5`):
+- **Build** (`dd84925`): libharu se liga como biblioteca estática (`obj/haru/libharu.a`,
+  regla `ar`) en vez de listar ~45 `.o` en el enlace; un cambio menor al motor recompila
+  solo su `.o` y re-liga sin re-archivar haru.
+- **Patrones de relleno §4.11 (Fases 1–3 de `plan_patterns.md`)**: `hatch` pasó de índice
+  entero a `FillPattern` en `dspstate` (nuevo `GraphicsItem` `HatchAttr`; `Display::setHatch`),
+  con `hatch` **sobrecargado** (número = ángulo LIBRE de una familia; cadena = estilo
+  `"hatch"`/`"hatchback"`/`"crosshatch"`) y `hatch_gap` libre. EPS dejó los 4 procs PS fijos
+  por un barrido genérico por ángulo (igual método que PDF); SVG teja el crosshatch con las
+  dos diagonales de un tile `gap·√2`. Se corrigió el ángulo SVG reflejado por el flip global
+  `scale(1,-1)` (`rotate(90-a)`, no `a-90`). Verificado EPS/SVG/PDF idénticos para ángulos
+  libres y nombrados.
+- **Texto (tres arreglos, §4.8/§7.5/§14.3)**: (1) EPS sincroniza el caché de fuente
+  `dev_face/dev_size` con `gsave/grestore` (antes un `grestore` revertía la fuente del
+  dispositivo pero el caché quedaba obsoleto → el guard omitía el `setfont` y el texto salía
+  con la fuente vieja; etiquetas encimadas en fill_styles). (2) `text()` ahora **honra sus
+  atributos por-primitiva** (antes se parseaban y se ignoraban): `font_size` (alias `size`),
+  `color`, `align`, `valign` como estado acotado con push/pop; (3) `font=` (cara) como cara
+  inicial de `parse_text`, horneada en el `Text`. Verificado en los tres backends.
+
+Siguiente concreto — **Fase 4 de patrones** (`plan_patterns.md`): la spec §4.11 y
+`fill_styles.mg` ya están al modelo nuevo; **falta la limpieza de código muerto**: `patternFor`
+/`AT_FPATRN`/`max_fillpattern` siguen vivos SOLO como camino del front-end V1 congelado
+(`Attribute::draw`); si se confirma que V3 nunca los toca, borrarlos. Otros pendientes:
+curvas de fig4-1 (paneles + escala, reescribir sin `rotate 90`); spline/smooth §9 (motor
+`splines.cpp` listo); `font=` por-primitiva en `numbers`/etiquetas de `axis` si se pide;
+traductor `mg1to2.py`. Wart conocido: `EPSDisplay::start` no chequea el fallo de `fopen`
+(segfaults si la ruta no es escribible).
 
 ## Code style
 
