@@ -41,6 +41,13 @@ inline Value evalError(const char *msg, const std::string &extra = "") {
   return Value(0.0);
 }
 
+// Aviso NO fatal: imprime y sigue, sin alterar la semántica (a diferencia de
+// evalError). Para casos con respaldo sensato (p.ej. color desconocido → negro);
+// la generación de salida continúa normalmente.
+inline void warn(const char *msg, const std::string &extra = "") {
+  std::fprintf(stderr, "Aviso: %s%s\n", msg, extra.c_str());
+}
+
 // --- Ámbito léxico: variables encadenadas al padre --------------------------
 struct Scope {
   std::map<std::string, Value> vars;
