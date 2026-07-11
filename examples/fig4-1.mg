@@ -1,27 +1,20 @@
 % Fig 2.1 de IMQ (difracción de electrones) — 4 paneles a) b) c) d).
-% Traducción V3 (ESQUELETO DE ESTUDIO) de examples/v1/fig4-1.mg. Render objetivo:
-% examples/v1/reference/fig4-1.svg.
+% Render objetivo: examples/v1/reference/fig4-1.svg.
 %
-% Propósito: composición de paneles en V3 (structs con ventana propia + fit
-% anidado, §8/§10.2/§16). Curvas (curvas3.mg) y flechas (arrow.mg) ya traducidas
-% e incluidas. Regla clave: V1 PWST SIEMPRE deformaba → V3 fit(stretch=true) (§10.2).
-%
-% ⚠ Pendiente SOLO de verificar el render contra el oráculo (todo bloqueado por
-%   el parser V3; este archivo es sintaxis V3). No quedan decisiones de diseño:
-%   1) que fit(stretch=true) reproduzca el aspecto del V1 (PWST);
-%   2) rotación/posición exactas de Fg1/Fg2 y el rect del haz de Flechas.
-% (Las flechas van world-scaled a propósito: reproducen el V1, no usan el
-%  marcador físico —eso es para datos nuevos, fig2-3.)
+% Reescritura V3 declarativa (sin el truco V1 `rotate 90`): las curvas de
+% difracción viven en curvas3.mg como DATOS naturales (x=posición t, y=intensidad,
+% §9); aquí se TRANSPONEN (`transpose`, intensidad horizontal) y se colocan con
+% `fit` directo en su rectángulo, sin rotar ni `at`. La base común (pantallas +
+% haz) se factoriza en `Aparato`. Paneles en el orden del oráculo: aparato+
+% detectores ARRIBA (a,b), aparato+curvas ABAJO (c,d).
 
 display_size 11 7.7
 font_size 8
 
 include "arrow.mg"       % marcadores de flecha: Arrowr…
-include "curvas3.mg"     % curvas de onda: SenDeriv2Sym / SenCosDeriv2Sym
+include "curvas3.mg"     % curvas de onda TRANSPUESTAS: SenDeriv2Sym / SenCosDeriv2Sym
 
 % ── Aparato: pantallas con rendijas (fiel al V1) ─────────────────────────────
-% V1 MARCO: WW 0 2.2 0 1, LWIDTH 0 → 0.1. Los `;` del PL V1 se conservan en V3
-% como subtrayectos disjuntos (§4): un solo polyline, mismo estilo.
 struct Marco() {
     world_window 0 2.2 0 1
     line_width 0.1
@@ -33,10 +26,7 @@ struct Marco() {
 
 % ── Haz de flechas de electrones ─────────────────────────────────────────────
 % Dos haces VERTICALES de 9 flechas (Arrowr apunta a la derecha), a la izquierda
-% de cada pantalla (x≈0.05 antes de la rendija en 0.3; x≈0.95 antes de la doble
-% rendija en 1.6). repeat = traslación pura hacia arriba (advance), sin rotar —
-% más simple y directo que el place a lo largo de una línea. La ventana es la del
-% panel (0..2.2) → se fija a todo el ancho, no a 1.3.
+% de cada pantalla. repeat = traslación pura hacia arriba (advance), sin rotar.
 struct Flechas() {
     world_window 0 2.2 0 1
     line_width 0.2
@@ -44,36 +34,38 @@ struct Flechas() {
     repeat(Arrowr, scale=0.02, count=9, at=(1.52, 0.1), advance=(0, 0.1))
 }
 
-% Curva simétrica rotada 90° y colocada, lista para fit en el panel (V1 FG1/FG2).
-% ⚠ rotación/posición exactas por verificar contra el oráculo.
-struct Fg1() { rotate 90   SenDeriv2Sym(at=(1, 0)) }
-struct Fg2() { rotate 90   SenCosDeriv2Sym(at=(1, 0)) }
-
-% ── Paneles superiores a) b): aparato + curvas de difracción ─────────────────
-struct FigAB() {
+% Base común de ambos paneles: pantallas + haz de electrones.
+struct Aparato() {
     world_window 0 2.2 0 1
-    fit(Marco, stretch=true) { 0 0  2.2 1 }
-    line_width 0.4
-    fit(Fg1, stretch=true) { 0.35 0  0.9 1 }    % patrón de una rendija
-    fit(Fg2, stretch=true) { 1.6  0  2.2 1 }    % patrón de doble rendija
-    fit(Flechas, stretch=true) { 0 0  2.2 1 }   % ⚠ rect del haz por confirmar
+    fit(Marco,   stretch=true) { 0 0  2.2 1 }
+    fit(Flechas, stretch=true) { 0 0  2.2 1 }
 }
 
-% ── Paneles inferiores c) d): aparato + detectores ───────────────────────────
-struct FigCD() {
+% ── Paneles a) b): aparato + patrones de difracción ──────────────────────────
+% `transpose` pone la intensidad horizontal (dato natural = posición horizontal);
+% fit directo, sin rotar. Una rendija tras x=0.3–0.9; doble rendija tras x=1.6–2.2.
+struct PanelCurvas() {
     world_window 0 2.2 0 1
-    fit(Marco, stretch=true) { 0 0  2.2 1 }
+    fit(Aparato, stretch=true) { 0 0  2.2 1 }
+    line_width 0.4
+    fit(transpose(&SenDeriv2Sym),    stretch=true) { 0.35 0  0.9 1 }   % patrón de una rendija
+    fit(transpose(&SenCosDeriv2Sym), stretch=true) { 1.6  0  2.2 1 }   % patrón de doble rendija
+}
+
+% ── Paneles c) d): aparato + detectores ──────────────────────────────────────
+struct PanelDetectores() {
+    world_window 0 2.2 0 1
+    fit(Aparato, stretch=true) { 0 0  2.2 1 }
     line_width 0.4
     polyline { 0.9 0.45 0.5 0.45 0.5 0.55 0.9 0.55 ;      % detector izq.
                2.2 0.3 1.8 0.3 1.8 0.4 2.2 0.4 ;          % detectores der.
                2.2 0.7 1.8 0.7 1.8 0.6 2.2 0.6 }
-    fit(Flechas, stretch=true) { 0 0  2.2 1 }
 }
 
-% ── Composición: dos bandas horizontales + etiquetas ─────────────────────────
+% ── Composición: dos bandas horizontales (curvas abajo, detectores arriba) ────
 world_window -0.07 1.03  -0.05 1.05
-fit(FigCD, stretch=true) { 0 0    1 0.45 }    % banda inferior → c) d)
-fit(FigAB, stretch=true) { 0 0.55 1 1 }       % banda superior → a) b)
+fit(PanelCurvas,     stretch=true) { 0 0    1 0.45 }   % banda inferior → c) d)
+fit(PanelDetectores, stretch=true) { 0 0.55 1 1 }      % banda superior → a) b)
 
 text("a)") { 0.22 0.53 }
 text("b)") { 0.81 0.55 }

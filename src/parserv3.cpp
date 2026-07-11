@@ -12,12 +12,14 @@
 #include <map>
 #include <fstream>
 #include <sstream>
+#include <algorithm>       // std::reverse (concat de paths, §9)
 
 #include "ast.h"
 #include "tokens.h"
 
 // Motor reutilizado (árbol dibujable + backends)
 #include "structures.h"    // MetaGrafica, GraphicsItemList, point, Path, primitivas
+#include "splines.h"       // concat_paths/process_path: álgebra de paths (§9)
 #include "text_parser.h"   // parse_text: markup de texto (super/subíndices, TeX, math)
 #include "mgflags.h"       // MGFlags: banderas de uso para el backend (reencode, cmmi…)
 #include "SVGDisplay.h"
@@ -524,6 +526,100 @@ struct StructDefStmt : Stmt {
   }
 };
 
+// ── Álgebra de paths (§9) ────────────────────────────────────────────────────
+// Un PathExpr evalúa a un Path (= std::vector<point>). Vive APARTE de la jerarquía
+// Expr/Value (que solo transporta escalares/cadenas/listas), igual que g_structs
+// vive aparte de Scope::vars: un Value no puede llevar un Path. Todas las ops son
+// funcionales (no mutan su operando).
+struct PathExpr {
+  virtual ~PathExpr() {}
+  virtual Path evalPath(Scope &s) const = 0;
+};
+using PathExprPtr = std::unique_ptr<PathExpr>;
+
+// Registro global de paths nombrados (§9), calcado de g_structs.
+static std::map<std::string, PathExprPtr> g_paths;
+
+// Literal de puntos { x y  x y … }: los pares se evalúan a la hora de usar el path.
+struct PathLiteral : PathExpr {
+  std::vector<ExprPtr> coords;                 // pares x y (Term)
+  Path evalPath(Scope &s) const override {
+    Path p;
+    for (size_t i = 0; i + 1 < coords.size(); i += 2)
+      p.push_back(point(coords[i]->eval(s).num, coords[i + 1]->eval(s).num));
+    return p;
+  }
+};
+
+// Referencia &ID a un path nombrado; se resuelve en g_paths al evaluar (diferido,
+// para que un path pueda referir a otro declarado antes).
+struct PathRef : PathExpr {
+  std::string name;
+  Path evalPath(Scope &s) const override {
+    auto it = g_paths.find(name);
+    if (it == g_paths.end()) { evalError("path no definido: ", name); return Path(); }
+    return it->second->evalPath(s);
+  }
+};
+
+// Ops unarias (§9): transpose intercambia (x,y)→(y,x) [reflexión en y=x]; flip_x
+// refleja en el eje x (x,y)→(x,−y) —el ESPEJO real de una curva—; flip_y en el
+// eje y (x,y)→(−x,y). La reflexión es respecto al origen; la posición absoluta se
+// reabsorbe en `concat` (que re-suelda) y en `fit` (que usa el bbox resultante).
+struct PathUnary : PathExpr {
+  enum Op { TRANSPOSE, FLIP_X, FLIP_Y } op = TRANSPOSE;
+  PathExprPtr arg;
+  Path evalPath(Scope &s) const override {
+    Path p = arg->evalPath(s);
+    for (auto &pt : p) {
+      if (op == TRANSPOSE)   { double t = pt.x; pt.x = pt.y; pt.y = t; }
+      else if (op == FLIP_X) { pt.y = -pt.y; }
+      else                   { pt.x = -pt.x; }
+    }
+    return p;
+  }
+};
+
+// concat(a, b): suelda dos paths en uno continuo. Elige el emparejamiento de
+// extremos MÁS CERCANO (invierte a/b según convenga) y traslada b para que su
+// inicio coincida con el final de a. Así el usuario no hace reverse ni coloca, y
+// el resultado no depende de la orientación de los operandos —a diferencia de la
+// heurística por-x de concat_paths() (que comparte el front-end V1): p. ej. una
+// media curva H y su espejo flip_y(H) comparten el pico, y `concat(&H, flip_y(&H))`
+// los solda ahí, formando un perfil simétrico de UN pico central (§9).
+struct PathConcat : PathExpr {
+  PathExprPtr a, b;
+  static double dist2(const point &p, const point &q) {
+    double dx = p.x - q.x, dy = p.y - q.y; return dx * dx + dy * dy;
+  }
+  Path evalPath(Scope &s) const override {
+    Path p1 = a->evalPath(s);
+    Path p2 = b->evalPath(s);
+    if (p1.empty()) return p2;
+    if (p2.empty()) return p1;
+    point a0 = p1.front(), a1 = p1.back(), b0 = p2.front(), b1 = p2.back();
+    double d[4] = { dist2(a1, b0), dist2(a1, b1), dist2(a0, b0), dist2(a0, b1) };
+    int best = 0;
+    for (int i = 1; i < 4; i++) if (d[i] < d[best]) best = i;
+    if (best == 2 || best == 3) std::reverse(p1.begin(), p1.end());   // p1 termina en el punto común
+    if (best == 1 || best == 3) std::reverse(p2.begin(), p2.end());   // p2 empieza en el punto común
+    point tail = p1.back(), head = p2.front();
+    double dx = tail.x - head.x, dy = tail.y - head.y;                // suelda (traslada b)
+    for (size_t i = 1; i < p2.size(); i++)                            // salta el punto duplicado
+      p1.push_back(point(p2[i].x + dx, p2[i].y + dy));
+    return p1;
+  }
+};
+
+// path ID = <PathExpr>: registra la definición (diferida) en g_paths. Posee el árbol.
+struct PathDeclStmt : Stmt {
+  std::string name;
+  PathExprPtr expr;
+  void exec(Scope &, MetaGrafica &, GraphicsItemList &) override {
+    g_paths[name] = std::move(expr);
+  }
+};
+
 struct InvokeStmt : Stmt {
   std::string name;
   std::vector<ExprPtr> pos;
@@ -731,33 +827,62 @@ struct RepeatStmt : Stmt {
 // Matrix::to_rectangle). Inline con OPMPUSH/OPMPOP, como repeat/invocación.
 struct FitStmt : Stmt {
   std::string structName;
+  PathExprPtr pathArg;                    // fit de un path (§9) en vez de struct
   ExprPtr stretchE;                       // stretch= (null = proporcional/meet)
   std::vector<ExprPtr> coords;            // 4 Terms = 2 esquinas del rectángulo
-  void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
-    auto it = g_structs.find(structName);
-    if (it == g_structs.end()) { evalError("struct no definida (fit): ", structName); return; }
-    StructDef *def = it->second.get();
-    if (coords.size() < 4) { evalError("fit requiere un rectángulo (2 puntos)"); return; }
-    double x1 = coords[0]->eval(caller).num, y1 = coords[1]->eval(caller).num;
-    double x2 = coords[2]->eval(caller).num, y2 = coords[3]->eval(caller).num;
-    Box w = structBox(caller, def);
-    bool stretch = stretchE && stretchE->eval(caller).num != 0.0;
-    double tdx = x2 - x1, tdy = y2 - y1;   // firmados: el orden de esquinas refleja
 
+  // Construye la matriz window→rectángulo (misma lógica para struct y path). El
+  // orden de las esquinas refleja (escala con signo); stretch deforma, si no meet.
+  static Matrix fitMatrix(const Box &w, double x1, double y1, double x2, double y2,
+                          bool stretch) {
+    double tdx = x2 - x1, tdy = y2 - y1;
+    double wdx = (w.dx != 0.0) ? w.dx : 1.0, wdy = (w.dy != 0.0) ? w.dy : 1.0;
     Matrix M;
     if (stretch) {
       M.translate(x1, y1);
-      M.scale(tdx / w.dx, tdy / w.dy);     // window → rectángulo exacto
+      M.scale(tdx / wdx, tdy / wdy);
       M.translate(-w.x, -w.y);
     } else {
-      double sx = tdx / w.dx, sy = tdy / w.dy;
+      double sx = tdx / wdx, sy = tdy / wdy;
       double s = (std::fabs(sx) < std::fabs(sy)) ? std::fabs(sx) : std::fabs(sy);
-      double ssx = (sx < 0 ? -s : s), ssy = (sy < 0 ? -s : s);   // uniforme, con signo
-      double ox = x1 + (tdx - ssx * w.dx) / 2, oy = y1 + (tdy - ssy * w.dy) / 2;  // centrado
+      double ssx = (sx < 0 ? -s : s), ssy = (sy < 0 ? -s : s);
+      double ox = x1 + (tdx - ssx * wdx) / 2, oy = y1 + (tdy - ssy * wdy) / 2;
       M.translate(ox, oy);
       M.scale(ssx, ssy);
       M.translate(-w.x, -w.y);
     }
+    return M;
+  }
+
+  void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (coords.size() < 4) { evalError("fit requiere un rectángulo (2 puntos)"); return; }
+    double x1 = coords[0]->eval(caller).num, y1 = coords[1]->eval(caller).num;
+    double x2 = coords[2]->eval(caller).num, y2 = coords[3]->eval(caller).num;
+    bool stretch = stretchE && stretchE->eval(caller).num != 0.0;
+
+    // fit de un path (§9): usa el bbox REAL del path como caja fuente y hornea la
+    // matriz en los puntos (Polyline), sin OPMPUSH/OPMPOP (nada que se fugue).
+    if (pathArg) {
+      Path path = pathArg->evalPath(caller);
+      if (path.empty()) return;
+      double minx = path[0].x, miny = path[0].y, maxx = path[0].x, maxy = path[0].y;
+      for (const point &p : path) {
+        if (p.x < minx) minx = p.x; if (p.x > maxx) maxx = p.x;
+        if (p.y < miny) miny = p.y; if (p.y > maxy) maxy = p.y;
+      }
+      Box w{minx, miny, maxx - minx, maxy - miny};
+      Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);
+      auto p = std::make_unique<Polyline>(GI_POLYLINE);
+      p->setPath(process_path(M, path));
+      out.push_back(std::move(p));
+      return;
+    }
+
+    auto it = g_structs.find(structName);
+    if (it == g_structs.end()) { evalError("struct no definida (fit): ", structName); return; }
+    StructDef *def = it->second.get();
+    Box w = structBox(caller, def);
+    Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);   // window → rectángulo (esquinas firmadas)
     Scope local(caller.root());
     for (size_t i = 0; i < def->params.size(); i++)
       local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
@@ -953,6 +1078,7 @@ struct PrimStmt : Stmt {
   std::map<std::string, ExprPtr> named;   // args nombrados
   std::vector<ExprPtr> coords;            // coordenadas (Term), en pares x y
   std::vector<size_t> breaks;             // índices en coords donde ';' abre subtrayecto
+  PathExprPtr pathArg;                    // polyline(<PathExpr>): un path del álgebra §9
 
   double namedOr(Scope &s, const char *k, double def) const {
     auto it = named.find(k);
@@ -983,7 +1109,19 @@ struct PrimStmt : Stmt {
     else if (name == "bezier")   poly = GI_BEZIER;   // path = p0 c1 c2 p1 [c1 c2 p2…]; Polyline::draw agrupa de 3 en 3 → curveto
     else isPoly = false;
 
-    if (isPoly) {
+    // polyline/polygon/bezier(<PathExpr>): un path del álgebra §9 (§9) como único
+    // subtrayecto. El resultado del álgebra es una secuencia plana de puntos.
+    if (pathArg) {
+      if (!isPoly) { evalError("un path solo puede dibujarse con polyline/polygon/bezier"); return; }
+      bool closed = named.count("closed") && named.at("closed")->eval(s).num != 0.0;
+      Path path = pathArg->evalPath(s);
+      if (!path.empty()) {
+        auto p = std::make_unique<Polyline>(poly);
+        p->setPath(std::move(path));
+        p->setClosed(closed);
+        items.push_back(std::move(p));
+      }
+    } else if (isPoly) {
       // §4.1: closed=true cierra cada subtrayecto (closepath) sin repetir el
       // punto inicial. Default false = polilínea abierta. En polygon es redundante
       // (el relleno ya cierra); solo cambia algo si se pide explícitamente.
@@ -1348,10 +1486,24 @@ static StmtPtr parsePlace(Lexer &);
 static StmtPtr parseSine(Lexer &);
 static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
+static PathExprPtr parsePathExpr(Lexer &);   // álgebra de paths (§9)
 
 // Un nombre de atributo puede coincidir con una palabra de control: `to`/`step`
 // son keywords (for i = a to b) pero también nombres nombrados (arc(from=, to=)).
 // Dentro de (…) se desambigua por contexto: keyword seguida de '=' = nombre.
+// ¿El punto actual empieza un PathExpr (§9)? Una referencia `&nombre` o una op de
+// path (`transpose`/`flip_x`/`flip_y`/`concat`). Sirve para bifurcar polyline/fit
+// entre su forma clásica y la de álgebra de paths.
+static bool startsPathExpr(const Lexer &lx) {
+  int tt = lx.peek().type;
+  if (tt == T_AMP) return true;
+  if (tt == T_IDENTIFIER) {
+    const std::string &n = lx.peek().str;
+    return n == "transpose" || n == "flip_x" || n == "flip_y" || n == "concat";
+  }
+  return false;
+}
+
 static bool attrNameHere(const Lexer &lx, std::string &out) {
   int tt = lx.peek().type;
   if (lx.peek(1).type != T_ASSIGN) return false;
@@ -1398,6 +1550,14 @@ static StmtPtr parseStatement(Lexer &lx) {
   }
   lx.next();                                   // consume el nombre del comando
 
+  if (name == "path") {                        // path ID = <PathExpr>  (§9)
+    auto st = std::make_unique<PathDeclStmt>();
+    if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre del path");
+    st->name = lx.next().str;
+    if (!lx.accept(T_ASSIGN)) parseError(lx, "'=' en la declaración de path");
+    st->expr = parsePathExpr(lx);
+    return st;
+  }
   if (isConfig(name)) {
     auto st = std::make_unique<ConfigStmt>();
     st->which = name;
@@ -1410,7 +1570,14 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (isPrim(name)) {
     auto st = std::make_unique<PrimStmt>();
     st->name = name;
-    if (lx.accept(T_LPAREN)) parseArgList(lx, st->pos, st->named);   // args (Expression)
+    if (lx.accept(T_LPAREN)) {
+      if (startsPathExpr(lx)) {                 // polyline(<PathExpr>): álgebra §9
+        st->pathArg = parsePathExpr(lx);
+        if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+      } else {
+        parseArgList(lx, st->pos, st->named);   // args (Expression)
+      }
+    }
     if (lx.accept(T_LBRACE)) {                  // { coords }  (Term; ';' abre subtrayecto §4; newline se salta)
       while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
         if (lx.accept(T_SEMICOLON)) { st->breaks.push_back(st->coords.size()); continue; }
@@ -1636,6 +1803,54 @@ static void parseTransformValue(Lexer &lx, std::vector<MatrixCtor> &out) {
   if (out.empty()) parseError(lx, "un constructor de transform (rotate/scale/translate/shear)");
 }
 
+// Parsea un PathExpr (§9): literal `{ x y … }`, referencia `&nombre`, u op de path
+// `transpose/flip_x/flip_y(<PathExpr>)` / `concat(<PathExpr>, <PathExpr>)`. Anidable.
+static PathExprPtr parsePathExpr(Lexer &lx) {
+  const Tok &t = lx.peek();
+  if (t.type == T_LBRACE) {                      // literal { x y  x y … }
+    lx.next();
+    auto lit = std::make_unique<PathLiteral>();
+    while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+      if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+      lit->coords.push_back(parseTerm(lx));
+    }
+    if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+    return lit;
+  }
+  if (t.type == T_AMP) {                         // &ID
+    lx.next();
+    if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre del path tras '&'");
+    auto r = std::make_unique<PathRef>();
+    r->name = lx.next().str;
+    return r;
+  }
+  if (t.type == T_IDENTIFIER) {
+    std::string n = t.str;
+    if (n == "transpose" || n == "flip_x" || n == "flip_y") {
+      lx.next();
+      if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras la operación de path");
+      auto u = std::make_unique<PathUnary>();
+      u->op = (n == "transpose") ? PathUnary::TRANSPOSE
+            : (n == "flip_x")    ? PathUnary::FLIP_X : PathUnary::FLIP_Y;
+      u->arg = parsePathExpr(lx);
+      if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+      return u;
+    }
+    if (n == "concat") {
+      lx.next();
+      if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras concat");
+      auto c = std::make_unique<PathConcat>();
+      c->a = parsePathExpr(lx);
+      if (!lx.accept(T_COMMA)) parseError(lx, "',' en concat(a, b)");
+      c->b = parsePathExpr(lx);
+      if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+      return c;
+    }
+  }
+  parseError(lx, "un path: '{…}', &nombre, transpose/flip_x/flip_y/concat(…)");
+  return nullptr;                                // inalcanzable (parseError hace exit)
+}
+
 static StmtPtr parseRepeat(Lexer &lx) {
   if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras repeat");
   auto st = std::make_unique<RepeatStmt>();
@@ -1655,8 +1870,12 @@ static StmtPtr parseRepeat(Lexer &lx) {
 static StmtPtr parseFit(Lexer &lx) {
   if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras fit");
   auto st = std::make_unique<FitStmt>();
-  if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct a ajustar");
-  st->structName = lx.next().str;
+  if (startsPathExpr(lx)) {                      // fit(<PathExpr>) { rect }  (§9)
+    st->pathArg = parsePathExpr(lx);
+  } else {
+    if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct o un path (&…)");
+    st->structName = lx.next().str;
+  }
   while (lx.accept(T_COMMA)) {                   // argumentos nombrados (stretch=…)
     std::string k;
     if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (stretch=)");
