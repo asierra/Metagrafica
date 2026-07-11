@@ -19,6 +19,7 @@
 // Motor reutilizado (árbol dibujable + backends)
 #include "structures.h"    // MetaGrafica, GraphicsItemList, point, Path, primitivas
 #include "splines.h"       // concat_paths/process_path: álgebra de paths (§9)
+#include "markers.h"        // markerIdForName: marcadores físicos de dot (§4.11)
 #include "text_parser.h"   // parse_text: markup de texto (super/subíndices, TeX, math)
 #include "mgflags.h"       // MGFlags: banderas de uso para el backend (reencode, cmmi…)
 #include "SVGDisplay.h"
@@ -1117,7 +1118,19 @@ struct PrimStmt : Stmt {
       Path path = evalPath(s, 0, coords.size());
       std::unique_ptr<GraphicsItem> item;
       if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
-      else if (name == "dot") { auto p = std::make_unique<Dot>(); p->setRadius(posOr(s, 0, 1)); p->setPath(path); item = std::move(p); }
+      else if (name == "dot") {
+        auto p = std::make_unique<Dot>();
+        p->setRadius(posOr(s, 0, namedOr(s, "size", 1)));
+        // marker= (§4.11): forma física alterna al círculo (square/diamond/cross/x/arrow).
+        auto mit = named.find("marker");
+        if (mit != named.end()) {
+          MarkerId mid;
+          std::string mname = mit->second->eval(s).str;
+          if (markerIdForName(mname, mid)) p->setMarker(mid);
+          else evalError("marcador desconocido: ", mname);
+        }
+        p->setPath(path); item = std::move(p);
+      }
       else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }

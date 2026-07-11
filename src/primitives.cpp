@@ -98,7 +98,8 @@ void Arc::draw(Display &g) {
 
 void Dot::draw(Display &g) {
   for (const auto &p : path) {
-    g.dot(p.x, p.y, r);
+    if (marker_id == MK_CIRCLE) g.dot(p.x, p.y, r);   // círculo = arco real (calidad)
+    else                        g.marker(p.x, p.y, marker_id, r, 0.0);
   }
 }
 

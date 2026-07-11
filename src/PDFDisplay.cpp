@@ -7,6 +7,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
     Version:  2024
 */
 #include "PDFDisplay.h"
+#include "markers.h"
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
 #include "text_parser.h"       // cmmiUnicode(): byte cmmi -> Unicode
 #include <math.h>
@@ -444,6 +445,38 @@ void PDFDisplay::dot(double x, double y, double r) {
     HPDF_Page_Stroke(page);
   }
   HPDF_Page_GRestore(page);
+}
+
+void PDFDisplay::marker(double x, double y, MarkerId id, double size, double angle) {
+  // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), rotada
+  // angle rad, en cada subtrayecto de markers.h. Rellenable (cuadrado/rombo/
+  // flecha) -> Fill; no-rellenable (cruz/x) -> Stroke, igual convención que dot.
+  mt.transform(x, y);
+  MarkerShape shape = markerShapeForId(id);
+  double ca = cos(angle), sa = sin(angle);
+  bool doFill = shape.fillable && dspstate.fill;
+  for (const auto &sub : shape.subpaths) {
+    if (sub.empty()) continue;
+    HPDF_Page_GSave(page);
+    // El color (y el ancho de trazo) se fija en PAGE_DESCRIPTION, ANTES de
+    // iniciar el path (MoveTo lo pasa a PATH_OBJECT), igual que dot().
+    if (doFill) {
+      applyFillColor();
+    } else {
+      applyStrokeColor();
+      HPDF_Page_SetLineWidth(page, dspstate.line_width_pt);
+    }
+    bool first = true;
+    for (const auto &u : sub) {
+      double dx = x + size * (u.x * ca - u.y * sa);
+      double dy = y + size * (u.x * sa + u.y * ca);
+      if (first) { HPDF_Page_MoveTo(page, dx, dy); first = false; }
+      else       HPDF_Page_LineTo(page, dx, dy);
+    }
+    if (doFill) HPDF_Page_Fill(page);
+    else        HPDF_Page_Stroke(page);
+    HPDF_Page_GRestore(page);
+  }
 }
 
 /* ------------------------------------------------------------------ */

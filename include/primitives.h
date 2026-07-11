@@ -280,6 +280,11 @@ private:
   double ai = 0, af = 360;
 };
 
+// Marcadores físicos de dot (§4.11): formas alternas al círculo, dispersadas
+// en cada punto del path. La geometría vive en markers.h (fuera del parser);
+// aquí solo el identificador, para que Dot lo cargue sin ciclo de includes.
+enum MarkerId { MK_CIRCLE, MK_SQUARE, MK_DIAMOND, MK_CROSS, MK_X, MK_ARROW };
+
 class Dot : public GraphicsItemWithPath {
 public:
   Dot() : GraphicsItemWithPath(GI_DOT) { }
@@ -287,9 +292,11 @@ public:
   void draw(Display &) override;
 
   void setRadius(double x) { r = x;  }
+  void setMarker(MarkerId m) { marker_id = m; }
 
 private:
   double r = 1;
+  MarkerId marker_id = MK_CIRCLE;
 };
 
 class Attribute : public GraphicsItem {

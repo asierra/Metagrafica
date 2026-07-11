@@ -1,4 +1,5 @@
 #include "SVGDisplay.h"
+#include "markers.h"
 #include "text_parser.h"
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
 #include <cmath>
@@ -461,6 +462,38 @@ void SVGDisplay::dot(double x, double y, double r) {
         sprintf(colorBuf, "#%06X", dspstate.linecolor);
         fprintf(file, "<circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\" />\n",
                 x, y, r, colorBuf, dspstate.line_width_pt);
+    }
+}
+
+void SVGDisplay::marker(double x, double y, MarkerId id, double size, double angle) {
+    // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), rotada
+    // angle rad, en cada subtrayecto de markers.h. Rellenable (cuadrado/rombo/
+    // flecha) -> <polygon> con el color de relleno; no-rellenable (cruz/x) ->
+    // <polyline> sin relleno, trazo en color de línea (igual convención que dot).
+    // NOTA: hay un flip global scale(1,-1) en el <g> raíz; con angle=0 y estas
+    // formas simétricas en y el flip es invisible, pero cuando se añada
+    // orientación tangente habrá que revisar el signo de rotación (como el
+    // fix rotate(90-a) del tramado).
+    mt.transform(x, y);
+    MarkerShape shape = markerShapeForId(id);
+    char colorBuf[10];
+    double ca = cos(angle), sa = sin(angle);
+    for (const auto &sub : shape.subpaths) {
+        if (sub.empty()) continue;
+        std::ostringstream pts;
+        for (const auto &u : sub) {
+            double dx = x + size * (u.x * ca - u.y * sa);
+            double dy = y + size * (u.x * sa + u.y * ca);
+            pts << dx << "," << dy << " ";
+        }
+        if (shape.fillable && dspstate.fill) {
+            sprintf(colorBuf, "#%06X", dspstate.fillcolor);
+            fprintf(file, "<polygon points=\"%s\" fill=\"%s\" />\n", pts.str().c_str(), colorBuf);
+        } else {
+            sprintf(colorBuf, "#%06X", dspstate.linecolor);
+            fprintf(file, "<polyline points=\"%s\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\" />\n",
+                    pts.str().c_str(), colorBuf, dspstate.line_width_pt);
+        }
     }
 }
 
