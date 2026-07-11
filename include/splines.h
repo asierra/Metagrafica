@@ -31,7 +31,20 @@ Path splines_to_bezier(Path controlpoints);
 
 Path process_path(Matrix matrix, Path path);
 
-void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation=true);
+// Ops unarias del álgebra de paths §9 (reflexiones respecto al origen; la
+// posición absoluta se reabsorbe en concat_paths y en fit):
+//   transpose: (x,y)→(y,x)  reflexión en y=x (intercambia ejes de datos)
+//   flip_x:    (x,y)→(−x,y)  voltea en x (izquierda↔derecha; espeja en el eje y)
+//   flip_y:    (x,y)→(x,−y)  voltea en y (arriba↔abajo; espeja en el eje x)
+Path transpose_path(const Path &p);
+Path flip_x_path(const Path &p);
+Path flip_y_path(const Path &p);
+
+// concat_paths(a, b): suelda dos paths en uno continuo (álgebra de paths §9).
+// Empareja los extremos MÁS CERCANOS (invierte a/b según convenga) y traslada b
+// para que su inicio coincida con el final de a; el resultado no depende de la
+// orientación de los operandos. Operación gráfica sobre los datos, no de parseo.
+Path concat_paths(const Path &a, const Path &b);
 
 void normalize_path(Path& path);
 

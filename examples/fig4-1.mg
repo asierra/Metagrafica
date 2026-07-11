@@ -48,8 +48,8 @@ struct PanelCurvas() {
     world_window 0 2.2 0 1
     fit(Aparato, stretch=true) { 0 0  2.2 1 }
     line_width 0.4
-    fit(transpose(&SenDeriv2Sym),    stretch=true) { 0.35 0  0.9 1 }   % patrón de una rendija
-    fit(transpose(&SenCosDeriv2Sym), stretch=true) { 1.6  0  2.2 1 }   % patrón de doble rendija
+    fit(flip_x(transpose(&SenDeriv2Sym)),    stretch=true) { 0.35 0  0.9 1 }   % patrón de una rendija
+    fit(flip_x(transpose(&SenCosDeriv2Sym)), stretch=true) { 1.6  0  2.2 1 }   % patrón de doble rendija
 }
 
 % ── Paneles c) d): aparato + detectores ──────────────────────────────────────

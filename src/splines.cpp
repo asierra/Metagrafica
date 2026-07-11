@@ -170,38 +170,50 @@ void normalize_path(Path& path) {
   compute_maxmins_path(path, min, max);
 }
 
-void concat_paths(Path &path1, Path path2, Matrix mt, bool use_translation) {
-  Matrix mttl;
-  //printf("concat paths %zu %zu\n", path1.size(), path2.size());
-  if (path1.size()==0) {
-    Path path2m = process_path(mt, path2);
-    point p2b = path2m.back(), p2f = path2m.front();
-    //printf("extremos %g %g - %g %g\n", p2f.x, p2f.y, p2b.x, p2b.y);
-    if (p2f.x > p2b.x) 
-      std::reverse(path2m.begin(), path2m.end());
-    path1.insert(path1.end(), path2m.begin(), path2m.end());
-  } else {
-    point p1 = path1.back();
-    point p2b = path2.back(), p2f = path2.front();
-    mt.transform(p2b.x, p2b.y);
-    mt.transform(p2f.x, p2f.y);
-    // Alinea el frente del segmento con el final del acumulado (p1), en ambos
-    // ejes. La resta de p2f evita asumir que el frente está en x=0 local.
-    double dx = p1.x - p2f.x;
-    double dfy = p1.y - p2f.y;
-    if (p2f.x > p2b.x) {
-      // Tras invertir, el nuevo frente es el antiguo final (p2b).
-      std::reverse(path2.begin(), path2.end());
-      dx = p1.x - p2b.x;
-      dfy = p1.y - p2b.y;
-    }
-    if (use_translation) 
-      mttl.translate(dx, dfy);
-    mttl = mttl*mt;
-    Path path2m = process_path(mttl, path2);
-    //printf("point %g %g - %g %g %g\n", p1.x, p1.y, path2m.front().x, path2m.back().x, dfy);
-    path1.insert(path1.end(), std::next(path2m.begin()), path2m.end());
-  }
+Path transpose_path(const Path &p) {
+  Path r = p;
+  for (auto &pt : r) { double t = pt.x; pt.x = pt.y; pt.y = t; }
+  return r;
+}
+
+Path flip_x_path(const Path &p) {
+  Path r = p;
+  for (auto &pt : r) pt.x = -pt.x;
+  return r;
+}
+
+Path flip_y_path(const Path &p) {
+  Path r = p;
+  for (auto &pt : r) pt.y = -pt.y;
+  return r;
+}
+
+static double concat_dist2(const point &p, const point &q) {
+  double dx = p.x - q.x, dy = p.y - q.y; return dx * dx + dy * dy;
+}
+
+// concat_paths(a, b): suelda dos paths en uno continuo. Elige el emparejamiento
+// de extremos MÁS CERCANO (invierte a/b según convenga) y traslada b para que su
+// inicio coincida con el final de a. Así el usuario no hace reverse ni coloca, y
+// el resultado no depende de la orientación de los operandos: p. ej. una media
+// curva H y su espejo flip_x(H) comparten el pico, y concat(&H, flip_x(&H)) los
+// suelda ahí, formando un perfil simétrico de UN pico central (§9).
+Path concat_paths(const Path &a, const Path &b) {
+  Path p1 = a, p2 = b;
+  if (p1.empty()) return p2;
+  if (p2.empty()) return p1;
+  point a0 = p1.front(), a1 = p1.back(), b0 = p2.front(), b1 = p2.back();
+  double d[4] = { concat_dist2(a1, b0), concat_dist2(a1, b1),
+                  concat_dist2(a0, b0), concat_dist2(a0, b1) };
+  int best = 0;
+  for (int i = 1; i < 4; i++) if (d[i] < d[best]) best = i;
+  if (best == 2 || best == 3) std::reverse(p1.begin(), p1.end());  // p1 termina en el punto común
+  if (best == 1 || best == 3) std::reverse(p2.begin(), p2.end());  // p2 empieza en el punto común
+  point tail = p1.back(), head = p2.front();
+  double dx = tail.x - head.x, dy = tail.y - head.y;               // suelda (traslada b)
+  for (size_t i = 1; i < p2.size(); i++)                           // salta el punto duplicado
+    p1.push_back(point(p2[i].x + dx, p2[i].y + dy));
+  return p1;
 }
 
 void get_bezier_tangents(point p0, point p1, point p2, point p3, point &t1, point &t2)

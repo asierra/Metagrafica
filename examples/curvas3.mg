@@ -45,5 +45,6 @@ path SenCosDeriv2 = {
 
 % Perfil simétrico: la media curva + su espejo en la POSICIÓN (flip_y), soldadas
 % por el pico central con concat (§9). Sustituye los dos `fit` reflejados del V1.
-path SenDeriv2Sym    = concat(&SenDeriv2,    flip_y(&SenDeriv2))
-path SenCosDeriv2Sym = concat(&SenCosDeriv2, flip_y(&SenCosDeriv2))
+path SenDeriv2Sym    = concat(&SenDeriv2,    flip_x(&SenDeriv2))
+path SenCosDeriv2Sym = concat(&SenCosDeriv2, flip_x(&SenCosDeriv2))
+

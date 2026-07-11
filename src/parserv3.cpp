@@ -12,7 +12,6 @@
 #include <map>
 #include <fstream>
 #include <sstream>
-#include <algorithm>       // std::reverse (concat de paths, §9)
 
 #include "ast.h"
 #include "tokens.h"
@@ -562,52 +561,28 @@ struct PathRef : PathExpr {
   }
 };
 
-// Ops unarias (§9): transpose intercambia (x,y)→(y,x) [reflexión en y=x]; flip_x
-// refleja en el eje x (x,y)→(x,−y) —el ESPEJO real de una curva—; flip_y en el
-// eje y (x,y)→(−x,y). La reflexión es respecto al origen; la posición absoluta se
-// reabsorbe en `concat` (que re-suelda) y en `fit` (que usa el bbox resultante).
+// Ops unarias (§9): transpose/flip_x/flip_y. La geometría vive en splines.cpp
+// (álgebra de datos, no de parseo); aquí solo se despacha sobre el path evaluado.
 struct PathUnary : PathExpr {
   enum Op { TRANSPOSE, FLIP_X, FLIP_Y } op = TRANSPOSE;
   PathExprPtr arg;
   Path evalPath(Scope &s) const override {
     Path p = arg->evalPath(s);
-    for (auto &pt : p) {
-      if (op == TRANSPOSE)   { double t = pt.x; pt.x = pt.y; pt.y = t; }
-      else if (op == FLIP_X) { pt.y = -pt.y; }
-      else                   { pt.x = -pt.x; }
-    }
-    return p;
+    if (op == TRANSPOSE) return transpose_path(p);
+    if (op == FLIP_X)    return flip_x_path(p);
+    return flip_y_path(p);
   }
 };
 
-// concat(a, b): suelda dos paths en uno continuo. Elige el emparejamiento de
-// extremos MÁS CERCANO (invierte a/b según convenga) y traslada b para que su
-// inicio coincida con el final de a. Así el usuario no hace reverse ni coloca, y
-// el resultado no depende de la orientación de los operandos —a diferencia de la
-// heurística por-x de concat_paths() (que comparte el front-end V1): p. ej. una
-// media curva H y su espejo flip_y(H) comparten el pico, y `concat(&H, flip_y(&H))`
-// los solda ahí, formando un perfil simétrico de UN pico central (§9).
+// concat(a, b): suelda dos paths en uno continuo (§9). La soldadura vive en
+// concat_paths() (splines.cpp) —álgebra de datos, no de parseo—: empareja los
+// extremos MÁS CERCANOS y re-suelda, de modo que p. ej. una media curva H y su
+// espejo flip_x(H), que comparten el pico, formen un perfil simétrico de UN pico
+// central con `concat(&H, flip_x(&H))`.
 struct PathConcat : PathExpr {
   PathExprPtr a, b;
-  static double dist2(const point &p, const point &q) {
-    double dx = p.x - q.x, dy = p.y - q.y; return dx * dx + dy * dy;
-  }
   Path evalPath(Scope &s) const override {
-    Path p1 = a->evalPath(s);
-    Path p2 = b->evalPath(s);
-    if (p1.empty()) return p2;
-    if (p2.empty()) return p1;
-    point a0 = p1.front(), a1 = p1.back(), b0 = p2.front(), b1 = p2.back();
-    double d[4] = { dist2(a1, b0), dist2(a1, b1), dist2(a0, b0), dist2(a0, b1) };
-    int best = 0;
-    for (int i = 1; i < 4; i++) if (d[i] < d[best]) best = i;
-    if (best == 2 || best == 3) std::reverse(p1.begin(), p1.end());   // p1 termina en el punto común
-    if (best == 1 || best == 3) std::reverse(p2.begin(), p2.end());   // p2 empieza en el punto común
-    point tail = p1.back(), head = p2.front();
-    double dx = tail.x - head.x, dy = tail.y - head.y;                // suelda (traslada b)
-    for (size_t i = 1; i < p2.size(); i++)                            // salta el punto duplicado
-      p1.push_back(point(p2[i].x + dx, p2[i].y + dy));
-    return p1;
+    return concat_paths(a->evalPath(s), b->evalPath(s));
   }
 };
 
