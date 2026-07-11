@@ -10,6 +10,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 #include "primitives.h"
 #include "Display.h"
+#include "markers.h"   // markerShapeForId / MarkerShape (resolución de la forma del Dot)
 
 
 void Polyline::draw(Display &g) {
@@ -106,11 +107,18 @@ void Dot::draw(Display &g) {
     case MR_MID:   lo = (n >= 2) ? 1 : n;     hi = (n >= 2) ? n - 1 : n;     break;
     case MR_LAST:  lo = (n >= 1) ? n - 1 : 0; hi = n;                        break;
   }
+  // Resuelve la forma UNA vez: struct del usuario (§B) o builtin del catálogo.
+  // El círculo builtin no pasa por marker() (usa g.dot(), un arco real).
+  bool useCircle = !has_custom && marker_id == MK_CIRCLE;
+  MarkerShape shape;
+  if (has_custom)       { shape.subpaths = custom_subpaths; shape.fillable = custom_fillable; }
+  else if (!useCircle)  shape = markerShapeForId(marker_id);
+
   for (std::size_t i = lo; i < hi; i++) {
     const point &p = path[i];
-    if (marker_id == MK_CIRCLE) { g.dot(p.x, p.y, r); continue; }   // círculo = arco real
+    if (useCircle) { g.dot(p.x, p.y, r); continue; }               // círculo = arco real
     point d = orient ? pathTangent(path, i) : point(0, 0);         // tangente local si se orienta
-    g.marker(p.x, p.y, marker_id, r, d.x, d.y);
+    g.marker(p.x, p.y, shape, r, d.x, d.y);
   }
 }
 

@@ -24,6 +24,7 @@ Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper.
 #include <vector>
 
 class MetaGrafica;
+struct MarkerShape;   // markers.h; el backend la consulta en marker()
 
 constexpr double point_to_cm =  0.03527777777777;
 constexpr double cm_to_point = 28.34645669291339;
@@ -107,8 +108,9 @@ public:
   // forma en unidades de dispositivo (tamaño `size`). (dirx,diry) es la tangente
   // EN MUNDO para orientar la forma; el backend la lleva a dispositivo por `mt`
   // (así respeta stretch y el flip); (0,0) = sin orientar. Relleno o contorno
-  // según el estado y si la forma es rellenable (markers.h).
-  virtual void marker(double x, double y, MarkerId id, double size, double dirx, double diry) = 0;
+  // según el estado y si la forma es rellenable. La forma (subtrayectos en caja
+  // unitaria) la resuelve el llamador: builtin (markers.h) o struct del usuario (§B).
+  virtual void marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) = 0;
 
   virtual void rect(double x1, double y1, double x2, double y2)=0;
 

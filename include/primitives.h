@@ -313,11 +313,21 @@ public:
   void setOrient(bool o) { orient = o; }
   void setRange(MarkerRange r_) { range = r_; }
 
+  // Marcador definido por una struct del usuario (§B): en vez de un MarkerId del
+  // catálogo, lleva sus subtrayectos crudos (caja del propio struct; ancla = su
+  // origen, sin recentrar). Recorren EL MISMO camino físico que los builtin.
+  void setCustomShape(std::vector<Path> subs, bool fill) {
+    custom_subpaths = std::move(subs); custom_fillable = fill; has_custom = true;
+  }
+
 private:
   double r = 1;
   MarkerId marker_id = MK_CIRCLE;
   bool orient = false;         // §B.3: orienta la forma a la tangente local del path
   MarkerRange range = MR_ALL;  // §4.11: subconjunto de vértices a marcar (start/mid/end)
+  std::vector<Path> custom_subpaths;   // §B: geometría de un marcador-struct (vacío = builtin)
+  bool custom_fillable = false;
+  bool has_custom = false;
 };
 
 class Attribute : public GraphicsItem {

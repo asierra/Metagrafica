@@ -30,8 +30,11 @@ struct Marco() {
 struct Flechas() {
     world_window 0 2.2 0 1
     line_width 0.2
-    repeat(Arrowr, scale=0.02, count=9, at=(0.24, 0.1), advance=(0, 0.1))
-    repeat(Arrowr, scale=0.02, count=9, at=(1.52, 0.1), advance=(0, 0.1))
+    for i = 0 to 8 {
+        y = .1 + i*0.1
+        polyline(marker_end="Arrowr", marker_size=3) { .01 y .28 y }
+        polyline(marker_end="Arrowr", marker_size=3) { 1.3 y 1.58 y }
+    }    
 }
 
 % Base común de ambos paneles: pantallas + haz de electrones.

@@ -74,7 +74,7 @@ class EPSDisplay: public Display {
   void setFontFace(FontFace face) override;
   void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
   void dot(double x, double y, double r) override;
-  void marker(double x, double y, MarkerId id, double size, double dirx, double diry) override;
+  void marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) override;
 
   void deviceTranslate(double x, double y) override;
   void deviceScale(double x, double y) override;

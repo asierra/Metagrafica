@@ -1102,6 +1102,32 @@ struct SineStmt : Stmt {
   }
 };
 
+// Marcador definido por una struct del usuario (§B): ejecuta el cuerpo del struct
+// a una lista temporal y recoge los subtrayectos de sus polyline/polygon como
+// geometría del marcador (caja del propio struct; ancla = su origen, sin recentrar
+// —se ajusta editando las coords del struct). Solo geometría poligonal por ahora;
+// arcos/texto/nested vienen después. false si el nombre no es una struct o no
+// aporta geometría. (world_window del cuerpo va a localWindow, no muta mg.)
+static bool markerShapeFromStruct(Scope &s, MetaGrafica &mg, const std::string &name,
+                                  std::vector<Path> &subpaths, bool &fillable) {
+  auto it = g_structs.find(name);
+  if (it == g_structs.end()) return false;
+  StructDef *def = it->second.get();
+  Scope local(s.root());
+  for (size_t i = 0; i < def->params.size(); i++)
+    local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
+  GraphicsItemList tmp;
+  for (auto &st : def->body) st->exec(local, mg, tmp);
+  fillable = false;
+  for (auto &gi : tmp) {
+    GraphicsItemType t = gi->getType();
+    if (t != GI_POLYLINE && t != GI_POLYGON) continue;   // bezier = puntos de control, no on-curve
+    subpaths.push_back(static_cast<GraphicsItemWithPath *>(gi.get())->getPath());
+    if (t == GI_POLYGON) fillable = true;                 // polygon = relleno; polyline = contorno
+  }
+  return !subpaths.empty();
+}
+
 struct PrimStmt : Stmt {
   std::string name;
   std::vector<ExprPtr> pos;               // args posicionales
@@ -1126,7 +1152,7 @@ struct PrimStmt : Stmt {
     return path;
   }
 
-  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
     // polyline/polygon/bezier admiten subtrayectos disjuntos separados por ';'
     // (§4): un item por subtrayecto, mismo estilo (distinto de compound, §9.4,
     // que combina en un solo relleno par-impar). El resto de primitivas ignora
@@ -1235,14 +1261,14 @@ struct PrimStmt : Stmt {
       for (auto &it : items) out.push_back(std::move(it));
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
-    emitMarkers(s, out, markerPaths);   // §4.11: marcadores sobre la ruta (encima)
+    emitMarkers(s, mg, out, markerPaths);   // §4.11: marcadores sobre la ruta (encima)
   }
 
   // Marcadores (§4.11) sobre polyline: tras la ruta, dispersa Dot(s) en los
   // vértices de cada subtrayecto según el canal (start/mid/end, o `marker`=todos),
   // con el MISMO path (la tangente se calcula completa). Heredan estado ambiente y
   // relleno negro por default (como dot); su tamaño es FÍSICO (marker_size, def 4).
-  void emitMarkers(Scope &s, GraphicsItemList &out, const std::vector<Path> &paths) const {
+  void emitMarkers(Scope &s, MetaGrafica &mg, GraphicsItemList &out, const std::vector<Path> &paths) const {
     if (paths.empty()) return;
     // Override global de orientación; por default la flecha se orienta (§B.3).
     int orientOv = 0;   // 0=por forma (arrow→auto), +1=auto, -1=fixed
@@ -1258,12 +1284,21 @@ struct PrimStmt : Stmt {
     auto emit = [&](MarkerRange range, const Expr *e) {
       std::string nm = e->eval(s).str;
       MarkerId id;
-      if (!markerIdForName(nm, id)) { evalError("marcador desconocido: ", nm); return; }
-      bool orient = (orientOv > 0) || (orientOv == 0 && id == MK_ARROW);
+      bool builtin = markerIdForName(nm, id);
+      std::vector<Path> subs; bool fillable = false;
+      if (!builtin && !markerShapeFromStruct(s, mg, nm, subs, fillable)) {
+        evalError("marcador desconocido (ni builtin ni struct): ", nm); return;
+      }
+      // Orientación: builtin sigue el default por forma (arrow→auto); una struct
+      // no se sabe "flecha", así que default fixed salvo marker_orient="auto" (§B.3).
+      bool orient = builtin ? ((orientOv > 0) || (orientOv == 0 && id == MK_ARROW))
+                            : (orientOv > 0);
       for (const Path &p : paths) {
         auto d = std::make_unique<Dot>();
         d->setPath(p);          // copia: comparte la forma del subtrayecto
-        d->setMarker(id); d->setRange(range); d->setOrient(orient); d->setRadius(msize);
+        if (builtin) d->setMarker(id);
+        else         d->setCustomShape(subs, fillable);
+        d->setRange(range); d->setOrient(orient); d->setRadius(msize);
         mk.push_back(std::move(d));
       }
     };

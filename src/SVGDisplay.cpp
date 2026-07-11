@@ -465,7 +465,7 @@ void SVGDisplay::dot(double x, double y, double r) {
     }
 }
 
-void SVGDisplay::marker(double x, double y, MarkerId id, double size, double dirx, double diry) {
+void SVGDisplay::marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) {
     // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), en cada
     // subtrayecto de markers.h. Rellenable (cuadrado/rombo/flecha) -> <polygon>
     // con el color de relleno; no-rellenable (cruz/x) -> <polyline> sin relleno,
@@ -483,7 +483,6 @@ void SVGDisplay::marker(double x, double y, MarkerId id, double size, double dir
         mt.transform(bx, by);
         angle = atan2(by - ay, bx - ax);
     }
-    MarkerShape shape = markerShapeForId(id);
     char colorBuf[10];
     double ca = cos(angle), sa = sin(angle);
     for (const auto &sub : shape.subpaths) {

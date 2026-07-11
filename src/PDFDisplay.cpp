@@ -447,7 +447,7 @@ void PDFDisplay::dot(double x, double y, double r) {
   HPDF_Page_GRestore(page);
 }
 
-void PDFDisplay::marker(double x, double y, MarkerId id, double size, double dirx, double diry) {
+void PDFDisplay::marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) {
   // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), en cada
   // subtrayecto de markers.h. Orientación: tangente EN MUNDO (dirx,diry)
   // transformada por el marco (dos puntos), ángulo visual en dispositivo (respeta
@@ -461,7 +461,6 @@ void PDFDisplay::marker(double x, double y, MarkerId id, double size, double dir
     mt.transform(bx, by);
     angle = atan2(by - ay, bx - ax);
   }
-  MarkerShape shape = markerShapeForId(id);
   double ca = cos(angle), sa = sin(angle);
   bool doFill = shape.fillable && dspstate.fill;
   for (const auto &sub : shape.subpaths) {

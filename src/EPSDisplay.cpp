@@ -456,7 +456,7 @@ void EPSDisplay::dot(double x, double y, double r) {
   stroke();
 }
 
-void EPSDisplay::marker(double x, double y, MarkerId id, double size, double dirx, double diry) {
+void EPSDisplay::marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) {
   // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), en cada
   // subtrayecto de markers.h. La orientación sale de la tangente EN MUNDO
   // (dirx,diry) transformada por el marco (dos puntos: ancla y ancla+dir), así el
@@ -470,7 +470,6 @@ void EPSDisplay::marker(double x, double y, MarkerId id, double size, double dir
     mt.transform(bx, by);
     angle = atan2(by - ay, bx - ax);
   }
-  MarkerShape shape = markerShapeForId(id);
   bool saved_fill = dspstate.fill;
   if (!shape.fillable) dspstate.fill = false;
   double ca = cos(angle), sa = sin(angle);
