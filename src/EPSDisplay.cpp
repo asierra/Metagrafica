@@ -310,46 +310,44 @@ void EPSDisplay::useFillPattern() {
   fprintf(file, "grestore\n");
 }
 
-// ¿El run FN_TEX_CMMI es griego? (todos sus bytes están en cmmiUnicode, es decir,
-// son glifos del subset LM Math). Si no —dígitos/latinas dentro de $…$— NO están en
-// ese subset (griego+hbar) y deben ir a Times-Italic, no a /LMMath. Igual criterio
-// que SVG (isCmmiGreekRun) y PDF (§14). Cadena vacía = no.
-static bool isCmmiGreekRun(const string &s) {
-  if (s.empty()) return false;
-  const std::map<unsigned char, unsigned int> &m = cmmiUnicode();
-  for (unsigned char c : s)
-    if (m.find(c) == m.end()) return false;
-  return true;
-}
-
 void EPSDisplay::text(string s) {
-  // FN_TEX_CMMI mixto: setFontFace ya fijó /LMMath (correcto para el griego, que SÍ
-  // está en el subset). Pero los runs ASCII (E, dígitos del subíndice…) no tienen
-  // glifo en /LMMath → saldrían en blanco; se re-fijan a Times-Italic (aprox. de
-  // math itálico), como PDF/SVG. Se marca dev_face=Times-Italic para no desincronizar
-  // el guard: el próximo run cmmi (griego) re-fijará /LMMath por sí solo.
-  if (dspstate.fontFace == FN_TEX_CMMI && !isCmmiGreekRun(s)) {
+  // Emite un segmento (con la fuente ya fijada) usando el operador de alineación
+  // vigente. Escapa paréntesis primero.
+  auto emitSeg = [&](string seg) {
+    size_t pos = 0;
+    while ((pos = seg.find('(', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
+    pos = 0;
+    while ((pos = seg.find(')', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
+    if (dspstate.text_align == 1)      fprintf(file, "(%s) cshow\n", seg.c_str());
+    else if (dspstate.text_align == 2) fprintf(file, "(%s) rshow\n", seg.c_str());
+    else                               fprintf(file, "(%s) show\n", seg.c_str());
+  };
+
+  // FN_TEX_CMMI: un run puede MEZCLAR bytes griegos (∈ cmmiUnicode, glifos del
+  // subset LM Math → /LMMath, embebida) y ASCII (E, dígitos, ' V = W'… que NO están
+  // en ese subset griego+hbar → Times-Italic, aprox. de math itálico). P.ej.
+  // "\Delta V": sin partir, el byte griego 162 saldría en Times-Italic (= ¢) o el
+  // ASCII en /LMMath (= blanco). Se parte en segmentos homogéneos, cada uno con su
+  // fuente (igual criterio que SVG por-byte y PDF). Alineación center/right sobre un
+  // run mixto queda por-segmento (limitación pre-existente del multi-run, rara).
+  if (dspstate.fontFace == FN_TEX_CMMI) {
+    const std::map<unsigned char, unsigned int> &gm = cmmiUnicode();
     string prefix = flags.using_reencode ? "/ISO" : "/";
-    fprintf(file, "%sTimes-Italic findfont %g scalefont setfont\n", prefix.c_str(), dev_size);
-    dev_face = FN_TIMES_ITALIC;
+    size_t i = 0, n = s.size();
+    while (i < n) {
+      bool greek = gm.count((unsigned char)s[i]) > 0;
+      size_t j = i;
+      while (j < n && (gm.count((unsigned char)s[j]) > 0) == greek) j++;
+      if (greek) fprintf(file, "/LMMath findfont %g scalefont setfont\n", dev_size);
+      else       fprintf(file, "%sTimes-Italic findfont %g scalefont setfont\n", prefix.c_str(), dev_size);
+      emitSeg(s.substr(i, j - i));
+      i = j;
+    }
+    dev_face = FN_NOFACE;   // el dispositivo quedó en una fuente ad-hoc → re-sincroniza
+    return;
   }
-  // escape parentheses
-  size_t pos = 0;
-  while ((pos=s.find('(', pos))!=std::string::npos) {
-    s.insert(pos, "\\");
-    pos += 2;
-  }
-  pos = 0;
-  while ((pos=s.find(')', pos))!=std::string::npos) {
-    s.insert(pos, "\\");
-    pos += 2;
-  }
-  if (dspstate.text_align == 1)
-    fprintf(file, "(%s) cshow\n", s.c_str());
-  else if (dspstate.text_align == 2)
-    fprintf(file, "(%s) rshow\n", s.c_str());
-  else
-    fprintf(file, "(%s) show\n", s.c_str());
+
+  emitSeg(std::move(s));
 }
 
 void EPSDisplay::getTextSize(string s, double *w, double *h) {}

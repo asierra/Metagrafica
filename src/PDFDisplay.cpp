@@ -537,22 +537,36 @@ void PDFDisplay::text(string s) {
   // FN_TEX_CMMI: el griego se traduce a su codepoint Unicode (cmmiUnicode) y se
   // dibuja con Latin Modern Math por la ruta UTF-8 (mismos glifos CM que EPS/SVG);
   // los latinos (no están en la tabla) caen a Times-Italic como aprox. de math
-  // itálico. (Los símbolos de map_symbol siguen en Symbol; pendiente P1 del plan.)
-  HPDF_Font use_font = current_font;
-  string s_out = s;
-  if (dspstate.fontFace == FN_TEX_CMMI && s.size() == 1) {
+  // itálico. Un run puede MEZCLAR ambos (p.ej. "\Delta V"): se parte en segmentos
+  // homogéneos, cada uno con su fuente, para que el byte griego no caiga en
+  // Times-Italic (= ¢) ni el ASCII en LM Math (= .notdef). Igual criterio que EPS/SVG.
+  // (Los símbolos de map_symbol siguen en Symbol; pendiente P1 del plan.)
+  struct Seg { HPDF_Font font; string txt; };
+  std::vector<Seg> segs;
+  if (dspstate.fontFace == FN_TEX_CMMI) {
     const auto &cu = cmmiUnicode();
-    auto it = cu.find((unsigned char)s[0]);
-    if (it != cu.end() && lmmath_face) {
-      unsigned int cp = it->second;      // griego/hbar: todos en U+0800..U+FFFF (3 bytes UTF-8)
-      s_out.clear();
-      s_out += (char)(0xE0 | (cp >> 12));
-      s_out += (char)(0x80 | ((cp >> 6) & 0x3F));
-      s_out += (char)(0x80 | (cp & 0x3F));
-      use_font = HPDF_GetFont(pdf, lmmath_face, "UTF-8");
-    } else {
-      use_font = HPDF_GetFont(pdf, "Times-Italic", "WinAnsiEncoding");
+    auto isGreek = [&](unsigned char c) { return lmmath_face && cu.count(c) > 0; };
+    size_t i = 0, n = s.size();
+    while (i < n) {
+      bool greek = isGreek((unsigned char)s[i]);
+      size_t j = i;
+      while (j < n && isGreek((unsigned char)s[j]) == greek) j++;
+      if (greek) {
+        string u;                          // UTF-8 de cada codepoint griego (U+0800..U+FFFF)
+        for (size_t k = i; k < j; k++) {
+          unsigned int cp = cu.at((unsigned char)s[k]);
+          u += (char)(0xE0 | (cp >> 12));
+          u += (char)(0x80 | ((cp >> 6) & 0x3F));
+          u += (char)(0x80 | (cp & 0x3F));
+        }
+        segs.push_back({ HPDF_GetFont(pdf, lmmath_face, "UTF-8"), u });
+      } else {
+        segs.push_back({ HPDF_GetFont(pdf, "Times-Italic", "WinAnsiEncoding"), s.substr(i, j - i) });
+      }
+      i = j;
     }
+  } else {
+    segs.push_back({ current_font, s });
   }
 
   // El texto debe usar el color de trazo (linecolor), no el fill color de shapes.
@@ -564,21 +578,20 @@ void PDFDisplay::text(string s) {
     HPDF_Page_SetGrayFill(page, dspstate.linegray);
   }
 
-  HPDF_Page_SetFontAndSize(page, use_font, size);
-  double tw = HPDF_Page_TextWidth(page, s_out.c_str());
-
-  double tx = cur_x;
-  if (dspstate.text_align == 1)      tx -= tw / 2.0f;
-  else if (dspstate.text_align == 2) tx -= tw;
-
-  HPDF_Page_BeginText(page);
-  HPDF_Page_SetFontAndSize(page, use_font, size);
-  HPDF_Page_MoveTextPos(page, tx, cur_y);
-  HPDF_Page_ShowText(page, s_out.c_str());
-  HPDF_Page_EndText(page);
-
-  // Avanzar cur_x para el siguiente segmento de la misma línea de texto
-  cur_x = tx + tw;
+  // Dibuja los segmentos en secuencia, avanzando cur_x. La alineación center/right
+  // se aplica por-segmento (multi-run centrado ya era aproximado; caso raro).
+  for (const Seg &seg : segs) {
+    HPDF_Page_SetFontAndSize(page, seg.font, size);
+    double tw = HPDF_Page_TextWidth(page, seg.txt.c_str());
+    double tx = cur_x;
+    if (dspstate.text_align == 1)      tx -= tw / 2.0f;
+    else if (dspstate.text_align == 2) tx -= tw;
+    HPDF_Page_BeginText(page);
+    HPDF_Page_MoveTextPos(page, tx, cur_y);
+    HPDF_Page_ShowText(page, seg.txt.c_str());
+    HPDF_Page_EndText(page);
+    cur_x = tx + tw;                        // siguiente segmento de la misma línea
+  }
 
   // Restaurar fill color para shapes posteriores
   applyFillColor();

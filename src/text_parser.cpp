@@ -446,7 +446,14 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       if (!math_mode) {
         textflush();
         tspush();
-        text_state.font_face = FN_TEX_CMMI;
+        // Cara por DEFECTO del math = itálica (variables latinas: E, W, V…). El
+        // griego entra por \comando como FN_TEX_CMMI en un run AISLADO (add_symbol
+        // hace tspush/flush/tspop), así NO se fusiona con el latino vecino. Antes el
+        // default era FN_TEX_CMMI: "\Delta V" salía como UN run mixto → el byte
+        // griego caía en Times-Italic (=¢) en EPS/PDF, y en SVG el ancho cmmi
+        // descuadraba el subíndice siguiente. Con caras distintas, cada run es
+        // homogéneo (griego→LM Math, latino→Times-Italic) en los tres backends.
+        text_state.font_face = FN_TIMES_ITALIC;
         math_mode = true;
       } else {
         textflush();
