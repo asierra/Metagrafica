@@ -1,5 +1,6 @@
 #include "EPSDisplay.h"
 #include "markers.h"
+#include "text_parser.h"   // cmmiUnicode(): byte cmmi -> Unicode (griego vs ASCII)
 #include <math.h>
 #include <stdlib.h>
 
@@ -309,7 +310,29 @@ void EPSDisplay::useFillPattern() {
   fprintf(file, "grestore\n");
 }
 
+// ¿El run FN_TEX_CMMI es griego? (todos sus bytes están en cmmiUnicode, es decir,
+// son glifos del subset LM Math). Si no —dígitos/latinas dentro de $…$— NO están en
+// ese subset (griego+hbar) y deben ir a Times-Italic, no a /LMMath. Igual criterio
+// que SVG (isCmmiGreekRun) y PDF (§14). Cadena vacía = no.
+static bool isCmmiGreekRun(const string &s) {
+  if (s.empty()) return false;
+  const std::map<unsigned char, unsigned int> &m = cmmiUnicode();
+  for (unsigned char c : s)
+    if (m.find(c) == m.end()) return false;
+  return true;
+}
+
 void EPSDisplay::text(string s) {
+  // FN_TEX_CMMI mixto: setFontFace ya fijó /LMMath (correcto para el griego, que SÍ
+  // está en el subset). Pero los runs ASCII (E, dígitos del subíndice…) no tienen
+  // glifo en /LMMath → saldrían en blanco; se re-fijan a Times-Italic (aprox. de
+  // math itálico), como PDF/SVG. Se marca dev_face=Times-Italic para no desincronizar
+  // el guard: el próximo run cmmi (griego) re-fijará /LMMath por sí solo.
+  if (dspstate.fontFace == FN_TEX_CMMI && !isCmmiGreekRun(s)) {
+    string prefix = flags.using_reencode ? "/ISO" : "/";
+    fprintf(file, "%sTimes-Italic findfont %g scalefont setfont\n", prefix.c_str(), dev_size);
+    dev_face = FN_TIMES_ITALIC;
+  }
   // escape parentheses
   size_t pos = 0;
   while ((pos=s.find('(', pos))!=std::string::npos) {
