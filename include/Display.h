@@ -104,9 +104,11 @@ public:
   virtual void dot(double x, double y, double r)=0;
 
   // Dibuja un marcador físico (§4.11 marcadores): ancla transformada por el marco,
-  // forma en unidades de dispositivo (tamaño `size`), rotada `angle` rad. Relleno o
-  // contorno según el estado y si la forma es rellenable (markers.h).
-  virtual void marker(double x, double y, MarkerId id, double size, double angle) = 0;
+  // forma en unidades de dispositivo (tamaño `size`). (dirx,diry) es la tangente
+  // EN MUNDO para orientar la forma; el backend la lleva a dispositivo por `mt`
+  // (así respeta stretch y el flip); (0,0) = sin orientar. Relleno o contorno
+  // según el estado y si la forma es rellenable (markers.h).
+  virtual void marker(double x, double y, MarkerId id, double size, double dirx, double diry) = 0;
 
   virtual void rect(double x1, double y1, double x2, double y2)=0;
 

@@ -465,16 +465,24 @@ void SVGDisplay::dot(double x, double y, double r) {
     }
 }
 
-void SVGDisplay::marker(double x, double y, MarkerId id, double size, double angle) {
-    // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), rotada
-    // angle rad, en cada subtrayecto de markers.h. Rellenable (cuadrado/rombo/
-    // flecha) -> <polygon> con el color de relleno; no-rellenable (cruz/x) ->
-    // <polyline> sin relleno, trazo en color de línea (igual convención que dot).
-    // NOTA: hay un flip global scale(1,-1) en el <g> raíz; con angle=0 y estas
-    // formas simétricas en y el flip es invisible, pero cuando se añada
-    // orientación tangente habrá que revisar el signo de rotación (como el
-    // fix rotate(90-a) del tramado).
-    mt.transform(x, y);
+void SVGDisplay::marker(double x, double y, MarkerId id, double size, double dirx, double diry) {
+    // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), en cada
+    // subtrayecto de markers.h. Rellenable (cuadrado/rombo/flecha) -> <polygon>
+    // con el color de relleno; no-rellenable (cruz/x) -> <polyline> sin relleno,
+    // trazo en color de línea (igual convención que dot).
+    // El ángulo se calcula transformando la tangente EN MUNDO (dirx,diry) por el
+    // marco (dos puntos), en el MISMO espacio mt donde se emiten las coordenadas.
+    // Por eso el flip global scale(1,-1) del <g> raíz no requiere corrección de
+    // signo: espeja la forma y su orientación juntas (a diferencia de un rotate()
+    // como atributo SVG, que sí operaría en el espacio ya flipeado).
+    double ax = x, ay = y;
+    mt.transform(ax, ay);
+    double angle = 0;
+    if (dirx != 0 || diry != 0) {
+        double bx = x + dirx, by = y + diry;
+        mt.transform(bx, by);
+        angle = atan2(by - ay, bx - ax);
+    }
     MarkerShape shape = markerShapeForId(id);
     char colorBuf[10];
     double ca = cos(angle), sa = sin(angle);
@@ -482,8 +490,8 @@ void SVGDisplay::marker(double x, double y, MarkerId id, double size, double ang
         if (sub.empty()) continue;
         std::ostringstream pts;
         for (const auto &u : sub) {
-            double dx = x + size * (u.x * ca - u.y * sa);
-            double dy = y + size * (u.x * sa + u.y * ca);
+            double dx = ax + size * (u.x * ca - u.y * sa);
+            double dy = ay + size * (u.x * sa + u.y * ca);
             pts << dx << "," << dy << " ";
         }
         if (shape.fillable && dspstate.fill) {

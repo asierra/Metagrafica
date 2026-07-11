@@ -447,11 +447,20 @@ void PDFDisplay::dot(double x, double y, double r) {
   HPDF_Page_GRestore(page);
 }
 
-void PDFDisplay::marker(double x, double y, MarkerId id, double size, double angle) {
-  // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), rotada
-  // angle rad, en cada subtrayecto de markers.h. Rellenable (cuadrado/rombo/
-  // flecha) -> Fill; no-rellenable (cruz/x) -> Stroke, igual convención que dot.
-  mt.transform(x, y);
+void PDFDisplay::marker(double x, double y, MarkerId id, double size, double dirx, double diry) {
+  // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), en cada
+  // subtrayecto de markers.h. Orientación: tangente EN MUNDO (dirx,diry)
+  // transformada por el marco (dos puntos), ángulo visual en dispositivo (respeta
+  // stretch). Rellenable (cuadrado/rombo/flecha) -> Fill; no-rellenable (cruz/x)
+  // -> Stroke, igual convención que dot.
+  double ax = x, ay = y;
+  mt.transform(ax, ay);
+  double angle = 0;
+  if (dirx != 0 || diry != 0) {
+    double bx = x + dirx, by = y + diry;
+    mt.transform(bx, by);
+    angle = atan2(by - ay, bx - ax);
+  }
   MarkerShape shape = markerShapeForId(id);
   double ca = cos(angle), sa = sin(angle);
   bool doFill = shape.fillable && dspstate.fill;
@@ -468,8 +477,8 @@ void PDFDisplay::marker(double x, double y, MarkerId id, double size, double ang
     }
     bool first = true;
     for (const auto &u : sub) {
-      double dx = x + size * (u.x * ca - u.y * sa);
-      double dy = y + size * (u.x * sa + u.y * ca);
+      double dx = ax + size * (u.x * ca - u.y * sa);
+      double dy = ay + size * (u.x * sa + u.y * ca);
       if (first) { HPDF_Page_MoveTo(page, dx, dy); first = false; }
       else       HPDF_Page_LineTo(page, dx, dy);
     }

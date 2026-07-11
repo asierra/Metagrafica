@@ -456,12 +456,20 @@ void EPSDisplay::dot(double x, double y, double r) {
   stroke();
 }
 
-void EPSDisplay::marker(double x, double y, MarkerId id, double size, double angle) {
-  // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), rotada
-  // angle rad, en cada subtrayecto de markers.h. Reutiliza stroke() como dot();
-  // las formas no-rellenables (cruz/x) fuerzan fill=false porque su geometría
-  // no describe un contorno cerrado.
-  mt.transform(x, y);
+void EPSDisplay::marker(double x, double y, MarkerId id, double size, double dirx, double diry) {
+  // Marcadores físicos (§4.11): forma en unidades de dispositivo (size), en cada
+  // subtrayecto de markers.h. La orientación sale de la tangente EN MUNDO
+  // (dirx,diry) transformada por el marco (dos puntos: ancla y ancla+dir), así el
+  // ángulo es el visual en dispositivo (respeta stretch). Reutiliza stroke() como
+  // dot(); las formas no-rellenables (cruz/x) fuerzan fill=false.
+  double ax = x, ay = y;
+  mt.transform(ax, ay);
+  double angle = 0;
+  if (dirx != 0 || diry != 0) {
+    double bx = x + dirx, by = y + diry;
+    mt.transform(bx, by);
+    angle = atan2(by - ay, bx - ax);
+  }
   MarkerShape shape = markerShapeForId(id);
   bool saved_fill = dspstate.fill;
   if (!shape.fillable) dspstate.fill = false;
@@ -471,8 +479,8 @@ void EPSDisplay::marker(double x, double y, MarkerId id, double size, double ang
     fprintf(file, "newpath\n");
     bool first = true;
     for (const auto &u : sub) {
-      double dx = x + size * (u.x * ca - u.y * sa);
-      double dy = y + size * (u.x * sa + u.y * ca);
+      double dx = ax + size * (u.x * ca - u.y * sa);
+      double dy = ay + size * (u.x * sa + u.y * ca);
       fprintf(file, "%f %f %s\n", dx, dy, first ? "moveto" : "lineto");
       first = false;
     }

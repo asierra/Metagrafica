@@ -169,6 +169,17 @@ struct point {
 
 using Path = std::vector<point>;
 
+// Tangente por diferencia sobre un path: central en interiores, unilateral en
+// extremos. Devuelve el vector dirección (sin normalizar); (0,0) si n<2. Misma
+// convención que StructurePath::draw (§C.1); la comparten dot y los placements.
+inline point pathTangent(const Path &path, std::size_t i) {
+  const std::size_t n = path.size();
+  if (n < 2) return point(0, 0);
+  if (i == 0)     return path[1] - path[0];
+  if (i == n - 1) return path[n - 1] - path[n - 2];
+  return path[i + 1] - path[i - 1];
+}
+
 /**
    Descriptor de patrón de relleno (tramado), independiente del dispositivo.
    Sigue el modelo del formato .pat de AutoCAD: un patrón es una o más familias
@@ -285,6 +296,12 @@ private:
 // aquí solo el identificador, para que Dot lo cargue sin ciclo de includes.
 enum MarkerId { MK_CIRCLE, MK_SQUARE, MK_DIAMOND, MK_CROSS, MK_X, MK_ARROW };
 
+// Rango de vértices donde un Dot dispersa su marcador (§4.11 marker_start/mid/end):
+// todo el path, o solo el primero / interiores / último. La tangente se calcula
+// SIEMPRE con el path COMPLETO (por eso es un rango, no un path recortado: recortar
+// perdería la orientación en los extremos). first/mid/last particionan [0,n).
+enum MarkerRange { MR_ALL, MR_FIRST, MR_MID, MR_LAST };
+
 class Dot : public GraphicsItemWithPath {
 public:
   Dot() : GraphicsItemWithPath(GI_DOT) { }
@@ -293,10 +310,14 @@ public:
 
   void setRadius(double x) { r = x;  }
   void setMarker(MarkerId m) { marker_id = m; }
+  void setOrient(bool o) { orient = o; }
+  void setRange(MarkerRange r_) { range = r_; }
 
 private:
   double r = 1;
   MarkerId marker_id = MK_CIRCLE;
+  bool orient = false;         // §B.3: orienta la forma a la tangente local del path
+  MarkerRange range = MR_ALL;  // §4.11: subconjunto de vértices a marcar (start/mid/end)
 };
 
 class Attribute : public GraphicsItem {

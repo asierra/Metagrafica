@@ -97,9 +97,20 @@ void Arc::draw(Display &g) {
 }
 
 void Dot::draw(Display &g) {
-  for (const auto &p : path) {
-    if (marker_id == MK_CIRCLE) g.dot(p.x, p.y, r);   // círculo = arco real (calidad)
-    else                        g.marker(p.x, p.y, marker_id, r, 0.0);
+  const std::size_t n = path.size();
+  // Rango de índices a dibujar (§4.11 start/mid/end); la tangente usa el path COMPLETO.
+  std::size_t lo = 0, hi = n;
+  switch (range) {
+    case MR_ALL:   lo = 0;                    hi = n;                        break;
+    case MR_FIRST: lo = 0;                    hi = (n >= 1) ? 1 : 0;         break;
+    case MR_MID:   lo = (n >= 2) ? 1 : n;     hi = (n >= 2) ? n - 1 : n;     break;
+    case MR_LAST:  lo = (n >= 1) ? n - 1 : 0; hi = n;                        break;
+  }
+  for (std::size_t i = lo; i < hi; i++) {
+    const point &p = path[i];
+    if (marker_id == MK_CIRCLE) { g.dot(p.x, p.y, r); continue; }   // círculo = arco real
+    point d = orient ? pathTangent(path, i) : point(0, 0);         // tangente local si se orienta
+    g.marker(p.x, p.y, marker_id, r, d.x, d.y);
   }
 }
 

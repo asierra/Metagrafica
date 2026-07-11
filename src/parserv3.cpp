@@ -1078,6 +1078,13 @@ struct PrimStmt : Stmt {
     // que combina en un solo relleno par-impar). El resto de primitivas ignora
     // los ';' (no aplican: rectangle=pares, dot=posiciones, circle/arc=centros).
     std::vector<std::unique_ptr<GraphicsItem>> items;
+    // Marcadores en polyline (§4.11): si se piden, guardamos una copia de cada
+    // subtrayecto para dispersar Dot(s) sobre el mismo path tras dibujar la ruta.
+    // (polygon/bezier: segunda pasada; bezier además tiene puntos de control.)
+    bool wantMarkers = (name == "polyline") &&
+        (named.count("marker") || named.count("marker_start") ||
+         named.count("marker_mid") || named.count("marker_end"));
+    std::vector<Path> markerPaths;
     GraphicsItemType poly = GI_POLYLINE;
     bool isPoly = true;
     if      (name == "polyline") poly = GI_POLYLINE;
@@ -1092,6 +1099,7 @@ struct PrimStmt : Stmt {
       bool closed = named.count("closed") && named.at("closed")->eval(s).num != 0.0;
       Path path = pathArg->evalPath(s);
       if (!path.empty()) {
+        if (wantMarkers) markerPaths.push_back(path);
         auto p = std::make_unique<Polyline>(poly);
         p->setPath(std::move(path));
         p->setClosed(closed);
@@ -1107,6 +1115,7 @@ struct PrimStmt : Stmt {
         Path path = evalPath(s, start, end);
         start = end;
         if (path.empty()) return;
+        if (wantMarkers) markerPaths.push_back(path);
         auto p = std::make_unique<Polyline>(poly);
         p->setPath(std::move(path));
         p->setClosed(closed);
@@ -1122,13 +1131,24 @@ struct PrimStmt : Stmt {
         auto p = std::make_unique<Dot>();
         p->setRadius(posOr(s, 0, namedOr(s, "size", 1)));
         // marker= (§4.11): forma física alterna al círculo (square/diamond/cross/x/arrow).
+        MarkerId mid = MK_CIRCLE;
         auto mit = named.find("marker");
         if (mit != named.end()) {
-          MarkerId mid;
           std::string mname = mit->second->eval(s).str;
           if (markerIdForName(mname, mid)) p->setMarker(mid);
           else evalError("marcador desconocido: ", mname);
         }
+        // Orientación (§B.3): la flecha se orienta a la tangente local por default;
+        // el resto queda fijo. Sobreescribible con marker_orient="auto"|"fixed".
+        bool orient = (mid == MK_ARROW);
+        auto oit = named.find("marker_orient");
+        if (oit != named.end()) {
+          std::string ov = oit->second->eval(s).str;
+          if (ov == "auto") orient = true;
+          else if (ov == "fixed") orient = false;
+          else evalError("marker_orient debe ser \"auto\" o \"fixed\": ", ov);
+        }
+        p->setOrient(orient);
         p->setPath(path); item = std::move(p);
       }
       else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
@@ -1155,11 +1175,81 @@ struct PrimStmt : Stmt {
     }
     if (attrs.empty()) {
       for (auto &it : items) out.push_back(std::move(it));
-      return;
+    } else {
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      for (auto &a : attrs) out.push_back(std::move(a));
+      for (auto &it : items) out.push_back(std::move(it));
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
+    emitMarkers(s, out, markerPaths);   // §4.11: marcadores sobre la ruta (encima)
+  }
+
+  // Marcadores (§4.11) sobre polyline: tras la ruta, dispersa Dot(s) en los
+  // vértices de cada subtrayecto según el canal (start/mid/end, o `marker`=todos),
+  // con el MISMO path (la tangente se calcula completa). Heredan estado ambiente y
+  // relleno negro por default (como dot); su tamaño es FÍSICO (marker_size, def 4).
+  void emitMarkers(Scope &s, GraphicsItemList &out, const std::vector<Path> &paths) const {
+    if (paths.empty()) return;
+    // Override global de orientación; por default la flecha se orienta (§B.3).
+    int orientOv = 0;   // 0=por forma (arrow→auto), +1=auto, -1=fixed
+    auto oit = named.find("marker_orient");
+    if (oit != named.end()) {
+      std::string ov = oit->second->eval(s).str;
+      if (ov == "auto") orientOv = 1;
+      else if (ov == "fixed") orientOv = -1;
+      else evalError("marker_orient debe ser \"auto\" o \"fixed\": ", ov);
+    }
+    double msize = namedOr(s, "marker_size", 4);
+    GraphicsItemList mk;
+    auto emit = [&](MarkerRange range, const Expr *e) {
+      std::string nm = e->eval(s).str;
+      MarkerId id;
+      if (!markerIdForName(nm, id)) { evalError("marcador desconocido: ", nm); return; }
+      bool orient = (orientOv > 0) || (orientOv == 0 && id == MK_ARROW);
+      for (const Path &p : paths) {
+        auto d = std::make_unique<Dot>();
+        d->setPath(p);          // copia: comparte la forma del subtrayecto
+        d->setMarker(id); d->setRange(range); d->setOrient(orient); d->setRadius(msize);
+        mk.push_back(std::move(d));
+      }
+    };
+    bool hasSpecific = named.count("marker_start") || named.count("marker_mid") || named.count("marker_end");
+    auto all = named.find("marker");
+    if (all != named.end() && !hasSpecific) {
+      emit(MR_ALL, all->second.get());                  // atajo: un Dot(MR_ALL) por subtrayecto
+    } else {
+      const Expr *fallback = (all != named.end()) ? all->second.get() : nullptr;  // `marker` rellena ausentes
+      auto chan = [&](const char *key, MarkerRange range) {
+        auto it = named.find(key);
+        if (it != named.end())  emit(range, it->second.get());
+        else if (fallback)      emit(range, fallback);
+      };
+      chan("marker_start", MR_FIRST);
+      chan("marker_mid",   MR_MID);
+      chan("marker_end",   MR_LAST);
+    }
+    if (mk.empty()) return;
+    // Alcance propio (§B.4): marker_color fija trazo+relleno (un valor sirve para
+    // formas rellenas y para cruz/x); marker_fill sobreescribe solo el relleno
+    // ("none" = abierto). Sin ninguno: relleno negro por default (como dot); el
+    // trazo (cruz/x) hereda el estado ambiente.
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
-    for (auto &a : attrs) out.push_back(std::move(a));
-    for (auto &it : items) out.push_back(std::move(it));
+    bool haveFill = named.count("marker_fill") != 0;
+    if (named.count("marker_color")) {
+      int c = colorFromValue(named.at("marker_color")->eval(s));
+      auto lc = std::make_unique<Attribute>(); lc->set(AT_LCOLOR, c); out.push_back(std::move(lc));
+      auto fc = std::make_unique<Attribute>(); fc->set(AT_FCOLOR, c); out.push_back(std::move(fc));
+    } else if (!haveFill) {
+      auto fc = std::make_unique<Attribute>(); fc->set(AT_FCOLOR, 0); out.push_back(std::move(fc));   // negro por default
+    }
+    bool open = false;
+    if (haveFill) {
+      Value fv = named.at("marker_fill")->eval(s);
+      if (fv.type == Value::STRING && fv.str == "none") open = true;   // abierto
+      else { auto fc = std::make_unique<Attribute>(); fc->set(AT_FCOLOR, colorFromValue(fv)); out.push_back(std::move(fc)); }
+    }
+    out.push_back(std::make_unique<GraphicsState>(open ? GS_NOFILL : GS_FILL));
+    for (auto &it : mk) out.push_back(std::move(it));
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
 };
