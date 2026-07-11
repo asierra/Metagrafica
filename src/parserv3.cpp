@@ -341,14 +341,15 @@ static bool emitStyleAttr(const std::string &name, const Value &v, GraphicsItemL
     auto at = std::make_unique<Attribute>(); at->set(AT_TVALIGN, a); out.push_back(std::move(at));
     return true;
 }
-  if (name == "dash") {                                             // §4.10: patrón de línea
-    int idx = 0;                                                    // solid/none/continuous → 0
+  if (name == "dash") {                             // §4.10: patrón de línea
+    int idx = 0;                                    // solid/none/continuous → 0
     if (v.type == Value::STRING) {
-      if (v.str == "longdashed") idx = 1;                               // dashArrayForIndex: {4,2}
+      if (v.str == "longdashed") idx = 1;          // dashArrayForIndex: {4,2}
       else if (v.str == "dashed") idx = 2;
       else if (v.str == "dotted") idx = 3;                          // {2,1.6}
       else if (v.str == "dashdot" || v.str == "dash-dot") idx = 4;  // {4,2,1,2}
       else if (v.str == "dashdotdot") idx = 5;                      // {4,2,2,2,2,2}
+      else if (v.str == "shortdashed") idx = 6;
     }
     auto a = std::make_unique<Attribute>(); a->set(AT_LSTYLE, idx); out.push_back(std::move(a));
     return true;

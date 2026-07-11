@@ -182,15 +182,15 @@ public:
   
   // Traduce el índice de patrón (V1: LPATRN n) al arreglo on/off en puntos.
   // Única fuente de verdad para los cinco patrones clásicos; V2 la reutiliza
-  // para sus alias ("dashed", "dotted", ...). idx 0 o 1 -> línea continua
-  // (en el motor V1, LPATRN 1 nunca se distinguió de LPATRN 0).
+  // para sus alias ("dashed", "dotted", ...). idx 0 -> línea continua
   static std::vector<double> dashArrayForIndex(int idx) {
     switch (idx) {
       case 1:  return {8, 2};
       case 2:  return {4, 2};
       case 3:  return {1, 1};
       case 4:  return {4, 2, 1, 2};
-      case 5:  return {4, 2, 1, 2, 1, 2};
+      case 5:  return {4, 2, 1, 2, 1, 2};   
+      case 6:  return {2, 2};
       default: return {};
     }
   }

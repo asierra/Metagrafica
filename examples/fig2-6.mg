@@ -57,7 +57,7 @@ polyline { 5.7 1.15  5.7 0  0 0  0 2.5  5.7 2.5  5.7 1.35 }
 
 % Detector girado 37° y a escala (V1 SCST .1 .1 + RTST 37)
 Detector(at=(7, -0.2), scale=0.2, rotate=37)
-dot(1.0) { 7 -0.2 }
+
 % Pila ajustada a su caja (V1 PWST)
 fit(Pila, stretch=true) { 2 -0.4  2.6 0 }
 
@@ -68,7 +68,7 @@ polyline { 8 1.25  8.9 1.25  7.19 -0.0552 }
 % Rayos catódicos (V1 TICKS punteados) — ⚠ params por calibrar
 {
 line_width 0.2
-dash "dashed"
+dash "shortdashed"
 for i = 0 to 9 {
   y = 0.8 + i*0.1
   % w se fija por defecto (8.9) y las ramas lo modifican: una asignación dentro
