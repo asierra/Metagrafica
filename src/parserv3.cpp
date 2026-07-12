@@ -1847,15 +1847,32 @@ static StmtPtr parseStatement(Lexer &lx) {
 
   if (lx.peek().type == T_LPAREN) return parseInvoke(lx, name);   // invocación: Nombre( … )
 
-  // Resto: sentencia de estado (color, line_width, …), argumentos hasta el
-  // fin de línea (T_NEWLINE). '}' también la corta (estado dentro de bloque).
+  // Resto: sentencia de estado (color, line_width, …). ARIDAD ACOTADA por nombre
+  // (antes leía "hasta T_NEWLINE", lo que se tragaba una sentencia escrita en el
+  // mismo renglón: `line_width 0.5  P()` → P() era arg de line_width). Así varias
+  // sentencias por línea funcionan, igual que translate/rotate (§11.1). Casi todas
+  // toman 1 arg; `hatch` 1-2 (ángulo/estilo + paso opcional); `outlinefill` 0-1.
   auto st = std::make_unique<StateStmt>();
   st->name = name;
-  while (lx.peek().type != T_NEWLINE && lx.peek().type != T_EOF && lx.peek().type != T_RBRACE) {
-    SArg a;
+  auto parseArg = [&](SArg &a) {
     if (lx.peek().type == T_STRING) { a.isStr = true; a.str = lx.next().str; }
-    else { a.isStr = false; a.num = parseTerm(lx); }
-    st->args.push_back(std::move(a));
+    else                            { a.isStr = false; a.num = parseTerm(lx); }
+  };
+  if (name == "outlinefill") {
+    // 0 o 1: bare = on; también `outlinefill true|false` (bareword → cadena) o un
+    // número/cadena. Un identificador que NO sea true/false se deja como la
+    // siguiente sentencia (no se consume).
+    int t = lx.peek().type;
+    if (t == T_IDENTIFIER && (lx.peek().str == "true" || lx.peek().str == "false")) {
+      SArg a; a.isStr = true; a.str = lx.next().str; st->args.push_back(std::move(a));
+    } else if (t == T_NUMBER || t == T_MINUS || t == T_STRING) {
+      SArg a; parseArg(a); st->args.push_back(std::move(a));
+    }
+  } else {
+    SArg a; parseArg(a); st->args.push_back(std::move(a));           // 1er arg (obligatorio)
+    if (name == "hatch" && (lx.peek().type == T_NUMBER || lx.peek().type == T_MINUS)) {
+      SArg g; parseArg(g); st->args.push_back(std::move(g));         // hatch: paso opcional
+    }
   }
   return st;
 }
