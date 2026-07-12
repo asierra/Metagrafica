@@ -10,13 +10,14 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MG="$ROOT/bin/mg"
-EXDIR="$ROOT/examples/v3"
+EXDIR="$ROOT/examples"
 GOLD="$ROOT/test/golden"
 
 FORMATS="eps svg"
 # Corpus V3 (post-cutover, §22.6): bin/mg ES el compilador V3. La red golden es
 # la salida del propio renderer V3 (regresión), no el oráculo V1 de migración.
-EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10 fill_styles line_patterns primitives rpstest sines"
+# El corpus vive en examples/ (raíz); PDF se verifica por vista, no por golden.
+EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10 fill_styles line_patterns markers-demo primitives rpstest sines texto"
 
 export LC_ALL=C
 
@@ -26,17 +27,6 @@ if [ "$MODE" != "capture" ] && [ "$MODE" != "check" ]; then
     echo "Usage: $0 [capture|check]" >&2
     exit 2
 fi
-
-# --- PAUSA DEL HARNESS (transición examples/v3 → examples/, 2026-07-09) ---------
-# El corpus V3 se movió a examples/ y se está corrigiendo a mano (las salidas ya
-# no están atadas al oráculo V1), así que la red golden está temporalmente
-# desconectada. Se re-cablea (ajustar EXDIR a "$ROOT/examples" y re-bendecir con
-# `capture`) cuando los ejemplos nuevos sean estables.
-# Para reactivar: borra este bloque hasta el marcador de FIN.
-echo "run.sh: harness EN PAUSA durante la migración examples/v3 → examples/ (salida omitida)." >&2
-echo "        Re-cablea EXDIR y corre 'capture' cuando los ejemplos sean estables." >&2
-exit 0
-# --- FIN PAUSA DEL HARNESS ------------------------------------------------------
 
 if [ ! -x "$MG" ]; then
     echo "error: binary not found or not executable: $MG (run 'make' first)" >&2
