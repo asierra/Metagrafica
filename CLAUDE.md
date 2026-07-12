@@ -64,9 +64,9 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 1. `GI_*` enum + subclass in `include/primitives.h`; 2. despacho por nombre en `parserv3.cpp` (`isPrim()` + `PrimStmt`, o un `Stmt`/`parse*` propio para sintaxis con bloque, p. ej. `axis`/`compound`); 3. `draw(Display&)` calling `Display` virtuals; 4. implement those in the three backends. *(V3 despacha las primitivas por su nombre-cadena en `parseStatement`, no por token del lexer; solo hace falta tocar `src/lexer.l` para símbolos/operadores nuevos, no para comandos.)*
 
-## Roadmap state (2026-07-09)
+## Roadmap state (act. 2026-07-11)
 
-El parser V3 (`src/parserv3.cpp`) compila los 15 ejemplos de `examples/` a EPS/SVG/PDF.
+El parser V3 (`src/parserv3.cpp`) compila los 16 ejemplos de `examples/` a EPS/SVG/PDF.
 Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
 (§8/§10/§17), generadores §13 (numbers/ticks/axis/grid), primitivas geométricas+bezier+
 sine, texto con markup, estado color/fill/line_width/dash/font/align/valign + atributos
@@ -109,11 +109,33 @@ wart de `fopen`: `EPSDisplay::start` ahora reporta y `exit(1)` si la ruta no es 
 cierra la costura (`closepath`) para todo `GI_POLYGON`, no solo con `closed=true` (el
 `closepath fill` del relleno va dentro de gsave/grestore en EPS/PDF y no persiste).
 
-Siguiente concreto — curvas de **fig4-1** (paneles + escala, reescribir sin `rotate 90`;
-originalmente usó trucos por limitaciones de versiones previas — Alejandro está decidiendo
-el enfoque). Otros pendientes: spline/smooth §9 (motor `splines.cpp` listo); `font=`
-por-primitiva en `numbers`/etiquetas de `axis` si se pide; traductor `mg1to2.py`
-(`plan_mg1to2.md`).
+### Cerrado en la sesión del 2026-07-11 (commits `51368c3`..`fig2-1`)
+
+- **Marcadores §B**: struct del usuario como marcador (`marker_end="Arrowr"`) por la ruta `Dot`
+  (`Display::marker` toma `const MarkerShape&`; `markerShapeFromStruct` extrae la geometría).
+- **Texto matemático (fuentes) en EPS/PDF**: (1) ASCII dentro de `$…$` salía EN BLANCO en EPS
+  (la migración LM Math `0b040c3` solo cubrió PDF/SVG) → ASCII math ahora va a Times-Italic;
+  (2) run MIXTO griego+ASCII (`$\Delta V = W_B - W_A$`): la Δ salía como ¢ (EPS/PDF) y el
+  subíndice embarrado (SVG). Fix raíz en `text_parser.cpp`: la cara por defecto del math pasa a
+  `FN_TIMES_ITALIC`; el griego entra por `\comando` como `FN_TEX_CMMI` en run AISLADO → no se
+  fusiona. EPS/PDF además parten cualquier run cmmi en segmentos griego/ASCII.
+- **§19 rotación de texto**: `rotate 90 text(...)` ahora gira los GLIFOS en los 3 backends
+  (`text()` saca el ángulo de `mt`; SVG `<g rotate>`, EPS `gsave/rotate`, PDF `SetTextMatrix`).
+- **Parser — aridad acotada en sentencias de estado**: `line_width 0.5  P()` en un renglón ya
+  NO se traga `P()` (antes leía args "hasta newline"). Varias sentencias por línea, como
+  translate/rotate. hatch=1-2 args, outlinefill=0-1, resto=1.
+- **Ports fieles**: `fig4-10` (rediseño 3 paneles, etiquetas en coords de panel) y **`fig6-10`**
+  (puntos de ocupación con `for`+`dot()`; huecos de letrero con `place(gap=)` = LNST gap V1;
+  encuadre = ensanchar `world_window` al aspecto del display, reemplaza el `SCST` anisótropo V1).
+  `fig2-1` cerrada. **Lección durable:** figura "apretada en un eje" = aspecto de `world_window`
+  ≠ aspecto de `display_size` (el meet isométrico letterboxea).
+- **Harness golden REACTIVADO** (ver "Build and test"): `bash test/run.sh check` → ok=32.
+
+Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
+los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran
+pendiente para migrar el material V1. Otros: `spline`/`smooth` §9 (motor `splines.cpp` listo,
+bajo costo); Math P1/P2 de `plan_lmmath.md` (símbolos `map_symbol`→LM Math; latino math→itálica
+LM Math en vez de Times-Italic); `marker_start/mid/end` en polygon/bezier; ventanas anidadas §16.
 
 ## Code style
 
