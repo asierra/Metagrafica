@@ -12,26 +12,32 @@ material V1 histórico.
 
 `mg1to2.py entrada.mg` lee un `.mg` **V1** (comandos de dos letras, ver
 `examples/v1/*.mg`) y escribe un `.mg` **V3** equivalente (gramática nueva, ver
-`especificacion_mg.md` y `examples/v3/*.mg`). "Equivalente" = **su render debe
+`especificacion_mg.md` y `examples/*.mg`). "Equivalente" = **su render debe
 coincidir con el del original** (mismo dibujo).
 
 ---
 
-## 1. El recurso más importante: ya existen 14 pares traducidos a mano
+## 1. El recurso más importante: ya existen 16 pares traducidos a mano
 
 **No empieces de cero.** Para cada `examples/v1/X.mg` existe una traducción a
-mano `examples/v3/X.mg`, hecha durante el desarrollo del parser V3. Son la
+mano `examples/X.mg`, hecha durante el desarrollo del parser V3. Son la
 **especificación por ejemplo** del traductor: el objetivo es que `mg1to2.py`
 produzca algo **equivalente** (idealmente idéntico módulo espaciado/orden) a esas
 traducciones a mano.
 
 - `examples/v1/*.mg` — entradas (V1).
-- `examples/v3/*.mg` — salidas de referencia (V3, hechas a mano).
+- `examples/*.mg` — salidas de referencia (V3, hechas a mano). Es el corpus de la
+  red golden (`test/run.sh`, ok=32).
 - `examples/v1/reference/*.svg` — **oráculo de render** (lo que produce el
   compilador V1). Es la verdad de fondo para verificar.
 
-Los 14: `arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10
-fill_styles line_patterns primitives rpstest sines`.
+Los 16: `arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10
+fill_styles line_patterns markers-demo primitives rpstest sines texto`.
+
+**Actualización 2026-07-11:** `fig6-10` y `fig4-10` se re-portaron **fielmente**
+al original V1 (puntos de ocupación, huecos de letrero, encuadre medido contra el
+oráculo) — dejaron de ser "por calibrar" y son ahora **buenos objetivos de
+fidelidad** para el traductor.
 
 Empieza por los que ya son **píxel-idénticos** al oráculo cuando se compilan con
 `bin/mg` (V3): **`fill_styles` y `line_patterns`**. Si tu traductor reproduce
@@ -53,7 +59,7 @@ diff <(grep -vE '^<\?xml|width=|height=|viewBox' /tmp/X.svg) \
 
 - **`fill_styles`, `line_patterns`** deben dar **diff = 0** (píxel-idénticos).
 - El resto: comparar también contra la traducción a mano
-  `diff /tmp/X_v3.mg examples/v3/X.mg` para ver si el traductor coincide con el
+  `diff /tmp/X_v3.mg examples/X.mg` para ver si el traductor coincide con el
   criterio humano. Varios ejemplos son "por calibrar / declarativo limpio" y su
   render no es píxel-exacto por diseño (fig2-3, fig4-1, fig4-10, …); ahí basta
   con equivalencia estructural.
@@ -141,7 +147,7 @@ CONVERSIONES NUMÉRICAS (marcadas ⚠) son las que hay que respetar al pie.
 | `BR x1 y1 x2 y2 }` | `rectangle { x1 y1  x2 y2 }` |
 | `CR r : centros }` | `circle(r) { centros }` (o `dot(r)` si es marcador) |
 | `EL rx ry : … }` | `ellipse(rx, ry) { … }` |
-| `DOT … }` | `dot(r) { … }` |
+| `DOT s pts… }` / `DOT s &path` | `dot(r) { pts… }`  ⚠ **s = tamaño físico (1er arg)**; V1 `DOT 3` ≈ V3 `dot(0.75)` (fig6-10, factor ~0.25) — calibrar contra el oráculo. `DOT s &dots` (dispersar sobre un path generado) → un `for` con `dot()` por punto (ver §6.4) |
 | `BZ p0 c1 c2 p1 … }` | `bezier { … }` |
 | `SP … }` | `spline { … }` |
 | `DT texto` | `text("texto")` (en la pluma) |
@@ -165,7 +171,7 @@ CONVERSIONES NUMÉRICAS (marcadas ⚠) son las que hay que respetar al pie.
 | V1 | V3 |
 |---|---|
 | `TLLC dx dy` | `translate dx dy` |
-| `RTLC a` | `rotate a` |
+| `RTLC a` | `rotate a`  ✅ **§19 implementado (2026-07-11): el texto bajo `rotate` gira los glifos** en los 3 backends, así que `XYPP x y  RTLC 90  DT etiqueta` → `{ translate x y  rotate 90  text("etiqueta") { 0 0 } }` rinde la etiqueta vertical (p.ej. "energy" de fig6-10) |
 | `SCLC sx sy` | `scale sx sy` |
 | `SHLC hx hy` | `shear hx hy` |
 | `IDLC` | (cierra el bloque `{ }` que agrupa los transforms) |
@@ -175,7 +181,8 @@ CONVERSIONES NUMÉRICAS (marcadas ⚠) son las que hay que respetar al pie.
 |---|---|
 | `OPST n … CLST` | `struct n() { … }` |
 | `MKST n args` | `n(args)` (invocación) |
-| `LNST sc [sh [cnt [gap]]] p1 p2` | `place(n, scale=sc, shift=sh, count=cnt\|gap=gap) { p1 p2 }` |
+| `SCST sx sy` | escala MTST del **siguiente** placement (no dibuja). En V3: `scale=` en la invocación, **o** doblarlo en el rect del `fit`/en el aspecto de la ventana. ⚠ Si `sx≠sy` era compensación anisótropa del V1 (`SCST .45 .8` en fig6-10) → en V3 **ensanchar `world_window`** para que su aspecto = el del display (ver §6.1), NO un `scale` anisótropo |
+| `LNST sc [sh [cnt [gap]]] p1 p2` | `place(n, scale=sc, shift=sh, count=cnt, gap=gap) { p1 p2 }`  ⚠ **shift = 1 − arg2** (el motor V1 guarda `1-valor`); **gap** = hueco centrado para un letrero → `place(gap=)` **verificado** (fig6-10 `LNST … .5` → `gap=0.5`); `sc<0` → `both_sides=true` (flechas de doble punta) |
 | `ARCST sc r da ai [sh [cnt]] c` | `place(n, scale=sc, r=r, from=ai, to=ai+da) { c }`  ⚠ **to = ai + da** (da es barrido) |
 | `DPST n` / `&name` | `place(n, scale) { &path }` |
 | `PWST p1 p2` | `fit(n, stretch=true) { p1 p2 }`  ⚠ **PWST SIEMPRE deformaba** → `stretch=true` |
@@ -188,7 +195,7 @@ CONVERSIONES NUMÉRICAS (marcadas ⚠) son las que hay que respetar al pie.
 | `TLPP dx dy` | `step(translate=(dx,dy))`  (o `advance=` en la llamada) |
 | `TICKS n dx dy` | `ticks(n, mark=(dx,dy), at=…, advance=…)`  ⚠ V1 normalizaba dx/wdx, dy/wdy — en V3 NO; ver §6 |
 | `GNNUM i0 inc n dec` | `numbers(from=i0, by=inc, count=n, decimals=dec, at=…, advance=…)` |
-| `GNPATH n x y name` | `trail(start=(x,y), count=n, …)` |
+| `GNPATH n x y name` + `DOT s &name` | ⚠ **NO es `trail()`** (que no existe en el parser). `GNPATH` genera un path de `n` puntos desde `(x,y)` con el paso de pluma vigente (`TLPP dx dy`); `DOT s &name` dispersa dots físicos ahí = **columna/serie de puntos**. En V3 → un `for i = 0 to n-1 { y = y0 + i*paso  dot(r) { x y } }` (ver §6.4). **Trampa:** una traducción a mano lo confundió con `polyline(dash="dotted")` — NO repetir |
 | `OPPT … CLPT` | `compound { … }` |
 | `RPPT`/`CTPT…CLPT`/`INVPT`/`NORMPT`/`GNBZPATH` | `tile()`/`concat()`/`reverse()`/`normalize()`/`smooth()` (álgebra §9 — aún no toda implementada en el parser) |
 
@@ -209,6 +216,15 @@ isométrico por construcción, §3.1). Consecuencias para el traductor:
   (a) con la ventana en unidades de datos; `fig2-1` quedó como "archivo
   desproporcionado" pendiente de calibrar. **Empieza sin `stretch`; si el diff
   contra el oráculo muestra deformación por eje, añade `stretch=true`.**
+- **Técnica medida (fig6-10, 2026-07-11) para el caso `$D` ancho + `SCST` anisótropo:**
+  el síntoma es una figura **apretada en un eje** con márgenes vacíos en el otro —
+  porque el meet isométrico se limita por el eje más restrictivo. La causa exacta es
+  **aspecto de `world_window` ≠ aspecto de `$D`**. Solución idiomática V3: **darle a la
+  ventana el aspecto del display** (extender el eje corto: en fig6-10 la ventana pasó de
+  11.8×9.4 a 11.8×**23.6** en X, con los paneles colocados a lo ancho). Esto REEMPLAZA el
+  estirado anisótropo `SCST .45 .8` del V1 sin deformar nada. Diagnóstico útil: rasterizar
+  oráculo y salida a PNG y medir posiciones (perfil de columnas oscuras) — dio pozos 88px
+  vs 44px = factor 2 exacto → confirmó el letterbox.
 - Las escalas de placement (`LNST sc`, `MKST scale`) llevaban el factor
   `docwmin` en V1. Si un placement sale con tamaño incorrecto, el factor a
   aplicar es `sc × min(wdx,wdy)` o su inverso — calibrar contra el oráculo (esto
@@ -235,6 +251,33 @@ omitirlos por parecer redundantes. Ejemplo real: `fig2-3` ponía `LPATRN 2`
 grid y ejes. **Traduce cada comando de estado, incluidos los que "vuelven al
 default".** (Alternativa: envolver en bloques `{ }` donde V1 usaba estado
 acotado, pero es más invasivo; el reset explícito es más fiel.)
+
+> **Nota (bug #1 arreglado 2026-07-11):** el parser V3 ya acepta **varias sentencias
+> por línea** (aridad acotada en sentencias de estado, como `translate`/`rotate`), así
+> que el traductor puede emitir `line_width 0.4  color "red"  n()` en un renglón si
+> conviene. Ya NO es obligatorio "una sentencia por línea" (antes, una sentencia de
+> estado se tragaba la siguiente del mismo renglón).
+
+### 6.4 `GNPATH … dots` + `DOT s &dots` → columnas de puntos con `for`
+Patrón V1 frecuente (fig6-10: ocupación electrónica): `TLPP 0 dy` fija el paso de
+pluma, `GNPATH n x0 y0 dots` genera un path de `n` puntos, y `DOT s &dots` dispersa
+un dot físico en cada uno. En V3 no hay `trail`; se emite un bucle:
+```
+for i = 0 to n-1 {
+    y = y0 + i*dy        % ⚠ precomputar en variable (ver abajo)
+    dot(r) { x0 y }
+}
+```
+Un `TLPT dx 0` que traslada el path y repite `DOT s &dots` → otro bucle desplazado
+(o `dot(r) { x0 y  x1 y }` sembrando ambos). **Trampa histórica:** la traducción a
+mano confundió esto con `polyline(dash="dotted")` (líneas punteadas) — el traductor
+NO debe hacerlo; son **puntos**.
+
+> **⚠ Trampa de coords calculadas:** los bloques de coordenadas `{ }` se parsean con
+> `parseTerm` (solo `* /`, potencia `^`), **sin `+`/`-` binario**. Una coord como
+> `y0 + i*dy` NO se puede escribir inline en el bloque → hay que **precomputar en una
+> variable** (`y = y0 + i*dy`, que sí usa la gramática de expresión completa) y usar
+> `dot(r) { x0 y }`. Aplica a cualquier coordenada aritmética generada por el traductor.
 
 ---
 
@@ -264,15 +307,18 @@ debería cubrir.
 
 ## 8. Qué NO tiene que resolver el traductor
 
-- Los ejemplos "declarativo limpio / por calibrar" (fig2-3, fig4-1, fig4-10,
-  fig6-1) **no** son objetivo de fidelidad píxel: sus traducciones a mano
-  rediseñaron el encuadre (marcos de datos, paneles). El traductor mecánico puede
-  producir una versión más literal (con `stretch`, sin el rediseño); está bien.
-- Features del parser V3 aún no implementadas (álgebra de paths completa §9,
-  `valign`, ventanas anidadas §16): si un V1 las usa, el traductor puede emitir
-  la sintaxis V3 correspondiente aunque el parser todavía no la compile —o
-  marcarla con un comentario `% TODO` — pero eso solo aparece en material V1
-  avanzado, no en los 14 ejemplos base.
+- Los ejemplos "declarativo limpio / por calibrar" (fig2-3, fig4-1, fig6-1) **no**
+  son objetivo de fidelidad píxel: sus traducciones a mano rediseñaron el encuadre
+  (marcos de datos, paneles). El traductor mecánico puede producir una versión más
+  literal (con `stretch`, sin el rediseño); está bien. **Nota:** `fig4-10` y
+  `fig6-10` ya NO están en esta categoría — se re-portaron fielmente (§1) y sí sirven
+  como objetivo de fidelidad.
+- Features del parser V3 aún no implementadas: **álgebra de paths completa §9**
+  (spline/tile/concat/reverse — el motor `splines.cpp` existe pero no todo está
+  cableado) y **ventanas anidadas §16**. Si un V1 las usa, emitir la sintaxis V3 y
+  marcar `% TODO` — pero solo aparecen en material V1 avanzado, no en los 16 base.
+  **Ya HECHAS (no marcar TODO):** `valign` (§7.3), `dash`, marcadores/flechas §4.11,
+  hatch como estado, rotación de texto §19, `outlinefill`, concatenación de cadenas.
 
 ---
 
@@ -283,5 +329,5 @@ debería cubrir.
 python3 mg1to2.py entrada.mg [salida.mg]     # stdout si no se da salida
 ```
 Sin dependencias externas (solo stdlib). Un test `test/run_translator.sh` que
-corra el loop §2 sobre los 14 ejemplos y reporte diff por archivo sería el
+corra el loop §2 sobre los 16 ejemplos y reporte diff por archivo sería el
 complemento natural (empezando por exigir diff=0 en fill_styles/line_patterns).
