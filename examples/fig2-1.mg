@@ -29,5 +29,4 @@ struct Fg1() {
     }
 }
 
-world_window 0 1.03 0.08 0.92
-Fg1(at=(0.53, 0.5), scale=0.46)
+Fg1(at=(0.52, 0.5), scale=0.46)
