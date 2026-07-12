@@ -578,19 +578,30 @@ void PDFDisplay::text(string s) {
     HPDF_Page_SetGrayFill(page, dspstate.linegray);
   }
 
-  // Dibuja los segmentos en secuencia, avanzando cur_x. La alineación center/right
-  // se aplica por-segmento (multi-run centrado ya era aproximado; caso raro).
+  // §19: los glifos honran la rotación de la matriz de MUNDO (`rotate 90 text(...)`).
+  // Ángulo = dirección del eje x transformado por mt; la pluma (px,py) y el avance
+  // van a lo largo de la línea base ROTADA (cos,sin). ang≈0 → cc=1,ss=0 → horizontal.
+  double ox = 0, oy = 0, ux = 1, uy = 0;
+  mt.transform(ox, oy); mt.transform(ux, uy);
+  double ang = atan2(uy - oy, ux - ox);
+  double cc = cos(ang), ss = sin(ang);
+
+  // Dibuja los segmentos en secuencia, avanzando la pluma por la línea base. La
+  // alineación center/right se aplica por-segmento (multi-run centrado ya era
+  // aproximado; caso raro).
   for (const Seg &seg : segs) {
     HPDF_Page_SetFontAndSize(page, seg.font, size);
     double tw = HPDF_Page_TextWidth(page, seg.txt.c_str());
-    double tx = cur_x;
-    if (dspstate.text_align == 1)      tx -= tw / 2.0f;
-    else if (dspstate.text_align == 2) tx -= tw;
+    double off = 0;
+    if (dspstate.text_align == 1)      off = -tw / 2.0f;
+    else if (dspstate.text_align == 2) off = -tw;
+    double px = cur_x + off * cc, py = cur_y + off * ss;   // inicio sobre la base rotada
     HPDF_Page_BeginText(page);
-    HPDF_Page_MoveTextPos(page, tx, cur_y);
+    HPDF_Page_SetTextMatrix(page, cc, ss, -ss, cc, px, py);
     HPDF_Page_ShowText(page, seg.txt.c_str());
     HPDF_Page_EndText(page);
-    cur_x = tx + tw;                        // siguiente segmento de la misma línea
+    cur_x = px + tw * cc;                   // avanza por la línea base
+    cur_y = py + tw * ss;
   }
 
   // Restaurar fill color para shapes posteriores

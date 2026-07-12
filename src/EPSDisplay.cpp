@@ -311,6 +311,17 @@ void EPSDisplay::useFillPattern() {
 }
 
 void EPSDisplay::text(string s) {
+  // §19: los glifos honran la rotación de la matriz de MUNDO (`rotate 90 text(...)`).
+  // Ángulo = dirección del eje x transformado por mt; si ≠0 se gira la CTM alrededor
+  // del punto actual (currentpoint translate · rotate · 0 0 moveto), como deviceRotate.
+  // (Sirve para un run simple —etiquetas de eje/"energy"—; texto rotado multi-run con
+  // subíndices es raro.) mt sin rotación → ang≈0 → sin gsave.
+  double ox = 0, oy = 0, ux = 1, uy = 0;
+  mt.transform(ox, oy); mt.transform(ux, uy);
+  double ang = atan2(uy - oy, ux - ox) * 180.0 / M_PI;
+  bool rot = fabs(ang) > 0.01;
+  if (rot) fprintf(file, "gsave currentpoint translate %f rotate 0 0 moveto\n", ang);
+
   // Emite un segmento (con la fuente ya fijada) usando el operador de alineación
   // vigente. Escapa paréntesis primero.
   auto emitSeg = [&](string seg) {
@@ -344,10 +355,11 @@ void EPSDisplay::text(string s) {
       i = j;
     }
     dev_face = FN_NOFACE;   // el dispositivo quedó en una fuente ad-hoc → re-sincroniza
-    return;
+  } else {
+    emitSeg(std::move(s));
   }
 
-  emitSeg(std::move(s));
+  if (rot) fprintf(file, "grestore\n");
 }
 
 void EPSDisplay::getTextSize(string s, double *w, double *h) {}

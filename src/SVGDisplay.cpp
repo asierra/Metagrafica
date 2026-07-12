@@ -664,11 +664,22 @@ void SVGDisplay::text(string s) {
     else if (dspstate.text_align == 2) anchor = "end";
 
     double size = dspstate.fontSize * relfontsize;
+
+    // §19: los glifos honran la rotación de la matriz de MUNDO (`rotate 90 text(...)`).
+    // El ángulo = dirección del eje x transformado por mt; si ≠0 se envuelve el
+    // <text> en un <g rotate> alrededor del ancla (cur_x, cur_y), igual que
+    // deviceRotate. mt sin rotación (caso común) → ang≈0 → sin envoltura.
+    double ox = 0, oy = 0, ux = 1, uy = 0;
+    mt.transform(ox, oy); mt.transform(ux, uy);
+    double ang = atan2(uy - oy, ux - ox) * 180.0 / M_PI;
+    bool rot = fabs(ang) > 0.01;
+    if (rot) fprintf(file, "<g transform=\"rotate(%f, %f, %f)\">\n", ang, cur_x, cur_y);
     fprintf(file,
             "<text x=\"%f\" y=\"%f\" transform=\"scale(1, -1)\" text-anchor=\"%s\" "
             "fill=\"%s\" font-size=\"%f\" font-family=\"%s\" font-style=\"%s\" "
             "font-weight=\"%s\">%s</text>\n",
             cur_x, -cur_y, anchor, colorBuf, size, family, style, weight, body.c_str());
+    if (rot) fprintf(file, "</g>\n");
 
     // Avanzar cur_x igual que el "current point" de PostScript tras show, para
     // que los runs siguientes de la misma línea (p.ej. "Cosine ", pi, "/2") no
