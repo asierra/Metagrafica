@@ -331,3 +331,166 @@ python3 mg1to2.py entrada.mg [salida.mg]     # stdout si no se da salida
 Sin dependencias externas (solo stdlib). Un test `test/run_translator.sh` que
 corra el loop §2 sobre los 16 ejemplos y reporte diff por archivo sería el
 complemento natural (empezando por exigir diff=0 en fill_styles/line_patterns).
+
+---
+
+## 10. Estado (act. 2026-07-12)
+
+`mg1to2.py` y `test/run_translator.sh` YA EXISTEN e implementan casi todo lo de
+arriba. El harness (`bash test/run_translator.sh check`) es una red de
+AUTO-regresión (compara contra su propia salida previa capturada en
+`test/golden_translator/`, no está en git — mismo principio que `test/run.sh`)
+sobre 14 de los 16 + `bzsinepaths` (biblioteca, no es de los 16, ver abajo):
+**ok=14 fail=0 error=1** (el error es `fig4-10`, ver más abajo). `sines`/`texto`
+salieron del `EXAMPLES` del harness: **nunca existió** `examples/v1/sines.mg` ni
+`texto.mg` (se escribieron directo en V3 para ejercitar gramática) — traerlos
+solo producía un ERROR "file not found" perpetuo, no señal sobre el traductor.
+
+Arreglado en esta sesión:
+- **`INPUT arrow.mg`** perdía la extensión (`expect_string` corta en el primer
+  no-alfanumérico, así que `arrow.mg` quedaba en `arrow` + un `.` suelto que
+  rompía el siguiente token). Nuevo `Scanner.expect_filename()` replica el
+  estado `<incl>` real de `mgpp.l` (come hasta el siguiente espacio, sin
+  tokenizar) — ver `handle_INPUT`.
+- **Heurística de invocación de struct** (`elif ... or any(c.islower()...)`)
+  fallaba con structs definidos en MAYÚSCULAS en un archivo `INPUT`-eado
+  (`fig4-1.mg`: `SNDVTSQ`/`SNCSDVTSQ`, definidos vía `OPST` en `curvas3.mg`).
+  Ground truth (`busca_key` en `mgpp.l`): CUALQUIER palabra no reconocida como
+  comando/operador de matriz es `YIDENTIFIER` (struct), sin importar
+  mayús/minus. Se reemplazó la heurística por un set explícito
+  `KNOWN_UNIMPLEMENTED_COMMANDS` (comandos reales de `keyword_map` que
+  `mg1to2.py` aún no traduce — álgebra de paths avanzada) + "todo lo demás es
+  invocación de struct".
+- **Bug real de scoping (encontrado, no solo un error de traducción)**: el
+  canal ST/PP/RS/PT (`RTST`/`SCST`/`TLPP`/`TLPT`/`MKST`, ver §5) son variables
+  LOCALES de `Parser::parsePrimitives()` en el ground truth (`Matrix mtst,
+  mtpp, mtrs; ... Structure *st = NULL;` declaradas DENTRO de la función, que
+  se llama recursivamente por cada `OPST`) — es decir, se resetean solas al
+  entrar a un struct y el valor del padre nunca se comparte con el hijo.
+  `mg1to2.py` los modelaba como campos planos de `State` que NUNCA se
+  reseteaban en `OPST`/`CLST`, así que se filtraban entre structs hermanos
+  (visto en `fig4-1.mg`: `RTST 90` de `OPST FG1` sobrevivía intacto hasta la
+  invocación de `flechas` en `OPST FIG1`, mucho después y sin relación). Fix:
+  `State.struct_local_stack` — `handle_OPST` empuja y resetea
+  (`marked_struct`, `pending_struct_scale`, `pending_struct_rotate`,
+  `rs_transform_parts`, `pen`, `advance`, `path_step`); `handle_CLST` restaura.
+  Si se agregan más campos "canal ST/PP/RS/PT" a futuro, hay que sumarlos aquí.
+- **Invocación directa con 2 puntos** (`flechas 0 0 1.3 0 }`) cayía en la rama
+  rota `at=(0 0  1.3 0)` (sintaxis inválida). Ground truth: `YIDENTIFIER`
+  SIEMPRE hace `parsePath()` sin importar la cuenta de puntos — 1 punto es
+  invocación simple (`Nombre(at=(x,y))`, ya andaba), 2+ puntos es SIEMPRE
+  `place()` (§10.1: PlaceStmt con 2 puntos = `StructureLine`, igual que
+  `LNST`; con 3+ = `StructurePath` orientado a la tangente). El umbral pasó de
+  `>= 3` a `>= 2`. Nota: `place()` en V3 NO tiene `rotate=` (ni falta, el
+  locus ya orienta), así que no se intentó pasar la rotación pendiente ahí.
+- **`&nombre` a nivel de sentencia + `PWPT`** (§9, usado por `fig6-1.mg` vía
+  `bzsinepaths.mg`): implementado RESOLVIENDO TODO EN PYTHON (no delegando al
+  `&nombre`/`path` real de V3), porque V3 no tiene todavía scale/translate de
+  un `PathExpr` (solo `transpose/flip_x/flip_y/concat`) — no hay forma de
+  expresarle a V3 el mapeo `PWPT`. `handle_INPUT` ahora, además de emitir
+  `include`, abre el archivo hermano (mismo directorio del `.mg` de entrada)
+  y cosecha sus literales `&nombre x y ... }` de nivel de sentencia
+  (`harvest_named_paths`) hacia `state.raw_paths`; `PWPT nombre x1 y1 x2 y2`
+  mapea esos puntos crudos al rectángulo (x1,y1)-(x2,y2) — **con los mismos
+  números crudos de la fuente V1, sin rastrear `world_window` vigente**: la
+  normalización se cancela exactamente entre el mapeo unit-square→rect y su
+  inverso (verificado con `Matrix::to_rectangle`+`parsePoint()` a mano, y
+  CONFIRMADO en la práctica: la curva bezier resultante de `fig6-1.mg` salió
+  **carácter por carácter idéntica** al oráculo V1) — y el resultado va a
+  `state.computed_paths['buffer']`, consumido y limpiado por la siguiente
+  `&buffer` (fmt_block). Un literal `&nombre pts }` a nivel de sentencia
+  (dentro del propio archivo, no solo vía INPUT) también se reconoce y además
+  se emite como `path nombre = { ... }` (construcción real de V3) para que el
+  archivo traducido siga siendo V3 válido si algo lo incluye.
+  `bzsinepaths` (la librería que `fig4-10`/`fig6-1` incluyen) se agregó al
+  `EXAMPLES` de `test/run_translator.sh` (no es de los 16, pero sin su propia
+  entrada en el workdir compartido el `include "bzsinepaths.mg"` que emite
+  `mg1to2.py` queda colgado — el `include` de V3 hoy solo *advierte* si no
+  encuentra el archivo, no aborta, así que esto no rompía nada, pero dejaba un
+  aviso espurio).
+- **`fig4-1` y `fig6-1` ya CIERRAN** (ok en el harness). `fig6-1` no es
+  objetivo de fidelidad píxel (§8) pero de hecho la curva bezier salió
+  pixel-exacta contra el oráculo; quedan diffs menores sin investigar (relleno
+  con hatch de los 2 `PG` con `FPATRN 2` sin `FILL` explícito — el oráculo V1
+  rellena igual, sugiere que V1 trata `FPATRN`/`FCOLOR` como activador
+  implícito de fill y `mg1to2.py` no lo modela así; y algunas etiquetas de
+  texto con `font-style` distinto) — no bloquean, no son prioridad dado §8.
+
+### Auditoría 2026-07-12 (segunda pasada, revisión del trabajo anterior)
+
+Se auditó `mg1to2.py` contra el ground truth (Parser.cpp, v1-legacy) y los
+oráculos. **8 bugs encontrados y corregidos en el código; verificación parcial
+(se agotó la sesión antes de re-verificar todo y re-bendecir goldens):**
+
+1. **DT perdía posición y avance** — V1 dibuja EN la pluma y la avanza con mtpp
+   (Parser.cpp YDT); `text()` sin coords en V3 no dibuja NADA (TextStmt itera
+   los pares). El "heat capacity" de fig2-3 y los I/II/III/ψ de fig6-1
+   desaparecían en silencio. Fix: `handle_DT` emite `text(){px py}` + avanza.
+2. **XYDT no fijaba la pluma** (cae sin break en YDT, Parser.cpp:816).
+3. **DT bajo RTLC**: los oráculos (fig2-3, fig6-10 "energy") muestran el texto
+   HORIZONTAL — V1 nunca rotó glifos ni posición (la posición ya estaba fijada
+   por el XYPP previo y using_mtlc omite el GS). Se emite el idioma canónico §5
+   `{ translate pen <ops> text{0 0} }` (rota glifos — DESVIACIÓN DELIBERADA
+   §19, bendecida por el port a mano de fig6-10). Maquinaria: lc_block_ops +
+   retract-si-fresco + reopen perezoso (`reopen_lc_if_pending`).
+4. **Invocación con 2+ puntos**: YIDENTIFIER = UNA instancia POR PUNTO
+   (StructurePath), sin orientar salvo $O 1. El `place()` que se emitía es
+   StructureLine con 2 puntos (¡otra semántica!) y fuerza orient con 3+. Fix:
+   N invocaciones sueltas `Nombre(at=)`; `place()` solo con $O 1 y 3+ puntos.
+   `$O` ahora se rastrea (state.orient, sticky).
+5. **WW a mitad de cuerpo** (fig4-1 ×2, único caso — auditado): V3 aplica UNA
+   ventana a todo el cuerpo; las coords pre-WW (fit `{0 0 1 1}` bajo ventana
+   unitaria) quedaban a 1/2.2 del tamaño. Fix: `patch_window_change` re-expresa
+   los bloques `{…}`/`at=()` ya emitidos en unidades de la ventana nueva.
+6. **PG + FPATRN sin FILL**: en V1 polygon SIEMPRE se auto-rellena (v1-legacy
+   Polyline::draw hace setFilled(true) temporal) → el hatch aplica aunque
+   fill_on sea False (oráculo fig6-1: `fill=url(#mgpat_2_)`). Fix:
+   `take_pending_hatch(force=)` para polygon. El guard original sigue siendo
+   correcto para BR/CR/EL (caso fig6-10).
+7. **TLPP/TLPT sobreescribían** en vez de ACUMULAR (mtpp/mtpt componen hasta
+   IDPP/IDPT). Inofensivo en el corpus (siempre hay reset) pero corregido.
+8. **LNST count>1 NO es el count= de place()**: YLNST emite n StructureLine
+   completas (línea+struct) desplazando AMBOS extremos por mtpp entre copias
+   (fig4-1: 9 flechas apiladas por `TLPP 0 .1`); place(count=) INTERPOLA por
+   el segmento (StructurePath, sin línea). Fix: expandir a n place() sueltos
+   con extremos desplazados. **⚠ Este fix quedó SIN re-verificar** (era el
+   último; verificado todo lo anterior con el loop §2 en /tmp/mgrev).
+
+También: guard en `harvest_named_paths` (una referencia &nombre posterior ya
+no sobreescribe la definición con []).
+
+**Estado de verificación al cierre:** con los fixes 1-7 aplicados, el diff
+contra oráculo (paths+texts) dio: rpstest≈0, fig2-1: 2, line_patterns: 6,
+primitives: 8, fill_styles: 20, markers-demo: 19, fig2-3: 36, fig2-6: 40,
+fig6-1: 44, fig6-10: 48, fig4-1: 108→(solo flechas LNST tras el fix 5).
+Varias de esas diferencias son evolución legítima del motor (fuentes math
+MGMath vs Times-Italic, `Z` closepath en polygon, kerning) — no bugs del
+traductor. **Pendiente:** correr `bash test/run_translator.sh check` (los
+goldens actuales son PRE-fixes → van a fallar), verificar fig4-1 con el fix 8,
+y `capture` para re-bendecir. Los goldens de `test/golden_translator/` están
+OBSOLETOS hasta entonces.
+
+**Bloqueado, no arreglado — `fig4-10`:** usa `SCPT`+`TLPT` ENCADENADOS sin
+`IDPT` de por medio (dos bloques seguidos de `TLPT`/`SCPT` que se ACUMULAN
+sobre la misma matriz `mtpt`, ground truth `Matrix::translate/scale`
+post-multiplican) — el modelo actual de `state.path_step`/`path_scale` como
+un par `(dx,dy)`/`(sx,sy)` que cada `TLPT`/`SCPT` SOBREESCRIBE no alcanza para
+eso (haría falta una matriz 2D afín acumulador real, como el `Matrix` de
+C++). Además usa `RPPT` (repetir un path N veces, soldando con
+`concat_paths` — álgebra de tiling) para las 3 de sus 4 sub-figuras en `RO` y
+la última de `PHI`. `RPPT` SÍ es computable en Python sin ayuda de V3 (ver
+`concat_paths` en `src/splines.cpp` — bordes más cercanos, invierte si hace
+falta, suelda sin duplicar punto), pero combinado con la matriz acumulador
+pendiente es más inversión de la que se justifica ahora mismo (2 de 16
+ejemplos), sobre todo porque el propio parser V3 tampoco tiene `tile()`
+cableado (§8) así que ni delegándoselo a V3 funcionaría. `SCPT` se dejó
+DELIBERADAMENTE fuera de `handle_pt_transform` (sigue lanzando
+`TranslateError` honesto) para no fingir soporte parcial. Si se retoma:
+1) generalizar `state.path_step`/`path_scale` a una matriz 2×3 real con
+`translate()`/`scale()` que post-multipliquen (mismo orden que `Matrix::matmat`);
+2) implementar `concat_paths` en Python (arriba) para `RPPT`; 3) usar el
+`state.cur_ww` (world_window vigente, que HAY que empezar a rastrear con push/
+reset-en-`OPST`/pop-en-`CLST` igual que el resto del canal — hoy no existe)
+para convertir puntos normalizados de vuelta a unidades de dato antes de
+emitir, como se derivó a mano para este caso (a diferencia de `PWPT`, aquí NO
+cancela solo).
