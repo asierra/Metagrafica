@@ -1,91 +1,120 @@
-# Plan para soporte de simulación 3D por medio de transformadas afines en MG
+# Plan para simulación pseudo-3D (proyección oblicua) en MG V3
 
-La arquitectura de MetaGráfica V3 que has diseñado, basada en la ortogonalidad entre la forma (`primitive(args)`) y la posición (el bloque `{ x y }`), junto con la fuerte pila de transformaciones afines, ofrece una vía muy limpia para integrar esto sin tener que modificar la regla sagrada `Subpath ::= (Coord Coord)+`. Introducir coordenadas `x y z` rompería la simplicidad del parser y del motor subyacente.
+Objetivo: dar soporte fiel a la ilustración científica 2.5D (planos que "receden",
+prismas, pantallas inclinadas) manteniendo la filosofía 2D del lenguaje —espacio
+isométrico por construcción (§3.1), ortogonalidad forma/posición, y la regla sagrada
+`Subpath ::= (Coord Coord)+` intacta— sin introducir coordenadas `x y z` ni matemática
+3D en el motor.
 
-Para mantener la filosofía 2D del lenguaje ("espacio isométrico por construcción") pero dar soporte nativo a la ilustración científica pseudo-3D, estas son las extensiones más naturales para la gramática V3:
+## Punto de partida (corregido respecto al draft anterior)
 
-### 1. Modificadores de Plano como Transformación (2.5D)
+El draft anterior asumía que había que construir en C++ una máquina que "calcula la
+matriz afín exacta". **Eso ya existe.** La cizalla es ciudadana de primera clase en V3:
 
-En lugar de que el usuario calcule a mano los valores de `shear` y `rotate`, puedes añadir proyecciones de plano directamente a `TransformCall` y `AttrName` en la EBNF.
+- Sentencia de transformación local §11.1: `shear <sx> <sy>` (`parserv3.cpp` map en
+  `transformOp`, exec en `TransformStmt`, con `using_ellipse=true` para que arcos →
+  elipse bajo deformación). Los argumentos pasan por `parseTerm` → **aceptan
+  expresiones y parámetros** (verificado); hay `sin`/`cos`/`tan`/`pi`/`round`.
+- Constructor `transform=` §17: compone `shear`/`rotate`/`scale`/`translate`.
+- `Matrix::shear` (`matrix.cpp`) = cizalla homogénea estándar.
 
-El motor de MG interpretará estas instrucciones, calculará la matriz afín exacta (rotación + cizallamiento + escala) y la empujará a la pila de transformaciones. El usuario sigue dibujando formas 2D puras, pero el bloque de estado las "aplasta" hacia la perspectiva correcta.
+**Verificado**: metiendo `shear 0.55 0` dentro del struct `Caja` de `fig10-2v3.mg`, los
+tres planos salen como paralelogramos en EPS/SVG/PDF. El efecto pseudo-3D del `SHST 0
+1.1` del V1 se reproduce **sin tocar el motor**. Lo que falta para clavar
+`fig10-2.png` es fidelidad de relleno (gris + contorno, era `FGRAY -80`) y calibrar
+eje/factor del shear, no capacidades nuevas.
 
-**Propuesta para la EBNF (§2):**
-Añadir a `TransformCall` y `AttrName`:
+## Taxonomía (decisión: priorizar OBLICUA)
 
-* `isometric(plane)` donde `plane` es `"top"`, `"left"`, `"right"`.
-* `oblique(plane, angle, factor)` donde `plane` es `"front"`, `"top"`, `"side"`.
+Los ejemplos del corpus (`fig10-2`, `fig2-7`) son **proyección oblicua / caballera**:
+la cara frontal conserva su forma real y recede por **un solo eje cizallado**. Es un
+`shear` (más quizá `scale` de escorzo en profundidad). La **isométrica verdadera**
+(tres ejes a 120°, todo escorzado) no tiene ejemplo en el corpus y queda como caso
+posterior. Este plan diseña la oblicua primero; la isométrica se añade luego como
+otro preajuste de la misma biblioteca.
 
-**Ejemplo de uso en V3:**
+Nota de nomenclatura: **no** llamar `isometric(...)` a la proyección de plano. El
+motor ya es "isométrico por construcción" (§3.1, semilla *meet* del mundo); reusar el
+término confunde. Términos libres: `oblicua`/`oblique`, `plano`/`plane`, `prisma`.
 
-```text
-% Dibuja un volumen proyectado armando sus tres caras planas
-compound("cristal_difractor") {
-    isometric("top") {
-        % Se dibuja en 2D normal, la matriz lo proyecta al techo
-        rectangle(fill="#E0E0E0", color="black") { 0 0  5 5 }
-        circle(0.2, fill="black") { 2.5 2.5 } % El círculo se vuelve elipse automáticamente
-    }
-    isometric("left") {
-        rectangle(fill="#A0A0A0", color="black") { 0 0  5 3 }
-    }
-    isometric("right") {
-        rectangle(fill="#606060", color="black") { 0 0  5 3 }
-    }
-}
+## Mecanismo (decisión: BIBLIOTECA .mg PURA)
 
-```
+Un plano oblicuo *es* una composición de `scale·rotate·shear` que `transform=` y las
+sentencias §11.1 ya saben componer. Por tanto se ofrece como **biblioteca estándar
+includible** (`lib/pseudo3d.mg`), construida sobre structs paramétricos (§8) y las
+transformaciones existentes. **Cero C++.** Coherente con la filosofía del proyecto
+(toda feature en el compilador, sin cajas negras; ver `project_philosophy`). Solo se
+consideraría subir algo a builtin si un límite concreto del lenguaje lo impide, y se
+anotaría aquí antes de hacerlo.
 
-**Por qué funciona en tu motor:** Como indicas en §4.4, el `rectangle` y otras primitivas ya son formas transformables que operan transformando sus vértices. Al aplicar una matriz isométrica u oblicua, el backend (SVG, EPS o PDF) hará el renderizado perfecto sin que el motor central necesite saber nada de matemáticas 3D.
+Un único mecanismo: **sentencia de estado con alcance** (como `translate`/`rotate`),
+no atributo por-primitiva. No duplicar el concepto en `TransformCall` y en `AttrName`.
 
-### 2. Generador de Coordenadas 3D a 2D (`project`)
+## Fases (ordenadas por lo que el corpus pide)
 
-Para casos donde realmente se necesita trazar líneas entre puntos arbitrarios en el espacio (como en diagramas de rayos X o visualización de órbitas), puedes introducir una función de nivel `Expression` o una primitiva generadora que acepte tríos pero emita la secuencia de pares que el bloque `{ }` ya espera.
+### Fase 0 — Portar fig10-2 (HECHA, sin motor)
+`examples/simulate3d/fig10-2v3.mg` reproduce `fig10-2.png`: `shear 0.4 0` en un bloque
+acotado (solo planos + esquina; cotas/enlaces sin cizallar); relleno `gray(0.8)` con
+contorno (= `FGRAY -80`); base angosta vía `world_window 0 2.5 0 1` para el aspecto
+alto-angosto del original. Compila EPS/SVG/PDF. **Aprendizaje:** el factor de shear
+`k` domina el aspecto visual; el `world_window` del struct fija la base.
 
-**Propuesta:** Una primitiva de trayectoria (similar a `bezier` o `spline` en §2) llamada `path3d`.
+### Fase 1 — `lib/pseudo3d.mg` (HECHA, sin motor)
+Structs paramétricos con **vértices COMPUTADOS** de los params (no gimnasia de ventana
+ni shear ambiental): la proyección oblicua se hornea en la geometría del paralelogramo,
+así cada pieza se coloca con `at=`/`scale=`/`rotate=` y compone predeciblemente.
+- `plano(w, h, k=0.4, relleno, contorno, lw)` — cara rectangular oblicua (polígono con
+  el borde superior desplazado `k·h`).
+- `prisma(w, h, d, a=35, f=0.6, frente/techo/lado, …)` — caja de 3 caras sombreadas;
+  profundidad proyectada a `a` grados con factor `f` (1=caballera, 0.5=gabinete),
+  dibujada de atrás hacia adelante.
+- Trig en **radianes** (`cos(a*pi/180)`); `gray(g)` sirve de default de color.
+- **⚠ Footgun del lenguaje:** un identificador desnudo seguido de `(` se parsea como
+  llamada a función (`dx (h+dy)` → `dx(h+dy)`). En coords, parentizar la variable:
+  `(dx) (h+dy)`. Anotado en la propia lib.
+- **Sin z-buffer:** orden de pintado = orden de escritura (dibujar lo lejano primero).
 
-```text
-% Usando projection oblicua por defecto
-path3d(proj="oblique", angle=45, factor=0.5, color="red", line_width=1.5) {
-    % x y z
-    0 0 0 ; 
-    5 5 5 ;
-    10 0 0
-}
+### Fase 2 — Portar fig2-7 sobre la biblioteca (panel b HECHO)
+`examples/simulate3d/fig2-7b-v3.mg` (panel b, montaje pseudo-3D): pantalla = `plano`
+blanco; láminas policristalinas = polígonos oblicuos con `hatch` inline; cristal =
+`prisma`; anillo = `ellipse` directa (el motor la da; no hizo falta cizallar un
+círculo); rayos = líneas; ángulos = `arc`; haz = `polyline(marker_end="Arrowr")`.
+Compila EPS/SVG/PDF; θ/2θ como texto matemático. (El panel a —Bragg 2D— ya estaba en
+`fig2-7v3.mg`, no usa pseudo-3D.) Pendiente opcional: `hatch` como parámetro de `plano`
+para no dibujar las láminas inline.
 
-```
+### Fase 3 — (opcional) puntos 3D arbitrarios como GENERADOR
+Solo si algún ejemplo pide trazar líneas entre vértices 3D arbitrarios que no se puedan
+precomputar cómodamente. Hacerlo como **generador §13** (estilo `axis`/`grid`) que
+recibe los vértices 3D **por argumento** (listas nombradas) y *emite* pares 2D → la
+gramática `Subpath ::= (Coord Coord)+` queda intacta. **No** leer tripletas con `;`
+dentro del bloque `{ }` (eso rompería la regla sagrada que este plan protege).
 
-Internamente, en la fase del compilador, `path3d` lee grupos de tres, aplica la fórmula de proyección y los convierte a una `polyline` estándar de pares de coordenadas 2D. Así, proteges el backend de cualquier cambio estructural.
+### Fase 4 — (especulativo, diferir) jaula 3D con ejes/ticks
+`box_axis`/caja delimitadora con cuadrículas y marcas. Ni fig10-2 ni fig2-7 lo piden;
+va al final o se descarta.
 
-### 3. Generadores Espaciales (Expansión de §2 `Generator`)
+## Para retomar la próxima semana (act. 2026-07-12)
 
-En gráficos científicos y de datos espaciales, dibujar la "jaula" delimitadora (bounding box) es fundamental y tedioso. Puedes extender los generadores de V3 (`axis`, `grid`) para incluir contenedores de volumen.
+Fases 0-2 **hechas y commiteadas** (`lib/pseudo3d.mg`, `examples/simulate3d/fig10-2v3.mg`
++ `fig2-7b-v3.mg`, ambos calibrados a su `.png`). Puntos de arranque, en orden sugerido:
 
-**Propuesta:** Añadir `box_axis`.
+1. **`hatch` como parámetro de `plano`** (bajo costo): añadir `trama=0, trama_gap=3` y un
+   `if trama > 0 { polygon(hatch=trama,…) } else { polygon(fill=…) }` en el cuerpo. Así
+   las láminas de `fig2-7b-v3` dejan de ir inline. (Ojo: duplica la lista de vértices;
+   ver si compensa.)
+2. **Refactor de `fig10-2v3` para usar `plano`** (validación de la extracción sobre la
+   figura real; hoy usa `shear` en bloque, que también es válido). El demo ya probó que
+   `plano` reproduce esos planos; el riesgo es re-calibrar la esquina/cotas.
+3. **Afinado fino de `fig2-7b`** (rendimiento decreciente): elipse levemente ladeada
+   siguiendo la pantalla, cristal más laja, pantalla un pelín más vertical.
+4. **Fase 3** solo si aparece un ejemplo con vértices 3D arbitrarios no precomputables.
 
-```text
-box_axis(proj="isometric", x_len=10, y_len=10, z_len=5, ticks=true) { 0 0 }
+Recordar el **footgun**: identificador desnudo + `(` = llamada a función; parentizar la
+variable en coords (`(dx) (h+dy)`).
 
-```
-
-Esto invocaría una subrutina en el motor que automáticamente genere los tres planos isométricos con sus cuadrículas y marcas (`ticks`), dejando todo listo para que el usuario emita sus marcadores de tamaño físico (`marker`, §4.6) u objetos dentro del volumen.
-
-### 4. Primitivas de Volumen Simulado vía `struct`
-
-La gran ventaja de haber implementado `struct` (§8) con parámetros nativos es que ni siquiera tienes que programar formas tridimensionales básicas en C/Python.
-
-Puedes crear una librería estándar (por ejemplo, `include "3d_utils.mg"`) que envuelva las transformaciones propuestas en el paso 1 para ofrecer prismas listos para usar:
-
-```text
-struct Prisma(w, h, d, color_top="white", color_left="gray", color_right="black") {
-    isometric("top")   { rectangle(fill=color_top) { ... } }
-    isometric("left")  { rectangle(fill=color_left) { ... } }
-    isometric("right") { rectangle(fill=color_right) { ... } }
-}
-
-% En el script del usuario:
-Prisma(5, 3, 2) { 10 10 }
-
-```
-
-El enfoque de añadir las matrices de proyección estandarizadas (`isometric` y `oblique`) a la pila de estado actual es la intervención más económica, elegante y coherente con el manifiesto de la Especificación V3. Te daría resultados matemáticamente perfectos para ilustraciones de artículos académicos con un impacto nulo en la complejidad de renderizado del backend.
+## Resumen
+La intervención más económica y coherente es **no** añadir motor: la cizalla ya está,
+y una biblioteca `.mg` de `plano`/`prisma` sobre las transformaciones existentes
+reproduce el corpus oblicuo con impacto nulo en los backends. La isométrica verdadera,
+los generadores 3D y la jaula quedan como extensiones posteriores de la misma línea.

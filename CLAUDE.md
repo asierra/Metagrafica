@@ -131,6 +131,32 @@ cierra la costura (`closepath`) para todo `GI_POLYGON`, no solo con `closed=true
   ≠ aspecto de `display_size` (el meet isométrico letterboxea).
 - **Harness golden REACTIVADO** (ver "Build and test"): `bash test/run.sh check` → ok=32.
 
+### Cerrado en la sesión del 2026-07-12 (pseudo-3D, ver `plan_pseudo3d.md`)
+
+Soporte de ilustración pseudo-3D por **proyección oblicua**, **sin tocar el motor**
+(hallazgo clave: `shear` YA existía en V3 como sentencia §11.1 y en `transform=`; el
+draft del plan asumía falsamente que faltaba). Todo por composición de primitivas 2D:
+
+- **`lib/pseudo3d.mg`** (biblioteca nueva): structs `plano(w,h,k,…)` y
+  `prisma(w,h,d,a,f,…)` por **vértices COMPUTADOS** de los params (la oblicua se hornea
+  en el polígono; nada de shear ambiental ni gimnasia de ventana → cada pieza se coloca
+  con `at=`/`scale=`/`rotate=`). Trig en **radianes** (`cos(a*pi/180)`); `gray(g)` de
+  default. Sin z-buffer: orden de pintado = orden de escritura.
+- **`examples/simulate3d/`** (carpeta nueva, fuera de la red golden): `fig10-2v3.mg`
+  (planos cizallados grises = `FGRAY -80`; `shear 0.4 0` en bloque acotado; base angosta
+  vía `world_window 0 2.5 0 1`) y `fig2-7b-v3.mg` (panel b: láminas `hatch` inline,
+  cristal `prisma`, pantalla `plano`, anillo `ellipse` directa — calibrado al original).
+  `fig2-7v3.mg` = panel a (Bragg 2D, ya existía, NO usa pseudo-3D). Los `.png` son los
+  oráculos de calibración (los `.eps/.pdf` grandes de V1 quedan fuera de git por
+  `.gitignore`). Compilan EPS/SVG/PDF.
+- **Footgun del lenguaje V3 documentado**: identificador desnudo seguido de `(` se parsea
+  como llamada a función (`dx (h+dy)`→`dx(h+dy)`); en coords, parentizar: `(dx) (h+dy)`.
+
+Pendientes pseudo-3D (opcionales, ver `plan_pseudo3d.md`): `hatch` como parámetro de
+`plano` (hoy las láminas van inline); refactorizar `fig10-2v3` para usar `plano`; puntos
+3D arbitrarios como generador §13 (Fase 3, si algún ejemplo lo pide); `box_axis` (Fase 4,
+diferida). Isométrica verdadera (3 ejes) es caso posterior a la oblicua.
+
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran
 pendiente para migrar el material V1. Otros: `spline`/`smooth` §9 (motor `splines.cpp` listo,
