@@ -164,8 +164,10 @@ void EPSDisplay::start() {
   fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n", filename.c_str());
   fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n%%%%EndComments\n",
           (int)(dvx + 0.5), (int)(dvy + 0.5));
-  if (flags.using_ellipse)
+  if (flags.using_ellipse) {
     fprintf(file, "%s", ps_ellipse);
+    ellipse_defined = true;
+  }
   if (flags.using_textalign)
     fprintf(file, "%s", ps_simpletextalign);
   if (flags.using_reencode)
@@ -311,6 +313,14 @@ void EPSDisplay::useFillPattern() {
 }
 
 void EPSDisplay::text(string s) {
+  // Si aún no se emitió NINGUNA fuente al dispositivo (dev_size<0), un `show` sin
+  // fuente actual no dibuja nada. Pasa cuando el primer texto del documento hereda
+  // la cara ambiente (FN_NOFACE) —rótulos de axis/numbers/grid— y nunca se fijó una
+  // fuente con `font`: Text::draw omite setFontFace para FN_NOFACE. Fija la cara
+  // lógica vigente, o Times-Roman por default (igual que el default de text()).
+  if (dev_size < 0.0)
+    setFontFace(dspstate.fontFace != FN_NOFACE ? dspstate.fontFace : FN_TIMES_ROMAN);
+
   // §19: los glifos honran la rotación de la matriz de MUNDO (`rotate 90 text(...)`).
   // Ángulo = dirección del eje x transformado por mt; si ≠0 se gira la CTM alrededor
   // del punto actual (currentpoint translate · rotate · 0 0 moveto), como deviceRotate.
@@ -474,7 +484,14 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
     else
       fprintf(file, "%f %f %f %f %f arc\n", x, y, w, sa, ea);
   } else {
-
+    // Define el proc /ellipse en su primer uso si el prólogo no lo emitió (la
+    // bandera de parse-time no cubre p. ej. fit(stretch=true) sobre círculos).
+    // `def` afecta el diccionario actual, no el estado gráfico: sobrevive a
+    // gsave/grestore, así que definirlo aquí (dentro de cualquier contexto) basta.
+    if (!ellipse_defined) {
+      fprintf(file, "%s", ps_ellipse);
+      ellipse_defined = true;
+    }
     fprintf(file, "%g %g %g %g %g %g ellipse\n", x, y, w, h, sa, ea);
   }
   stroke();

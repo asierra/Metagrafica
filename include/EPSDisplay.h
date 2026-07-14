@@ -96,6 +96,14 @@ class EPSDisplay: public Display {
   FILE *file = nullptr;
   FILE *logfile = nullptr;
 
+  // El proc PostScript /ellipse se define en el prólogo cuando flags.using_ellipse
+  // (bandera de parse-time, aproximación conservadora). Pero la decisión real de
+  // emitir el operador `ellipse` la toma arc() al comparar las normas de columna
+  // del CTM (p. ej. fit(stretch=true) sobre una struct con círculos), caso que la
+  // bandera no cubre. Para no depender de esa aproximación, arc() define el proc
+  // just-in-time en su primer uso si aún no se emitió; este bool evita redefinirlo.
+  bool ellipse_defined = false;
+
   // Caché del estado de fuente REALMENTE emitido al dispositivo (findfont…setfont),
   // para que setFontFace no re-emita un setfont idéntico. La FUENTE es parte del
   // estado gráfico de PostScript: cada gsave/grestore la salva/restaura. Por eso
