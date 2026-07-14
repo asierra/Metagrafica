@@ -157,6 +157,38 @@ Pendientes pseudo-3D (opcionales, ver `plan_pseudo3d.md`): `hatch` como parámet
 3D arbitrarios como generador §13 (Fase 3, si algún ejemplo lo pide); `box_axis` (Fase 4,
 diferida). Isométrica verdadera (3 ejes) es caso posterior a la oblicua.
 
+### Cerrado en la sesión del 2026-07-14 (dos bugs de EPS + `fig6-4` con axis, ver `plan_plot.md`)
+
+Al portar `fig6-4` (Geiger-Nuttall: x lineal, **y logarítmico**) salieron dos bugs del
+motor **solo-EPS** (SVG/PDF renderizaban bien), ambos corregidos (commit `7194975`, red
+golden intacta `ok=32`):
+
+- **`/undefined in ellipse`**: `fit(stretch=true)` sobre una struct con `circle(...)` da
+  elipses al dibujar (`EPSDisplay::arc` compara normas de columna del CTM), pero el proc
+  `/ellipse` solo se definía según la bandera de parse-time `flags.using_ellipse`, que no
+  cubre ese caso (sí `SCST x≠y`/`shear`/`ellipse()` explícito). **Fix de raíz:**
+  `EPSDisplay::arc` define `/ellipse` en su **primer uso** (miembro `ellipse_defined`);
+  desacople draw-time/parse-time resuelto sin ampliar la heurística de parse (que habría
+  metido el proc en casi todo documento con `fit(stretch)`, ubicuo en V3).
+- **Rótulos de `axis` en blanco**: `axis`/`numbers`/`grid` emiten etiquetas con `FN_NOFACE`
+  ("hereda ambiente") y `Text::draw` **omite `setFontFace`** para `FN_NOFACE` (`text.cpp:416`);
+  si el documento nunca fijó `font`, EPS hace `show` sin fuente actual → invisible. **Fix:**
+  guard en `EPSDisplay::text()` — si nunca se emitió fuente (`dev_size<0`), fija la cara
+  vigente o Times-Roman. Cero churn (un `text()` normal hornea `FN_DEFAULT`, no lo toca).
+
+- **`examples/fig6-4v3-clean.mg`** (commiteado; versión limpia con `axis`): ejes con `axis()`
+  en vez de polilínea-en-L + `ticks()` a mano; puntos = `dot()` **físicos** (redondos, no
+  `circle` que el stretch deforma → es la causa del bug #1). El eje y log se rotula a mano
+  (`10^n` en `text()` math) porque `axis` aún no hace `scale="log"`. Los archivos crudos
+  `examples/fig6-4.mg` (original V1), `fig6-4v3.mg` (traducción literal) y `fig6.4.png`
+  (oráculo) quedaron **sin commitear** (working tree).
+
+**Siguiente (`plan_plot.md`, NUEVO, sin commitear):** aterriza el graficado de datos. El
+núcleo ya existe (`axis` §13.5 + marco de datos §13.7 + `fit`); falta pulir el eje y
+empaquetar en azúcar `plot { }`. **Prototipo (Fase 1, bajo costo):** `axis(scale="log")` +
+`format=` tocando solo `AxisStmt::exec` (`parserv3.cpp:1512`), sin sintaxis nueva, que cierra
+`fig6-4`. Hay 4 preguntas abiertas para Alejandro al pie del plan.
+
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran
 pendiente para migrar el material V1. Otros: `spline`/`smooth` §9 (motor `splines.cpp` listo,
