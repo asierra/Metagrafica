@@ -407,6 +407,9 @@ public:
   void setGSType(GraphicsStateType gs) { gstype = gs; }
   void setPosition(point p) { position = p; gstype = GS_PLUMEPOSITION; }
 
+  point getPosition() const { return position; }
+  GraphicsStateType getGraphicsStateType() const { return gstype; }
+  
 private:
   // GS_CLOSEPATH es inocuo con el estado inicial (openpath ya es false);
   // el parser siempre fija el tipo real antes de dibujar.

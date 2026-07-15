@@ -575,6 +575,19 @@ static Box structBox(Scope &s, const StructDef *def) {
 // Registro global (§15: nombres globales). Posee las definiciones.
 static std::map<std::string, std::unique_ptr<StructDef>> g_structs;
 
+// Bandera de contexto: activa mientras PlotStmt ejecuta contenido en modo LOG
+// (plan_plot.md Fase 4 Paso 5). Los colocadores de structs (invoke/repeat/fit/
+// place) la consultan y erroran: una struct dibuja en coords LOCALES y el motor
+// aplica su matriz en draw-time, así que el mapper puntual del plot (no afín)
+// daría matriz(map(p)) ≠ map(matriz(p)). Detección en la SENTENCIA, no en el item
+// (evita falsos negativos de structs sin Transform y falsos positivos de rotate).
+static bool g_plotLogContext = false;
+static bool logPlotBlocksStruct(const char *what) {
+  if (!g_plotLogContext) return false;
+  evalError("structs dentro de un plot logarítmico: aún no soportado (", std::string(what) + ")");
+  return true;
+}
+
 struct StructDefStmt : Stmt {
   std::unique_ptr<StructDef> def;
   void exec(Scope &, MetaGrafica &, GraphicsItemList &) override {
@@ -657,6 +670,7 @@ struct InvokeStmt : Stmt {
   std::vector<ExprPtr> pos;
   std::map<std::string, ExprPtr> named;      // incluye at/rotate/scale (aún ignorados)
   void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (logPlotBlocksStruct("invoke")) return;
     auto it = g_structs.find(name);
     if (it == g_structs.end()) { evalError("struct no definida: ", name); return; }
     StructDef *def = it->second.get();
@@ -815,6 +829,7 @@ struct RepeatStmt : Stmt {
   std::map<std::string, ExprPtr> named;   // count, scale, rotate, at, advance
   std::vector<MatrixCtor> xform;          // transform= (vacío = identidad)
   void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (logPlotBlocksStruct("repeat")) return;
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (repeat): ", structName); return; }
     StructDef *def = it->second.get();
@@ -910,6 +925,7 @@ struct FitStmt : Stmt {
       return;
     }
 
+    if (logPlotBlocksStruct("fit")) return;   // solo la rama struct (fit-de-path arriba ya retornó)
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (fit): ", structName); return; }
     StructDef *def = it->second.get();
@@ -965,6 +981,7 @@ struct PlaceStmt : Stmt {
   std::map<std::string, ExprPtr> named;   // scale, shift, count, gap, both_sides, r, from, to
   std::vector<ExprPtr> coords;
   void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (logPlotBlocksStruct("place")) return;
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (place): ", structName); return; }
     Structure *s = buildStructure(it->second.get(), mg, caller);
@@ -1874,13 +1891,22 @@ struct PlotStmt : Stmt {
       evalError("plot: un eje log requiere rango (x=/y=) positivo"); return;
     }
 
+    // Mapper puntual valor→caja por eje (lineal o log). Lo usa la ruta LOG (abajo);
+    // la lineal usa una matriz envolvente. t = fracción a lo largo del eje; en log
+    // t interpola en el exponente (log no es afín → ninguna Matrix 3×3 lo expresa).
+    auto mapAxis = [](double v, double from, double to, double b0, double b1, bool log) {
+      double t;
+      if (log) { double lf = std::log10(from), lt = std::log10(to);
+                 t = (lt == lf) ? 0 : (std::log10(v) - lf) / (lt - lf); }
+      else     { t = (to == from) ? 0 : (v - from) / (to - from); }
+      return b0 + t * (b1 - b0);
+    };
+    auto mapPt = [&](point p) {
+      return point(mapAxis(p.x, x0, x1, bx0, bx1, xlog),
+                   mapAxis(p.y, y0, y1, by0, by1, ylog));
+    };
+
     // --- Contenido de datos → caja ------------------------------------------
-    if (xlog || ylog) {
-      // Ruta LOG: mapper puntual (pendiente, plan_plot.md Fase 4 Paso 4). El eje
-      // sí sabe log; lo que falta es remapear los PUNTOS del contenido.
-      evalError("plot: escala log del contenido aún no implementada (ruta lineal por ahora)");
-      return;
-    }
     // Retícula (grid=): capa de FONDO, ANTES del contenido → z-order correcto
     // (contenido y ejes encima). Reusa axis(ticks="grid"): los pasos salen del
     // `step` de xaxis/yaxis, así se auto-alinea con las marcas (y log sale gratis
@@ -1914,17 +1940,59 @@ struct PlotStmt : Stmt {
       emitGrid(yaxis.get(), false);
     }
 
-    // Ruta lineal: matriz envolvente datos→box (stretch), como fit de struct. Se
-    // ejecuta el contenido dentro del envoltorio OPMPUSH/OPMPOP; los transforms
-    // locales §11.1 del cuerpo se cierran antes del OPMPOP (como en FitStmt).
-    Box w{x0, y0, x1 - x0, y1 - y0};
-    Matrix M = FitStmt::fitMatrix(w, bx0, by0, bx1, by1, /*stretch=*/true);
-    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
-    { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
-    for (auto &st : content) st->exec(s, mg, out);
-    popTransforms(countTransforms(content), out);
-    { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
-    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    if (!xlog && !ylog) {
+      // Ruta LINEAL: matriz envolvente datos→box (stretch), como fit de struct. Se
+      // ejecuta el contenido dentro del envoltorio OPMPUSH/OPMPOP; los transforms
+      // locales §11.1 del cuerpo se cierran antes del OPMPOP (como en FitStmt).
+      // Ruta general: hasta structs invocadas dentro funcionan (matrices componen).
+      Box w{x0, y0, x1 - x0, y1 - y0};
+      Matrix M = FitStmt::fitMatrix(w, bx0, by0, bx1, by1, /*stretch=*/true);
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
+      for (auto &st : content) st->exec(s, mg, out);
+      popTransforms(countTransforms(content), out);
+      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    } else {
+      // Ruta LOG: mapper puntual. El contenido se ejecuta a una lista temporal (con
+      // la bandera de contexto activa → bloquea colocación de structs, cuya matriz
+      // de draw-time NO compone con el mapper no afín) y luego se remapean SOLO los
+      // PUNTOS de cada item. Radios/anchos/line_width/font son miembros aparte o
+      // Attributes → el mapper no los alcanza (invariante físico gratis, Lección 4).
+      GraphicsItemList tmp;
+      bool prevLogCtx = g_plotLogContext;   // save/restore (soporta plots anidados)
+      g_plotLogContext = true;
+      for (auto &st : content) st->exec(s, mg, tmp);
+      g_plotLogContext = prevLogCtx;
+      for (auto &it : tmp) {
+        switch (it->getType()) {
+          case GI_POLYLINE: case GI_POLYGON: case GI_BEZIER: case GI_DOT:
+          case GI_RECTANGLE: case GI_ARC: case GI_CIRCLE: case GI_ELLIPSE:
+          case GI_POLYBAR: {
+            auto *gp = static_cast<GraphicsItemWithPath *>(it.get());
+            Path p = gp->getPath();
+            for (point &pt : p) pt = mapPt(pt);
+            gp->setPath(std::move(p));
+            break;
+          }
+          case GI_STATE: {                       // ancla de text(): solo GS_PLUMEPOSITION lleva punto
+            auto *gs = static_cast<GraphicsState *>(it.get());
+            if (gs->getGraphicsStateType() == GS_PLUMEPOSITION)
+              gs->setPosition(mapPt(gs->getPosition()));
+            break;
+          }
+          case GI_TICKS:
+            // grid()/ticks()/axis() PELADO en el contenido: su path[0] es un VECTOR,
+            // no un punto → el mapper lo destruiría. La retícula va con grid= (arg de
+            // plot); marcas/ejes con xaxis/yaxis. Error, no corrupción silenciosa.
+            evalError("plot log: grid()/ticks()/axis() en el contenido corrompe coords; usa grid= o xaxis/yaxis");
+            break;
+          default: break;                        // Attribute/HatchAttr/Transform/glifos: intactos
+        }
+      }
+      popTransforms(countTransforms(content), tmp);   // §11.1 del cuerpo (raro en log)
+      for (auto &it : tmp) out.push_back(std::move(it));
+    }
 
     // --- Ejes: coords exteriores, NO mapeados -------------------------------
     // p1 p2 = borde de la caja; from/to/scale heredados de los args de plot. axis

@@ -1,65 +1,50 @@
 % Fig. 6.4 — Vidas medias alfa nucleares (ley de Geiger-Nuttall):
 % log(λ⁻¹) vs. E^{-1/2}, del Po al U. IMQ 3a. ed.
 %
-% Versión V3 LIMPIA (propuesta), a partir de la traducción literal fig6-4v3.mg.
-% Cambios respecto a la literal:
-%   1. Los ejes se generan con axis() en vez de una polilínea en L + dos ticks()
-%      manuales con marcas/avances calculados a mano.
-%   2. Los puntos experimentales son marcadores FÍSICOS dot() (círculos redondos,
-%      radio inmune al stretch) en vez de circle() geométrico (que bajo el stretch
-%      del fit se deforma en elipse — justo el caso que exigía el prólogo /ellipse).
-%   3. La recta de ajuste vive en la misma struct que los datos, fiteada al marco.
-%   4. (plan_plot.md Fase 1) El eje y usa axis(scale="log"): from/to en VALORES
-%      (1e-15/1e5), marcas y rótulos "10^n" generados solos (antes 5 text() a
-%      mano). El eje x usa strip_zero=true para el estilo del libro (".30", no
-%      "0.30").
+% Versión V3 con plot { } (plan_plot.md Fase 4). Los datos van EN UNIDADES REALES
+% (E^{-1/2} en MeV^{-1/2}, λ⁻¹ en s), convertidos de los píxeles digitalizados del
+% escaneo con un script de un solo uso (inversión derivada en plan_plot.md). plot mapea
+% datos→caja: x lineal, y LOGARÍTMICO (mapper puntual, log no es afín). Los ejes
+% (xaxis/yaxis) heredan x=/y= y se rotulan solos: adiós a los cinco text() de
+% potencias de diez y a las coords digitalizadas.
 %
-% Lo que axis NO cubre aún y queda manual:
-%   - Rótulos de isótopos y los títulos matemáticos de los ejes (superíndices).
+% Layout del libro: el eje x cae ABAJO de la 1ª marca log (10^{-15}), con un hueco.
+% Se reproduce con box de fondo en y=0 (nivel del eje x) y el rango y extendido a
+% 1e-20; yaxis(start=1e-15) rotula desde 10^{-15} hacia arriba.
 
 display_size 9 6.7
 font_size 8
 
-% ── Datos: recta de ajuste + puntos, en coords digitalizadas ────────────────
-% dot(r) = marcador físico (§4.6): su POSICIÓN sigue el stretch del fit, su RADIO
-% (pt) no → puntos redondos en su sitio. fill "black" los rellena (disco).
-struct PUNTOS() {
-    world_window 15 139 18 132
-    line_width 0.8
-    polyline { 15 132  139 18 }
-    fill "black"
-    dot(1.5) { 18 127  36 114  42 109  53 101  44 95  55 92  60 87.5  69 87
-               71 78.5  78.5 85  80 71  83.5 71.5  76.5 68  80 68  88 60
-               99.5 56.5  106 47  101.5 40  108 38  111 41  102.5 30
-               129.5 24.5  131 19  137 18 }
-}
-
-% Ventana en unidades de "plot" (0..6 en x, 0..5.5 en y), con margen para rótulos.
+% Lienzo exterior (world coords) con margen para el título del eje y y los isótopos.
 world_window -1 7.2 -0.95 6.25
 
-% ── Eje x: E^{-1/2} lineal, .30 … .50 cada .05 ──────────────────────────────
-% axis mapea el VALOR (from..to) a lo largo de la línea {p1 p2}; los rótulos y las
-% marcas salen solos. (La recta 0..6 en plot ↔ .30..50 en dato.) strip_zero pule
-% el cero inicial (".30", no "0.30" — estilo del libro). ticks="in": marcas hacia
-% adentro (como el original). extend: la línea rebasa un poco cada extremo.
-line_width 0.2
-axis(from=0.30, to=0.50, step=0.05, decimals=2, strip_zero=true,
-     ticks="in", extend=0.4) { 0 0  6 0 }
+% x = E^{-1/2} (0.30..0.50, lineal) ; y = λ⁻¹ (log). box=(0,0,6,5) = región de datos
+% en world coords; la anisotropía y el mapeo log los hace plot.
+plot(x=(0.30,0.50), y=(1e-20,1e5), yscale="log", box=(0,0, 6,5)) {
 
-% ── Eje y: λ^{-1} logarítmico (5 décadas mayores) ───────────────────────────
-% scale="log": from/to en VALORES (no exponentes); step=5 décadas entre marcas
-% mayores → caen en 1e-15, 1e-10, 1e-5, 1, 1e5 (rótulos "10^n" generados solos,
-% n=0 → "1"). ticks="in": marcas hacia adentro. extend=(1, 0.3): la línea baja
-% 1 unidad bajo la 1ª marca hasta el eje x (esquina) y rebasa un poco arriba.
-axis(scale="log", from=1e-15, to=1e5, step=5,
-     ticks="in", extend=(1, 0.3)) { 0 1  0 5 }
+    % recta de ajuste (Geiger-Nuttall), EN DATOS
+    line_width 0.8
+    polyline { 0.320 1.0e7  0.493 3.2e-17 }
 
-% ── Puntos y recta al rectángulo de datos ───────────────────────────────────
-line_width 1
-fit(PUNTOS, stretch=true) { 0.6 0.7  5.79 5.4 }
+    % puntos experimentales, EN DATOS (dot = marcador físico: posición mapeada,
+    % radio inmune al mapper → discos redondos en su sitio)
+    fill "black"
+    dot(1.5) { 0.324 9.3e5  0.349 1.9e3  0.358 1.8e2  0.373 4.1e0
+               0.360 2.4e-1  0.376 5.7e-2  0.383 6.7e-3  0.395 5.3e-3
+               0.398 9.4e-5  0.409 2.0e-3  0.411 2.7e-6  0.416 3.4e-6
+               0.406 6.4e-7  0.411 6.4e-7  0.422 1.4e-8  0.438 2.7e-9
+               0.447 3.0e-11  0.441 1.1e-12  0.450 4.2e-13  0.454 1.7e-12
+               0.442 9.4e-15  0.480 6.9e-16  0.482 5.1e-17  0.490 3.2e-17 }
 
-% Títulos de ejes (matemáticos) e isótopos: aún manuales (fuera de Fase 1).
+    % Eje x: E^{-1/2} lineal, .30..50 cada .05, marcas adentro, sobrante de línea.
+    xaxis(line_width=0.2, step=0.05, decimals=2, strip_zero=true, ticks="in",
+          extend=0.4, title="$/iE^{/r-1/2} (MeV)^{/r-1/2} $")
+    % Eje y: λ⁻¹ log; rótulos 10^n desde 10^{-15} (start), 5 décadas por marca.
+    yaxis(line_width=0.2, start=1e-15, step=5, ticks="in", extend=(0, 0.3))
+}
+
+% Título del eje y (horizontal, arriba — estilo del libro, NO rotado) e isótopos:
+% anotaciones en world coords, fuera del plot.
 text("${/gl^-1} (/rs)$") { -0.83 5.5 }
-text("$/iE^{/r-1/2} (MeV)^{/r-1/2} $") { 2.4 -0.9 }
 text("$Po{^292}$") { 1.1 5.1 }
 text("$ U{^238}$") { 5.9 0.6 }
