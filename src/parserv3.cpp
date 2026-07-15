@@ -1964,6 +1964,11 @@ struct PlotStmt : Stmt {
       g_plotLogContext = true;
       for (auto &st : content) st->exec(s, mg, tmp);
       g_plotLogContext = prevLogCtx;
+      // Acota el estado del contenido (fill/color/line_width/dash) con push/pop, como
+      // la ruta lineal lo hace vía el envoltorio de matriz. Sin esto un `fill "black"`
+      // del contenido se FUGA a los ejes (que se dibujan después) → en PDF/SVG las
+      // líneas del eje salen rellenas sin trazo = invisibles (EPS lo toleraba).
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
       for (auto &it : tmp) {
         switch (it->getType()) {
           case GI_POLYLINE: case GI_POLYGON: case GI_BEZIER: case GI_DOT:
@@ -1990,8 +1995,9 @@ struct PlotStmt : Stmt {
           default: break;                        // Attribute/HatchAttr/Transform/glifos: intactos
         }
       }
-      popTransforms(countTransforms(content), tmp);   // §11.1 del cuerpo (raro en log)
       for (auto &it : tmp) out.push_back(std::move(it));
+      popTransforms(countTransforms(content), out);   // §11.1 del cuerpo (raro en log)
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
 
     // --- Ejes: coords exteriores, NO mapeados -------------------------------
