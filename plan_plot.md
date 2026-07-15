@@ -352,27 +352,46 @@ churn con el cero-churn de la Fase 1.
 4. Casos de error con mensaje claro (no crash, no silencio): `scale="log"` con
    `from<=0`, `step` no entero en log, rango log sin década completa (advertencia).
 
-### Fase 2 — Marco de datos: `edge=` + herencia de rango
+### Fase 2 — `edge=` — ❌ NO HACER SUELTA: se PLIEGA dentro de la Fase 4
 
-`axis(edge="bottom"|"top"|"left"|"right")` **sin** bloque `{p1 p2}` y **sin** `from`/`to`:
-toma los extremos físicos del borde y el rango de la `world_window` vigente (§13.7). Con
-esto `fig2-3` pierde sus dos bloques de extremos y sus `from`/`to`. Requiere que
-`AxisStmt` consulte `mg.getWindow()` cuando faltan bloque/rango.
+> **Doble corrección (2026-07-14). Este plan afirmaba dos cosas falsas sobre la Fase 2.**
 
-> **Corrección (2026-07-14): NO es prerequisito duro de `plot`, como decía este plan.**
-> `plot` construye sus `AxisStmt` internamente: conoce las esquinas de `box` y los rangos,
-> así que puede fijar `coords` y `from`/`to` él mismo. Y para los ejes **abajo/izquierda**
-> —los únicos que fig6-4 y fig2-3 necesitan— la heurística de tangente que ya existe
-> (horizontal→abajo, vertical→izquierda) da exactamente el lado correcto. `edge=` solo se
-> vuelve **necesario** para ejes arriba/derecha (`frame=true`, ejes secundarios).
-> Es entonces una **preferencia de secuenciación** (hacer `plot` primero obliga a
-> hand-rollear los bordes y luego refactorizar), no un muro. Su valor propio sigue en pie:
-> `axis(edge=…)` standalone limpia fig2-3.
+**(a) NO es prerequisito de `plot`.** `plot` construye sus `AxisStmt` internamente: conoce
+las esquinas de `box` y los rangos, así que fija `coords` y `from`/`to` él mismo. Y para los
+ejes **abajo/izquierda** —los únicos que fig6-4 y fig2-3 necesitan— la heurística de
+tangente que ya existe (horizontal→abajo, vertical→izquierda) da el lado correcto. `edge=`
+solo se vuelve necesario para ejes arriba/derecha (`frame=true`, ejes secundarios).
 
-**Sub-tarea** que la Fase 1.5 dejó pendiente: `edge` también fija el LADO de
-etiquetas/marcas/título (hoy se deriva de la tangente `horiz`); con `edge="top"`/`"right"`
-el "out" es el opuesto y la auto-alineación debe invertirse — center/**bottom** para top,
-**left**/middle para right.
+**(b) La versión standalone NO ES IMPLEMENTABLE hoy, y su beneficio declarado era falso.**
+Decía: "`axis(edge=…)` toma el rango de la `world_window` vigente; con esto fig2-3 pierde
+sus bloques y sus `from`/`to`". **Falso**, verificado en el archivo real:
+
+```text
+examples/fig2-3.mg:19   world_window -0.1 1.1  -1 7   stretch=true   % ← CON MÁRGENES
+examples/fig2-3.mg:53   axis(from=0, to=1, …) { 0 0  1 0 }           % ← en el rango de DATOS
+examples/fig2-3.mg:55   axis(from=0, to=6, …) { 0 0  0 6 }
+```
+
+La ventana **≠** el rango de datos: lleva márgenes para que quepan rótulos y títulos.
+`edge="bottom"` heredando de la ventana pondría el eje en `y=-1` abarcando `x=-0.1…1.1`
+— en el margen, no en los datos. fig2-3 **no** perdería nada; saldría mal.
+
+**Raíz:** el ejemplo de §13.7 que inspiró `edge=` usa una **ventana anidada** cuyo rango
+*es* el de datos (`world_window 0 1 0 6 stretch=true` dentro de un bloque), con el margen en
+la ventana **exterior**. Y **§16 (ventanas anidadas) no existe** (ver "Corrección al plan
+anterior" arriba). Sin §16, un documento suelto no tiene dónde declarar "la caja de datos"
+por separado de la ventana-con-márgenes: `edge=` se queda **sin fuente de verdad**.
+
+**Conclusión:** `edge=` **solo tiene sentido dentro de `plot`**, donde `box=` cumple el papel
+de la ventana anidada (caja de datos explícita, márgenes afuera). Se pliega a la Fase 4 como
+mecanismo interno; **no se implementa como sentencia suelta**. La `axis(edge=…)` standalone
+de §13.7 queda **diferida hasta que exista §16**, y hay que anotarlo en la spec.
+
+**Sub-tarea que viaja a la Fase 4:** `edge` fija el LADO de etiquetas/marcas/título (hoy se
+deriva de la tangente `horiz`); con `edge="top"`/`"right"` el "out" es el opuesto y la
+auto-alineación de la Fase 1.5 debe invertirse — center/**bottom** para top, **left**/middle
+para right. Solo hace falta si se implementa `frame=true`; para fig6-4/fig2-3 (ejes
+abajo/izquierda) la heurística actual basta.
 
 *Nota log:* `edge` + `scale="log"` solo compone bien **dentro de `plot`** (Fase 4), donde
 los rangos heredados son de datos reales. En un documento suelto la `world_window` es
@@ -618,6 +637,75 @@ auditoría:
 2. `grid()`/`ticks()`/`axis()` **pelados** en el contenido → sugerir `xaxis(ticks="grid")`.
 3. Rango de datos ≤ 0 en un eje log (el `axis` ya valida; `plot` debe hacerlo con `x=`/`y=`).
 
+#### GUÍA DE IMPLEMENTACIÓN (ejecutable por un agente, en orden)
+
+Todo el diseño está arriba; esto es la receta. **Antes de empezar:** `make` y
+`bash test/run.sh check` deben dar `ok=51 fail=0 error=0 psfail=0`. Si el directorio
+`test/golden/` no existe (no va en git), correr `bash test/run.sh capture` primero.
+
+**Paso 1 — Motor: los dos accesores** (`include/primitives.h`, clase `GraphicsState`,
+~línea 398). Añadir, junto a los `set*` existentes:
+```cpp
+  GraphicsStateType getGSType() const { return gstype; }
+  point getPosition() const { return position; }
+```
+Nada más del motor. `make` debe seguir limpio de warnings. Cero churn (`ok=51`).
+
+**Paso 2 — Parser: `parsePlot` + `PlotStmt`** (`src/parserv3.cpp`). Calcar `CompoundStmt`
+(struct ~1767) y su `parseStatement` (~1791: `if (name == "compound")`). Registrar
+`if (name == "plot") return parsePlot(lx);` junto a los demás constructos con bloque.
+Args nombrados: `x=`, `y=` (tuplas), `xscale=`/`yscale=` (`"log"`), `box=` (tupla de 4;
+default = `mg.getWindow()`). Cuerpo: loop de `parseStatement` hasta `}`, **interceptando**
+`xaxis`/`yaxis` → `AxisStmt` con `edge` predefinido (guardarlos aparte del contenido).
+
+**Paso 3 — `PlotStmt::exec`, ruta LINEAL primero** (sin log). Es la que no necesita mapper:
+1. Contenido → `GraphicsItemList` temporal.
+2. `Matrix M = FitStmt::fitMatrix(Box{x0,y0,dx,dy}, box…, /*stretch=*/true)` — reusar tal cual.
+3. Envolver el temporal con `Transform(OPMPUSH, M)` … `Transform(OPMPOP)` (patrón de
+   `FitStmt` rama struct, ~línea 922) y volcarlo a `out`.
+4. Ejes: construir los `AxisStmt` con `coords` = borde de `box` y `from`/`to` de `x=`/`y=`;
+   ejecutarlos **fuera** del envoltorio (coords exteriores).
+**Verificar aquí:** portar `fig2-3` a `plot{}` → debe salir **exacto** (`ok=51` sin
+re-bendecir). Si no es exacto, el mapeo lineal está mal; **no seguir al Paso 4**.
+
+**Paso 4 — Ruta LOG (el mapper).** Solo si `xscale`/`yscale` es `"log"`:
+1. Mapper por eje: lineal `t=(v-from)/(to-from)` o log `t=(log10(v)-log10(from))/(log10(to)-log10(from))`;
+   luego `t` → coordenada dentro de `box`. Validar `from>0 && to>0` (error, como `axis`).
+2. Recorrer el temporal (**pasada lineal, es plano**) y remapear:
+   - `switch (it->getType())`: `GI_POLYLINE/GI_POLYGON/GI_BEZIER/GI_DOT/GI_RECTANGLE/`
+     `GI_ARC/GI_ELLIPSE/GI_POLYBAR` → `static_cast<GraphicsItemWithPath*>` →
+     `getPath()` → mapear cada punto → `setPath()`.
+   - `GI_STATE` → **solo si `getGSType() == GS_PLUMEPOSITION`** →
+     `setPosition(map(getPosition()))`. (Ver la trampa de `setPosition` arriba: sin el
+     filtro, cada push/pop se vuelve un movimiento de pluma.)
+   - `GI_TICKS` → **NO mapear**: `path[0]` es un vector. No debería llegar aquí (ver el
+     error del Paso 5); si llega, es un bug.
+   - `Attribute`/`HatchAttr`/`Transform` → no tocar.
+3. Los ejes NO pasan por el mapper (igual que en el Paso 3).
+
+**Paso 5 — Los tres errores claros** (usar `evalError`, que imprime y sigue):
+- Bandera de contexto global (junto a `g_structs`/`g_flags`) que `PlotStmt::exec` levanta
+  mientras ejecuta contenido **en modo log**, y que consultan `InvokeStmt` (~655),
+  `RepeatStmt` (~813), `FitStmt` (~860) y `PlaceStmt` (~963) al inicio de su `exec` →
+  *"structs dentro de un plot logarítmico: aún no soportado"*. **No** olfatear `Transform`s.
+- `grid()`/`ticks()`/`axis()` pelados en el contenido → error sugiriendo
+  `xaxis(ticks="grid")`.
+- `x=`/`y=` con valores ≤ 0 cuando su escala es `"log"`.
+
+**Paso 6 — Portar fig6-4.** Requiere el **script Python de un solo uso** (inversión ya
+derivada y verificada arriba) para convertir sus píxeles a datos. **No saldrá
+byte-idéntico** → re-bendecir con `capture` **solo tras comparar por vista** contra
+`examples/fig6-4.png` en EPS/SVG/PDF.
+
+**Compuertas en cada paso** (Lecciones 1-3): `make` sin warnings; `bash test/run.sh check`;
+y para cualquier cosa que mueva texto, revisar el **PDF por vista** (`pdftoppm`), porque el
+golden lo compara por bytes pero no te dice *qué* cambió.
+
+**Qué NO hacer** (todo verificado, no re-litigar): no añadir elementos gráficos al motor; no
+un virtual `GraphicsItem::mapPoints`; no olfatear `Transform`s para detectar structs; no
+volver `protected` los miembros de `GraphicsState`; no implementar `axis(edge=)` suelta; no
+clipear.
+
 ### Fase 5 — (opcional, cuando un ejemplo lo pida) contenido de alto nivel
 
 - **Línea de tendencia** sobre una serie (la recta manual de fig6-4).
@@ -650,12 +738,12 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
 - **Hecho 2026-07-14 (preparación para plot):** trabajo commiteado en la rama
   `axis-plot-fase1`; `fig6-4v3-clean` promovido al golden; Capas 1 y 2 del harness
   (`ok=51 … psfail=0`), ambas verificadas reintroduciendo sus bugs.
-- **Siguiente: Fase 2 (`edge=`)** — bajo costo; **no** es bloqueante de `plot` (ver la
-  corrección en la Fase 2), pero hacerla antes evita hand-rollear los bordes y
-  refactorizar después. Incluye invertir la auto-alineación de la 1.5 para
-  `edge="top"/"right"`.
-- **Luego Fase 4 (`plot`)** — el headline; su valor subió mucho porque hereda todo el
-  pulido de `axis`. Portar fig6-4 y fig2-3 a `plot{}` es el criterio de cierre.
+- **Fase 2 (`edge=` suelta): NO HACER.** Se plegó a la Fase 4 (ver la doble corrección en
+  la Fase 2): no es prerequisito, y la versión standalone **no es implementable** sin §16
+  —la `world_window` lleva márgenes, así que no hay de dónde heredar el rango de datos—.
+- **Siguiente: Fase 4 (`plot`) — directo.** Tiene **guía de implementación paso a paso**
+  ejecutable por un agente. Su valor subió mucho porque hereda todo el pulido de `axis`.
+  Criterio de cierre: fig2-3 exacto, fig6-4 equivalente por vista.
   **Costo de motor auditado: DOS accesores const** en `GraphicsState` (`getPosition()` y
   `getGSType()`), cero elementos gráficos nuevos → es trabajo de parser, no de motor.
   **Tarea previa al port de fig6-4:** script Python de un solo uso que convierta sus

@@ -77,7 +77,7 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 1. `GI_*` enum + subclass in `include/primitives.h`; 2. despacho por nombre en `parserv3.cpp` (`isPrim()` + `PrimStmt`, o un `Stmt`/`parse*` propio para sintaxis con bloque, p. ej. `axis`/`compound`); 3. `draw(Display&)` calling `Display` virtuals; 4. implement those in the three backends. *(V3 despacha las primitivas por su nombre-cadena en `parseStatement`, no por token del lexer; solo hace falta tocar `src/lexer.l` para símbolos/operadores nuevos, no para comandos.)*
 
-## Roadmap state (act. 2026-07-11)
+## Roadmap state (act. 2026-07-14)
 
 El parser V3 (`src/parserv3.cpp`) compila los 16 ejemplos de `examples/` a EPS/SVG/PDF.
 Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
@@ -196,11 +196,39 @@ golden intacta `ok=32`):
   `examples/fig6-4.mg` (original V1), `fig6-4v3.mg` (traducción literal) y `fig6.4.png`
   (oráculo) quedaron **sin commitear** (working tree).
 
-**Siguiente (`plan_plot.md`, NUEVO, sin commitear):** aterriza el graficado de datos. El
-núcleo ya existe (`axis` §13.5 + marco de datos §13.7 + `fit`); falta pulir el eje y
-empaquetar en azúcar `plot { }`. **Prototipo (Fase 1, bajo costo):** `axis(scale="log")` +
-`format=` tocando solo `AxisStmt::exec` (`parserv3.cpp:1512`), sin sintaxis nueva, que cierra
-`fig6-4`. Hay 4 preguntas abiertas para Alejandro al pie del plan.
+### Cerrado en la sesión del 2026-07-14 (`axis` maduro + red de pruebas; ver `plan_plot.md`)
+
+> ⚠️ **Este trabajo vive en la rama `axis-plot-fase1`** (6 commits), no en `main`.
+
+**Fases 1 y 1.5 de `plan_plot.md` HECHAS**, todo en `AxisStmt::exec` (`parserv3.cpp`), más
+los ajustes de fidelidad que salieron de calibrar `fig6-4` contra el original del libro:
+- `scale="log"` (from/to en **valores**, no exponentes; marcas iterando el **exponente
+  entero**, sin deriva flotante; rótulos `10^n` por markup math, n=0→`"1"`; `minor=true`),
+  `strip_zero=true`; errores claros con from/to≤0 o step no entero.
+- **Auto-alineación de etiquetas** por lado (center/top horizontal, right/middle vertical);
+  override `label_align=`/`label_valign=`. `extend=` (alarga solo la línea, en unidades del
+  eje). `label_gap` 8→**4 pt** (ahora mide al **borde** de la etiqueta, no al baseline) y
+  `title_gap` nuevo (desacopla el título, antes `label_gap*3`). **Título centrado** a lo
+  largo del eje (en el vertical, sobre la base rotada).
+- **Bug de PDF arreglado:** `PDFDisplay::text()` hacía `if (!current_font) return;` sin
+  fallback → el texto con cara ambiente (`FN_NOFACE`: rótulos de axis/numbers/grid) salía
+  **en blanco** si el documento nunca fijaba `font`. Era el análogo del guard `dev_size<0`
+  de EPS, nunca reflejado en PDF.
+
+**Red de pruebas ampliada** (ver "Build and test"): PDF entró al golden (libharu resultó
+byte-determinista) + compuerta `gs` (`psfail`); `fig6-4v3-clean` promovido al corpus.
+**Ambas compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar.**
+
+**Siguiente: Fase 4 = `plot { }`.** El plan trae **guía de implementación paso a paso
+ejecutable por un agente**, con el diseño ya auditado contra el código: `plot` es un `Stmt`
+(como `axis`, que no añadió ni una primitiva); su huella en el motor son **dos accesores
+const** en `GraphicsState` (`getPosition()`/`getGSType()`), cero elementos gráficos nuevos.
+Mecanismo: matriz envolvente si lineal / recorrido de puntos si log (log **no es afín**).
+**La Fase 2 (`edge=` suelta) NO se hace**: no es prerequisito y no es implementable sin §16
+(la `world_window` lleva márgenes → no hay de dónde heredar el rango de datos); se pliega
+dentro de `plot`, donde `box=` cumple ese papel. El plan lista lo que **no** hay que hacer
+(no re-litigar: nada de virtual `mapPoints`, ni olfatear `Transform`s, ni `protected`, ni
+clipping) y los tres errores claros que faltan.
 
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran
