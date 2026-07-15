@@ -1852,9 +1852,19 @@ struct PlotStmt : Stmt {
   std::unique_ptr<AxisStmt> xaxis, yaxis;  // ejes interceptados (coords exteriores)
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
-    // Rangos de datos (x=(from,to), y=(from,to)).
-    point xr = namedPoint(s, named, "x", 0, 1);
-    point yr = namedPoint(s, named, "y", 0, 1);
+    // Rangos de datos (x=(from,to), y=(from,to)). Deben ser TUPLAS, igual que box=:
+    // un escalar (`x=5`) es error, no se acepta en silencio cayendo al default (0,1).
+    auto getRange = [&](const char *k, point &r) -> bool {
+      auto it = named.find(k);
+      if (it == named.end()) { r = point(0, 1); return true; }   // omitido = default
+      Value v = it->second->eval(s);
+      if (v.type != Value::LIST || v.items.size() < 2) {
+        evalError("plot: requiere una tupla (from,to) en el arg ", k); return false;
+      }
+      r = point(v.items[0].num, v.items[1].num); return true;
+    };
+    point xr, yr;
+    if (!getRange("x", xr) || !getRange("y", yr)) return;
     double x0 = xr.x, x1 = xr.y, y0 = yr.x, y1 = yr.y;
     std::string xscale = namedStr(s, named, "xscale");
     std::string yscale = namedStr(s, named, "yscale");
@@ -1969,6 +1979,7 @@ struct PlotStmt : Stmt {
       // del contenido se FUGA a los ejes (que se dibujan después) → en PDF/SVG las
       // líneas del eje salen rellenas sin trazo = invisibles (EPS lo toleraba).
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      bool sawBareTicks = false;
       for (auto &it : tmp) {
         switch (it->getType()) {
           case GI_POLYLINE: case GI_POLYGON: case GI_BEZIER: case GI_DOT:
@@ -1989,13 +2000,19 @@ struct PlotStmt : Stmt {
           case GI_TICKS:
             // grid()/ticks()/axis() PELADO en el contenido: su path[0] es un VECTOR,
             // no un punto → el mapper lo destruiría. La retícula va con grid= (arg de
-            // plot); marcas/ejes con xaxis/yaxis. Error, no corrupción silenciosa.
-            evalError("plot log: grid()/ticks()/axis() en el contenido corrompe coords; usa grid= o xaxis/yaxis");
+            // plot); marcas/ejes con xaxis/yaxis. Se reporta UNA vez (tras el loop) y
+            // el item corrupto NO se emite (abajo se salta al volcar).
+            sawBareTicks = true;
             break;
           default: break;                        // Attribute/HatchAttr/Transform/glifos: intactos
         }
       }
-      for (auto &it : tmp) out.push_back(std::move(it));
+      if (sawBareTicks)
+        evalError("plot log: grid()/ticks()/axis() en el contenido corrompe coords; usa grid= o xaxis/yaxis");
+      for (auto &it : tmp) {
+        if (it->getType() == GI_TICKS) continue;   // no emitir el item corrupto (ya se avisó)
+        out.push_back(std::move(it));
+      }
       popTransforms(countTransforms(content), out);   // §11.1 del cuerpo (raro en log)
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
