@@ -6,12 +6,20 @@
 #   ./run.sh capture   - (re)generate the golden files from the current build
 #   ./run.sh check     - (default) compare current output against the golden files
 #
-# Dos compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
+# Tres compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
 #   - Golden por bytes (eps/svg/pdf): caza REGRESIONES de salida. No caza un bug
 #     preexistente: se bendice como correcto.
 #   - Ghostscript sobre el EPS (psfail): caza los bugs de PRÓLOGO, que el golden
 #     no puede ver porque producen un EPS byte-estable que revienta al interpretarse
 #     (/undefined in ellipse, /cshow sin su prólogo). Se omite si no hay gs.
+#   - Paridad entre backends (c3fail, "Capa 3"): caza bugs PREEXISTENTES que el
+#     golden bendice porque un backend omite algo silenciosamente. Dos invariantes
+#     robustos (cero falsos positivos en el corpus, sin herramientas externas):
+#       (a) TEXTO: nº de operaciones de texto EPS(show) == SVG(<text>) == PDF(Tj) —
+#           caza "rótulos en blanco en PDF/EPS" (bug de FN_NOFACE/current_font);
+#       (b) LÍNEAS RELLENAS: un path SVG de un solo segmento (M..L..) con fill=color
+#           y stroke=none es una línea de área nula = invisible → caza "ejes sin
+#           trazo en PDF/SVG" (fuga de fill del contenido, Lección 6).
 #
 set -u
 
@@ -96,8 +104,12 @@ ok_count=0
 fail_count=0
 error_count=0
 psfail_count=0
+c3fail_count=0
 
 for example in $EXAMPLES; do
+    # Capa 3 (paridad entre backends): acumuladores por ejemplo. Se llenan al vuelo
+    # dentro del loop de formatos (antes de borrar el tmpdir) y se comparan al salir.
+    c3_text_eps=""; c3_text_svg=""; c3_text_pdf=""; c3_filled_lines=0
     for fmt in $FORMATS; do
         base="$example.$fmt"
         tmpdir="$(mktemp -d)"
@@ -141,20 +153,44 @@ for example in $EXAMPLES; do
             fi
         fi
 
+        # Capa 3: extrae las métricas de esta salida ANTES de borrar el tmpdir.
+        # Sin herramientas externas: el PDF de libharu no está comprimido, así que
+        # los operadores (Tj de texto) son grepables directo, igual que EPS/SVG.
+        case "$fmt" in
+            eps) c3_text_eps=$(grep -cE '\)[[:space:]]*(show|cshow|rshow|ashow)$' "$outfile") ;;
+            svg) c3_text_svg=$(grep -c '<text' "$outfile")
+                 c3_filled_lines=$(grep -oE '<path d="M [-0-9.e ]+ L [-0-9.e ]+ " fill="#[0-9a-fA-F]{6}"[^>]*>' "$outfile" | grep -c 'stroke="none"') ;;
+            pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile") ;;
+        esac
+
         rm -rf "$tmpdir"
     done
+
+    # Capa 3: paridad entre backends (independiente del golden y de $MODE, como la
+    # compuerta gs). Solo si los tres formatos se renderizaron (si alguno falló, ya
+    # lo contó error_count). Ver el bloque de comentario del encabezado.
+    if [ -n "$c3_text_eps" ] && [ -n "$c3_text_svg" ] && [ -n "$c3_text_pdf" ]; then
+        if [ "$c3_text_eps" != "$c3_text_svg" ] || [ "$c3_text_eps" != "$c3_text_pdf" ]; then
+            echo "C3FAIL $example (texto EPS/SVG/PDF = $c3_text_eps/$c3_text_svg/$c3_text_pdf: un backend omite texto)"
+            c3fail_count=$((c3fail_count + 1))
+        fi
+        if [ "$c3_filled_lines" != "0" ]; then
+            echo "C3FAIL $example (SVG: $c3_filled_lines línea(s) rellena(s) sin trazo → stroke perdido)"
+            c3fail_count=$((c3fail_count + 1))
+        fi
+    fi
 done
 
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0

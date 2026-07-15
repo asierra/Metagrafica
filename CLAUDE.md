@@ -16,18 +16,18 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-3.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs: ok=51 fail=0 error=0 psfail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=51 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
-**Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14).** Corre el corpus
+**Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15).** Corre el corpus
 de `examples/` (17 `.mg` × EPS/SVG/**PDF** = 51 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=51 fail=0 error=0 psfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=51 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
-**Dos compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+**Tres compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
 - **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
@@ -39,8 +39,16 @@ files (`test/golden/`) **no están en git** (se regeneran con `capture`).
   (`/undefined in ellipse`; `/cshow` sin su prólogo si falta `using_textalign`). Se
   omite con aviso si no hay `gs` instalado. Corre también en `capture`, para no
   bendecir un EPS que no interpreta.
+- **Paridad entre backends** (`c3fail`, "Capa 3", nueva 2026-07-15) — caza bugs
+  **preexistentes** que el golden bendice porque un backend omite algo en silencio. Dos
+  invariantes robustos (cero falsos positivos en el corpus, **sin herramientas externas**:
+  el PDF de libharu no está comprimido → sus operadores son grepables): **(a)** nº de
+  operaciones de texto `EPS(show) == SVG(<text>) == PDF(Tj)` (caza rótulos en blanco); **(b)**
+  ningún path SVG de un solo segmento (`M..L..`) puede ir `fill=color stroke=none` = línea
+  de área nula invisible (caza ejes sin trazo por fuga de fill, Lección 6). Corre también en
+  `capture`. Es la única capa que caza un bug preexistente; las otras dos lo bendecen.
 
-Ambas compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar.
+Las tres compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar.
 
 Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexmg.cpp` from `src/mgpp.l`), `pandoc` (man page). Do not edit `src/lexmg.cpp` or `include/version.h` content by hand. libharu is vendored in `third_party/` for PDF.
 
@@ -261,9 +269,9 @@ Huella en el motor: **dos accesores const** en `GraphicsState` (`getPosition()`/
 envoltorio `GS_PUSHSTATE`/`GS_POPSTATE` (la lineal lo tiene vía la matriz) → el `fill "black"`
 de los puntos se **fugaba** a los ejes → sus líneas/marcas salían **rellenas sin trazo =
 invisibles en PDF/SVG** (EPS lo toleraba). **Ni el golden por bytes** (bendecía la salida rota)
-**ni la compuerta `gs`** (solo mira el EPS) lo cazaban → refuerza la necesidad de la **Capa 3**
-(paridad de trazo/texto entre backends, pendiente en `test/run.sh`). Fix: acotar el contenido
-log con push/pop, como la lineal. `make` limpio, `gs` OK, golden `ok=51`.
+**ni la compuerta `gs`** (solo mira el EPS) lo cazaban → motivó la **Capa 3** (paridad entre
+backends, ya HECHA — ver "Build and test"; su detector de "línea rellena" caza justo esto).
+Fix: acotar el contenido log con push/pop, como la lineal. `make` limpio, `gs` OK, golden `ok=51`.
 
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran

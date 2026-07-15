@@ -104,8 +104,8 @@ dónde se esconden los bugs. Se codifica aquí porque se repetirá en Fases 2–
    su `Polyline` traza igual). **Corolario para el harness:** ni el **golden por bytes**
    (bendice la salida rota como "correcta") ni la compuerta **`gs`** (solo mira el EPS, que se
    veía bien) cazan esta clase. Solo la caza comparar **qué se dibuja** entre backends (la
-   **Capa 3** pendiente: paridad de trazo/texto SVG↔PDF). Se destapó **revisando las tres
-   salidas por vista**, la disciplina de la Lección 3.
+   **Capa 3**, HECHA 2026-07-15: el detector de "línea rellena sin trazo" en SVG la mecaniza).
+   Se destapó **revisando las tres salidas por vista**, la disciplina de la Lección 3.
 
 ## TAREA — Automatizar las compuertas de la Lección 3 en `test/run.sh`
 
@@ -159,8 +159,22 @@ mueve texto y ejes en los tres backends a la vez).
 > quitar el fallback de `current_font` → `FAIL fig6-4v3-clean.pdf`. Hallazgo de ese
 > ejercicio: **solo fig6-4v3-clean caza el bug de PDF** (fig2-3 fija `font "italic"`, así
 > que nunca deja `current_font` nulo) — justifica la promoción por sí sola.
-> Falta la **Capa 3** (paridad de texto), que sigue siendo la única que cazaría un bug de
-> texto omitido *preexistente* (el golden lo bendeciría).
+> ✅ **Capa 3 HECHA (2026-07-15).** Paridad entre backends en `test/run.sh` (`c3fail`), la
+> única capa que caza un bug *preexistente* (las otras dos lo bendicen). **Sin herramientas
+> externas** — el PDF de libharu no está comprimido, así que sus operadores (`Tj`) son
+> grepables igual que EPS/SVG. Dos invariantes, ambos con **cero falsos positivos en el
+> corpus** y verificados reintroduciendo su bug:
+> - **Texto:** `EPS(show) == SVG(<text>) == PDF(Tj/TJ)`. Reintroducir el bug de
+>   `current_font` → `C3FAIL … texto 27/27/22` (PDF omite 5 rótulos). Cubre la clase de
+>   2026-07-14 en los TRES backends (el hallazgo previo era que el PDF-golden no bastaba).
+> - **Líneas rellenas:** ningún path SVG de un solo segmento (`M..L..`) puede ir
+>   `fill=color stroke=none` (línea de área nula). Reintroducir la fuga de fill de la
+>   Lección 6 → `C3FAIL … 12 líneas rellenas`. La descubrí NO scripteada (por vista); esta
+>   capa la mecaniza.
+>
+> *Descartado por frágil:* comparar el CONTEO de strokes entre backends — diverge
+> legítimamente (el SVG agrupa; `primitives` 19 vs 16 sin `stroke=none`). El detector de
+> "línea rellena" es preciso porque un segmento único relleno es SIEMPRE un bug (área nula).
 
 ## Fricción concreta observada (motiva las features)
 
@@ -772,9 +786,10 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
     estilo libro) porque `yaxis(title=)` lo rotaría a lo largo del eje.
 - **Fase 3 (auto-step/decimals + `format=`)** — ortogonal, alto valor (se afinó `step` a
   mano en cada ejemplo); pendiente, ahora sin bloqueadores.
-- **Tarea de test — falta la Capa 3** (paridad de trazo/texto entre backends, ver "TAREA…" y
-  Lección 6): es la única compuerta que habría cazado el bug de ejes invisibles. Capas 1
-  (PDF golden) y 2 (`gs`) ✅.
+- **Tarea de test — Capa 3 ✅ HECHA (2026-07-15)** (paridad entre backends en `test/run.sh`,
+  `c3fail`; ver "TAREA…" y Lección 6): texto `EPS==SVG==PDF` + "líneas rellenas" en SVG, sin
+  herramientas externas, verificada reintroduciendo ambos bugs. Es la única compuerta que caza
+  un bug preexistente (habría cazado el de ejes invisibles). Capas 1 (PDF golden) y 2 (`gs`) ✅.
 - **Tarea de doc pendiente:** sincronizar la tabla de `especificacion_mg.md` §13.5 con la
   superficie real de `axis` (ahora incluye `line_width`/`color`/`label_font`/`label_size`) y
   documentar `plot` §13.7 con la sintaxis real (`x=`/`y=`/`box=`/`xscale`/`yscale`/`grid=`).
