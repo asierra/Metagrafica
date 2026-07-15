@@ -166,7 +166,7 @@ lista de trabajo:
 | Etiquetas muy lejos / título corrido | `label_gap`=4 default, `title_gap`, título centrado | 1.5 ✅ |
 | `from`/`to` del eje x y el rectángulo del `fit` afinados por separado y **deben** concordar | marco de datos: `axis(edge=...)` hereda rango, sin bloque | 2 (prereq de plot) |
 | `step`/`decimals` puestos a dedo | `step` automático (familia 1/2/5·10ᵏ) + `decimals` derivado | 3 |
-| Datos como coords **digitalizadas** en píxeles, fiteadas con stretch | datos en unidades reales + auto-mapeo (`plot { }`) | 4 |
+| Datos como coords **digitalizadas** en píxeles, fiteadas con stretch (struct + `fit` = workaround, no geometría) | datos en unidades reales + auto-mapeo (`plot { }`). **Requiere convertir los píxeles a datos**: script Python de un solo uso, inversión ya derivada en la Fase 4 | 4 |
 | `Po^292`/`U^238` en posiciones adivinadas de la ventana exterior | dentro de `plot`, un `text()` se ancla **en datos** — cae gratis | 4 |
 | Títulos matemáticos `λ^-1 (s)`, `E^-1/2 (MeV)^-1/2` puestos a mano con `text()` | `axis title=` ya acepta markup §14 + rotación → dentro de `plot`, `xaxis(title=…)`/`yaxis(title=…)` | 4 |
 | Recta de ajuste = polilínea manual | (Fase 5) línea de tendencia | 5 |
@@ -566,11 +566,53 @@ una vez que `edge=` existe.
 `clip=true` esperaría a que el motor lo soporte), leyendas, series con estilo automático.
 Todo eso es contenido explícito, estilo MG.
 
+#### Semántica: los segmentos unen los puntos MAPEADOS, no la curva
+
+Un `polyline { x1 y1  x2 y2 }` en un eje log mapea **los dos extremos** y traza una recta
+entre ellos: una recta **en el plot**, no la imagen fiel de la recta en datos (que sería una
+curva). Es la semántica estándar (matplotlib hace lo mismo) y es **justo lo que fig6-4
+quiere**: la ley de Geiger-Nuttall *es* lineal en log λ⁻¹ vs E^-1/2, por eso su ajuste es
+recto ahí. Si algún día se quiere la imagen fiel de una relación no lineal, se muestrean
+puntos intermedios. Igual para `bezier` (puntos de control). **Decisión, no accidente.**
+
+#### Portar fig6-4 exige CONVERTIR sus datos (script Python de un solo uso)
+
+Los datos de `fig6-4v3-clean.mg` hoy son **píxeles digitalizados** del escaneo (15…139), no
+valores de λ⁻¹: viven en la struct `PUNTOS` y un `fit` los pega a la caja. `plot` los quiere
+en **datos reales**, así que el port necesita invertir la calibración. No es trabajo de
+compilador: es un **script Python de un solo uso**. La inversión ya está derivada del código
+y verificada (`fitMatrix` post-multiplica: `T(x1,y1)·S(tdx/wdx,tdy/wdy)·T(-wx,-wy)`):
+
+```python
+# 1. píxel -> plot units   (struct window 15..139 x 18..132 -> fit rect 0.6,0.7 .. 5.79,5.4)
+plot_x = 0.6 + (px - 15) * (5.79 - 0.6) / 124.0
+plot_y = 0.7 + (py - 18) * (5.4  - 0.7) / 114.0
+# 2. plot units -> datos   (x lineal 0.30..0.50 en 0..6 ; y log 1e-15..1e5 en 1..5)
+data_x = 0.30 + plot_x * 0.20 / 6.0
+data_y = 10 ** (5.0 * (plot_y - 1.0) - 15.0)
+```
+
+Cordura (verificada): `(15,132)`→`E^-1/2=0.320, λ⁻¹=1e7`; `(18,127)` (Po²⁹²)→`0.324, 9.3e5`;
+`(137,18)` (U²³⁸)→`0.490, 3.2e-17`. Concuerdan con el original. Redondear a la precisión
+real del digitalizado — la conversión da precisión falsa (0.32419…).
+
+> **Hallazgo que valida la decisión de NO clipear:** los extremos de la recta de ajuste caen
+> **fuera** del rango de los ejes (1e7 y 3.16e-17 vs. `y=(1e-15,1e5)`), porque el rect del
+> `fit` (plot_y 0.7…5.4) rebasa el span de marcas (1…5). El original **sí** dibuja fuera de
+> la caja. Si `plot` clipeara, cortaría la recta y **no** reproduciría la figura. No clipear
+> no es solo lo barato: aquí es lo correcto.
+
 **Criterios de aceptación (Fase 4):** portar fig6-4 y fig2-3 a `plot { }` (uno log, uno
-lineal-anisótropo) y que igualen sus versiones actuales en el golden de los **tres**
-backends (`ok=51 … psfail=0`, ya incluye PDF y `gs`), con **cero** coordenada digitalizada
-de eje y cero `text()` de potencia/título. Casos de error con mensaje claro (no crash, no
-silencio), los tres destapados por la auditoría:
+lineal-anisótropo), con **cero** coordenada digitalizada de eje y cero `text()` de
+potencia/título.
+- **fig2-3** (lineal, ya en datos reales): puede salir **exacto** → golden sin re-bendecir.
+- **fig6-4**: como sus datos se convierten de píxeles a valores, el resultado **NO será
+  byte-idéntico**, sino equivalente salvo redondeo. Su golden se **re-bendice con
+  verificación visual** contra `fig6-4.png`; no esperar `ok=51` a la primera. (Antes este
+  plan pedía "que igualen sus versiones actuales" — imposible por construcción.)
+
+Casos de error con mensaje claro (no crash, no silencio), los tres destapados por la
+auditoría:
 1. Struct colocada dentro de un `plot` **log** (`InvokeStmt`/`PlaceStmt`/`FitStmt`/
    `RepeatStmt` con la bandera de contexto activa) → "aún no soportado", no "imposible".
 2. `grid()`/`ticks()`/`axis()` **pelados** en el contenido → sugerir `xaxis(ticks="grid")`.
@@ -616,6 +658,9 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
   pulido de `axis`. Portar fig6-4 y fig2-3 a `plot{}` es el criterio de cierre.
   **Costo de motor auditado: DOS accesores const** en `GraphicsState` (`getPosition()` y
   `getGSType()`), cero elementos gráficos nuevos → es trabajo de parser, no de motor.
+  **Tarea previa al port de fig6-4:** script Python de un solo uso que convierta sus
+  píxeles digitalizados a datos reales (inversión ya derivada y verificada en la Fase 4);
+  su golden se re-bendice con verificación visual, no sale byte-idéntico.
 - **Fase 3 (auto-step/decimals + `format=`)** — ortogonal, alto valor (se afinó `step` a
   mano en cada ejemplo); puede intercalarse antes o después de la 4.
 - **Tarea de test (independiente, ver sección "TAREA — Automatizar las compuertas de la
