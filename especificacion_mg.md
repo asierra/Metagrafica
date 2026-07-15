@@ -1167,8 +1167,16 @@ axis(from=0, to=8, step=1, ticks="out", labels=true) { 0 0  0 8 }
 | `decimals` | `0` | decimales en las etiquetas |
 | `label_gap` | auto | distancia de las etiquetas a la línea, **cantidad física en pt** |
 | `field` | ventana | (solo `ticks="grid"`) largo perpendicular del barrido; default = rango de la ventana |
-| `title` | — | rótulo del eje (texto, admite markup matemático §14) |
+| `title` | — | rótulo del eje (texto, admite markup matemático §14); centrado a lo largo del eje, rotado en ejes verticales (§19) |
 | `title_font`, `title_size` | ambiente | fuente/tamaño del título, para cuando difieren de las etiquetas |
+| `title_gap` | `label_gap+20` | distancia física (pt) del eje al título, desacoplada de `label_gap` |
+| `label_font`, `label_size` | ambiente | fuente/tamaño de las **etiquetas** numéricas (hermanos de `title_font`/`title_size`) |
+| `label_align`, `label_valign` | auto por lado | override de la alineación de etiquetas (`"left"`/`"center"`/`"right"`; `"baseline"`/`"top"`/`"middle"`/`"bottom"`) |
+| `line_width`, `color` | ambiente | estilo de la **línea del eje y sus marcas**, acotado al eje (desacopla el eje del estado del contenido, necesario dentro de `plot` §13.7) |
+| `extend` | `0` | alarga **solo la línea** más allá de sus extremos, en unidades del eje. Escalar = ambos lados; lista `(lo hi)` = antes de `p1` / después de `p2`. Reproduce el "sobrante estilo libro" |
+| `scale` | `"linear"` | `"log"`: eje logarítmico. `from`/`to` son **valores** (no exponentes, `>0`); marcas mayores en cada `step` décadas (entero); rótulos `10^n` (n=0 → `"1"`) |
+| `minor` | `false` | (solo `scale="log"`) marcas menores sin rótulo en `2·10ⁿ…9·10ⁿ` |
+| `strip_zero` | `false` | (ejes lineales) quita el cero inicial de las etiquetas: `"0.30"→".30"`, `"-0.30"→"-.30"` |
 
 > **`tick_size` y `label_gap` son físicos (pt), no de mundo.** Como `line_width`,
 > `font_size` y los marcadores (§4.6), no los deforma la ventana ni el `stretch`: en un
@@ -1187,28 +1195,23 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 
 *(V1: combinación manual de `TICKS` + `GNNUM` + `LNST`/`PL`; ver el desglose de bajo nivel en §13.3.)*
 
-> ⚠️ **Propuesta para estudiar (obligatorios / optativos).** La meta es que el caso común
-> pida el mínimo. Distinción propuesta:
+> **Estado de implementación (act. 2026-07-15).** Casi toda la "propuesta para estudiar"
+> original ya está en la tabla de arriba, verificada contra fig2-3 y fig6-4:
 >
-> **Obligatorio:**
-> - El **anclaje geométrico**: los dos extremos físicos del bloque `{ p1 p2 }` — *salvo* que el
->   eje esté dentro de un marco de datos (§13.7), donde el borde se elige con `edge="bottom" |
->   "top" | "left" | "right"` y el bloque se omite.
-> - El **rango numérico** `from`/`to` — *salvo* dentro de un marco de datos, donde se **heredan**
->   de la ventana (§16) y no se repiten.
+> **Implementado:** `scale="log"` (con `minor`), `strip_zero`, `extend`, `ticks="in"`,
+> auto-alineación de etiquetas por lado (con override `label_align`/`label_valign`),
+> `line_width`/`color`/`label_font`/`label_size` por-eje, `title_gap` y título centrado/rotado.
 >
-> **Optativo (con default útil):**
-> - `step` **automático** si se omite: elegir un paso "redondo" (de la familia 1·10ᵏ, 2·10ᵏ,
->   5·10ᵏ) que produzca ~5–8 marcas en el rango, al estilo de un localizador de ejes. Esto quita
->   el parámetro más tedioso del caso común.
-> - `decimals` **derivado del paso** si se omite (un paso de 0.1 ⇒ 1 decimal).
-> - `ticks="out"`, `labels=true`, `tick_size`, `label_gap`, `title` — como en la tabla.
+> **Pendiente (Fase 3, `plan_plot.md`):**
+> - `step` **automático** si se omite (familia 1/2/5·10ᵏ, ~5–8 marcas) y `decimals` **derivado
+>   del paso** — quitan los dos parámetros más tediosos del caso común.
+> - `format="%.1f"` / notación científica — formato de etiqueta más allá de `decimals`/`strip_zero`
+>   (con validación estricta del especificador).
+> - `at=v` — posición del eje cruzado (dibujar el eje X a la altura del cero).
 >
-> **Candidatos nuevos a considerar:**
-> - `minor=n` — subdivisiones menores (marcas sin etiqueta) entre marcas mayores.
-> - `at=v` — posición del eje cruzado (p. ej. dibujar el eje X a la altura del cero, `at=0`).
-> - `scale="log"` — eje logarítmico (marcas y etiquetas en décadas).
-> - `format="%.1f"` / notación científica — formato de etiqueta más allá de `decimals`.
+> **Diferido:** `edge="bottom"|"top"|"left"|"right"` con `from`/`to` heredados del marco — **no**
+> se implementa suelto: requiere §16 (ventanas anidadas), que no existe. Se pliega dentro de
+> `plot` (§13.7), donde `box=` cumple ese papel y los ejes se piden con `xaxis`/`yaxis`.
 
 ### 13.6 grid — retícula
 
@@ -1223,12 +1226,15 @@ grid(xstep=2, ystep=2, dash="dotted")      { 0 0  10 8 } % retícula punteada
 
 ### 13.7 Graficar datos: el marco de datos
 
-> **Estado: núcleo resuelto** (realizado en `examples/v3/fig2-3.mg`). Para un plot que es toda la
-> figura basta la `world_window` de nivel superior **en unidades de datos** con `stretch=true`;
-> **no** hace falta ventana anidada —esa se reserva para **paneles** dentro de una figura mayor
-> (fig4-10). Los marcadores de datos son **físicos** (`dot`/`marker`, §4.6), inmunes al `stretch`.
-> Lo único **abierto** es el azúcar opcional `plot{ }` (al final de esta sección). El ejemplo de
-> abajo ilustra el concepto con ventana anidada; la realización *standalone* de fig2-3 la omite.
+> **Estado: `plot { }` IMPLEMENTADO** (2026-07-15, ver "Azúcar `plot { }`" al final de esta
+> sección y `plan_plot.md` Fase 4; fig2-3 y fig6-4 portadas). **Corrección importante:** las
+> **ventanas anidadas (§16) NO existen** en V3, así que el marco de datos **no** se realiza con
+> una `world_window` anidada como sugiere el ejemplo conceptual de abajo. Se realiza con el
+> mecanismo de `fit` (§10.2): matriz envolvente datos→caja si es lineal, o mapeo puntual de
+> coordenadas si algún eje es logarítmico (log no es afín → ninguna matriz lo expresa). Los
+> marcadores de datos son **físicos** (`dot`/`marker`, §4.6), inmunes al `stretch`. El ejemplo
+> con `world_window` anidada de abajo se mantiene como **ilustración del concepto**, no como la
+> sintaxis real (que es `plot(...)`).
 
 **El problema.** En V1, para meter una curva en una caja de ejes el autor **pre-escala los
 datos a mano**. En fig2-3 la temperatura relativa va de 0 a 1.0, pero el autor la multiplicó
@@ -1296,23 +1302,47 @@ su propia ventana en datos) lo que la ventana anidada hace *inline*. Para una cu
 uso, la ventana inline es más ligera; para una curva reutilizable o un panel repetido (fig4-10),
 `fit` sobre una struct es lo natural.
 
-**Azúcar opcional `plot { }` (a decidir).** Si el patrón "ventana de datos + dos ejes" es
-frecuente, un constructo `plot` podría empaquetarlo: la caja física en el bloque, los rangos como
-argumentos, `stretch` por default, y ejes con una línea:
+### Azúcar `plot { }` — IMPLEMENTADO (2026-07-15)
+
+`plot` empaqueta el marco de datos en un constructo tipo `compound`: **un solo bloque** de
+contenido (sentencias en unidades de datos), los rangos como argumentos, la caja física como
+`box=`, y los ejes con `xaxis`/`yaxis` dentro del bloque. `plot` **transforma las coordenadas de
+su contenido** (mecanismo de `fit`, no ventana anidada); los ejes se interceptan y se dibujan en
+coords exteriores heredando `from/to/scale`.
 
 ```text
-plot(x=(0,1), y=(0,6)) { -1 11  -1 7 } {   % rangos de datos ; caja física
-    xaxis(step=0.1, title="relative temperature")
-    yaxis(step=1,   title="heat capacity")
-    bezier   { ... }        % en datos
-    dot(0.1) { ... }        % en datos
+plot(x=(0.30,0.50), y=(1e-15,1e5), yscale="log",
+     box=(0.6,0.7, 5.79,5.4), grid=gray(0.5)) {
+    polyline { 0.30 3e4  0.50 2e-15 }        % recta de ajuste, EN DATOS
+    fill "black"
+    dot(1.5) { 0.31 8e2  0.33 1.1e1 }        % puntos EN DATOS (marcador físico)
+    text("$Po{^292}$") { 0.315 2e3 }         % anotación anclada a DATOS (cae gratis)
+    xaxis(line_width=0.2, step=0.05, strip_zero=true, title="$E^{-1/2}$ (MeV)$^{-1/2}$")
+    yaxis(line_width=0.2, minor=true, title="…")
 }
 ```
 
-Queda abierto si el doble bloque (rango + caja / contenido) es aceptable o si conviene que `plot`
-tome solo el contenido y derive la caja de la ventana vigente. **Recomendación:** especificar
-primero el marco de datos con ventana anidada (no cuesta nada, reutiliza §16), y decidir el
-azúcar `plot` al traducir fig2-3 y fig4-10 (§22.6), cuando se vea cuánta repetición ahorra.
+**Argumentos de `plot`:**
+
+| Arg | Default | Significado |
+|---|---|---|
+| `x`, `y` | `(0,1)` | rango de datos `(from,to)` de cada eje (tupla) |
+| `xscale`, `yscale` | `"linear"` | `"log"` para eje logarítmico (usa el mapeo puntual) |
+| `box` | ventana vigente | rectángulo físico `(x0,y0, x1,y1)` en world coords al que se mapean los datos |
+| `grid` | — | retícula de fondo: `true`=gris default, un color, o ausente=sin retícula. Pasos = `step` de `xaxis`/`yaxis` |
+
+Dentro del bloque, `xaxis`/`yaxis` son `axis` (§13.5) con el lado y el rango predefinidos por
+`plot` — aceptan toda la decoración de §13.5 (`step`, `title`, `strip_zero`, `line_width`, …) pero
+**no** llevan bloque `{ }` ni `from`/`to`. El contenido admite cualquier sentencia (polyline,
+bezier, dot, text con ancla en datos, control de flujo); `box=` omitido cubre "el plot es toda la
+figura", `box=` explícito cubre paneles (fig4-10).
+
+**Limitaciones (con error claro):** bajo escala **log**, colocar structs (`invoke`/`place`/`fit`
+de struct/`repeat`) da error ("aún no soportado": su matriz de draw-time no compone con el mapeo
+no afín); `grid()`/`ticks()`/`axis()` **pelados** en el contenido también (usa `grid=` o
+`xaxis`/`yaxis`); rango de datos ≤0 en un eje log. No hay clipping a la caja (el contenido puede
+rebasarla, como la recta de ajuste de fig6-4). El `text()` de título horizontal-arriba (estilo
+libro, como `λ⁻¹(s)` de fig6-4) va manual, porque `yaxis(title=)` rota el título a lo largo del eje.
 
 ---
 
@@ -1531,7 +1561,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **`rectangle` bajo rotación/shear** | ✓ Resuelto | `rectangle` es forma transformable como SVG (§4.4): se transforman las 4 esquinas. **Implementado** en los tres backends —`EPSDisplay::rect` y `PDFDisplay::rect` emiten el path de 4 esquinas (trazo/relleno + clip de tramado); SVG ya lo hacía. Verificado: rotado coincide con SVG, no-rotado idéntico; goldens EPS re-bendecidos (ok=18) |
 | **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
 | **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
-| **Graficar datos: azúcar `plot { }`** | ◑ Parcial | **Núcleo resuelto** (§13.7, realizado en `examples/v3/fig2-3.mg`): marco de datos = `world_window` en datos + `stretch`, marcadores físicos (`dot`/`marker`), y `axis` con `start`/`title_font` (§13.5). Queda **solo**: el azúcar `plot { }`, y las propuestas de §13.5 aún sin adoptar (`edge=`, `step` automático, `minor`/`at`/`scale="log"`/`format`) |
+| **Graficar datos: azúcar `plot { }`** | ✅ Hecho | `plot(x=, y=, box=, xscale=, yscale=, grid=) { contenido + xaxis/yaxis }` (§13.7, 2026-07-15): lineal (matriz envolvente) + log (mapeo puntual); ejes que heredan rango; fig2-3 y fig6-4 portadas. `axis` maduro (`scale="log"`, `minor`, `strip_zero`, `extend`, estilo por-eje). Pendiente Fase 3: `step`/`decimals` automáticos, `format`, `at=v`. `edge=` suelto diferido (necesita §16) |
 | **Modelo de iteración unificado (`for` vs `repeat` vs generadores)** | ◇ Prospectivo | Los tres constructos dedicados están justificados por un núcleo *irreducible* a un `for` + pluma: `repeat` con `transform` **acumulado** (§17), `place` por **longitud de arco** sobre path (§10), y el **formateo numérico** de `numbers`/`ticks` (`by`/`decimals`, §13). Su parte *reducible* (el `repeat` sin acumulación, el mero recorrido de `ticks`) podría especificarse como azúcar sobre `for`. **fig4-10 y rpstest ya traducidas confirmaron los tres constructos**; el "reset de pluma" (G3 de `rpstest`) se disolvió con `repeat` autocontenido (`at`/`advance` en la llamada, §17). La unificación como azúcar sobre `for` queda como refinamiento opcional, no bloqueante |
 | **Tamaño de texto relativo (tipo TeX)** | ◇ Prospectivo | `font_size` es absoluto (pt), un solo keyword en documento y bloque (§7.3). Un segundo eje `text_size` como **factor** relativo a la base (efectivo = `font_size × text_size`) se pospone hasta que existan calificadores nombrados que lo aprovechen; el corpus usa tamaños absolutos sin ratios redondos |
 | **Resolución geométrica (estilo MetaPost)** | ◇ Prospectivo | Describir relaciones en vez de calcular coordenadas: intersección de dos líneas, punto a una fracción de un path, punto medio. Convertiría "dibujar" en "describir"; es el siguiente salto de expresividad tras `axis`/`grid` |
