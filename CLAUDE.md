@@ -75,9 +75,9 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 ### Adding a new primitive
 
-1. `GI_*` enum + subclass in `include/primitives.h`; 2. despacho por nombre en `parserv3.cpp` (`isPrim()` + `PrimStmt`, o un `Stmt`/`parse*` propio para sintaxis con bloque, p. ej. `axis`/`compound`); 3. `draw(Display&)` calling `Display` virtuals; 4. implement those in the three backends. *(V3 despacha las primitivas por su nombre-cadena en `parseStatement`, no por token del lexer; solo hace falta tocar `src/lexer.l` para símbolos/operadores nuevos, no para comandos.)*
+1. `GI_*` enum + subclass in `include/primitives.h`; 2. despacho por nombre en `parserv3.cpp` (`isPrim()` + `PrimStmt`, o un `Stmt`/`parse*` propio para sintaxis con bloque, p. ej. `axis`/`compound`/`plot`); 3. `draw(Display&)` calling `Display` virtuals; 4. implement those in the three backends. *(V3 despacha las primitivas por su nombre-cadena en `parseStatement`, no por token del lexer; solo hace falta tocar `src/lexer.l` para símbolos/operadores nuevos, no para comandos.)*
 
-## Roadmap state (act. 2026-07-14)
+## Roadmap state (act. 2026-07-15)
 
 El parser V3 (`src/parserv3.cpp`) compila los 16 ejemplos de `examples/` a EPS/SVG/PDF.
 Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
@@ -219,16 +219,51 @@ los ajustes de fidelidad que salieron de calibrar `fig6-4` contra el original de
 byte-determinista) + compuerta `gs` (`psfail`); `fig6-4v3-clean` promovido al corpus.
 **Ambas compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar.**
 
-**Siguiente: Fase 4 = `plot { }`.** El plan trae **guía de implementación paso a paso
-ejecutable por un agente**, con el diseño ya auditado contra el código: `plot` es un `Stmt`
-(como `axis`, que no añadió ni una primitiva); su huella en el motor son **dos accesores
-const** en `GraphicsState` (`getPosition()`/`getGSType()`), cero elementos gráficos nuevos.
-Mecanismo: matriz envolvente si lineal / recorrido de puntos si log (log **no es afín**).
-**La Fase 2 (`edge=` suelta) NO se hace**: no es prerequisito y no es implementable sin §16
-(la `world_window` lleva márgenes → no hay de dónde heredar el rango de datos); se pliega
-dentro de `plot`, donde `box=` cumple ese papel. El plan lista lo que **no** hay que hacer
-(no re-litigar: nada de virtual `mapPoints`, ni olfatear `Transform`s, ni `protected`, ni
-clipping) y los tres errores claros que faltan.
+### Cerrado en la sesión del 2026-07-15 (`plot` Fase 4: lineal+log+grid, ver `plan_plot.md`)
+
+> ⚠️ Sigue en la rama **`axis-plot-fase1`** (ahora 10 commits), no en `main`.
+
+**Fase 4 HECHA: `plot { }`** (constructo tipo `compound` en `parserv3.cpp`, `PlotStmt`/
+`parsePlot`). Bloque de contenido en **unidades de datos** + rangos `x=`/`y=` + caja física
+`box=` (default = ventana vigente). `plot` **transforma las coordenadas de su contenido**:
+- **Ruta lineal** → matriz envolvente datos→box (`FitStmt::fitMatrix` con stretch); hasta
+  structs invocadas funcionan.
+- **Ruta log** (`xscale`/`yscale="log"`, log **no es afín**) → el contenido se ejecuta a una
+  lista temporal y se remapean **solo los puntos** de cada item (`getType()`+`getPath()`/
+  `setPath()`; anclas de `text()` vía `getGraphicsStateType()`+`getPosition()`/`setPosition()`,
+  solo `GS_PLUMEPOSITION`). Radios/anchos/font son miembros aparte o `Attribute`s → el mapper no
+  los alcanza (invariante físico gratis).
+- **Ejes** `xaxis`/`yaxis` interceptados por el parser, heredan `from/to/scale` de `plot` y se
+  dibujan en coords exteriores (NO pasan por el mapper).
+
+Huella en el motor: **dos accesores const** en `GraphicsState` (`getPosition()`/
+`getGraphicsStateType()`), **cero elementos gráficos nuevos** — todo es trabajo de parser.
+
+- **Estilo por-eje** (`AxisStmt`, aplica también al `axis` suelto): `line_width=`/`color=`
+  (calcado de `GridStmt`) + `label_font=`/`label_size=` (hermanos de `title_font`/`title_size`),
+  acotados con push/pop. **Resuelve** que los ejes de `plot` se dibujan FUERA del envoltorio de
+  contenido → un `line_width`/`font` suelto en el bloque NO les llegaba.
+- **`grid=`** (un solo arg: `true`=gris default / un color / `false`=sin): capa de **fondo**
+  (z-order correcto, se pinta antes del contenido), reusa `axis(ticks="grid")` con los `step`
+  de `xaxis`/`yaxis` → malla auto-alineada; log gratis. El `base` de la retícula del eje pasó a
+  la **línea del eje** (no al origen de ventana).
+- **Tres errores claros** (Paso 5): structs colocadas en un plot **log** (bandera de contexto
+  `g_plotLogContext` con save/restore, consultada por invoke/repeat/fit-de-struct/place);
+  `grid()`/`ticks()`/`axis()` **pelado** en contenido log (`GI_TICKS` lleva un VECTOR); rango
+  log ≤0. `fit`-de-**path** sí compone (hornea matriz afín) → no se bloquea.
+- **fig2-3** (lineal) y **fig6-4** (log) portadas a `plot { }`. fig6-4: datos en **valores
+  reales** (conversión píxel→dato con script de un solo uso, inversión en `plan_plot.md`), cero
+  coord digitalizada, cero `text()` de potencias de diez. Layout del libro (eje x bajo la 1ª
+  década): `box` de fondo en y=0, rango y extendido a `1e-20`, `yaxis(start=1e-15)`. El título
+  del eje y quedó `text()` manual (horizontal, estilo libro) porque `yaxis(title=)` lo rotaría.
+
+**Bug cazado EN REVISIÓN (Lecciones 1 y 3 del plan):** la ruta log volcaba el contenido SIN
+envoltorio `GS_PUSHSTATE`/`GS_POPSTATE` (la lineal lo tiene vía la matriz) → el `fill "black"`
+de los puntos se **fugaba** a los ejes → sus líneas/marcas salían **rellenas sin trazo =
+invisibles en PDF/SVG** (EPS lo toleraba). **Ni el golden por bytes** (bendecía la salida rota)
+**ni la compuerta `gs`** (solo mira el EPS) lo cazaban → refuerza la necesidad de la **Capa 3**
+(paridad de trazo/texto entre backends, pendiente en `test/run.sh`). Fix: acotar el contenido
+log con push/pop, como la lineal. `make` limpio, `gs` OK, golden `ok=51`.
 
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran

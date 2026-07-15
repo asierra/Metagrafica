@@ -96,6 +96,16 @@ dónde se esconden los bugs. Se codifica aquí porque se repetirá en Fases 2–
    **no** estaban en el plan original: salieron de comparar pixel a pixel contra
    `fig6-4.png` y `fig2-3v1.eps`. **Cada fase se cierra portando una figura del libro
    extremo-a-extremo contra su oráculo, en los tres backends** — no con un caso sintético.
+6. **Todo bloque que ejecuta contenido a una lista y lo vuelca a la salida DEBE acotar el
+   estado con `GS_PUSHSTATE`/`GS_POPSTATE`** — si no, el estado del contenido (fill, color,
+   line_width, dash) se **fuga** a lo que se dibuje después. La ruta lineal de `plot` lo hacía
+   gratis (envoltorio de matriz); la **log** no, y el `fill "black"` de fig6-4 se fugó a los
+   ejes → líneas/marcas **rellenas sin trazo = invisibles en PDF/SVG** (EPS lo toleraba porque
+   su `Polyline` traza igual). **Corolario para el harness:** ni el **golden por bytes**
+   (bendice la salida rota como "correcta") ni la compuerta **`gs`** (solo mira el EPS, que se
+   veía bien) cazan esta clase. Solo la caza comparar **qué se dibuja** entre backends (la
+   **Capa 3** pendiente: paridad de trazo/texto SVG↔PDF). Se destapó **revisando las tres
+   salidas por vista**, la disciplina de la Lección 3.
 
 ## TAREA — Automatizar las compuertas de la Lección 3 en `test/run.sh`
 
@@ -407,7 +417,14 @@ entregable de Fase 1).
   especificador de conversión, solo `%f/%g/%e/%d`; cualquier otra cosa → error de
   compilación.
 
-### Fase 4 — `plot { }` como constructo tipo compound
+### Fase 4 — `plot { }` como constructo tipo compound ✅ HECHA (2026-07-15)
+
+> ✅ **Implementada** (rama `axis-plot-fase1`): lineal + log + `grid=` + estilo por-eje;
+> fig2-3 y fig6-4 portadas; `ok=51`. El diseño de abajo se siguió tal cual, salvo: el
+> título del eje y de fig6-4 quedó `text()` manual (horizontal, estilo libro; `yaxis(title=)`
+> lo rotaría), y salió un bug de estado no acotado en la ruta log (ver Lección 6). Lo demás
+> —dos accesores const, cero elementos nuevos, mapper puntual, tres errores— se cumplió.
+
 
 **Por qué `plot` vale ahora MUCHO más que cuando se esbozó.** El esbozo original asumía un
 `axis` básico. Tras las Fases 1–1.5, `axis` es maduro: log, `minor`, `strip_zero`,
@@ -730,33 +747,37 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
    spot-check de PDF (Lección 3). Los crudos `fig6-4.mg`/`fig6-4v3.mg`/`fig6-4.png` siguen
    sin commitear.
 
-## Estado y orden recomendado (act. 2026-07-14)
+## Estado y orden recomendado (act. 2026-07-15)
 
 - **Fase 1 ✅** (log + strip_zero), **Fase 1.5 ✅** (auto-alineación), y adelantados por
   fidelidad a la figura: `extend` ✅, ticks-in ✅, `label_gap`/`title_gap` ✅, título
   centrado ✅, fix de PDF `current_font` ✅. Todo verificado en 3 backends contra oráculo.
-- **Hecho 2026-07-14 (preparación para plot):** trabajo commiteado en la rama
-  `axis-plot-fase1`; `fig6-4v3-clean` promovido al golden; Capas 1 y 2 del harness
-  (`ok=51 … psfail=0`), ambas verificadas reintroduciendo sus bugs.
-- **Fase 2 (`edge=` suelta): NO HACER.** Se plegó a la Fase 4 (ver la doble corrección en
-  la Fase 2): no es prerequisito, y la versión standalone **no es implementable** sin §16
-  —la `world_window` lleva márgenes, así que no hay de dónde heredar el rango de datos—.
-- **Siguiente: Fase 4 (`plot`) — directo.** Tiene **guía de implementación paso a paso**
-  ejecutable por un agente. Su valor subió mucho porque hereda todo el pulido de `axis`.
-  Criterio de cierre: fig2-3 exacto, fig6-4 equivalente por vista.
-  **Costo de motor auditado: DOS accesores const** en `GraphicsState` (`getPosition()` y
-  `getGSType()`), cero elementos gráficos nuevos → es trabajo de parser, no de motor.
-  **Tarea previa al port de fig6-4:** script Python de un solo uso que convierta sus
-  píxeles digitalizados a datos reales (inversión ya derivada y verificada en la Fase 4);
-  su golden se re-bendice con verificación visual, no sale byte-idéntico.
+- **Fase 2 (`edge=` suelta): NO se hizo** (plegada a la Fase 4): no es prerequisito, y la
+  standalone no es implementable sin §16. Dentro de `plot`, `xaxis`/`yaxis` fijan el lado
+  por la tangente (ejes abajo/izquierda), que basta para fig2-3/fig6-4.
+- **Fase 4 (`plot { }`) ✅ HECHA (2026-07-15, rama `axis-plot-fase1`).** Lineal (matriz
+  envolvente) + **log** (mapper puntual sobre la lista temporal; `getType()`+`getPath()`/
+  `setPath()` y `getPosition()`/`setPosition()` para anclas de texto). Ejes `xaxis`/`yaxis`
+  interceptados, heredan `from/to/scale`, en coords exteriores. **Costo de motor real: los
+  dos accesores const** (`getPosition()`/`getGraphicsStateType()`), cero elementos nuevos.
+  Añadido de paso: **estilo por-eje** (`line_width`/`color`/`label_font`/`label_size`, aplica
+  al `axis` suelto) y **`grid=`** (fondo, un solo arg, reusa `axis(ticks="grid")`). Tres
+  errores claros (structs en plot log; `grid`/`ticks`/`axis` pelado en contenido log; rango
+  log ≤0). **fig2-3 (lineal) y fig6-4 (log) portadas**; golden `ok=51`.
+  - *Bug cazado en revisión (Lecciones 1 y 3):* la ruta log volcaba el contenido sin
+    `GS_PUSHSTATE`/`GS_POPSTATE` → el `fill "black"` de los puntos se fugaba a los ejes →
+    líneas/marcas rellenas sin trazo = **invisibles en PDF/SVG** (EPS lo toleraba). Ni el
+    golden ni `gs` lo cazaron. Ver Lección 6.
+  - *Deviación consciente en fig6-4:* el título del eje y quedó `text()` manual (horizontal,
+    estilo libro) porque `yaxis(title=)` lo rotaría a lo largo del eje.
 - **Fase 3 (auto-step/decimals + `format=`)** — ortogonal, alto valor (se afinó `step` a
-  mano en cada ejemplo); puede intercalarse antes o después de la 4.
-- **Tarea de test (independiente, ver sección "TAREA — Automatizar las compuertas de la
-  Lección 3"):** `gs nullpage` + PDF al golden + paridad de texto en `test/run.sh`.
-  Conviene **antes de la Fase 4**, que mueve texto y ejes en los tres backends a la vez.
-  Barata: el PDF resultó byte-determinista, así que la Capa 1 es casi gratis.
+  mano en cada ejemplo); pendiente, ahora sin bloqueadores.
+- **Tarea de test — falta la Capa 3** (paridad de trazo/texto entre backends, ver "TAREA…" y
+  Lección 6): es la única compuerta que habría cazado el bug de ejes invisibles. Capas 1
+  (PDF golden) y 2 (`gs`) ✅.
 - **Tarea de doc pendiente:** sincronizar la tabla de `especificacion_mg.md` §13.5 con la
-  superficie real de `axis` (ver "Convención de nombres" en Decisiones de diseño).
+  superficie real de `axis` (ahora incluye `line_width`/`color`/`label_font`/`label_size`) y
+  documentar `plot` §13.7 con la sintaxis real (`x=`/`y=`/`box=`/`xscale`/`yscale`/`grid=`).
 
 ## Resumen
 
