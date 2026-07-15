@@ -6,7 +6,9 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <cmath>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <map>
@@ -1500,6 +1502,32 @@ struct GridStmt : Stmt {
 // ticks: "out"|"in"|"both"|"none"|"grid" (grid barre el campo, §13.6-como-eje).
 // Título vertical SIN rotar aún (2º corte). title_font (roman/italic) pendiente
 // del estado font §7.3; title_size sí se aplica (AT_THEIGHT). V1: TICKS+GNNUM+PL.
+//
+// scale="log" (§13.5 "Propuesta para estudiar", plan_plot.md Fase 1): from/to
+// siguen siendo VALORES de datos (p.ej. 1e-15/1e5), no exponentes — mismo
+// contrato que el eje lineal. Las marcas MAYORES caen en cada década (o cada
+// `step` décadas, step entero); las etiquetas son "10^n" vía markup matemático
+// (§14), n=0 → "1" (estilo del libro). `minor=true` añade marcas 2·10ⁿ..9·10ⁿ
+// sin rótulo. `strip_zero=true` (solo eje lineal) pule "0.30"→".30".
+
+// Mapeo de nombre → código de alineación de texto (mismos códigos que las
+// sentencias `align`/`valign`, parserv3.cpp §4.8): sirven para el override
+// label_align=/label_valign= de axis (plan_plot.md Fase 1.5). -1 = no reconocido
+// (deja el default derivado del lado).
+static int alignCodeFromStr(const std::string &v) {
+  if (v == "left")   return 0;
+  if (v == "center") return 1;
+  if (v == "right")  return 2;
+  return -1;
+}
+static int valignCodeFromStr(const std::string &v) {
+  if (v == "baseline") return 0;
+  if (v == "top")      return 1;
+  if (v == "middle")   return 2;
+  if (v == "bottom")   return 3;
+  return -1;
+}
+
 struct AxisStmt : Stmt {
   std::map<std::string, ExprPtr> named;
   std::vector<ExprPtr> coords;              // 2 puntos: p1 p2
@@ -1516,7 +1544,40 @@ struct AxisStmt : Stmt {
     std::string title = namedStr(s, named, "title");
     double titleSize = namedNum(s, named, "title_size", 0);
     double tickSize = namedNum(s, named, "tick_size", 3.0);   // pt
-    double labelGap = namedNum(s, named, "label_gap", 8.0);   // pt
+    // label_gap: distancia FÍSICA (pt) del eje al BORDE cercano de la etiqueta (arriba
+    // para el eje X, derecha para el Y), tras la auto-alineación (Fase 1.5). Default 4:
+    // libra las marcas de 3 pt de `ticks="out"` con ~1 pt de margen sin quedar lejos.
+    double labelGap = namedNum(s, named, "label_gap", 4.0);   // pt
+
+    // extend=: alarga SOLO la línea del eje más allá de sus extremos, en unidades
+    // del eje (las mismas del bloque {p1 p2}), sin mover marcas/etiquetas. Escalar
+    // = ambos extremos por igual; lista [lo hi] = lo antes de p1, hi después de p2.
+    // Reproduce el "sobrante estilo libro" (eje que rebasa la primera/última marca,
+    // p.ej. fig6-4: la vertical baja hasta el eje x). Default 0 → cero churn.
+    double extLo = 0, extHi = 0;
+    { auto it = named.find("extend");
+      if (it != named.end()) {
+        Value ev = it->second->eval(s);
+        if (ev.type == Value::LIST && ev.items.size() >= 2) { extLo = ev.items[0].num; extHi = ev.items[1].num; }
+        else extLo = extHi = ev.num;
+      } }
+
+    // scale="log": from/to en valores (no exponentes); step = décadas enteras
+    // entre marcas mayores (default 1). minor/strip_zero: ver comentario arriba.
+    bool isLog = namedStr(s, named, "scale") == "log";
+    bool minorTicks = named.count("minor") ? namedNum(s, named, "minor", 0) != 0.0 : false;
+    bool stripZero = named.count("strip_zero") ? namedNum(s, named, "strip_zero", 0) != 0.0 : false;
+    int stepDec = 1;
+    if (isLog) {
+      if (from <= 0 || to <= 0) {
+        evalError("axis(scale=\"log\") requiere from/to positivos"); return;
+      }
+      double r = std::round(step);
+      if (std::fabs(step - r) > 1e-9 || r <= 0) {
+        evalError("axis(scale=\"log\"): step debe ser un entero positivo (décadas)"); return;
+      }
+      stepDec = (int)r;
+    }
 
     double dx = p2.x - p1.x, dy = p2.y - p1.y, L = std::sqrt(dx * dx + dy * dy);
     if (L <= 0 || step == 0) return;
@@ -1537,21 +1598,46 @@ struct AxisStmt : Stmt {
       return point(px * (cm / scx), py * (cm / scy));
     };
     auto posOf = [&](double v) {
-      double t = (to == from) ? 0 : (v - from) / (to - from);
+      double t;
+      if (isLog) {
+        double lf = std::log10(from), lt = std::log10(to);
+        t = (lt == lf) ? 0 : (std::log10(v) - lf) / (lt - lf);
+      } else {
+        t = (to == from) ? 0 : (v - from) / (to - from);
+      }
       return point(p1.x + t * dx, p1.y + t * dy);
     };
     const double eps = 1e-9;
 
-    // 1. línea del eje
-    { auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
-      pp.push_back(p1); pp.push_back(p2); pl->setPath(pp); out.push_back(std::move(pl)); }
+    // Valores de las marcas MAYORES, precomputados UNA vez y reusados por
+    // marcas/etiquetas/grid (mismo cómputo que antes en el caso lineal ⇒ cero
+    // churn: los `v` resultantes son bit-idénticos a los tres loops previos).
+    std::vector<double> majors;
+    if (isLog) {
+      double lTo = std::log10(to), lStart = std::log10(startv);
+      bool asc = to >= from;
+      int n = asc ? (int)std::ceil(lStart - eps) : (int)std::floor(lStart + eps);
+      int dn = asc ? stepDec : -stepDec;
+      for (; asc ? (n <= lTo + eps) : (n >= lTo - eps); n += dn)
+        majors.push_back(std::pow(10.0, n));
+      if (majors.empty())
+        warn("axis(scale=\"log\"): el rango no contiene ninguna década completa, sin marcas mayores");
+    } else {
+      for (double v = startv; v <= to + eps; v += step) majors.push_back(v);
+    }
+
+    // 1. línea del eje (con el sobrante opcional extend=, a lo largo de la tangente)
+    { point a1(p1.x - extLo * ux, p1.y - extLo * uy);
+      point a2(p2.x + extHi * ux, p2.y + extHi * uy);
+      auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
+      pp.push_back(a1); pp.push_back(a2); pl->setPath(pp); out.push_back(std::move(pl)); }
 
     // 2. marcas
     if (tdir == "grid") {                     // barren el campo perpendicular (ventana o field=)
       double field = named.count("field") ? namedNum(s, named, "field", 0) : (horiz ? wdy : wdx);
       double base  = horiz ? wy : wx;
       Path pp; pp.push_back(horiz ? point(0, field) : point(field, 0));
-      for (double v = startv; v <= to + eps; v += step) {
+      for (double v : majors) {
         point q = posOf(v); pp.push_back(horiz ? point(q.x, base) : point(base, q.y));
       }
       auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(pp); out.push_back(std::move(pl));
@@ -1560,29 +1646,97 @@ struct AxisStmt : Stmt {
       if (tdir == "in")        mark = point(-o.x, -o.y);
       else if (tdir == "both") { off = point(-o.x, -o.y); mark = point(2 * o.x, 2 * o.y); }
       Path pp; pp.push_back(mark);
-      for (double v = startv; v <= to + eps; v += step) {
+      for (double v : majors) {
         point q = posOf(v); pp.push_back(point(q.x + off.x, q.y + off.y));
       }
       auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(pp); out.push_back(std::move(pl));
     }
 
+    // 2b. marcas MENORES (solo log; sin rótulo, mitad de tamaño; §13.5 "minor=").
+    // Barren TODAS las décadas del rango (2·10ⁿ..9·10ⁿ), no solo entre marcas
+    // mayores (stepDec puede saltarse décadas). En "grid" no barren el campo:
+    // siguen siendo marcas cortas sobre la línea, como en "out"/"in"/"both".
+    if (isLog && minorTicks && tdir != "none") {
+      point o = physOut(tickSize * 0.5), mark = o, off(0, 0);
+      if (tdir == "in")        mark = point(-o.x, -o.y);
+      else if (tdir == "both") { off = point(-o.x, -o.y); mark = point(2 * o.x, 2 * o.y); }
+      Path pp; pp.push_back(mark);
+      double lo = std::min(from, to), hi = std::max(from, to);
+      int nStart = (int)std::floor(std::log10(lo) - eps);
+      int nEnd   = (int)std::ceil(std::log10(hi) + eps);
+      for (int n = nStart; n <= nEnd; n++) {
+        for (int m = 2; m <= 9; m++) {
+          double v = m * std::pow(10.0, n);
+          if (v < lo - eps || v > hi + eps) continue;
+          point q = posOf(v); pp.push_back(point(q.x + off.x, q.y + off.y));
+        }
+      }
+      if (pp.size() > 1) {
+        auto pl = std::make_unique<Polyline>(GI_TICKS); pl->setPath(pp); out.push_back(std::move(pl));
+      }
+    }
+
     // 3. etiquetas numéricas (heredan el estado de texto vigente, §14)
     if (labels) {
+      // Alineación de las etiquetas, derivada del lado del eje, para que NO se
+      // encimen con la línea (plan_plot.md Fase 1.5): eje ~horizontal → centradas
+      // y colgando bajo la marca (center/top); eje ~vertical → pegadas por la
+      // derecha y centradas en vertical (right/middle). Override explícito con
+      // label_align=/label_valign= (nombres = sentencias align/valign, §4.8).
+      int alignCode  = horiz ? 1 : 2;    // 1=center, 2=right
+      int valignCode = horiz ? 1 : 2;    // 1=top,    2=middle
+      if (named.count("label_align")) {
+        int c = alignCodeFromStr(namedStr(s, named, "label_align")); if (c >= 0) alignCode = c;
+      }
+      if (named.count("label_valign")) {
+        int c = valignCodeFromStr(namedStr(s, named, "label_valign")); if (c >= 0) valignCode = c;
+      }
+      // El prólogo EPS /cshow /rshow solo se emite si esta bandera se activó en
+      // parse-time — exec() corre ANTES de EPSDisplay::start(), que la lee. Sin
+      // ella el EPS llamaría al operador cshow REAL de PS y truena en typecheck
+      // (misma clase de trampa que el proc /ellipse). Solo aplica a center/right.
+      if (alignCode != 0) g_flags.using_textalign = true;
+
+      // Estado de alineación acotado con push/pop, igual que el título aísla
+      // title_size (AT_THEIGHT): no se filtra a los text() que sigan al eje.
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, alignCode);  out.push_back(std::move(a)); }
+      { auto a = std::make_unique<Attribute>(); a->set(AT_TVALIGN, valignCode); out.push_back(std::move(a)); }
+
       point g = physOut(labelGap);
       char fmt[8]; std::snprintf(fmt, sizeof fmt, "%%.%df", decimals < 0 ? 0 : decimals);
-      for (double v = startv; v <= to + eps; v += step) {
-        point q = posOf(v); char num[64]; std::snprintf(num, sizeof num, fmt, v);
+      for (double v : majors) {
+        point q = posOf(v); char num[64];
+        if (isLog) {
+          int n = (int)std::llround(std::log10(v));
+          if (n == 0) std::snprintf(num, sizeof num, "1");
+          else        std::snprintf(num, sizeof num, "$10{^%d}$", n);
+        } else {
+          std::snprintf(num, sizeof num, fmt, v);
+          if (stripZero) {
+            size_t len = std::strlen(num);
+            if (len >= 2 && num[0] == '0' && num[1] == '.')
+              std::memmove(num, num + 1, len);
+            else if (len >= 3 && num[0] == '-' && num[1] == '0' && num[2] == '.')
+              std::memmove(num + 1, num + 2, len - 1);
+          }
+        }
         auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(q.x + g.x, q.y + g.y));
         out.push_back(std::move(gs));
         out.push_back(parse_text(num, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));  // hereda font ambiente
       }
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
 
     // 4. título. Eje vertical → texto girado con el ángulo de la línea (MTLC),
     //    acotado con save/restore del dispositivo para cerrar el grupo de rotación.
     if (!title.empty()) {
+      // title_gap: distancia FÍSICA (pt) del eje al título, DESACOPLADA de label_gap
+      // (que ahora es pequeño, ~4 pt). Default = label_gap + 20: libra la fila de
+      // etiquetas (~1 alto de fuente) y deja aire antes del título. Override propio.
+      double titleGap = namedNum(s, named, "title_gap", labelGap + 20.0);
       point m(p1.x + 0.5 * dx, p1.y + 0.5 * dy);
-      point t = physOut(labelGap * 3.0);
+      point t = physOut(titleGap);
       point tp(m.x + t.x, m.y + t.y);
       double ang = horiz ? 0.0 : std::atan2(uy, ux) * 57.29577951308232;   // rad→grados
       std::string titleFont = namedStr(s, named, "title_font");
@@ -1590,13 +1744,17 @@ struct AxisStmt : Stmt {
       // sin él, FN_NOFACE → hereda la ambiente. title_size se aísla con push/pop.
       FontFace tff = titleFont.empty() ? FN_NOFACE
                      : get_font_face_from_string(titleFont, g_flags.using_fontcmmi);
-      bool wrap = titleSize > 0;
-      if (wrap) {
-        out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
-        auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)titleSize); out.push_back(std::move(a));
-      }
+      // Título CENTRADO a lo largo del eje: align=center anclado al punto medio. En
+      // el eje X centra horizontalmente; en el Y (texto rotado) centra a lo largo de
+      // la línea, ya que cshow/text-anchor operan sobre la base ROTADA. El estado se
+      // acota con push/pop (no se filtra). using_textalign activa el prólogo /cshow
+      // de EPS (misma trampa que las etiquetas, §Fase 1.5); seguro en parse-time.
+      g_flags.using_textalign = true;
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, 1); out.push_back(std::move(a)); }
+      if (titleSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)titleSize); out.push_back(std::move(a)); }
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVSAVE));
-      auto gs = std::make_unique<GraphicsState>(); gs->setPosition(tp); out.push_back(std::move(gs));
+      { auto gs = std::make_unique<GraphicsState>(); gs->setPosition(tp); out.push_back(std::move(gs)); }
       if (ang != 0.0) {
         auto tr = std::make_unique<Transform>();
         tr->setOperation(OPMRT); tr->setRotation(ang); tr->setPredefinedMatrix(MTLC);
@@ -1604,7 +1762,7 @@ struct AxisStmt : Stmt {
       }
       out.push_back(parse_text(title, tff, g_flags.using_reencode, g_flags.using_fontcmmi));
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVRESTORE));
-      if (wrap) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
   }
 };

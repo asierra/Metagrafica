@@ -9,12 +9,13 @@
 %      radio inmune al stretch) en vez de circle() geométrico (que bajo el stretch
 %      del fit se deforma en elipse — justo el caso que exigía el prólogo /ellipse).
 %   3. La recta de ajuste vive en la misma struct que los datos, fiteada al marco.
+%   4. (plan_plot.md Fase 1) El eje y usa axis(scale="log"): from/to en VALORES
+%      (1e-15/1e5), marcas y rótulos "10^n" generados solos (antes 5 text() a
+%      mano). El eje x usa strip_zero=true para el estilo del libro (".30", no
+%      "0.30").
 %
-% Lo que axis NO cubre aún y queda manual (ver "ideas para plot" al pie):
-%   - El eje y es LOGARÍTMICO: sus rótulos son potencias de diez (10^n, con
-%     superíndice); axis solo formatea números decimales. Se dibuja la línea y las
-%     marcas con axis(labels=false) y los 10^n a mano.
-%   - Rótulos de isótopos y el título matemático de x (superíndices) van a mano.
+% Lo que axis NO cubre aún y queda manual:
+%   - Rótulos de isótopos y los títulos matemáticos de los ejes (superíndices).
 
 display_size 9 6.7
 font_size 8
@@ -38,28 +39,26 @@ world_window -1 7.2 -0.95 6.25
 
 % ── Eje x: E^{-1/2} lineal, .30 … .50 cada .05 ──────────────────────────────
 % axis mapea el VALOR (from..to) a lo largo de la línea {p1 p2}; los rótulos y las
-% marcas salen solos. (La recta 0..6 en plot ↔ .30..50 en dato.)
+% marcas salen solos. (La recta 0..6 en plot ↔ .30..50 en dato.) strip_zero pule
+% el cero inicial (".30", no "0.30" — estilo del libro). ticks="in": marcas hacia
+% adentro (como el original). extend: la línea rebasa un poco cada extremo.
 line_width 0.2
-axis(from=0.30, to=0.50, step=0.05, decimals=2) { 0 0  6 0 }
+axis(from=0.30, to=0.50, step=0.05, decimals=2, strip_zero=true,
+     ticks="in", extend=0.4) { 0 0  6 0 }
 
 % ── Eje y: λ^{-1} logarítmico (5 décadas mayores) ───────────────────────────
-% Línea + marcas por axis; rótulos numéricos apagados (son 10^n, superíndices).
-% start=1 → marcas en y = 1,2,3,4,5 (no en el origen, que es el eje x).
-axis(from=0, to=5.5, step=1, start=1, labels=false) { 0 0  0 5.5 }
+% scale="log": from/to en VALORES (no exponentes); step=5 décadas entre marcas
+% mayores → caen en 1e-15, 1e-10, 1e-5, 1, 1e5 (rótulos "10^n" generados solos,
+% n=0 → "1"). ticks="in": marcas hacia adentro. extend=(1, 0.3): la línea baja
+% 1 unidad bajo la 1ª marca hasta el eje x (esquina) y rebasa un poco arriba.
+axis(scale="log", from=1e-15, to=1e5, step=5,
+     ticks="in", extend=(1, 0.3)) { 0 1  0 5 }
 
 % ── Puntos y recta al rectángulo de datos ───────────────────────────────────
 line_width 1
 fit(PUNTOS, stretch=true) { 0.6 0.7  5.79 5.4 }
 
-% ── Rótulos manuales que axis no genera ─────────────────────────────────────
-% Potencias de diez del eje y (superíndice → texto matemático).
-text("$10{^-15}$") { -0.9 0.92 }
-text("$10{^-10}$") { -0.9 1.92 }
-text("$10{^-5}$")  { -0.9 2.92 }
-text("1")          { -0.55 3.92 }
-text("$10{^5}$")   { -0.7 4.92 }
-
-% Títulos de ejes (matemáticos) e isótopos.
+% Títulos de ejes (matemáticos) e isótopos: aún manuales (fuera de Fase 1).
 text("${/gl^-1} (/rs)$") { -0.83 5.5 }
 text("$/iE^{/r-1/2} (MeV)^{/r-1/2} $") { 2.4 -0.9 }
 text("$Po{^292}$") { 1.1 5.1 }
