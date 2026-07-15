@@ -1626,6 +1626,22 @@ struct AxisStmt : Stmt {
       for (double v = startv; v <= to + eps; v += step) majors.push_back(v);
     }
 
+    // Estilo por-eje (line_width/color): acotado con push/pop alrededor de TODO el
+    // eje (línea + marcas + etiquetas + título), como GridStmt. Desacopla el ancho
+    // del eje del line_width del contenido — necesario dentro de plot, donde los
+    // ejes se dibujan FUERA del envoltorio de contenido (plan_plot.md Fase 4). Sin
+    // estos args, estado ambiente como antes → cero churn en ejes sueltos.
+    GraphicsItemList styleAttrs;
+    for (const char *k : {"color", "line_width"}) {
+      auto it = named.find(k);
+      if (it != named.end()) emitStyleAttr(k, it->second->eval(s), styleAttrs);
+    }
+    bool styleWrap = !styleAttrs.empty();
+    if (styleWrap) {
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      for (auto &a : styleAttrs) out.push_back(std::move(a));
+    }
+
     // 1. línea del eje (con el sobrante opcional extend=, a lo largo de la tangente)
     { point a1(p1.x - extLo * ux, p1.y - extLo * uy);
       point a2(p2.x + extHi * ux, p2.y + extHi * uy);
@@ -1691,6 +1707,14 @@ struct AxisStmt : Stmt {
       if (named.count("label_valign")) {
         int c = valignCodeFromStr(namedStr(s, named, "label_valign")); if (c >= 0) valignCode = c;
       }
+      // label_font/label_size: cara y tamaño de las etiquetas numéricas, hermanos de
+      // title_font/title_size. Sin label_font, FN_NOFACE = hereda la cara ambiente
+      // (comportamiento previo, cero churn). label_size se acota con el push/pop de
+      // alineación de abajo (AT_THEIGHT), como title_size.
+      std::string labelFont = namedStr(s, named, "label_font");
+      FontFace lff = labelFont.empty() ? FN_NOFACE
+                     : get_font_face_from_string(labelFont, g_flags.using_fontcmmi);
+      double labelSize = namedNum(s, named, "label_size", 0);
       // El prólogo EPS /cshow /rshow solo se emite si esta bandera se activó en
       // parse-time — exec() corre ANTES de EPSDisplay::start(), que la lee. Sin
       // ella el EPS llamaría al operador cshow REAL de PS y truena en typecheck
@@ -1702,6 +1726,7 @@ struct AxisStmt : Stmt {
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
       { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, alignCode);  out.push_back(std::move(a)); }
       { auto a = std::make_unique<Attribute>(); a->set(AT_TVALIGN, valignCode); out.push_back(std::move(a)); }
+      if (labelSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)labelSize); out.push_back(std::move(a)); }
 
       point g = physOut(labelGap);
       char fmt[8]; std::snprintf(fmt, sizeof fmt, "%%.%df", decimals < 0 ? 0 : decimals);
@@ -1723,7 +1748,7 @@ struct AxisStmt : Stmt {
         }
         auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(q.x + g.x, q.y + g.y));
         out.push_back(std::move(gs));
-        out.push_back(parse_text(num, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));  // hereda font ambiente
+        out.push_back(parse_text(num, lff, g_flags.using_reencode, g_flags.using_fontcmmi));  // label_font, o FN_NOFACE=ambiente
       }
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
@@ -1764,6 +1789,8 @@ struct AxisStmt : Stmt {
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVRESTORE));
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
+
+    if (styleWrap) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));   // cierra el estilo por-eje
   }
 };
 
@@ -1784,6 +1811,89 @@ struct CompoundStmt : Stmt {
     for (auto &st : body) st->exec(s, mg, out);
     out.push_back(std::make_unique<GraphicsState>(GS_CLOSEPATH));   // cierra → rellena/traza
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
+// plot (§13.7): marco de datos declarativo. Bloque de contenido (sentencias de
+// datos, EN UNIDADES DE DATOS) + rangos como args (x=/y=) + caja física box=
+// (world coords; default = ventana vigente). El contenido se mapea datos→caja;
+// los ejes se piden con xaxis(...)/yaxis(...) DENTRO del bloque (interceptados por
+// el parser) y se dibujan en coords exteriores, heredando from/to/scale de plot.
+//
+// Mecanismo (plan_plot.md Fase 4): plot TRANSFORMA las coordenadas de su
+// contenido. Ruta 100% LINEAL → matriz envolvente datos→box (= FitStmt::fitMatrix
+// con stretch, la misma idea que fit de struct). La ruta LOG (mapper puntual,
+// porque log no es afín) se añade después; por ahora xscale/yscale="log" es error.
+// Huella en el motor: CERO elementos nuevos (igual que axis).
+struct PlotStmt : Stmt {
+  std::map<std::string, ExprPtr> named;    // x, y, xscale, yscale, box
+  std::vector<StmtPtr> content;            // sentencias de datos (mapeadas)
+  std::unique_ptr<AxisStmt> xaxis, yaxis;  // ejes interceptados (coords exteriores)
+
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    // Rangos de datos (x=(from,to), y=(from,to)).
+    point xr = namedPoint(s, named, "x", 0, 1);
+    point yr = namedPoint(s, named, "y", 0, 1);
+    double x0 = xr.x, x1 = xr.y, y0 = yr.x, y1 = yr.y;
+    std::string xscale = namedStr(s, named, "xscale");
+    std::string yscale = namedStr(s, named, "yscale");
+    bool xlog = xscale == "log", ylog = yscale == "log";
+
+    // Caja física en world coords: box=(bx0,by0, bx1,by1); default = ventana vigente.
+    double bx0, by0, bx1, by1;
+    if (named.count("box")) {
+      Value bv = named.at("box")->eval(s);
+      if (bv.type != Value::LIST || bv.items.size() < 4) {
+        evalError("plot: box= requiere 4 valores (x0,y0, x1,y1)"); return;
+      }
+      bx0 = bv.items[0].num; by0 = bv.items[1].num;
+      bx1 = bv.items[2].num; by1 = bv.items[3].num;
+    } else {
+      double wx, wy, wdx, wdy; mg.getWindow(wx, wy, wdx, wdy);
+      bx0 = wx; by0 = wy; bx1 = wx + wdx; by1 = wy + wdy;
+    }
+
+    // Rango de datos ≤ 0 en un eje log → error (el axis lo revalida, pero aquí el
+    // mensaje es específico del plot).
+    if ((xlog && (x0 <= 0 || x1 <= 0)) || (ylog && (y0 <= 0 || y1 <= 0))) {
+      evalError("plot: un eje log requiere rango (x=/y=) positivo"); return;
+    }
+
+    // --- Contenido de datos → caja ------------------------------------------
+    if (xlog || ylog) {
+      // Ruta LOG: mapper puntual (pendiente, plan_plot.md Fase 4 Paso 4). El eje
+      // sí sabe log; lo que falta es remapear los PUNTOS del contenido.
+      evalError("plot: escala log del contenido aún no implementada (ruta lineal por ahora)");
+      return;
+    }
+    // Ruta lineal: matriz envolvente datos→box (stretch), como fit de struct. Se
+    // ejecuta el contenido dentro del envoltorio OPMPUSH/OPMPOP; los transforms
+    // locales §11.1 del cuerpo se cierran antes del OPMPOP (como en FitStmt).
+    Box w{x0, y0, x1 - x0, y1 - y0};
+    Matrix M = FitStmt::fitMatrix(w, bx0, by0, bx1, by1, /*stretch=*/true);
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
+    for (auto &st : content) st->exec(s, mg, out);
+    popTransforms(countTransforms(content), out);
+    { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+
+    // --- Ejes: coords exteriores, NO mapeados -------------------------------
+    // p1 p2 = borde de la caja; from/to/scale heredados de los args de plot. axis
+    // ya sabe log, alinear, centrar título, extend → reuso directo.
+    auto setup = [](AxisStmt &ax, double px1, double py1, double px2, double py2,
+                    double from, double to, const std::string &scale) {
+      ax.coords.clear();
+      ax.coords.push_back(ExprPtr(new NumExpr(px1)));
+      ax.coords.push_back(ExprPtr(new NumExpr(py1)));
+      ax.coords.push_back(ExprPtr(new NumExpr(px2)));
+      ax.coords.push_back(ExprPtr(new NumExpr(py2)));
+      ax.named["from"] = ExprPtr(new NumExpr(from));
+      ax.named["to"]   = ExprPtr(new NumExpr(to));
+      if (!scale.empty()) ax.named["scale"] = ExprPtr(new StrExpr(scale));
+    };
+    if (xaxis) { setup(*xaxis, bx0, by0, bx1, by0, x0, x1, xscale); xaxis->exec(s, mg, out); }
+    if (yaxis) { setup(*yaxis, bx0, by0, bx0, by1, y0, y1, yscale); yaxis->exec(s, mg, out); }
   }
 };
 
@@ -1809,6 +1919,7 @@ static StmtPtr parseRepeat(Lexer &);
 static StmtPtr parseFit(Lexer &);
 static StmtPtr parsePlace(Lexer &);
 static StmtPtr parseSine(Lexer &);
+static StmtPtr parsePlot(Lexer &);
 static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 static PathExprPtr parsePathExpr(Lexer &);   // álgebra de paths (§9)
@@ -1970,6 +2081,7 @@ static StmtPtr parseStatement(Lexer &lx) {
     }
     return st;
   }
+  if (name == "plot") return parsePlot(lx);    // plot(x=, y=, box=, …) { contenido + xaxis/yaxis } (§13.7)
   if (name == "grid") {                        // grid(xstep=, ystep=, …) { rect } (§13.6)
     auto st = std::make_unique<GridStmt>();
     if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
@@ -2044,6 +2156,32 @@ static StmtPtr parseBlock(Lexer &lx) {
   }
   if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
   return blk;
+}
+
+// plot(args) { contenido… xaxis(...) yaxis(...) }  (§13.7). Calcado de parseCompound:
+// args nombrados + loop de parseStatement hasta '}', INTERCEPTANDO xaxis/yaxis (que
+// solo son válidos aquí) → AxisStmt sin bloque de coords (plot fija p1 p2 y from/to).
+static StmtPtr parsePlot(Lexer &lx) {
+  auto st = std::make_unique<PlotStmt>();
+  if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+  if (!lx.accept(T_LBRACE)) parseError(lx, "'{' tras plot(...)");
+  while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+    if (lx.accept(T_NEWLINE)) continue;
+    const Tok &tk = lx.peek();
+    if (tk.type == T_IDENTIFIER && (tk.str == "xaxis" || tk.str == "yaxis")) {
+      bool isX = tk.str == "xaxis";
+      lx.next();
+      auto ax = std::make_unique<AxisStmt>();
+      if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, ax->named); }
+      // Sin bloque { }: plot suministra coords y from/to. Un bloque aquí es error.
+      if (lx.peek().type == T_LBRACE) parseError(lx, "xaxis/yaxis dentro de plot no llevan bloque { }");
+      if (isX) st->xaxis = std::move(ax); else st->yaxis = std::move(ax);
+      continue;
+    }
+    st->content.push_back(parseStatement(lx));
+  }
+  if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+  return st;
 }
 
 static StmtPtr parseStructDef(Lexer &lx) {

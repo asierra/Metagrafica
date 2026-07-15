@@ -1,56 +1,53 @@
 % Fig. 2.3 — La variación de la capacidad calorífica del diamante con la
 % temperatura, comparada con la predicción de la teoría cuántica de Einstein.
-% Traducción V3 (BORRADOR) de examples/v1/fig2-3.mg. El render debe igualar
-% examples/v1/reference/fig2-3.svg.
+% Puerto a plot { } (plan_plot.md Fase 4, ruta LINEAL). Debe igualar por vista
+% examples/v1/reference/fig2-3.svg (oráculo V1); NO es byte-idéntico al render
+% anterior: ahora el mapeo datos→caja lo hace plot (stretch), no la world_window.
 %
-% Traducción con marco de datos (world_window en datos + stretch, §13.7). Las
-% decisiones de axis/grid/marcador quedaron resueltas; queda solo CALIBRAR el
-% tamaño físico del marcador (dot 0.1) contra el oráculo al verificar el render.
+% Modelo: los datos viven EN UNIDADES DE DATOS (temperatura 0..1, capacidad
+% 0..6); plot los mapea a la caja física box= (world coords) con stretch, y los
+% ejes se piden con xaxis/yaxis DENTRO del bloque (heredan from/to de x=/y=).
+% Sin retícula (el grid dentro de plot es trabajo aparte; ver plan_plot.md).
 
 display_size 12 8
 font_size 8
 
-% ── Marco de datos (§13.7) ──────────────────────────────────────────────────
-% Realización simple: para un plot que ES toda la figura NO hace falta ventana
-% anidada; basta que la world_window esté EN UNIDADES DE DATOS, con stretch
-% (temperatura y capacidad no guardan proporción). El ×10 manual del V1
-% desaparece. (La ventana anidada de §13.7 se reserva para paneles: fig4-10.)
-% V1: WW -1 11 -1 7 con temp×10  →  aquí x/10, y igual; margen para ejes/rótulos.
-world_window -0.1 1.1  -1 7   stretch=true
+% Lienzo exterior en cm (1 unidad = 1 cm; aspecto = display ⇒ isométrico, sin
+% letterbox). La anisotropía temperatura/capacidad la produce ahora el fit
+% interno de plot (datos→box), NO la world_window (antes: -0.1 1.1 -1 7 stretch).
+world_window 0 12 0 8
 
-% ── Curva teórica (Einstein) ────────────────────────────────────────────────
-% V1 LWIDTH 4 → 0.8 pt (¡no 4!, regla LWIDTH·0.2, §4.10 — el borrador de §13.7
-% tenía este bug). LPATRN 2 → "dashed".
-line_width 0.8
-dash "dashed"
-polyline { 0 0  0.076 0 }                                  % tramo recto inicial
-bezier   { 0.076 0  0.26602 0.0247  0.17879 5.0734  0.99809 5.4533 }
-dash "solid"                                               % V1 LPATRN 0: la trama solo aplica a la curva
+% x = temperatura relativa (0..1) ; y = capacidad calorífica (0..6).
+% box = rectángulo FÍSICO de datos, en cm; el margen para rótulos/títulos queda
+% AFUERA de la caja.
+plot(x=(0,1), y=(0,6), box=(1.3,1.1, 11.5,7.5)) {
 
-% ── Puntos experimentales ───────────────────────────────────────────────────
-% dot es marcador FÍSICO (§4.6): la posición la transforma el marco stretch, el
-% tamaño NO → círculos redondos en su sitio. El argumento es el RADIO en pt
-% (§4.6). El V1 usaba CR 0.1 = círculo de 0.1 cm de radio ≈ 2.83 pt; aquí se
-% aproxima con un marcador físico de ese radio (V1 CR era geométrico y bajo
-% stretch salía elíptico, esto es redondo por diseño).
-dot(2.83, color="black") {
-    0.16011 0.7290  0.19421 1.1410  0.21008 1.3624  0.22753 1.5638
-    0.24370 1.8089  0.26464 2.0984  0.30605 2.6922  0.35098 3.3768
-    0.38756 3.6056  0.65876 5.3581  0.80844 5.3956  0.94408 5.5524
+    % ── Curva teórica (Einstein), EN DATOS ──────────────────────────────
+    % V1 LWIDTH 4 → 0.8 pt (regla LWIDTH·0.2, §4.10). LPATRN 2 → "dashed".
+    line_width 0.8
+    dash "dashed"
+    polyline { 0 0  0.076 0 }                                 % tramo recto inicial
+    bezier   { 0.076 0  0.26602 0.0247  0.17879 5.0734  0.99809 5.4533 }
+    dash "solid"                                              % la trama solo aplica a la curva
+
+    % ── Puntos experimentales (marcador físico dot, EN DATOS) ───────────
+    % dot(r): posición mapeada por el fit del plot, radio (pt) inmune al stretch
+    % → círculos redondos en su sitio (V1 CR 0.1 cm ≈ 2.83 pt).
+    dot(2.83, color="black") {
+        0.16011 0.7290  0.19421 1.1410  0.21008 1.3624  0.22753 1.5638
+        0.24370 1.8089  0.26464 2.0984  0.30605 2.6922  0.35098 3.3768
+        0.38756 3.6056  0.65876 5.3581  0.80844 5.3956  0.94408 5.5524
+    }
+
+    % ── Ejes (from/to HEREDADOS de x=/y=; sin bloque de coords) ─────────
+    % El estilo va SOBRE el eje (line_width/label_font), no como estado del bloque:
+    % los ejes se dibujan fuera del envoltorio de contenido, así que un line_width/
+    % font suelto aquí NO les llegaría. Etiquetas en itálica; títulos en romana 10.
+    % La x omite el 0 con start=0.1 (V1: 0.1..1.0).
+    xaxis(line_width=0.2, label_font="italic",
+          step=0.1, start=0.1, decimals=1,
+          title="relative temperature", title_font="roman", title_size=10)
+    yaxis(line_width=0.2, label_font="italic",
+          step=1, decimals=0,
+          title="heat capacity", title_font="roman", title_size=10)
 }
-
-% ── Retícula gris (V1: TICKS que barren todo el alto/ancho = gridlines) ───────
-% V1 LGRAY 50 → gray(0.5); LWIDTH 0 → 0.1 pt. grid incluye las líneas del cero,
-% pero coinciden con los ejes (dibujados encima) → sin diferencia visible.
-grid(xstep=0.1, ystep=1, color=gray(0.5), line_width=0.1) { 0 0  1 6 }
-
-% ── Ejes ──────────────────────────────────────────────────────────────────
-% V1 LWIDTH 1 → 0.2 pt. Sin marco anidado: from/to explícitos (no heredados).
-% Etiquetas en itálica 8 (estado de texto ambiente, font_size 8 vigente); títulos
-% en romana 10 (title_font/title_size). La x omite el 0 con start=0.1 (V1: 0.1..1.0).
-line_width 0.2
-font "italic"
-axis(from=0, to=1, step=0.1, start=0.1, decimals=1,
-     title="relative temperature", title_font="roman", title_size=10) { 0 0  1 0 }
-axis(from=0, to=6, step=1, decimals=0,
-     title="heat capacity", title_font="roman", title_size=10) { 0 0  0 6 }
