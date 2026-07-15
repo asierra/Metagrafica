@@ -20,7 +20,7 @@ world_window 0 12 0 8
 % x = temperatura relativa (0..1) ; y = capacidad calorífica (0..6).
 % box = rectángulo FÍSICO de datos, en cm; el margen para rótulos/títulos queda
 % AFUERA de la caja.
-plot(x=(0,1), y=(0,6), box=(1.3,1.1, 11.5,7.5)) {
+plot(x=(0,1), y=(0,6), box=(1.3,1.1, 11.5,7.5), grid=gray(0.5)) {
 
     % ── Curva teórica (Einstein), EN DATOS ──────────────────────────────
     % V1 LWIDTH 4 → 0.8 pt (regla LWIDTH·0.2, §4.10). LPATRN 2 → "dashed".

@@ -1651,7 +1651,11 @@ struct AxisStmt : Stmt {
     // 2. marcas
     if (tdir == "grid") {                     // barren el campo perpendicular (ventana o field=)
       double field = named.count("field") ? namedNum(s, named, "field", 0) : (horiz ? wdy : wdx);
-      double base  = horiz ? wy : wx;
+      // La retícula arranca en la LÍNEA del eje (coord perpendicular de p1), no en el
+      // origen de ventana: así barre el campo desde el eje (dentro de plot, desde el
+      // borde de la caja). Coinciden cuando el eje está en el origen (cero churn en
+      // ejes sueltos; ningún ejemplo usa ticks="grid").
+      double base  = horiz ? p1.y : p1.x;
       Path pp; pp.push_back(horiz ? point(0, field) : point(field, 0));
       for (double v : majors) {
         point q = posOf(v); pp.push_back(horiz ? point(q.x, base) : point(base, q.y));
@@ -1853,6 +1857,17 @@ struct PlotStmt : Stmt {
       bx0 = wx; by0 = wy; bx1 = wx + wdx; by1 = wy + wdy;
     }
 
+    // grid=: retícula opcional. `true` (número 1) → gris default; un color (cadena
+    // "azul"/hex, o RGB de gray()/entero) → ese color; `false`/0/ausente → sin
+    // retícula. (grid=gray(0)=0 cae en "sin retícula": una malla negra no se usa.)
+    bool hasGrid = false;
+    int gridColor = 0x808080;
+    if (named.count("grid")) {
+      Value gv = named.at("grid")->eval(s);
+      if (gv.type == Value::STRING) { hasGrid = true; gridColor = colorFromValue(gv); }
+      else if (gv.num != 0.0) { hasGrid = true; if (gv.num != 1.0) gridColor = (int)gv.num; }
+    }
+
     // Rango de datos ≤ 0 en un eje log → error (el axis lo revalida, pero aquí el
     // mensaje es específico del plot).
     if ((xlog && (x0 <= 0 || x1 <= 0)) || (ylog && (y0 <= 0 || y1 <= 0))) {
@@ -1866,6 +1881,39 @@ struct PlotStmt : Stmt {
       evalError("plot: escala log del contenido aún no implementada (ruta lineal por ahora)");
       return;
     }
+    // Retícula (grid=): capa de FONDO, ANTES del contenido → z-order correcto
+    // (contenido y ejes encima). Reusa axis(ticks="grid"): los pasos salen del
+    // `step` de xaxis/yaxis, así se auto-alinea con las marcas (y log sale gratis
+    // cuando llegue). Estilo propio (gris 0.1 pt), desacoplado de ejes/contenido.
+    // La pasada de grid dibuja también su línea de eje (gris, sobre el borde de la
+    // caja), pero el eje real —negro, pintado después— la cubre → sin artefacto.
+    if (hasGrid) {
+      auto emitGrid = [&](AxisStmt *src, bool isX) {
+        if (!src) return;                       // sin eje en esa dirección, sin retícula
+        double from = isX ? x0 : y0, to = isX ? x1 : y1;
+        const std::string &scale = isX ? xscale : yscale;
+        double field = isX ? (by1 - by0) : (bx1 - bx0);
+        double gx2 = isX ? bx1 : bx0, gy2 = isX ? by0 : by1;
+        AxisStmt g;
+        g.coords.push_back(ExprPtr(new NumExpr(bx0)));
+        g.coords.push_back(ExprPtr(new NumExpr(by0)));
+        g.coords.push_back(ExprPtr(new NumExpr(gx2)));
+        g.coords.push_back(ExprPtr(new NumExpr(gy2)));
+        g.named["from"] = ExprPtr(new NumExpr(from));
+        g.named["to"]   = ExprPtr(new NumExpr(to));
+        if (!scale.empty()) g.named["scale"] = ExprPtr(new StrExpr(scale));
+        g.named["step"]       = ExprPtr(new NumExpr(namedNum(s, src->named, "step", 1)));
+        g.named["ticks"]      = ExprPtr(new StrExpr("grid"));
+        g.named["labels"]     = ExprPtr(new NumExpr(0));           // sin rótulos
+        g.named["field"]      = ExprPtr(new NumExpr(field));
+        g.named["line_width"] = ExprPtr(new NumExpr(0.1));
+        g.named["color"]      = ExprPtr(new NumExpr((double)gridColor));
+        g.exec(s, mg, out);
+      };
+      emitGrid(xaxis.get(), true);
+      emitGrid(yaxis.get(), false);
+    }
+
     // Ruta lineal: matriz envolvente datos→box (stretch), como fit de struct. Se
     // ejecuta el contenido dentro del envoltorio OPMPUSH/OPMPOP; los transforms
     // locales §11.1 del cuerpo se cierran antes del OPMPOP (como en FitStmt).
