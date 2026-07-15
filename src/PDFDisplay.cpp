@@ -530,6 +530,13 @@ void PDFDisplay::setFontFace(FontFace face) {
 }
 
 void PDFDisplay::text(string s) {
+  // Si aún no se fijó NINGUNA fuente (current_font null), un `show` no dibuja nada.
+  // Pasa cuando el primer texto del documento hereda la cara ambiente (FN_NOFACE)
+  // —rótulos de axis/numbers/grid— y nunca se fijó una fuente con `font`: Text::draw
+  // omite setFontFace para FN_NOFACE. Fija la cara lógica vigente, o Times-Roman por
+  // default (mismo remedio que el guard dev_size<0 de EPSDisplay::text).
+  if (!current_font)
+    setFontFace(dspstate.fontFace != FN_NOFACE ? dspstate.fontFace : FN_TIMES_ROMAN);
   if (!current_font) return;
 
   double size = dspstate.fontSize * relfontsize;
