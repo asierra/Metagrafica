@@ -33,8 +33,8 @@ Este plan **no arranca de cero**: la spec ya diseñó §13.5 (`axis` declarativo
   motor" en la Fase 4): `GraphicsItemWithPath` (`primitives.h:228`) expone
   `getPath()`/`setPath()` y de él heredan `Polyline`/`Dot`/`Polybar`/`Rectangle`/`Arc`; la
   discriminación sin RTTI se hace con `getType()`. **Consecuencia: `plot` no necesita
-  elementos gráficos nuevos** — su huella en el motor es UN accesor
-  (`GraphicsState::getPosition()`, hoy ausente).
+  elementos gráficos nuevos** — su huella en el motor son DOS accesores const en
+  `GraphicsState` (`getPosition()` y `getGSType()`, hoy ausentes).
 - **Precedente que zanja el punto:** `axis` (log, ticks, alineación, títulos rotados) se
   implementó **sin añadir una sola primitiva al motor**. `plot` es del mismo tipo de
   constructo.
@@ -188,7 +188,7 @@ lista de trabajo:
 - **`plot` vive en el PARSER; el motor no gana elementos gráficos** (auditoría 2026-07-14,
   detalle en "Huella en el motor", Fase 4). Emite solo items existentes, igual que `axis`,
   y remapea puntos con la API pública de `GraphicsItemWithPath`. Huella total en el motor:
-  **un accesor** (`GraphicsState::getPosition()`). Esto mantiene la regla del proyecto —
+  **dos accesores const** en `GraphicsState`. Esto mantiene la regla del proyecto —
   las features van en el compilador, el motor solo crece cuando hay geometría genuinamente
   nueva que dibujar (§"Adding a new primitive" de CLAUDE.md), y aquí no la hay.
 - **Marcadores físicos por default en contexto de datos.** `dot` ya cumple; los símbolos
@@ -432,7 +432,7 @@ bifurca según la escala.** Es la lección central del proyecto (log NO es afín
   `afín ∘ log10`, aplicado recorriendo la lista temporal de items (ver "Huella en el motor").
   Bézier: puntos de control mapeados puntualmente (aproximación, como al digitalizar).
 
-#### Huella en el motor: CERO elementos gráficos nuevos, UN accesor (auditado 2026-07-14)
+#### Huella en el motor: CERO elementos gráficos nuevos, DOS accesores (auditado 2026-07-14)
 
 **Corrección al plan anterior:** este documento decía que la ruta log "necesita un hook
 `GraphicsItem::mapPoints(fn)`". **Está sobre-diseñado** — mete un virtual a TODA la
@@ -447,9 +447,23 @@ que ya existe. Auditoría del código:
   (`primitives.h:228-235`). El mapeo es `getPath()` → mapear → `setPath()`: **cero motor**.
 - **Discriminación sin RTTI:** `switch (getType())` + `static_cast`, el idioma que el motor
   ya usa (`Polyline::draw` despacha así por `type`). Vive en el parser.
-- **El ÚNICO cambio de motor:** `GraphicsState::position` es privado y **no tiene getter**
-  (`primitives.h:408-414`), y ahí viven las anclas de `text()`. Hace falta añadir
-  `point getPosition() const`. **Una línea, aditiva, sin tocar la jerarquía.**
+- **El ÚNICO cambio de motor: DOS accesores const** en `GraphicsState` (`primitives.h:398-415`),
+  donde viven las anclas de `text()`. No tiene getter **ni de `position` ni de `gstype`**:
+  ```cpp
+  GraphicsStateType getGSType() const;   // para filtrar: solo GS_PLUMEPOSITION lleva posición
+  point getPosition() const;
+  ```
+  > ⚠️ **Trampa: `setPosition` tiene efecto colateral.** `void setPosition(point p) { position = p;
+  > gstype = GS_PLUMEPOSITION; }`. De los nueve `GraphicsStateType` solo **uno** lleva posición;
+  > los demás son `PUSHSTATE`/`POPSTATE`/`OPENPATH`/`FILL`/… Un mapper que llamara `setPosition`
+  > a ciegas sobre cada `GI_STATE` **convertiría cada push/pop en un movimiento de pluma** →
+  > destrucción total. De ahí que haga falta `getGSType()` para filtrar, no solo `getPosition()`.
+
+  Dos líneas, aditivas, sin virtuales ni tocar la jerarquía. **No sirve volver los miembros
+  `protected`**: el consumidor (`PlotStmt::exec`) es un cliente externo, no una subclase — y de
+  `GraphicsState` no hereda nadie. El patrón correcto ya está en el mismo header:
+  `GraphicsItemWithPath` usa `protected: path` (sus subclases lo recorren) **y** `public:
+  getPath()/setPath()` (para clientes). Aquí solo aplica la segunda mitad.
 - **Precedente de mapeo parser-side:** `FitStmt` (rama path) ya hace exactamente esto con
   `process_path(M, path)` (función libre de `splines.h`) antes de emitir el `Polyline`.
   Para log haría falta su gemela no-afín (un `process_path` que tome un mapper), **también
@@ -459,22 +473,73 @@ que ya existe. Auditoría del código:
 guarda sus centros en el `path` pero el radio `r` es un miembro privado **aparte**
 (`primitives.h:305-330`): mapear el path mueve los centros y **no hay forma** de que toque
 el radio. Igual `line_width`/`font_size`, que son `Attribute`s, no puntos. El mapper
-literalmente no puede alcanzar una cantidad física. Por eso el contenido de datos usa
-`dot`, no `circle` (que además se deforma bajo stretch).
+literalmente no puede alcanzar una cantidad física.
 
-> ⚠️ **Gotcha que refuerza excluir los ejes del mapper:** en un `Polyline(GI_TICKS)`,
-> `path[0]` **NO es un punto sino el vector de la marca** (`Polyline::draw` lo lee como `tk`
-> y lo suma a los demás). Un `ticks()`/`axis` que cayera en el contenido de datos quedaría
-> corrompido por el mapper. Los ejes ya están excluidos por diseño (se dibujan en coords
-> exteriores); esto lo vuelve obligatorio, no una preferencia.
+#### Inventario de lo que el contenido puede emitir (auditado 2026-07-14)
 
-**Restricción de structs bajo log (error claro, no silencio) — la razón exacta:** una struct
-invocada emite un `Transform` (matriz) + su contenido; el mapper del parser remapearía los
-puntos **locales** y luego el motor aplicaría la matriz en **draw-time** → daría
-`matriz(map(p))` en vez de `map(matriz(p))`, que **difieren cuando `map` no es afín**. Por
-eso bajo log el contenido son primitivas directas (`polyline`/`bezier`/`dot`/`text`/
-`polybar`). En un plot **lineal** no hay problema: la ruta es la matriz envolvente y las
-structs funcionan igual que en `fit`.
+**Buena noticia estructural:** la lista temporal es **PLANA**. `BlockStmt`, `for`, `if` y
+`compound` empujan sus items al mismo `out`, así que anidar no crea estructura: el mapper es
+una **pasada lineal**, sin recursión.
+
+| | Item | Bajo el mapper |
+|---|---|---|
+| **A. Gratis** | `Polyline` (vértices), `Dot` (centros; `r` aparte), `Rectangle` (2 esquinas), posición de `text()` (en `GraphicsState`) | correcto. El rectángulo alineado a ejes mapea a rectángulo porque el mapa es **separable** (x e y independientes) |
+| **B. Aproxima / desaconsejado** | `Bezier` | puntos de control mapeados puntualmente = aproximación (como al digitalizar) |
+| | `Arc`/`circle`/`ellipse` | el path lleva los **centros**, pero `rx`/`ry` son miembros aparte: el centro mapea, los radios no → mal bajo log (un arco en datos no es un arco en log). En plots: `dot` |
+| | `Polybar` | path = posiciones, `width` es miembro aparte → si el eje **x** es log, el ancho de barra queda mal (cruce con `plan_polybar.md`) |
+| **C. Se CORROMPE** | `Polyline(GI_TICKS)` | `path[0]` **NO es un punto: es el VECTOR de la marca** (`primitives.cpp:26-28` lo lee como `tk` y hace `moveto(p); lineto(p+tk)`). Mapearlo con `log10` es basura |
+| **Sin puntos** | `Attribute`, `HatchAttr`, `Transform` | el mapper no los toca |
+
+> ⚠️ **Hueco real, no hipotético: `grid()` dentro del contenido.** Lo emiten `ticks()`, `grid`
+> y `axis` (seis sitios en `parserv3.cpp`), todos `GI_TICKS`. Y este plan mismo dice *"`grid`
+> primero (fondo), ejes al final"* → **`grid()` en el contenido es un caso ESPERADO** que hoy
+> se corrompería en silencio. **Salida:** dentro de `plot` la retícula se pide con
+> `xaxis(ticks="grid")`/`yaxis(ticks="grid")` —que ya existe y **no pasa por el mapper**,
+> porque los ejes se dibujan en coords exteriores—. Un `grid()`/`ticks()`/`axis()` **pelado**
+> en el contenido debe dar **error claro** (o interceptarse como los ejes), nunca pasar de
+> largo. Esto vuelve "los ejes no pasan por el mapper" una **obligación**, no una preferencia.
+
+#### Restricción de structs bajo log: la razón, y cómo detectarla (auditado 2026-07-14)
+
+**La razón exacta.** Una struct **no dibuja en coordenadas de datos**: dibuja en su sistema
+**local** (p. ej. `PUNTOS` de fig6-4 tiene `world_window 15 139 18 132` — píxeles
+digitalizados, no valores de λ⁻¹), y una matriz la coloca. La invocación emite `Transform`
+(matriz) + el contenido **en coords locales**, y el motor aplica la matriz en *draw-time*.
+El mapper del parser vería los puntos **locales** y les aplicaría `log10` — sobre números
+que no significan nada en el eje; luego el motor pondría la matriz encima. Da
+`matriz(map(p))` en vez de `map(matriz(p))`, que **difieren cuando `map` no es afín**. Y no
+es un error de precisión: si una coord local fuera ≤ 0, `log10` da `-inf`/NaN. De ahí el
+error explícito. (En un plot **lineal** no hay problema: matrices componen y el motor lo
+hace bien solo.)
+
+**Cómo NO detectarlo.** Un borrador previo proponía "si ruta log y hay un `Transform` en la
+lista temporal → error". **Falla en las dos direcciones** (verificado en `InvokeStmt`,
+`parserv3.cpp:699-712`):
+- **Falso negativo (grave):** las emisiones de `Transform` son **condicionales** —
+  `hasFrame` (solo con `at`/`scale`/`rotate`) y `needN` (solo con `world_window` local). Una
+  struct de caja unitaria invocada sin modificadores **no emite ningún `Transform`**: el
+  sniffing la deja pasar y el mapper mutila sus coords locales en silencio. Falla justo en
+  el caso que quería proteger.
+- **Falso positivo:** `TransformStmt` (§11.1, `parserv3.cpp:490`) también emite `Transform`.
+  `rotate 90 text("…")` dentro del plot para girar una etiqueta es **legítimo** (el mapper
+  mapea la posición, que sí está en datos; el motor gira los glifos) y sería rechazado.
+
+**Cómo SÍ detectarlo: en la SENTENCIA, no en el item.** El parser sabe quién coloca structs:
+`InvokeStmt`, `PlaceStmt`, `FitStmt`, `RepeatStmt`. `PlotStmt::exec` levanta una bandera de
+contexto mientras ejecuta contenido en modo log, y esas cuatro la consultan en su `exec` y
+emiten el error (encaja con los globales que el proyecto ya usa: `g_structs`, `g_flags`,
+`g_baseDir`). Da **cero falsos positivos** (un `rotate` no la toca), **cero falsos
+negativos** (una invocación pelada la dispara aunque no emita `Transform`) y **anidamiento
+gratis**: `if cond { MiStruct() }` la dispara, porque el chequeo ocurre al ejecutar el
+invoke — un escaneo estático del cuerpo tendría que recursar por `if`/`for`/bloques.
+
+> **Matiz: es "no soportado AÚN", no imposible.** La restricción no es fundamental: nace de
+> que el motor aplica las matrices en draw-time. Si esas sentencias **hornearan** su matriz
+> en los puntos —justo lo que la rama de paths de `fit` ya hace con `process_path`— el
+> parser tendría coords de datos reales y las structs funcionarían bajo log. Fuera de la v1
+> (hornear se complica con transforms §11.1 anidados en el cuerpo e invocaciones
+> recursivas), pero es el camino si una figura lo pide. El mensaje de error debe decir "aún
+> no", no "no se puede".
 
 **Parser** (calcado de `CompoundStmt`, `parserv3.cpp:1791`): `parsePlot` = args nombrados +
 loop de `parseStatement` hasta `}`. Dentro se interceptan `xaxis`/`yaxis` (válidos **solo**
@@ -502,10 +567,14 @@ una vez que `edge=` existe.
 Todo eso es contenido explícito, estilo MG.
 
 **Criterios de aceptación (Fase 4):** portar fig6-4 y fig2-3 a `plot { }` (uno log, uno
-lineal-anisótropo) y que igualen sus versiones actuales en los **tres** backends (golden
-EPS+SVG + spot-check PDF + `gs nullpage`), con **cero** coordenada digitalizada de eje y
-cero `text()` de potencia/título. Caso de error: struct con transform dentro de un `plot`
-log → mensaje claro.
+lineal-anisótropo) y que igualen sus versiones actuales en el golden de los **tres**
+backends (`ok=51 … psfail=0`, ya incluye PDF y `gs`), con **cero** coordenada digitalizada
+de eje y cero `text()` de potencia/título. Casos de error con mensaje claro (no crash, no
+silencio), los tres destapados por la auditoría:
+1. Struct colocada dentro de un `plot` **log** (`InvokeStmt`/`PlaceStmt`/`FitStmt`/
+   `RepeatStmt` con la bandera de contexto activa) → "aún no soportado", no "imposible".
+2. `grid()`/`ticks()`/`axis()` **pelados** en el contenido → sugerir `xaxis(ticks="grid")`.
+3. Rango de datos ≤ 0 en un eje log (el `axis` ya valida; `plot` debe hacerlo con `x=`/`y=`).
 
 ### Fase 5 — (opcional, cuando un ejemplo lo pida) contenido de alto nivel
 
@@ -545,8 +614,8 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
   `edge="top"/"right"`.
 - **Luego Fase 4 (`plot`)** — el headline; su valor subió mucho porque hereda todo el
   pulido de `axis`. Portar fig6-4 y fig2-3 a `plot{}` es el criterio de cierre.
-  **Costo de motor auditado: UN accesor** (`GraphicsState::getPosition()`), cero elementos
-  gráficos nuevos → es trabajo de parser, no de motor.
+  **Costo de motor auditado: DOS accesores const** en `GraphicsState` (`getPosition()` y
+  `getGSType()`), cero elementos gráficos nuevos → es trabajo de parser, no de motor.
 - **Fase 3 (auto-step/decimals + `format=`)** — ortogonal, alto valor (se afinó `step` a
   mano en cada ejemplo); puede intercalarse antes o después de la 4.
 - **Tarea de test (independiente, ver sección "TAREA — Automatizar las compuertas de la
@@ -565,8 +634,8 @@ títulos matemáticos centrados) verificado en los tres backends. Quedan dos fre
 constructo tipo `compound` cuyo mecanismo es *transformar las coordenadas de su contenido*
 —matriz envolvente si lineal, mapper puntual si log (porque log no es afín y §16 no
 existe)— delegando los bordes a `xaxis`/`yaxis` = `axis(edge=…)`, que **hereda gratis**
-todo el pulido. `plot` es **trabajo de parser**: su huella auditada en el motor es UN
-accesor, cero elementos gráficos nuevos (igual que `axis`, que no añadió ninguno). El norte es fig6-4 y fig2-3 escritos como `plot { }` sin una sola
+todo el pulido. `plot` es **trabajo de parser**: su huella auditada en el motor son DOS
+accesores const, cero elementos gráficos nuevos (igual que `axis`, que no añadió ninguno). El norte es fig6-4 y fig2-3 escritos como `plot { }` sin una sola
 coordenada digitalizada. La lección durable que enmarca todo: **cada fase se cierra
 portando una figura real del libro contra su oráculo, en EPS/SVG/PDF** — ahí es donde
 aparecen los requisitos y los bugs que la spec abstracta no anticipa.
