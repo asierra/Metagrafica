@@ -141,6 +141,17 @@ Capa 3 cuando toque tocar texto de nuevo. Las tres son independientes de las Fas
 pueden hacerse en cualquier momento y **conviene tenerlas antes de la Fase 4** (`plot`
 mueve texto y ejes en los tres backends a la vez).
 
+> ✅ **Capas 1 y 2 HECHAS (2026-07-14).** `test/run.sh` corre 17 ejemplos × EPS/SVG/PDF =
+> **51 goldens** + la compuerta `gs` (`psfail`), que se omite con aviso si no hay `gs` y
+> corre también en `capture` (para no bendecir un EPS que no interpreta). `fig6-4v3-clean`
+> quedó promovido al corpus. **Ambas compuertas se verificaron reintroduciendo a propósito
+> los bugs que deben cazar:** quitar `using_textalign` → `PSFAIL` en fig2-3 y fig6-4;
+> quitar el fallback de `current_font` → `FAIL fig6-4v3-clean.pdf`. Hallazgo de ese
+> ejercicio: **solo fig6-4v3-clean caza el bug de PDF** (fig2-3 fija `font "italic"`, así
+> que nunca deja `current_font` nulo) — justifica la promoción por sí sola.
+> Falta la **Capa 3** (paridad de texto), que sigue siendo la única que cazaría un bug de
+> texto omitido *preexistente* (el golden lo bendeciría).
+
 ## Fricción concreta observada (motiva las features)
 
 `fig6-4v3-clean.mg` quedó limpio en los ejes, pero estas cosas siguen a mano y son la
@@ -341,20 +352,27 @@ churn con el cero-churn de la Fase 1.
 4. Casos de error con mensaje claro (no crash, no silencio): `scale="log"` con
    `from<=0`, `step` no entero en log, rango log sin década completa (advertencia).
 
-### Fase 2 — Marco de datos: `edge=` + herencia de rango  ← PREREQUISITO DE PLOT, siguiente
+### Fase 2 — Marco de datos: `edge=` + herencia de rango
 
 `axis(edge="bottom"|"top"|"left"|"right")` **sin** bloque `{p1 p2}` y **sin** `from`/`to`:
 toma los extremos físicos del borde y el rango de la `world_window` vigente (§13.7). Con
 esto `fig2-3` pierde sus dos bloques de extremos y sus `from`/`to`. Requiere que
 `AxisStmt` consulte `mg.getWindow()` cuando faltan bloque/rango.
 
-**Es el camino crítico hacia `plot`:** dentro de `plot`, `xaxis`/`yaxis` son exactamente
-`axis(edge=…)` con rango heredado. Sin `edge=`, `plot` tendría que pasar los cuatro
-extremos y el rango a cada eje a mano. Por eso Fase 2 va antes que Fase 4. Bajo costo
-(consultar `mg.getWindow()`), alto desbloqueo. **Sub-tarea nueva** que la Fase 1.5 dejó
-lista: `edge` también fija el LADO de las etiquetas/marcas/título (hoy se deriva de la
-tangente `horiz`; con `edge="top"` o `"right"` el "out" es el opuesto, y la auto-alineación
-de la Fase 1.5 debe invertirse — center/**bottom** para top, **left**/middle para right).
+> **Corrección (2026-07-14): NO es prerequisito duro de `plot`, como decía este plan.**
+> `plot` construye sus `AxisStmt` internamente: conoce las esquinas de `box` y los rangos,
+> así que puede fijar `coords` y `from`/`to` él mismo. Y para los ejes **abajo/izquierda**
+> —los únicos que fig6-4 y fig2-3 necesitan— la heurística de tangente que ya existe
+> (horizontal→abajo, vertical→izquierda) da exactamente el lado correcto. `edge=` solo se
+> vuelve **necesario** para ejes arriba/derecha (`frame=true`, ejes secundarios).
+> Es entonces una **preferencia de secuenciación** (hacer `plot` primero obliga a
+> hand-rollear los bordes y luego refactorizar), no un muro. Su valor propio sigue en pie:
+> `axis(edge=…)` standalone limpia fig2-3.
+
+**Sub-tarea** que la Fase 1.5 dejó pendiente: `edge` también fija el LADO de
+etiquetas/marcas/título (hoy se deriva de la tangente `horiz`); con `edge="top"`/`"right"`
+el "out" es el opuesto y la auto-alineación debe invertirse — center/**bottom** para top,
+**left**/middle para right.
 
 *Nota log:* `edge` + `scale="log"` solo compone bien **dentro de `plot`** (Fase 4), donde
 los rangos heredados son de datos reales. En un documento suelto la `world_window` es
@@ -518,8 +536,13 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
 - **Fase 1 ✅** (log + strip_zero), **Fase 1.5 ✅** (auto-alineación), y adelantados por
   fidelidad a la figura: `extend` ✅, ticks-in ✅, `label_gap`/`title_gap` ✅, título
   centrado ✅, fix de PDF `current_font` ✅. Todo verificado en 3 backends contra oráculo.
-- **Siguiente: Fase 2 (`edge=`)** — camino crítico a `plot`, bajo costo. Incluye invertir
-  la auto-alineación de la 1.5 para `edge="top"/"right"`.
+- **Hecho 2026-07-14 (preparación para plot):** trabajo commiteado en la rama
+  `axis-plot-fase1`; `fig6-4v3-clean` promovido al golden; Capas 1 y 2 del harness
+  (`ok=51 … psfail=0`), ambas verificadas reintroduciendo sus bugs.
+- **Siguiente: Fase 2 (`edge=`)** — bajo costo; **no** es bloqueante de `plot` (ver la
+  corrección en la Fase 2), pero hacerla antes evita hand-rollear los bordes y
+  refactorizar después. Incluye invertir la auto-alineación de la 1.5 para
+  `edge="top"/"right"`.
 - **Luego Fase 4 (`plot`)** — el headline; su valor subió mucho porque hereda todo el
   pulido de `axis`. Portar fig6-4 y fig2-3 a `plot{}` es el criterio de cierre.
   **Costo de motor auditado: UN accesor** (`GraphicsState::getPosition()`), cero elementos

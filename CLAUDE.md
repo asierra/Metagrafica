@@ -16,18 +16,31 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-3.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden-file regression (EPS+SVG): ok=32 fail=0 error=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs: ok=51 fail=0 error=0 psfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
-**Harness golden ACTIVO (reactivado 2026-07-11).** Corre el corpus de `examples/`
-(16 `.mg` × EPS/SVG = 32 goldens) y compara contra la red golden (salida del propio
-renderer V3, regresión — no el oráculo V1). Tras tocar el motor: `make` y
-`bash test/run.sh check` (debe dar **ok=32 fail=0 error=0**); re-bendecir con
-`capture` solo tras verificar que los cambios son intencionales. Golden files
-(`test/golden/`) **no están en git** (se regeneran con `capture`); PDF se verifica
-por vista. Complemento útil para el motor: renderizar a EPS y pasarlo por Ghostscript
-(`gs -dNOPAUSE -dBATCH -sDEVICE=nullpage f.eps`).
+**Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14).** Corre el corpus
+de `examples/` (17 `.mg` × EPS/SVG/**PDF** = 51 goldens) y compara contra la red golden
+(salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
+`make` y `bash test/run.sh check` (debe dar **ok=51 fail=0 error=0 psfail=0**);
+re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
+files (`test/golden/`) **no están en git** (se regeneran con `capture`).
+
+**Dos compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+"Lecciones de ingeniería"):
+- **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
+  2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
+  `/ID`, independiente del path), así que se compara igual que EPS/SVG. Antes se
+  "verificaba por vista" y en ese hueco vivió el bug de rótulos en blanco en PDF.
+  **No** caza un bug *preexistente*: se bendice como correcto.
+- **Ghostscript sobre el EPS** (`psfail`) — caza los bugs de **prólogo**, que el golden
+  no puede ver: producen un EPS byte-estable que revienta al interpretarse
+  (`/undefined in ellipse`; `/cshow` sin su prólogo si falta `using_textalign`). Se
+  omite con aviso si no hay `gs` instalado. Corre también en `capture`, para no
+  bendecir un EPS que no interpreta.
+
+Ambas compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar.
 
 Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexmg.cpp` from `src/mgpp.l`), `pandoc` (man page). Do not edit `src/lexmg.cpp` or `include/version.h` content by hand. libharu is vendored in `third_party/` for PDF.
 
@@ -37,7 +50,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (16 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-10, fig6-1/6-10, fill_styles, line_patterns, markers-demo, primitives, rpstest, sines, texto). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11).
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (17 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-10, fig6-1/6-10, fig6-4v3-clean, fill_styles, line_patterns, markers-demo, primitives, rpstest, sines, texto). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). `fig6-4v3-clean` entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF (fig2-3 no lo detecta: fija `font "italic"`). Su oráculo de calibración es `examples/fig6-4.png`.
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (`ok=32`, ver "Build and test"). `src/main.cpp`, `src/Parser.cpp`, `src/lexmg.cpp` (front-end V1) quedan en el árbol pero **fuera del build**; V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
