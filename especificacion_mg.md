@@ -1311,6 +1311,36 @@ axis(from=0, to=8, step=1, ticks="out", tick_labels=true) { 0 0  0 8 }
 
 Las **marcas y sus rótulos** van en `start, start+step, …` hasta `to` (`start` default = `from`). Los **rótulos de marca** heredan el estado de texto vigente (`font`, `font_size`, `align`, §7.3) y admiten override propio (`tick_label_font`/`tick_label_size`), igual que el **nombre del eje** (`label_font`/`label_size`), porque suelen diferir —p. ej. números en itálica y nombre en romana, como en fig2-3.
 
+#### Abierto: ¿el `label` cuelga de la LÍNEA o de la CAJA?
+
+**Hoy cuelga de la línea del eje.** matplotlib hace lo contrario: `set_ylabel` es un método del
+*Axes* (la caja), no del spine — si centras el spine izquierdo, el `ylabel` **se queda en el borde
+de la caja**. Las dos convenciones coinciden siempre que el eje corra sobre el borde, que es el
+caso de todo el corpus salvo un panel; **divergen solo con `base=`** (la trampa de §13.7).
+
+La medición que lo dejó ver, para no rederivarla (fig4-5, tres paneles; `V(x)` es la ordenada):
+
+| panel | eje y en x= | `V(x)` en x= | Δ vs **eje** | Δ vs **borde de caja** |
+|---|---|---|---|---|
+| a | **15.5** (interior, `base=0`) | 1.0 | **−14.5** | −4.5 |
+| b | 39.8 | 34.5 | −5.3 | −5.3 |
+| c | 80.0 | 74.5 | −5.5 | −5.5 |
+
+Respecto del eje es incoherente; respecto de la caja, coherente: **el libro ancla la ordenada a la
+caja**. Y en la *misma figura* ancla la abscisa a la **línea** — el rótulo `x` del panel c está en
+y=24.3, pegado a su eje interior (y=25), no al fondo de la caja (y=10). No es descuido: el extremo
+derecho de un eje x interior es buen lugar; el tope de un eje y interior cae **sobre la curva**.
+
+**No se cambió, y la razón no es conservadurismo: el anclaje a la caja no rescata su propio caso.**
+Con `label_at="end"` anclado a la caja, los tres `V(x)` quedarían en la esquina superior de *su*
+caja (y = 37, 38.5, 38.5); el libro los quiere a y=**35, los tres** — a una altura común, que es
+decisión de página y ningún anclaje da. Seguirían a mano. Súmale que haría falta un
+`label_rotate=false` sin más usuarios.
+
+**Lo decide la primera figura con un eje interior cuyo rótulo ESTORBE de verdad** (regla del
+proyecto: no especular sin ejemplo). Si ese día se elige la caja, revisar que no mueva fig2-3 /
+fig6-4 / fig_polybar, donde eje y borde coinciden y no debe cambiar un píxel.
+
 La orientación de marcas y etiquetas se deriva de la dirección de la línea (la lógica de tangente del motor de placements), así que un eje horizontal, vertical o inclinado se escriben igual, cambiando solo los extremos del bloque. Aquí `step` es el **intervalo de valor** (como en el `for` loop, §6), no el `step` de avance de pluma (§12).
 
 *(V1: combinación manual de `TICKS` + `GNNUM` + `LNST`/`PL`; ver el desglose de bajo nivel en §13.3.)*
@@ -1478,6 +1508,13 @@ potenciales de libro (fig4-5: eje `V` centrado en el oscilador, eje `x` sobre `V
 potencial efectivo). `v` fuera del rango deja el eje fuera de la caja, que es legítimo (no hay
 clipping); en un eje log `base=` exige `v>0`. La **retícula** de `grid=` no se mueve: barre la
 caja completa, cruce donde cruce el eje.
+
+> ⚠️ **Trampa: `base=` se lleva el rótulo del eje con él.** El `label` cuelga de la **línea** del
+> eje (§13.5), no de la caja, así que `yaxis(base=0, label="V")` manda el nombre del eje **al
+> centro del panel, encima de los datos**, sin avisar. No es hipotético: es por lo que fig4-5 pone
+> sus tres `V(x)` a mano en coords de ventana. Con `base=` y `label` juntos, revisa dónde cayó.
+> Los rótulos de MARCA no tienen el problema (van pegados a sus marcas, que sí siguen al eje a
+> propósito), ni el `label` de un eje sobre el borde de la caja, que es el caso normal.
 
 Un eje sin marcas ni rótulos —la línea desnuda de una figura esquemática— es
 `xaxis(ticks="none", labels=false)`.
