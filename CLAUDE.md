@@ -360,11 +360,55 @@ Pendientes conocidos de polybar (ninguno lo pide un ejemplo todavía): `width` e
 barra queda mal; y no hay `base=` (las barras siempre crecen desde 0). Ambos en §4.12 y
 `plan_polybar.md`.
 
+### Cerrado en la sesión del 2026-07-16 (nomenclatura §13 + renombre; `plot` EN PAUSA)
+
+Al comparar con matplotlib/asymptote salió que **los nombres de MG estaban cruzados**:
+`axis(title=)` era el *nombre del eje* (el `xlabel`/`ylabel` de todo el mundo) y `axis(labels=)`
+los *tick labels* — los dos nombres que cualquiera alcanza primero significaban otra cosa, y
+`title` ocupaba el del encabezado del plot, que MG no tiene. Cuatro commits (`d4c5c52`..`52be31a`):
+
+- **§13.0 "Anatomía de una gráfica"** (normativa): un nombre por parte, reservados aunque la
+  parte no exista. `plot(title=)` = encabezado; `axis(label=)` = nombre del eje; `tick_labels`
+  = los números. **Sin `units=`**: van en la cadena del label (separarlas obliga a una política
+  tipográfica no universal — SI `λ / µm` vs libros `λ(µm)`). `tick_labels` cubre 3 modos con un
+  arg (true/false/lista), como `grid=`; por el 3º (no numéricos) **no** se llama `numbers=`.
+- **Renombre HECHO** (`9d52325`). **Va en DOS FASES o colisiona** (`title_font→label_font` choca
+  con el `label_font` que ya existía): primero `label_*→tick_label_*`, luego `title_*→label_*`.
+  Los nombres viejos **fallan en compilación** (`checkRenamedAxisArgs`). 💡 **Técnica a repetir:**
+  `label_font`/`label_size`/`label_gap` son válidos ANTES y DESPUÉS con distinto significado → no
+  pueden fallar y el parser no los ve; la guardia fue que **el renombre es PURO** y exigir los 57
+  goldens **byte-idénticos**. fig2-3 traía la trampa pura (`label_font` y `title_font` contiguos).
+- **`label_at=`** (`1f19fe9`): `"center"` (matplotlib, fig2-3) / `"start"`/`"end"` (libro). El
+  default de `label_gap` depende de `label_at` y no es magia: **lo que estorba depende de dónde
+  lo pongas** (centrado libra la fila de rótulos; al extremo va más allá de ella). Absorbió los
+  3 rótulos `x` de fig4-5.
+- 🐞 **Bug del motor destapado por ese port:** `/i` y `/b` se tragaban **en silencio** sobre cara
+  heredada. Las caras componen por OR de bits pero el centinela es `FN_NOFACE = -1`, que ya tiene
+  **todos** los bits → `-1 | FN_ITALIC = -1`. Solo llegan con FN_NOFACE los rótulos de
+  axis/numbers/grid; se escondía porque fig6-4 usa `/i` dentro de `$…$` (math *asigna* itálica) y
+  funciona. Fix en `change_font_face`. **Lección: un centinela `-1` y un modelo de bits no conviven.**
+- ⚠️ **Trampa documentada (§13.7), demostrada con medición:** `yaxis(base=0, label="V")` manda el
+  nombre del eje **encima de los datos** (el label cuelga de la LÍNEA, y la línea se fue al centro).
+  Ligado a la pregunta abierta de §13.5: matplotlib ancla el label a la **caja** (`set_ylabel` es
+  método del Axes, no del spine). Coinciden salvo con `base=`. **No se cambió porque el anclaje a
+  la caja no rescata su propio caso** (los `V(x)` de fig4-5 quieren altura común, que ningún
+  anclaje da). Lo decide la primera figura donde estorbe.
+
+**`plot` EN PAUSA (2026-07-16), con ejemplos completos y funcionales:** fig2-3 (lineal), fig6-4
+(log), fig4-5 (3 paneles + `base=` + `label_at`), fig_polybar (`polybar` + 3 pasadas). Aparcado en
+la spec, **sin implementar**: `rule` (§13.8, valores notables — hijo del `plot`, decidido), `legend`
+(§13.9, dos fuentes), `table` (§13.10); y los huecos que destapó `figure_02.pdf`: **texto
+multilínea** (§14.1), **retícula por eje** (§13.6) y **`alpha`** (§4.11 — EPS no lo tiene nativo;
+es decisión de arquitectura, no un atributo). Los tres primeros esperan figuras a propósito.
+
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran
 pendiente para migrar el material V1. Otros: `spline`/`smooth` §9 (motor `splines.cpp` listo,
 bajo costo); Math P1/P2 de `plan_lmmath.md` (símbolos `map_symbol`→LM Math; latino math→itálica
 LM Math en vez de Times-Italic); `marker_start/mid/end` en polygon/bezier; ventanas anidadas §16.
+**Hueco de cobertura conocido** (follow-up #3 del code-review): el remapeo de posición de `text()`
+en un `plot` **log** —la razón única de los 2 accesores que ganó el motor— **no lo ejercita ningún
+ejemplo**; un bug ahí shippea sin que lo cacen las 3 compuertas.
 
 ## Code style
 
