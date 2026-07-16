@@ -16,10 +16,6 @@
 %
 % Ejercita: varios plot{} en un documento (rejilla de paneles) y `base=` en los
 % ejes — el eje V centrado de a), el eje x sobre V=0 de c).
-%
-% Nota: el V1 traía `DOT 5 011 .3` (punto decimal perdido) en el panel c, así que
-% la marca sobre x'_1 se iba a x=454, fuera de página, y falta en el original
-% impreso. Aquí sale en su sitio.
 % ───────────────────────────────────────────────────────────────────────────────
 
 display_size 12 4.5
