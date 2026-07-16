@@ -2,7 +2,7 @@
 
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-14-blue.svg)
 ![License](https://img.shields.io/badge/License-GPL%203.0-green.svg)
-![Version](https://img.shields.io/badge/version-3.0.0-orange.svg)
+![Version](https://img.shields.io/badge/version-3.0.0--beta-orange.svg)
 
 **A descriptive language for technical and scientific figures.**
 
@@ -137,7 +137,14 @@ bin/mg examples/fig6-4.mg out.svg
 
 ## Project status
 
-`mg` is the **version 3** compiler (`MG_VERSION 3.0.0`). The earlier two-letter grammar
+**This is a beta.** Two things follow from that. The **language can still change**: names
+and arguments are not frozen — `axis` recently renamed `title` to `label` and `labels` to
+`tick_labels`, so a figure that compiles today may need an edit tomorrow (the old names
+fail loudly, never silently). And **parts are unbuilt**: the specification describes
+features that do not exist yet. What is here is exercised by the regression corpus on
+every change, and has typeset published books.
+
+`mg` is the **version 3** compiler (`MG_VERSION 3.0.0-beta`). The earlier two-letter grammar
 (`PL`, `CR`, `GNNUM`…) is frozen on the `v1-legacy` branch, and its corpus lives in
 [`examples/v1/`](examples/v1/) as the migration oracle. **Those sources do not compile
 with this binary.**

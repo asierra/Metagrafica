@@ -1,2 +1,2 @@
-#define MG_VERSION "3.0.0"
+#define MG_VERSION "3.0.0-beta"
 

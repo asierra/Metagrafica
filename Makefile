@@ -67,7 +67,13 @@ $(BINDIR):
 V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o PDFDisplay.o structure.o \
 	matrix.o primitives.o text.o text_parser.o splines.o)
 
-$(BINDIR)/mg: $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_LIB) $(INCDIR)/ast.h $(INCDIR)/tokens.h $(INCDIR)/parserv3.h | $(BINDIR)
+# main.cpp, lexv3.cpp y parserv3.cpp se compilan DIRECTO en este enlace (no pasan por
+# obj/*.o), así que sus headers tienen que estar aquí: no hay un obj/main.o al que
+# colgarle dependencias. Faltaba version.h → cambiar la versión no recompilaba nada
+# y `mg -v` seguía mintiendo hasta un `make clean` (bug encontrado 2026-07-16).
+$(BINDIR)/mg: $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_LIB) \
+              $(INCDIR)/ast.h $(INCDIR)/tokens.h $(INCDIR)/parserv3.h $(INCDIR)/version.h \
+              $(INCDIR)/structures.h $(INCDIR)/EPSDisplay.h $(INCDIR)/PDFDisplay.h $(INCDIR)/SVGDisplay.h | $(BINDIR)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) -o $@ -L$(OBJDIR)/haru -lharu $(LDFLAGS) $(LIBS) -lz
 
 # Alias histórico: v3test == mg (mismo compilador V3).
@@ -94,8 +100,7 @@ $(OBJDIR)/PDFDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures
 $(OBJDIR)/SVGDisplay.o: $(INCDIR)/SVGDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
 $(OBJDIR)/SVGDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
 $(OBJDIR)/lexmg.o: $(INCDIR)/mgpp_tab.h
-$(OBJDIR)/main.o: $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
-$(OBJDIR)/main.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Parser.h $(INCDIR)/version.h
+# (obj/main.o no existe: main.cpp se compila en la regla de bin/mg, arriba.)
 $(OBJDIR)/matrix.o: $(INCDIR)/matrix.h
 $(OBJDIR)/Parser.o: $(INCDIR)/Parser.h $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h
 $(OBJDIR)/Parser.o: $(INCDIR)/matrix.h $(INCDIR)/mgpp_tab.h $(INCDIR)/text_parser.h $(INCDIR)/splines.h

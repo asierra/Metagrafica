@@ -1,294 +1,349 @@
 ---
 title: mg
 section: 1
-footer: mg 3.0.0
+footer: mg 3.0.0-beta
 date: 2026
 author: Alejandro Aguilar Sierra <algsierra@gmail.com>
 ---
 
 # NAME
-mg -  Metagrafica, a descriptive language to create high quality technical and scientific graphics.
 
+mg - MetaGráfica, a descriptive language for technical and scientific figures.
 
 # SYNOPSIS
-**mg** [**-h**|**-v**] *filename.mg*
 
-# GENERAL OPTIONS
+**mg** [**-h**|**-v**] *figure.mg* [*output*]
+
+# OPTIONS
+
 **-h**
-:   Display this friendly help message.
+:   Display a friendly help message.
 
 **-v**
 :   Display the current version.
 
+The **output format is chosen by the extension** of the output file: `.eps`
+(default), `.svg` or `.pdf`. With no output file, `mg figure.mg` writes
+*figure.eps*.
+
 # DESCRIPTION
-MetaGrafica, the command **mg**, is a descriptive language to create 2D vector graphics of publication quality as Encapsulated PostScript. Being vectorial, the basic element is not a pixel but a *point*, defined by a pair of coordinates x, y. A series of points creates a *path*, with which we can build polygons, curves and text, which we call *graphics primitives*. You can assign attributes to the primitives, like color and line width, and also geometric transformations, like rotations and scale. With a set of primitives you can build higher level structures, which are also controlled with linear transformations.
 
-The output area is defined in centimeters and is by default 10x10 but you can change it using the directive $D.
-The _object space_ is the reference system defined by the user with the command WW, being 0 to 1 in both horizontal and vertical directions the default. If you want to change the defaults, you must use both $D and WW at the beginning of the program. 
+MetaGráfica is a language for describing figures. You write *what the figure is* —
+points, lines, shapes, labels — and **mg** compiles it. There is no canvas to click
+on: a figure is source code, so it can be kept under version control, diffed,
+parameterized and regenerated.
 
-## Graphics primitives
+Being vectorial, the basic element is not a pixel but a **point**, a pair of
+coordinates *x y*. A series of points is a **path**, and paths are what the drawing
+commands consume. Coordinates are yours to choose — you declare the range you want
+to work in — while sizes that must not depend on that choice (line widths, text,
+markers) are given in typographic points, 1/72 inch.
 
-Every primitive is defined by its name, which usually is a short mnemonic, followed by numeric arguments. In the following list we describe them with name, syntax and a brief explanation. A *path* is defined by a series of points x1 y1 x2 y2 ... xn yn separated by blank spaces and ending with a closing }. A typographic point is 1/72 inch. 
- 
-`PL path`
-:  Polyline. Join all points of the path with straight lines.
- 
-`CR r [dq [q0]] : path`
-:  Circles or arcs. Draws circles or arcs of radius `r`, optional `dq` wide (in degrees) and optional initial angle `q0`, centered in every point of the path. By default, `dq` is 360 and `q0` is 0.
- 
-`EL rx ry [dq[ q0]] : path`
-:  Ellipses. Like `CR` but with horizontal `rx`  and vertical `ry` radius.
+Figures can be grouped into named **structures** that are placed, scaled, rotated
+and repeated. That, and not the drawing commands, is where the language earns its
+keep for a complicated figure.
 
-`BR path` 
-:  Polyrectangle. A bar defined by a couple of points, one for the left lower corner and the other for the upper right corner. The path must have an even number of points. 
- 
-`PG path`
-:  Filled polygon. Like `PL` but its interior will be filled with a color or pattern. 
+## Beta
 
-`DOT r path`
-:  Black circles with radius `r` defined in typographic points centered in every point of the path.
-  
-`BZ path`
-:  Bezier curve. Uses the path to define a bezier curve. Every segment needs four control points, the first and the last are in the curve and the second and third are the corresponding tangent local vectors to those points.
+This is version 3.0.0-**beta**, and both halves of that word matter:
 
-`SP path`
-: Catmull-Rom Spline curve. As with Bezier, each segment is defined by four control points, but every control point is in the curve, with the exception of the first and the last ones.
-  
-## Graphics state
+*  **The language can still change.** Names and arguments are not frozen: `axis`
+   recently renamed `title` to `label` and `labels` to `tick_labels`. A figure that
+   compiles today may need an edit tomorrow. The old names fail loudly, never
+   silently.
+*  **Parts are unbuilt.** The specification describes features that do not exist
+   yet (see *SEE ALSO*); this page documents only what the binary accepts.
 
-The graphics state manages properties that are used when the graphics is printed or displayed. The first type are attributes and the second are geometric transformations. Each attribute has an integer number as argument. Every command that starts with the character L is for lines, with F for filling and with T for text.
+What is here is exercised by a regression corpus on every change, and has typeset
+published books.
 
-`LPATRN n`
-:  Line patterns like points and dashes. There is a number of predefined patterns.
+# A FIRST FIGURE
 
-`LWIDTH n`
-:   Line width in units of 0.2 typographic points.
+```
+display_size 6 6                            % 6 x 6 cm on paper
+world_window -2.2 2.2 -4.6 0.6              % your coordinates
 
-`FPATRN n`
-:  Filling patterns. There is a number of predefined patterns. A negative number indicates to draw the contour.
+polyline { -1 0  1 0 }                      % the support
+polyline(dash="dashed") { 0 0  0 -4 }       % the vertical
+polyline { 0 0  1.9 -3.2 }                  % the string
+dot(4) { 1.9 -3.2 }                         % the bob, 4 pt across
+arc(1.3, from=270, to=301) { 0 0 }          % the angle
+text("$\theta$") { 0.75 -1.55 }
+```
 
-`FGRAY n`
-:   Gray level for filling, between 0 for black to 100 for white. A negative number indicates to draw the contour with the current line style. 
+Every command follows the same shape: a name, its **options in parentheses**, and
+its **path in braces**. Comments run from `%` to the end of the line.
 
-`FCOLOR s`
-:   Color for filling, as a string which can be the color name or six letters HTML RGB color code, like `000000` for black and `FFFFFF` for white. A preceding `-` indicates to draw the contour with the current line style. 
+# THE CANVAS
 
-`LGRAY n`
-:   Gray level for lines, 0 for black to 100 for white.    
+`display_size dx dy`
+:   Size of the figure **on paper**, in centimetres (default 10 10).
 
-`LCOLOR s`
-:   Color for paths, as a string which can be the color name or six letters HTML RGB color code, like `000000` for black and `FFFFFF` for white.
+`world_window xmin xmax ymin ymax`
+:   The coordinate range **you** want to work in (default 0 1 0 1). Everything you
+    draw is expressed in these units.
 
-`TALIGN n`
-:  Align the text, with 0 to the left (default), 1 to center, 2 to the right.
+The world window is mapped onto the display area **without distortion**: one unit in
+*x* is as long as one unit in *y*, so circles stay round. If the two aspect ratios
+differ, the figure is centred and the leftover becomes margin. Give
+`world_window` the aspect ratio of `display_size` when you want to fill the page.
 
-`TSIZE n`
-:   Text size in units of typographic points.
+Line widths, text sizes and markers are **physical**: they are given in typographic
+points and do not change when you change the window.
 
-`TSTYLE style`
-:  Set the style for text with one or more of these keywords, in lower case: roman (by default), sanserif, courier, bold or italic.
+# SHAPES
 
-`FILL`
-:  To fill all the next closed paths; no effect over the previous ones.
+Each command draws one instance **per point** (or per pair of points) of its path,
+so one line can draw many things. A path is a series of points `x1 y1 x2 y2 …`; a
+`;` separates disjoint subpaths.
 
-`NOFILL`
-:  To stop filling the next closed paths. 
+`polyline { path }`
+:   Join the points with straight lines. `polyline(closed=true)` closes the outline
+    without filling it. `marker_start=`, `marker_mid=`, `marker_end=` put a marker
+    on the first point, the interior ones or the last — and here the marker may be
+    **one of your own structures** by name, not only the shapes listed under `dot`.
+    An arrow turns to follow the line; `marker_orient="fixed"` stops it.
+    `marker_size=`, `marker_color=` and `marker_fill=` style it.
 
-## Linear transformations
+`polygon { path }`
+:   Closed and filled.
 
-Internally we use 3D homogeneous coordinate matrices to join every linear transformation in a single matrix by matrix product. The two letters prefix is the operation and the two letters suffix is the corresponding matrix. We support the following user defined transformations:
+`rectangle { x1 y1  x2 y2 }`
+:   One rectangle per **pair** of points: lower-left and upper-right corners.
 
-`RTMT theta`
-:  Rotate by `theta` degrees.
+`circle(r) { path }`
+:   A circle of radius `r` centred on every point.
 
-`SCMT sx sy`
-:  Scale by `sx` in the X axis and `sy` in the Y axis.
+`arc(r, from=, to=) { path }`
+:   Arc of radius `r`, from `from` to `to` degrees, centred on every point.
 
-`TLMT tx ty`
-:  Translate to the point `tx ty`.
+`ellipse(rx, ry) { path }`
+:   Like `circle`, with horizontal and vertical radii.
 
-`IDMT`
-:  Initialize the matrix with the identity. 
+`bezier { path }`
+:   Cubic Bézier. Four control points per segment: the first and last are on the
+    curve, the middle two are the tangents.
 
-The suffix *MT* can be replaced by the following supported matrices:
+`sine(amplitude=, half_cycles=, phase=) { x1 y1  x2 y2 }`
+:   A sine segment between two points.
 
-`LC`
-:  Local matrix applied in the first level.
+`dot(d) { path }`
+:   A marker of diameter `d` **in typographic points** at every point — its size is
+    physical, so it survives any scaling and never distorts. `marker=` picks the
+    shape: `"circle"` (default), `"square"`, `"diamond"`, `"cross"`, `"x"`,
+    `"arrow"`. A bare `dot(d)` is a filled disc; `color=` without `fill=` leaves it
+    hollow.
+
+`polybar(width=w) { path }`
+:   One bar per point, from a common base, `w` wide in world units; each point is
+    the **top centre** of its bar. `dir="horizontal"` grows along *x* instead.
+
+`compound { … }`
+:   Fuse several of the above into a single path, so that one fill covers them all.
+
+# APPEARANCE
 
-`ST`
-:  Applied for structures.
-                  	
-`PP`
-:  For the current point (plume position). 
-            	
-`PT`
-:  For paths and path generation. 
+These are **state**: they apply to everything after them, until the end of the
+enclosing block. Any of them can also be given to a single shape as an argument —
+`polyline(color="red", line_width=0.4) { … }` — in which case it applies to that
+shape only.
 
-`RS`
-:  For repeating structures. 
- 
- 
-## Structures
+`color c`
+:   Colour of lines and text. A CSS name (`"red"`, `"steelblue"`), a hex string
+    (`"#a03000"`), or `gray(g)` with *g* from 0 (black) to 1 (white).
 
-A _structure_ allows to associate primitives, attributes and matrices to create more complex graphics objects. Each structure has a user defined name.
+`fill c`
+:   Fill closed shapes with colour `c`. `fill "none"` stops filling.
 
-`OPST name`
-:  To create a structure you need to open a new one and set its name. Every command inside an open structure will be part of the structure.
+`line_width w`
+:   In typographic points. `line_width 0` is the thinnest line the device can draw.
 
-`CLST`
-:  To close the previously opened structure.
+`dash "style"`
+:   `"solid"`, `"dashed"`, `"dotted"`, `"longdashed"`, `"dashdot"`.
+
+`hatch a [gap]`
+:   Fill with a hatch pattern instead of a solid colour: `a` is the angle in degrees
+    (any value), or a name — `"hatch"`, `"hatchback"`, `"crosshatch"`. `hatch_gap`
+    sets the spacing in points.
 
-`name path`
-:  The structure named `name` will be reproduced at all points of the path, using the ST matrix for rotation and scale.
+`outlinefill`
+:   Also stroke the outline of filled shapes. Without it, a fill has no contour.
 
-`MKST name`
-:  To assign a structure of this `name` as the _marker_ for the following operations.
+# TEXT AND MATHEMATICS
 
-`PWST x1 y1 x2 y2`
-:  Port window structure. Insert the marker exactly in the rectangle defined by the two points.
+`text("string") { path }`
+:   Draw the string at every point of the path.
 
-`RPST n`
-:  Repeat n times the marked structure, applying each time the PP matrix to update the position and the RS matrix to transform the structure.
+`font "face"`, `font_size n`
+:   Face is one or more of `roman` (default), `sanserif`, `courier`, `bold`,
+    `italic`. Size in typographic points.
 
-`LNST sc [shift [n [d]]]: x1 y1 x2 y2`
-:  Draw a line and put the marker of scale `sc` at the end of the second point. The structure is rotated according to the line inclination. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of lines to be drawn, updating every time the points with the PP matrix. A fourth optional parameter indicates the size of a gap of size d in the middle of the line to insert a label.
+`align "a"`, `valign "v"`
+:   Horizontal `left` (default), `center`, `right`; vertical `baseline` (default),
+    `top`, `middle`, `bottom`.
 
-`ARCST sc r dq q0 [shift [n]]: x y`
-:  Draw an arc of radius `r`, wide `dq` and initial angle `q0` and put the marker of scale `sc` at the end of the arc, centered at the point `x y`. The structure is rotated according to the angle. If the scale is negative, both sides are used. An optional parameter indicates a shift from the edges. A second optional parameter indicates the number of arcs to be drawn, updating every time the center with the PP matrix.
+Inside the string, `$…$` switches to **mathematics**, where `_` and `^` are
+subscript and superscript (`{ }` groups them), and `\name` gives a Greek letter or
+symbol — `\alpha`, `\varphi`, `\infty`. Outside `$…$` those characters are literal.
+`/i`, `/b`, `/r`, `/s` switch to italic, bold, roman and sans-serif for what
+follows.
 
-## Path manipulation
+```
+text("$\Delta E = h\nu$") { 2 3 }
+text("mass $m_e$ at $t_0$", align="center") { 5 1 }
+```
 
-It is possible to create directly a path with its name and the character **&**. 
+Mathematics is set in Latin Modern Math, which **mg** embeds in the output; the
+figure needs no fonts installed to render elsewhere.
 
-`&name path`
-:  Creates a new path with the name you defined.
+# PLOTS AND AXES
 
-Once created, a path can be used in any primitive command, for instance `PL &name`. Every time a path is used, the corresponding matrix PT is applied. If you don't want this, just initialize that matrix with `IDPT`. You can copy a path to another one, simply defining the new one with the old one: 
+`plot(x=(x0,x1), y=(y0,y1), box=(bx0,by0, bx1,by1)) { … }`
+:   Everything inside the block is written in **data units** and mapped onto `box`,
+    a rectangle in world coordinates. `xscale=`/`yscale="log"` make an axis
+    logarithmic. `grid=true` (or a colour) draws a grid behind the content.
 
-`&newpath &oldpath`
+`xaxis(…)`, `yaxis(…)`
+:   Written **inside** a `plot`, they inherit its ranges and scale. Options:
+    `step` between ticks, `start` for the first one, `decimals`, `ticks=`
+    (`"out"`, `"in"`, `"both"`, `"none"`), `tick_labels=` (`true`/`false`),
+    `label="name of the axis"` with `label_at=` (`"center"`, `"start"`, `"end"`),
+    `base=v` to cross the other axis at *v* rather than at the edge of the box,
+    `extend=` to run the line past its ticks, and `minor=true` for the minor ticks
+    of a log axis.
 
-`CTPT name`
-:  After that command, you can transform and concatenate predefined paths and the result will be stored in the new path `&name`. The position is automatically updated. See examples below.
+`axis(…) { x1 y1  x2 y2 }`
+:   The same axis, standalone, between two points, with `from=`/`to=` for its range.
 
-`OPPT`
-:  This command creates a graphics state in with the paths are not closed, so you can join them in the same path, at PostScript level, otherwise incompatible primitives like lines and arcs.
+`grid(xstep=, ystep=) { x1 y1  x2 y2 }`, `ticks(…)`, `numbers(…)`
+:   Lower-level generators, for when `plot` does not fit.
 
-`CLPT`
-:  To close both CTPT and OPPT.
+```
+plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
+    polyline { 0 0  1 1  2 4  3 9  4 16  5 25 }
+    xaxis(step=2, label="x")
+    yaxis(step=25, label="$y = x^2$")
+}
+```
 
-`INVPT name`
-:  Invert the order of the points in the path named `&name`.
+# STRUCTURES
 
-`NORMPT name`
-:  Normalize the path named `&name` in a way that it is enclosed between the points (0,0) and (1,1), the unitary square.
+A **structure** is a named group of anything — shapes, state, transformations,
+other structures. Defining one draws nothing; using it does.
 
-`RPPT name n`
-:  Repeats n times the path `&name`. When used inside `CTPT`, automatically concatenates to the new path. Otherwise, stores the new path in the anonymous path that can be used with the name "buffer".  
+`struct Name(p1, p2) { … }`
+:   Define. Parameters are optional and behave like variables inside.
 
-`PWPT name x1 y1 x2 y2`
-:  Port window path. Insert the path *name* exactly in the rectangle defined by the two points. In order to work, the path must be normalized (inside the unitary square).
+`Name()`
+:   Draw it. `Name(at=(x,y), scale=s, rotate=deg)` places it: `at` moves it, `scale`
+    resizes, `rotate` turns it.
 
-## Optional Controls
- 
-`$D dx dy`
-:  Dimensions of the display area in centimeters (by default 10 10).
+`place(Name, scale=) { path }`
+:   Put a copy at every point of the path, **turned to follow** it — the path may be
+    a line, or an arc with `r=`, `from=`, `to=`. `both_sides=true` mirrors it.
 
-`$P n`
-:  To define the text size in typographic points (default 10). This can be changed inside the program with the attribute *TSIZE*.
+`fit(Name) { x1 y1  x2 y2 }`
+:   Squeeze the structure into that rectangle. `stretch=true` allows distorting it.
 
-`$S n`
-:  Spline mode. n = 0, the control points are converted to Bezier control points and the curve becomes a Bezier curve. n = 1, the next splines will be conic splines (not supported yet). n > 1, n is the number of points for each segment of a Catmull Rom cubic centripetal spline. Note: PostScript only supports Bezier splines, so it is recommended to use n = 0 to optimize the necessary data for the curve.
+`repeat(Name, count=n, at=, advance=)`
+:   *n* copies, each `advance`d from the last.
 
-`WW Xmin Xmax Ymin Ymax`
-:  To define the user space limits, or *World Window*. Every user defined coordinates will be inside these limits and they correspond to the complete display area of the graphics (default 0 1 0 1). It is a good practice that *WW* uses the same aspect ratio than *$D*.
- 
-`INPUT  name[.mg]`
-:  To include another mg file in the current graphics.
+A structure may declare its own `world_window`, and then it is written in its own
+convenient coordinates wherever it ends up.
 
-Comments
-:  After a **%**, MG will ignore the rest of the line.
+```
+struct Square() {
+    polyline(closed=true) { -1 -1  1 -1  1 1  -1 1 }
+}
 
-`EXIT`
-:  After this command, the rest of the file will be ignored.
+for i = 0 to 11 {
+    Square(rotate = i*7.5, scale = 1 + i*0.35)
+}
+```
 
-## Generators
+# TRANSFORMATIONS
 
-The generators produce repetitive primitives.
+`translate tx ty`, `rotate deg`, `scale sx [sy]`, `shear sx sy`
 
-`GNNUM i0 inc n decimals`
-:  Generates a series of `n` numbers and position each one at the current point using the PP matrix, using an initial number `i0`, increment `inc`, number of numbers `n` and number of `decimals`, with the current text style.
+They apply to everything that follows **in the current block**, and are undone on
+leaving it, so `{ rotate 30  Name() }` turns that one use and nothing else. They
+compose in order of appearance.
 
-`GNPATH n x y name`
-:  Generates the path `name` (a string you define) with `n` points with an initial point `x y` using the path matrix PT. Once created, the path can be used as `&name`.
+# EXPRESSIONS AND CONTROL
 
-`GNBZPATH name path`
-:  Using points in a path to complete a set of bezier segments and stores it in the path `&name`.
+Variables need no declaration: `n = 60`. Arithmetic is `+ - * / ^` with the usual
+precedence, and `+` also joins strings. Functions: `sin`, `cos`, `tan`, `atan2`,
+`sqrt`, `abs`, `mod`, `len`, `gray`, and `str(x[, decimals])` to put a number in a
+string. Angles are in **radians** for these functions, but in **degrees** for
+`rotate` and `arc`. Lists are `[a, b, c]`, indexed `list[i]` from 0.
 
-`TICKS n x y`
-:  Generates parallel lines and position them according with the PP matrix, with the parameters: number of lines *n*, generative vector `x y`.
+`for i = a to b { … }`
+:   Repeat, with `i` running from *a* to *b*.
 
-## Text
+`if cond { … } else if cond { … } else { … }`
+:   Conditionals; comparisons are `== != < <= > >=`, joined with `and` and `or`.
 
-Special commands to display text. We use standard PostScript fonts and an optional embedded LaTeX font for Greek and symbols.
+`include "file.mg"`
+:   Insert another file — how a library of structures is shared.
 
-`DT text`
-:  To display a string of text at the current position, which is updated with the PP matrix every time this command is used.
+`{ … }`
+:   A block on its own bounds state and transformations, and nothing more.
 
-`XYDT x y text`
-:  To display a string of text at the position `x y`.
- 
-Inside the string you can insert some commands to get some text effects and control the reach of those effects with *{* and *}*.
+> In coordinate braces, an identifier followed by `(` reads as a function call:
+> `polyline { x (y+1) … }` parses `x(y+1)`. Parenthesize every coordinate of the
+> path, or none.
 
-^
-:  superindex.
-
-_ 
-:  subindex.
-
-/b
-:  black.
-
-/e
-/i
-:  emphasized or italics.
-
-/r
-: Times new roman (default).
- 
-\\_symbol_
-:  LaTeX symbols like Greek and math, par example \\alpha, \\infty.
-  
 # EXAMPLES
 
-A simple MG file with a corner, a circle and a message.
+A pendulum: see *A FIRST FIGURE* above.
 
-    $D 12 8
-    WW 0 24 0 16
+Data, with axes that label themselves — the source of *examples/quickstart.mg*:
 
-    PL 12 15  12 8  20 8 }
-    CR 6 : 12 8 }
+```
+display_size 9 5.5
+font_size 9
+world_window -2 11 -1.5 5.5
 
-    XYDT 8 10 Hello World!
+plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
+    line_width 0.8
+    polyline { 0 0  1 1  2 4  3 9  4 16  5 25  6 36  7 49  8 64  9 81  10 100 }
 
-An example using path manipulation. The new path `&curve` is created concatenating 3 full period sine curves and one half period sine curve (defined in the file *bzsinepaths.mg*), each with different scales.
+    xaxis(step=2, label="x")
+    yaxis(step=25, label="$y = x^2$")
+}
+```
 
-    INPUT bzsinepaths
-    CTPT curve
-    SCPT .2 1
-    RPPT sin2pi 3
-    SCPT .5 .5
-    &sinpi
-    CLPT
+```
+mg quickstart.mg quickstart.svg
+```
 
-    BZ &curve
+# FILES
 
-See more examples in the *examples* directory.
+*examples/*
+:   The working corpus: every file there compiles with this binary and is checked on
+    every change. Start with `quickstart.mg` (a plot) and `fig2-5.mg` (an
+    illustration). Some of its files are meant to be `include`d rather than
+    compiled — `arrow.mg` defines the arrow markers, `curvas3.mg` the wave curves.
+
+*lib/*
+:   Structure libraries: `pseudo3d.mg` builds oblique-projection boxes and planes.
+
+*examples/v1/*
+:   The frozen corpus of the old two-letter grammar, kept as a migration reference.
+    **Those files do not compile with this binary.**
+
+# SEE ALSO
+
+*especificacion_mg.md*, in the source tree, is the language specification. It is a
+**design** document: it also describes what is not built yet, and why. This page
+describes what works.
 
 # BUGS
 
-Please report any bugs you find.
+Please report any bugs you find, with the output of `mg -v` and the smallest
+*.mg* file that shows the problem.
 
 # COPYRIGHT
-  
+
 License: GPL 3.0
 Copyright (c) 1988-2026 Alejandro Aguilar Sierra (algsierra@gmail.com)
