@@ -406,9 +406,16 @@ los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) 
 pendiente para migrar el material V1. Otros: `spline`/`smooth` §9 (motor `splines.cpp` listo,
 bajo costo); Math P1/P2 de `plan_lmmath.md` (símbolos `map_symbol`→LM Math; latino math→itálica
 LM Math en vez de Times-Italic); `marker_start/mid/end` en polygon/bezier; ventanas anidadas §16.
-**Hueco de cobertura conocido** (follow-up #3 del code-review): el remapeo de posición de `text()`
-en un `plot` **log** —la razón única de los 2 accesores que ganó el motor— **no lo ejercita ningún
-ejemplo**; un bug ahí shippea sin que lo cacen las 3 compuertas.
+
+**Hueco de cobertura CERRADO** (follow-up #3 del code-review, 2026-07-16): el remapeo de posición
+de `text()` en un `plot` **log** —la razón única de los 2 accesores que ganó el motor en la Fase 4—
+ya lo ejercita **fig6-4**: sus dos rótulos de isótopo (`Po²⁹²`, `U²³⁸`) pasaron de coords de ventana
+a **coords de datos DENTRO del plot**. Lo propuso Alejandro al notar que esos `text()` "se ponen por
+fuera". El port **verificó el mapper de paso**: las anclas nuevas cayeron a **0.002 pt y 0.000 pt**
+en `y` (el eje log) de las que el autor había fijado a mano — o sea, el remapeo puntual reproduce la
+posición exacta. Los 0.026 pt de `x` son el redondeo de la inversión a 3 decimales. El `λ⁻¹(s)`
+sigue fuera, y bien: es el **nombre del eje** (mobiliario de página, horizontal-arriba), no una
+anotación de datos.
 
 ## Code style
 
