@@ -1964,6 +1964,14 @@ struct PlotStmt : Stmt {
         g.named["to"]   = ExprPtr(new NumExpr(to));
         if (!scale.empty()) g.named["scale"] = ExprPtr(new StrExpr(scale));
         g.named["step"]       = ExprPtr(new NumExpr(namedNum(s, src->named, "step", 1)));
+        // `start` va junto con `step`: la retícula ES la marca barrida por el campo,
+        // así que tiene que nacer donde nacen las marcas. Sin esto arrancaba en
+        // `from` y bastaba un start= fuera de la malla `from + k·step` para dejarla
+        // en contrafase con su propio eje (p.ej. step=2 start=1 → marcas en 1,3,5…
+        // y líneas en 0,2,4…). En fig2-3/fig6-4 alineaba de casualidad: su start=
+        // cae a un número entero de pasos de from.
+        if (src->named.count("start"))
+          g.named["start"] = ExprPtr(new NumExpr(namedNum(s, src->named, "start", from)));
         g.named["ticks"]      = ExprPtr(new StrExpr("grid"));
         g.named["labels"]     = ExprPtr(new NumExpr(0));           // sin rótulos
         g.named["field"]      = ExprPtr(new NumExpr(field));

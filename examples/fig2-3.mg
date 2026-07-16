@@ -7,7 +7,10 @@
 % Modelo: los datos viven EN UNIDADES DE DATOS (temperatura 0..1, capacidad
 % 0..6); plot los mapea a la caja física box= (world coords) con stretch, y los
 % ejes se piden con xaxis/yaxis DENTRO del bloque (heredan from/to de x=/y=).
-% Sin retícula (el grid dentro de plot es trabajo aparte; ver plan_plot.md).
+% La retícula es grid= (§13.7): en V1 no había comando de retícula, eran TICKS
+% con el vector del tick tan largo como el campo (TICKS 10 0 6 / TICKS 6 10 0)
+% en LGRAY 50; grid=gray(0.5) hace lo mismo por dentro (axis(ticks="grid") con
+% los step de xaxis/yaxis), mismo gris y mismos pasos.
 
 display_size 12 8
 font_size 8

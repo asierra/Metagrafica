@@ -293,6 +293,14 @@ Fix: acotar el contenido log con push/pop, como la lineal. `make` limpio, `gs` O
   que también absorbería el título manual de fig6-4.
 - **Lección 7** (`plan_plot.md`): en bloques de coordenadas `+`/`-` y `(` interactúan — o
   parentizas todas las coords o ninguna.
+- **Bug de `grid=`: no propagaba `start`** (`emitGrid`, `parserv3.cpp`). La retícula ES la
+  marca barrida por el campo, pero nacía en `from` en vez de en el `start=` del eje → con un
+  `start=` fuera de la malla `from + k·step` quedaba en **contrafase con su propio eje**
+  (`step=2 start=1` → marcas en 1,3,5… y líneas en 0,2,4…). En fig2-3 y fig6-4 alineaba **de
+  casualidad** (su `start=` cae a un número entero de pasos de `from`), por eso nunca se vio.
+  Fix: propagar `start`. Único churn: fig2-3 pierde una vertical redundante en el borde de la
+  caja que el eje y ya tapaba (verificado en el diff del EPS: 4 líneas, x=36.85pt = 1.3cm =
+  bx0) → cero cambio visual, golden re-bendecido.
 - **`evalError` ahora es FATAL** (`ast.h`, `std::exit(1)`): antes imprimía y seguía, así que
   un documento roto llegaba a la salida (`-nan` en el EPS) con **código 0** — archivo
   inválido + "todo bien". Abortar es seguro: `buildFromSource` (parse+exec) corre entero

@@ -1335,7 +1335,7 @@ plot(x=(0.30,0.50), y=(1e-15,1e5), yscale="log",
 | `x`, `y` | `(0,1)` | rango de datos `(from,to)` de cada eje (tupla) |
 | `xscale`, `yscale` | `"linear"` | `"log"` para eje logarítmico (usa el mapeo puntual) |
 | `box` | ventana vigente | rectángulo físico `(x0,y0, x1,y1)` en world coords al que se mapean los datos |
-| `grid` | — | retícula de fondo: `true`=gris default, un color, o ausente=sin retícula. Pasos = `step` de `xaxis`/`yaxis` |
+| `grid` | — | retícula de fondo: `true`=gris default, un color, o ausente=sin retícula. Se auto-alinea con las marcas: toma `step` **y `start`** de `xaxis`/`yaxis` |
 
 Dentro del bloque, `xaxis`/`yaxis` son `axis` (§13.5) con el lado y el rango predefinidos por
 `plot` — aceptan toda la decoración de §13.5 (`step`, `title`, `strip_zero`, `line_width`, …) pero
