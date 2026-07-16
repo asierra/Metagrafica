@@ -1,8 +1,8 @@
 ---
 title: mg
 section: 1
-footer: mg 2024.37-beta
-date: 2024
+footer: mg 3.0.0
+date: 2026
 author: Alejandro Aguilar Sierra <algsierra@gmail.com>
 ---
 
@@ -291,4 +291,4 @@ Please report any bugs you find.
 # COPYRIGHT
   
 License: GPL 3.0
-Copyright (c) 2024 Alejandro Aguilar Sierra. All right reserved.
+Copyright (c) 1988-2026 Alejandro Aguilar Sierra (algsierra@gmail.com)

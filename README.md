@@ -137,9 +137,10 @@ bin/mg examples/fig6-4.mg out.svg
 
 ## Project status
 
-`mg` is the **V3** compiler (`MG_VERSION 3.0.0`). V1 — the original two-letter grammar
-(`PL`, `CR`, `GNNUM`…) — is frozen on the `v1-legacy` branch; its corpus lives in
-`examples/v1/` as the migration oracle. **V1 sources do not compile with this binary.**
+`mg` is the **version 3** compiler (`MG_VERSION 3.0.0`). The earlier two-letter grammar
+(`PL`, `CR`, `GNNUM`…) is frozen on the `v1-legacy` branch, and its corpus lives in
+[`examples/v1/`](examples/v1/) as the migration oracle. **Those sources do not compile
+with this binary.**
 
 Every change is gated by a regression harness over the whole corpus (`bash test/run.sh
 check`): byte-exact goldens for the three backends, a Ghostscript pass over the EPS, and
@@ -147,17 +148,28 @@ a cross-backend parity check.
 
 ## History
 
-The original version, from the late 1980s, drove an HP laser printer directly, at a time
-when no graphics application produced output of the quality a scientific paper needed;
-it was used for the figures of the first published article. The 2002 version moved to
-C++ and the STL, and emitted Encapsulated PostScript only, with Latin-1 text and the
-standard `symbol` font for Greek and mathematics; that is the version behind de la Peña's
-*Introducción a la mecánica cuántica*. PostScript stagnated and never caught the Unicode revolution, but it is still
-widely supported and converts trivially to PDF.
+MetaGráfica has been rewritten three times, and every version typeset something:
 
-This version keeps the descriptive core and adds SVG and PDF backends, an isometric
+| | year | language | output |
+|---|---|---|---|
+| **0** | 1988 | Pascal + assembler | drove an HP laser printer directly — the first published paper |
+| **1** | 1991 | C | the first book |
+| **2** | 1999–2024 | C++ / STL | EPS only — three more books |
+| **3** | 2026 | C++14 | EPS, SVG, PDF |
+
+Version 0 was written when no graphics application produced output of the quality a
+scientific paper needed. Version 2 emitted Encapsulated PostScript only, with Latin-1
+text and the standard `symbol` font for Greek and mathematics; PostScript stagnated and
+never caught the Unicode revolution, but it is still widely supported and converts
+trivially to PDF.
+
+This version keeps the descriptive core and adds the SVG and PDF backends, an isometric
 coordinate model, Latin Modern Math for symbols, and the `plot` family for data figures.
+The earlier two-letter grammar (`PL`, `CR`, `GNNUM`…) is gone; see *Project status*.
 
 ## License
 
-GPL 3.0 — Copyright © 2024 Alejandro Aguilar Sierra (algsierra@gmail.com)
+GPL 3.0 — Copyright © 1988–2026 Alejandro Aguilar Sierra (algsierra@gmail.com)
+
+The range spans the life of the work — see *History* above. Full text in
+[`LICENSE`](LICENSE).

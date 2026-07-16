@@ -3,7 +3,7 @@
               Definition of matrix data structure and operations.
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
-Copyright (c) 2026 Alejandro Aguilar Sierra (asierra@unam.mx)
+Copyright (c) 1988-2026 Alejandro Aguilar Sierra (algsierra@gmail.com)
     Version:  2026
 Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
 			 Version 1.0 1991 C, first published book.
