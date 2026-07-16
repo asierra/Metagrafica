@@ -1,6 +1,24 @@
-% Fig. 2.5 de IMQ — Diagrama de difracción de electrones.
-% Traducción V3 de examples/v1/fig2-6.mg. Render objetivo:
-% examples/v1/reference/fig2-6.svg.
+% Diagrama de difracción de electrones (experimento de Davisson-Germer).
+%
+% PROCEDENCIA — la figura tiene DOS números, uno por libro:
+%   · **Figura 2.5** de Cetto & de la Peña, "Quantum Mechanics: A Physical Approach"
+%     (Cambridge University Press, 2025) — https://doi.org/10.1017/9781009679633.
+%     Es la numeración que sigue el NOMBRE de este archivo.
+%   · Fig. 2.5 de IMQ (el libro en español). Coinciden por casualidad: el archivo se
+%     llamaba `fig2-6` porque esa era su numeración en un borrador de Cambridge, y al
+%     eliminarse una figura anterior del capítulo pasó a ser la 2.5 (renombrado
+%     2026-07-16). Su fuente V1 sigue siendo `examples/v1/fig2-6.mg` — el corpus V1
+%     está congelado y conserva los nombres viejos.
+%
+% Es el ejemplo de ILUSTRACIÓN del README (el otro es quickstart.mg, una gráfica).
+% Si lo cambias, regenera su SVG:
+%
+%     bin/mg examples/fig2-5.mg docs/img/fig2-5.svg
+%
+% Traducción V3 de examples/v1/fig2-6.mg; render de referencia (V1):
+% examples/v1/reference/fig2-6.svg. NO es idéntico y no puede serlo: el texto
+% matemático usa Latin Modern Math (V1 usaba Times + la fuente `symbol`), así que la
+% φ tiene otro trazo e inclinación. Es un cambio deliberado del proyecto.
 %
 % Valida dos piezas de diseño que ninguna otra figura usaba:
 %  · rotate= en la invocación: el Detector se coloca girado 37° (escala uniforme,

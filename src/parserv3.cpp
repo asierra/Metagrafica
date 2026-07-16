@@ -733,7 +733,7 @@ struct InvokeStmt : Stmt {
     // la caja unitaria, igual que fit/place/buildStructure. Va DENTRO del marco
     // de colocación (device = … · frame · N · coord) para que el at/rotate/scale
     // posicione la caja ya centrada/normalizada. Sin esto, la invocación directa
-    // ignoraba world_window (el detector de fig2-6 no se centraba ni agrandaba).
+    // ignoraba world_window (el detector de fig2-5 no se centraba ni agrandaba).
     Box w = structBox(caller, def);
     bool needN = (w.x != 0.0 || w.y != 0.0 || w.dx != 1.0 || w.dy != 1.0);
 

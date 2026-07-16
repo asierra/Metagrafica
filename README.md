@@ -10,8 +10,11 @@ You describe *what the figure is* — points, paths, structures, transformations
 `mg` compiles it to **EPS**, **SVG** or **PDF**. No GUI, no mouse: a figure is source
 code, so it can be versioned, diffed, parameterized and regenerated.
 
-MetaGráfica has been used to typeset the figures of Luis de la Peña's Quantum Mechanics
-textbooks.
+It typeset the figures of Ana María Cetto & Luis de la Peña, *[Quantum Mechanics: A
+Physical Approach](https://doi.org/10.1017/9781009679633)* (Cambridge University Press,
+2025) and, in earlier versions, those of Luis de la Peña's *[Introducción a la mecánica
+cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* (FCE/UNAM,
+3rd ed.).
 
 ## Quick start
 
@@ -39,6 +42,22 @@ That is the whole file ([`examples/quickstart.mg`](examples/quickstart.mg)). `pl
 **data units** onto a physical box in centimetres; the axes inherit the `x=`/`y=` ranges
 and label themselves. The `$…$` in the axis label is math markup — MetaGráfica embeds a
 TeX font for Greek letters, symbols, superscripts and subscripts.
+
+## Not just plots
+
+Data figures are one use. The language was built for **illustrations** — apparatus
+diagrams, sketches, anything a paper needs — and that is where structures, placement
+along arcs, arrows and math labels earn their keep:
+
+![Electron diffraction apparatus](docs/img/fig2-5.svg)
+
+> Figure 2.5 of Ana María Cetto & Luis de la Peña, *Quantum Mechanics: A Physical
+> Approach*, Cambridge University Press, 2025.
+> [doi:10.1017/9781009679633](https://doi.org/10.1017/9781009679633) — reproduced here
+> as [`examples/fig2-5.mg`](examples/fig2-5.mg), the source that typeset it.
+
+Under 60 lines of MetaGráfica: the detector is a structure placed at 37°, the beam arrows
+are another structure swept along an arc, and `φ` is set in Latin Modern Math.
 
 ## Building
 
@@ -109,6 +128,7 @@ bin/mg examples/fig6-4.mg out.svg
 | | |
 |---|---|
 | `quickstart.mg` | the figure above |
+| `fig2-5.mg` | the illustration above (structures, arcs, arrows) |
 | `fig2-3.mg` | linear plot with grid and axis labels |
 | `fig6-4.mg` | **log** axis, math labels, data annotations |
 | `fig4-5.mg` | three panels, interior axes, analytic curves |
@@ -132,7 +152,7 @@ when no graphics application produced output of the quality a scientific paper n
 it was used for the figures of the first published article. The 2002 version moved to
 C++ and the STL, and emitted Encapsulated PostScript only, with Latin-1 text and the
 standard `symbol` font for Greek and mathematics; that is the version behind de la Peña's
-textbooks. PostScript stagnated and never caught the Unicode revolution, but it is still
+*Introducción a la mecánica cuántica*. PostScript stagnated and never caught the Unicode revolution, but it is still
 widely supported and converts trivially to PDF.
 
 This version keeps the descriptive core and adds SVG and PDF backends, an isometric
