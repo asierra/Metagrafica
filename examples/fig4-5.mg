@@ -50,7 +50,7 @@ plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
     text("$x_1$", align="center") { a1 -0.18 }
     text("$x_2$", align="center") { a2 -0.18 }
 
-    xaxis(ticks="none", tick_labels=false, line_width=0.2)
+    xaxis(ticks="none", tick_labels=false, line_width=0.2, label="/ix", label_at="end", label_gap=2)
     yaxis(base=0, ticks="none", tick_labels=false, line_width=0.2)
 }
 
@@ -80,7 +80,7 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     text("/iE") { 37.3 Eb }
     text("$x_1$", align="center") { b1 -0.075 }
 
-    xaxis(ticks="none", tick_labels=false, line_width=0.2)
+    xaxis(ticks="none", tick_labels=false, line_width=0.2, label="/ix", label_at="end", label_gap=2)
     yaxis(ticks="none", tick_labels=false, line_width=0.2)
 }
 
@@ -126,23 +126,23 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     text("$x_1$")  { c1 0.033 }
     text("$x_2$", align="center") { c2 0.033 }
 
-    xaxis(base=0, ticks="none", tick_labels=false, line_width=0.2)
+    xaxis(base=0, ticks="none", tick_labels=false, line_width=0.2, label="/ix", label_at="end", label_gap=2)
     yaxis(ticks="none", tick_labels=false, line_width=0.2)
 }
 
 % ── Mobiliario de página: coords de la ventana ────────────────────────────────
-% Los rótulos de ordenada van a una misma altura en los tres paneles (decisión de
-% página, no de datos) y al extremo del eje, como en el libro; los de abscisa, al
-% final de su eje. Van aquí, y no como axis(label=), porque `label=` los centra a
-% lo largo del eje — ver `label_at=` en §13.0 de la spec.
+% Los rótulos de abscisa (`x`) YA NO viven aquí: son `xaxis(label=…, label_at="end")`
+% en cada panel (§13.0). Los de ordenada sí se quedan a mano, y NO por el centrado:
+%  1. van a una misma altura en los tres paneles — decisión de página, no de datos:
+%     un `label_at` los ataría al extremo de SU eje, cada uno a distinta altura;
+%  2. en a) el eje V es INTERIOR (base=0, en x=15.5) y su rótulo va al borde de la
+%     caja (x=1), no junto a su eje — ahí lo pondría encima de la curva.
+% O sea: son mobiliario de página, no el nombre del eje. Ningún `axis` los absorbe.
 line_width 0.2
 font "roman"
 text("/iV(x)") { 1 35 }
 text("/iV(x)") { 34.5 35 }
 text("/iV(x)") { 74.5 35 }
-text("/ix") { 26 9.3 }
-text("/ix") { 69 9.3 }
-text("/ix") { 109 24.3 }
 
 dot(2.5) { 5 40.5 }
 text("classical turning point") { 7 40 }

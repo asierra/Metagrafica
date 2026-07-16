@@ -175,6 +175,20 @@ string UTF8toISO8859_1(const char * in)
 string font_style_codes="beigrsct$";
 
 FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool& using_fontcmmi) {
+  // FN_NOFACE (= -1, "hereda la cara ambiente") NO puede recibir un bit: -1 ya los tiene
+  // TODOS prendidos, así que `-1 | FN_ITALIC` sigue siendo -1 y el /i se traga EN SILENCIO.
+  // Solo afecta a los modificadores de BIT (/b /e /i); /r /g /s /c /t /$ ASIGNAN una cara
+  // y no necesitan base. Se resuelve contra la cara por default, que es exactamente lo que
+  // hace un `text()` normal (hornea FN_DEFAULT = FN_SERIF = 0): así `axis(label="/ix")` sale
+  // en itálica igual que `text("/ix")`, en vez de caer mudo a la romana ambiente.
+  //
+  // Solo llegan aquí con FN_NOFACE los textos que heredan la cara: rótulos de axis/numbers/
+  // grid (§13). Los que ya fijan cara —`label_font=`, o el modo math, que asigna
+  // FN_TIMES_ITALIC antes— no pasan por esta rama, de ahí que el bug se escondiera: fig6-4
+  // usa `/i` DENTRO de `$…$` y funciona; fig4-5 lo usa pelado y no.
+  if (font_face == FN_NOFACE &&
+      (code_font_face == 'b' || code_font_face == 'e' || code_font_face == 'i'))
+    font_face = FN_DEFAULT;
   switch (code_font_face) {
   case 'b':
     if (font_face < FN_SYMBOL)                      // There is no bold for symbol

@@ -1850,11 +1850,28 @@ struct AxisStmt : Stmt {
     //    encabezado del plot). Eje vertical → texto girado con el ángulo de la línea
     //    (MTLC), acotado con save/restore del dispositivo para cerrar el grupo de rotación.
     if (!axisLabel.empty()) {
-      // label_gap: distancia FÍSICA (pt) del eje a su nombre, DESACOPLADA de
-      // tick_label_gap (que es pequeño, ~4 pt). Default = tick_label_gap + 20: libra la
-      // fila de rótulos de marca (~1 alto de fuente) y deja aire. Override propio.
-      double labelGap = namedNum(s, named, "label_gap", tickLabelGap + 20.0);
-      point m(p1.x + 0.5 * dx, p1.y + 0.5 * dy);
+      // label_at (§13.0): posición del nombre A LO LARGO del eje. Elige entre las dos
+      // convenciones reales, ambas en el corpus: "center" (default) = centrado, lo de
+      // matplotlib/asymptote (fig2-3); "start"/"end" = al extremo, estilo de libro
+      // (los rótulos `x` de fig4-5). La alineación se deriva: al extremo el texto
+      // ARRANCA en p2 (end, align=left) o TERMINA en p1 (start, align=right), para que
+      // crezca alejándose del eje en vez de encimarse con él.
+      std::string labelAt = namedStr(s, named, "label_at");
+      if (labelAt.empty()) labelAt = "center";
+      double lfrac = 0.5; int lalign = 1;                          // center
+      if (labelAt == "start")    { lfrac = 0.0; lalign = 2; }      // align=right
+      else if (labelAt == "end") { lfrac = 1.0; lalign = 0; }      // align=left
+      else if (labelAt != "center")
+        evalError("axis: label_at debe ser \"center\", \"start\" o \"end\": ", labelAt);
+
+      // label_gap: distancia FÍSICA (pt) del eje a la LÍNEA BASE de su nombre,
+      // DESACOPLADA de tick_label_gap. El default depende de label_at porque **lo que
+      // estorba depende de dónde lo pongas**: centrado tiene que librar la fila de
+      // rótulos de marca (tick_label_gap + 20 ≈ 1 alto de fuente + aire); al extremo NO
+      // —va más allá de ellos a lo largo del eje— y basta el hueco pequeño. Override propio.
+      double labelGap = namedNum(s, named, "label_gap",
+                                 labelAt == "center" ? tickLabelGap + 20.0 : tickLabelGap);
+      point m(p1.x + lfrac * dx, p1.y + lfrac * dy);
       point t = physOut(labelGap);
       point tp(m.x + t.x, m.y + t.y);
       double ang = horiz ? 0.0 : std::atan2(uy, ux) * 57.29577951308232;   // rad→grados
@@ -1863,14 +1880,14 @@ struct AxisStmt : Stmt {
       // sin él, FN_NOFACE → hereda la ambiente. label_size se aísla con push/pop.
       FontFace tff = labelFont.empty() ? FN_NOFACE
                      : get_font_face_from_string(labelFont, g_flags.using_fontcmmi);
-      // Nombre CENTRADO a lo largo del eje: align=center anclado al punto medio. En
-      // el eje X centra horizontalmente; en el Y (texto rotado) centra a lo largo de
-      // la línea, ya que cshow/text-anchor operan sobre la base ROTADA. El estado se
-      // acota con push/pop (no se filtra). using_textalign activa el prólogo /cshow
-      // de EPS (misma trampa que los rótulos de marca, §Fase 1.5); seguro en parse-time.
+      // El anclaje opera sobre la base ROTADA en el eje vertical (cshow/text-anchor),
+      // así que center/start/end miden a lo largo de la línea en ambas orientaciones.
+      // El estado se acota con push/pop (no se filtra). using_textalign activa el
+      // prólogo /cshow de EPS (misma trampa que los rótulos de marca, §Fase 1.5);
+      // seguro en parse-time, y se deja incondicional para no mover goldens.
       g_flags.using_textalign = true;
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
-      { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, 1); out.push_back(std::move(a)); }
+      { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, lalign); out.push_back(std::move(a)); }
       if (labelSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)labelSize); out.push_back(std::move(a)); }
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVSAVE));
       { auto gs = std::make_unique<GraphicsState>(); gs->setPosition(tp); out.push_back(std::move(gs)); }

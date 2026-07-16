@@ -1286,9 +1286,10 @@ axis(from=0, to=8, step=1, ticks="out", tick_labels=true) { 0 0  0 8 }
 | `decimals` | `0` | decimales en las etiquetas |
 | `tick_label_gap` | `4` | distancia de los rótulos de marca a la línea, **cantidad física en pt** |
 | `field` | ventana | (solo `ticks="grid"`) largo perpendicular del barrido; default = rango de la ventana |
-| `label` | — | **nombre del eje** (texto, admite markup matemático §14); centrado a lo largo del eje, rotado en ejes verticales (§19) |
+| `label` | — | **nombre del eje** (texto, admite markup matemático §14); rotado en ejes verticales (§19) |
+| `label_at` | `"center"` | posición del nombre **a lo largo** del eje: `"center"` (matplotlib/asymptote, fig2-3) o `"start"`/`"end"` (estilo de libro: el texto arranca/termina en el extremo, fig4-5) |
 | `label_font`, `label_size` | ambiente | fuente/tamaño del **nombre del eje**, para cuando difieren de los rótulos de marca |
-| `label_gap` | `tick_label_gap+20` | distancia física (pt) del eje a su nombre, desacoplada de `tick_label_gap` |
+| `label_gap` | según `label_at` | distancia física (pt) del eje a la **línea base** de su nombre. Default: `tick_label_gap+20` centrado (libra la fila de rótulos de marca) / `tick_label_gap` al extremo (no la libra: va más allá a lo largo del eje) |
 | `tick_label_font`, `tick_label_size` | ambiente | fuente/tamaño de los **rótulos de marca** (hermanos de `label_font`/`label_size`) |
 | `tick_label_align`, `tick_label_valign` | auto por lado | override de la alineación de los rótulos de marca (`"left"`/`"center"`/`"right"`; `"baseline"`/`"top"`/`"middle"`/`"bottom"`) |
 | `line_width`, `color` | ambiente | estilo de la **línea del eje y sus marcas**, acotado al eje (desacopla el eje del estado del contenido, necesario dentro de `plot` §13.7) |
@@ -1322,6 +1323,10 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 > `line_width`/`color`/`tick_label_font`/`tick_label_size` por-eje, `label_gap` y nombre de eje centrado/rotado.
 >
 > **Renombre a §13.0 HECHO (2026-07-16)**, verificado por goldens byte-idénticos (`ok=57`).
+> **`label_at` HECHO (2026-07-16)**: absorbe los 3 rótulos `x` de fig4-5 (antes `text()` a mano).
+> Los rótulos de ordenada de fig4-5 (`V(x)`) NO se absorben y no por el centrado: van a una
+> altura común en los 3 paneles (decisión de página) y en a) el eje V es interior — son
+> mobiliario de página, no el nombre del eje.
 >
 > **Pendiente (Fase 3, `plan_plot.md`):**
 > - `step` **automático** si se omite (familia 1/2/5·10ᵏ, ~5–8 marcas) y `decimals` **derivado
@@ -1329,9 +1334,6 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 > - `format="%.1f"` / notación científica — formato de etiqueta más allá de `decimals`/`strip_zero`
 >   (con validación estricta del especificador).
 > - `at=v` — posición del eje cruzado (dibujar el eje X a la altura del cero).
-> - **`label_at=`** (`"center"`/`"start"`/`"end"`): elige entre las dos
->   convenciones reales, ambas en el corpus — centrado (fig2-3) o al extremo (fig4-5, fig6-4,
->   fig_polybar, que hoy pagan con `text()` a mano). Ver la trampa del renombre en §13.0.
 > - **`tick_labels=[…]`** — rótulos de marca no numéricos (§13.0, modo 3).
 >
 > **Diferido:** `edge="bottom"|"top"|"left"|"right"` con `from`/`to` heredados del marco — **no**
@@ -1600,6 +1602,19 @@ El texto es procesado por un módulo independiente (`text_parser`) que se hereda
 ### 14.1 Markup del string
 
 El contenido del string soporta el siguiente markup, procesado en parse time:
+
+> 🐞 **Trampa resuelta (2026-07-16) — `FN_NOFACE` no puede recibir un bit de estilo.** El modelo
+> de caras compone por OR de bits (`FN_ITALIC=1`, `FN_BOLD=2`), pero el centinela "hereda la cara
+> ambiente" es **`FN_NOFACE = -1`**, que ya tiene *todos* los bits prendidos: `-1 | FN_ITALIC` es
+> `-1`, así que **`/i` y `/b` se tragaban en silencio** sobre una cara heredada. Solo afecta a los
+> modificadores de BIT; `/r`, `/g`, `/s`, `/c`, `/$` **asignan** una cara y nunca lo tuvieron.
+>
+> Con `FN_NOFACE` solo llegan los textos que heredan cara: los rótulos de `axis`/`numbers`/`grid`
+> (§13). Por eso se escondió tanto — `fig6-4` usa `/i` en su nombre de eje y funciona, porque va
+> **dentro de `$…$`** y el modo math *asigna* `FN_TIMES_ITALIC` antes; `fig4-5` lo usa pelado y
+> salía romano. **Fix** (`change_font_face`, `text_parser.cpp`): un modificador de bit sobre
+> `FN_NOFACE` resuelve contra la cara por default — exactamente lo que ya hacía un `text()` normal,
+> que hornea `FN_DEFAULT`. Así `axis(label="/ix")` sale itálico igual que `text("/ix")`.
 
 > **Pendiente — texto multilínea.** No hay salto de línea: un `text()` es siempre **un renglón**
 > (verificado en `text_parser.cpp`, que no maneja `\n` ni tiene interlínea). Lo pide el nombre de
