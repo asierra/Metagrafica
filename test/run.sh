@@ -38,7 +38,7 @@ FORMATS="eps svg pdf"
 # El corpus vive en examples/ (raíz). fig6-4v3-clean ejercita eje log + fit(stretch)
 # + math con superíndices + extend + ticks-in: la combinación donde se escondieron
 # los bugs de esta línea (plan_plot.md).
-EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10 fig6-4v3-clean fill_styles line_patterns markers-demo primitives rpstest sines texto"
+EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig4-5 fig6-1 fig6-10 fig6-4v3-clean fill_styles line_patterns markers-demo primitives rpstest sines texto"
 
 export LC_ALL=C
 

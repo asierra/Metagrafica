@@ -2031,8 +2031,30 @@ struct PlotStmt : Stmt {
       ax.named["to"]   = ExprPtr(new NumExpr(to));
       if (!scale.empty()) ax.named["scale"] = ExprPtr(new StrExpr(scale));
     };
-    if (xaxis) { setup(*xaxis, bx0, by0, bx1, by0, x0, x1, xscale); xaxis->exec(s, mg, out); }
-    if (yaxis) { setup(*yaxis, bx0, by0, bx0, by1, y0, y1, yscale); yaxis->exec(s, mg, out); }
+    // base= (opcional): valor —en unidades de datos del eje PERPENDICULAR— donde
+    // cruza este eje. Default = borde de la caja (by0 para x, bx0 para y). Es lo que
+    // permite el eje V centrado y el eje x sobre V=0 de las figuras de potenciales
+    // (fig4-5); sin él todo eje queda pegado al borde. NO mueve la retícula: el grid
+    // barre la caja completa, cruce donde cruce el eje.
+    auto baseOf = [&](AxisStmt &ax, double from, double to, double b0, double b1,
+                      bool log, double dflt, const char *which) {
+      auto it = ax.named.find("base");
+      if (it == ax.named.end()) return dflt;
+      double v = it->second->eval(s).num;
+      if (log && v <= 0) {
+        evalError("plot: base= requiere un valor positivo en eje log, en ", which);
+        return dflt;
+      }
+      return mapAxis(v, from, to, b0, b1, log);
+    };
+    if (xaxis) {
+      double yb = baseOf(*xaxis, y0, y1, by0, by1, ylog, by0, "xaxis");
+      setup(*xaxis, bx0, yb, bx1, yb, x0, x1, xscale); xaxis->exec(s, mg, out);
+    }
+    if (yaxis) {
+      double xb = baseOf(*yaxis, x0, x1, bx0, bx1, xlog, bx0, "yaxis");
+      setup(*yaxis, xb, by0, xb, by1, y0, y1, yscale); yaxis->exec(s, mg, out);
+    }
   }
 };
 

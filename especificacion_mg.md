@@ -1337,12 +1337,25 @@ Dentro del bloque, `xaxis`/`yaxis` son `axis` (§13.5) con el lado y el rango pr
 bezier, dot, text con ancla en datos, control de flujo); `box=` omitido cubre "el plot es toda la
 figura", `box=` explícito cubre paneles (fig4-10).
 
+**`base=v` — dónde cruza el eje.** Por default cada eje corre sobre el borde de `box` (el de
+abajo para `xaxis`, el izquierdo para `yaxis`). `base=v` lo mueve al valor `v` **en unidades de
+datos del eje perpendicular**: `xaxis(base=0)` pone la abscisa sobre `y=0` aunque el rango baje a
+negativos, y `yaxis(base=0)` centra la ordenada en el origen. Es lo que pide la figura de
+potenciales de libro (fig4-5: eje `V` centrado en el oscilador, eje `x` sobre `V=0` en el
+potencial efectivo). `v` fuera del rango deja el eje fuera de la caja, que es legítimo (no hay
+clipping); en un eje log `base=` exige `v>0`. La **retícula** de `grid=` no se mueve: barre la
+caja completa, cruce donde cruce el eje.
+
+Un eje sin marcas ni rótulos —la línea desnuda de una figura esquemática— es
+`xaxis(ticks="none", labels=false)`.
+
 **Limitaciones (con error claro):** bajo escala **log**, colocar structs (`invoke`/`place`/`fit`
 de struct/`repeat`) da error ("aún no soportado": su matriz de draw-time no compone con el mapeo
 no afín); `grid()`/`ticks()`/`axis()` **pelados** en el contenido también (usa `grid=` o
 `xaxis`/`yaxis`); rango de datos ≤0 en un eje log. No hay clipping a la caja (el contenido puede
 rebasarla, como la recta de ajuste de fig6-4). El `text()` de título horizontal-arriba (estilo
-libro, como `λ⁻¹(s)` de fig6-4) va manual, porque `yaxis(title=)` rota el título a lo largo del eje.
+libro, como `λ⁻¹(s)` de fig6-4) va manual, porque `yaxis(title=)` rota el título a lo largo del eje;
+lo mismo el título **al extremo** del eje (`V(x)`, `x` de fig4-5), porque `title=` lo centra.
 
 ---
 
@@ -1561,7 +1574,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **`rectangle` bajo rotación/shear** | ✓ Resuelto | `rectangle` es forma transformable como SVG (§4.4): se transforman las 4 esquinas. **Implementado** en los tres backends —`EPSDisplay::rect` y `PDFDisplay::rect` emiten el path de 4 esquinas (trazo/relleno + clip de tramado); SVG ya lo hacía. Verificado: rotado coincide con SVG, no-rotado idéntico; goldens EPS re-bendecidos (ok=18) |
 | **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
 | **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
-| **Graficar datos: azúcar `plot { }`** | ✅ Hecho | `plot(x=, y=, box=, xscale=, yscale=, grid=) { contenido + xaxis/yaxis }` (§13.7, 2026-07-15): lineal (matriz envolvente) + log (mapeo puntual); ejes que heredan rango; fig2-3 y fig6-4 portadas. `axis` maduro (`scale="log"`, `minor`, `strip_zero`, `extend`, estilo por-eje). Pendiente Fase 3: `step`/`decimals` automáticos, `format`, `at=v`. `edge=` suelto diferido (necesita §16) |
+| **Graficar datos: azúcar `plot { }`** | ✅ Hecho | `plot(x=, y=, box=, xscale=, yscale=, grid=) { contenido + xaxis/yaxis }` (§13.7, 2026-07-15): lineal (matriz envolvente) + log (mapeo puntual); ejes que heredan rango, con `base=` para el cruce; fig2-3, fig6-4 y fig4-5 (3 paneles) portadas. `axis` maduro (`scale="log"`, `minor`, `strip_zero`, `extend`, estilo por-eje). Pendiente Fase 3: `step`/`decimals` automáticos, `format`, `at=v`; `title_at=` (título al extremo del eje). `edge=` suelto diferido (necesita §16) |
 | **Modelo de iteración unificado (`for` vs `repeat` vs generadores)** | ◇ Prospectivo | Los tres constructos dedicados están justificados por un núcleo *irreducible* a un `for` + pluma: `repeat` con `transform` **acumulado** (§17), `place` por **longitud de arco** sobre path (§10), y el **formateo numérico** de `numbers`/`ticks` (`by`/`decimals`, §13). Su parte *reducible* (el `repeat` sin acumulación, el mero recorrido de `ticks`) podría especificarse como azúcar sobre `for`. **fig4-10 y rpstest ya traducidas confirmaron los tres constructos**; el "reset de pluma" (G3 de `rpstest`) se disolvió con `repeat` autocontenido (`at`/`advance` en la llamada, §17). La unificación como azúcar sobre `for` queda como refinamiento opcional, no bloqueante |
 | **Tamaño de texto relativo (tipo TeX)** | ◇ Prospectivo | `font_size` es absoluto (pt), un solo keyword en documento y bloque (§7.3). Un segundo eje `text_size` como **factor** relativo a la base (efectivo = `font_size × text_size`) se pospone hasta que existan calificadores nombrados que lo aprovechen; el corpus usa tamaños absolutos sin ratios redondos |
 | **Resolución geométrica (estilo MetaPost)** | ◇ Prospectivo | Describir relaciones en vez de calcular coordenadas: intersección de dos líneas, punto a una fracción de un path, punto medio. Convertiría "dibujar" en "describir"; es el siguiente salto de expresividad tras `axis`/`grid` |

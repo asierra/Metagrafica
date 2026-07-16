@@ -430,10 +430,16 @@ entregable de Fase 1).
   (notación científica, enteros con separador…). **Validado**: exactamente un
   especificador de conversión, solo `%f/%g/%e/%d`; cualquier otra cosa → error de
   compilación.
+- **`title_at=`** (`"center"` default / `"start"` / `"end"`) y **`title_rotate=false`**.
+  Hoy `title=` centra el rótulo a lo largo del eje y en el vertical lo rota; el estilo de
+  libro lo quiere **al extremo** y horizontal. Por eso van manuales los 6 rótulos de eje de
+  fig4-5 (`V(x)`, `x`) y el título `λ⁻¹(s)` de fig6-4 — la única razón que queda para poner
+  `text()` a mano junto a un eje. Con los dos args, `axis` los absorbe y desaparecen los
+  números mágicos en coords de ventana.
 
 ### Fase 4 — `plot { }` como constructo tipo compound ✅ HECHA (2026-07-15)
 
-> ✅ **Implementada** (rama `axis-plot-fase1`): lineal + log + `grid=` + estilo por-eje;
+> ✅ **Implementada** (en `main`): lineal + log + `grid=` + estilo por-eje;
 > fig2-3 y fig6-4 portadas; `ok=51`. El diseño de abajo se siguió tal cual, salvo: el
 > título del eje y de fig6-4 quedó `text()` manual (horizontal, estilo libro; `yaxis(title=)`
 > lo rotaría), y salió un bug de estado no acotado en la ruta log (ver Lección 6). Lo demás
@@ -769,7 +775,15 @@ Diferidas: sin ejemplo del corpus que las exija hoy.
 - **Fase 2 (`edge=` suelta): NO se hizo** (plegada a la Fase 4): no es prerequisito, y la
   standalone no es implementable sin §16. Dentro de `plot`, `xaxis`/`yaxis` fijan el lado
   por la tangente (ejes abajo/izquierda), que basta para fig2-3/fig6-4.
-- **Fase 4 (`plot { }`) ✅ HECHA (2026-07-15, rama `axis-plot-fase1`).** Lineal (matriz
+- **`base=` en `xaxis`/`yaxis` ✅ (2026-07-15, con fig4-5).** El lado seguía clavado al
+  borde de `box` (`by0`/`bx0` literales en `PlotStmt::exec`), y las figuras de potenciales
+  del libro cruzan por dentro: eje `V` centrado (oscilador), eje `x` sobre `V=0` (potencial
+  efectivo). `base=v` toma el valor en unidades de datos del eje **perpendicular** y lo pasa
+  por el `mapAxis` que ya estaba ahí → log sale gratis. **No es la Fase 2 rebautizada:**
+  `edge=` necesita §16 porque el eje suelto no tiene rango ni caja de dónde colgarse; dentro
+  de `plot` ambos ya están dados. Cero churn en el corpus (`ok=51` antes de sumar fig4-5).
+  La retícula NO se mueve con `base=`: barre la caja completa, que es lo correcto.
+- **Fase 4 (`plot { }`) ✅ HECHA (2026-07-15, en `main`).** Lineal (matriz
   envolvente) + **log** (mapper puntual sobre la lista temporal; `getType()`+`getPath()`/
   `setPath()` y `getPosition()`/`setPosition()` para anclas de texto). Ejes `xaxis`/`yaxis`
   interceptados, heredan `from/to/scale`, en coords exteriores. **Costo de motor real: los
