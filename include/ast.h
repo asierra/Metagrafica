@@ -10,6 +10,7 @@
 #include <map>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>   // std::exit (evalError es fatal)
 
 #include "tokens.h"   // códigos de operador (T_PLUS, T_MINUS, …)
 
@@ -35,10 +36,20 @@ inline std::string valueToStr(const Value &v) {
   return buf;
 }
 
-// Reporte de error de evaluación (sin excepciones): imprime y sigue con 0.
+// Error de evaluación: FATAL (sin excepciones → aborta con código 1).
+//
+// Antes solo imprimía y seguía con 0, así que el documento roto llegaba a la
+// salida —p.ej. `-nan -nan moveto` en el EPS— y `mg` terminaba con código 0: el
+// usuario recibía un archivo inválido junto con un "todo bien". Abortar aquí es
+// seguro y no deja archivo a medias: main corre buildFromSource() entero (parse
+// + exec) ANTES de construir el Display y abrir la salida.
+//
+// Para condiciones con respaldo sensato (color desconocido → negro) está `warn`,
+// que sí continúa; los sitios que llaman a evalError son errores duros.
 inline Value evalError(const char *msg, const std::string &extra = "") {
   std::fprintf(stderr, "Error de evaluación: %s%s\n", msg, extra.c_str());
-  return Value(0.0);
+  std::exit(1);
+  return Value(0.0);                  // inalcanzable; conserva el tipo de retorno
 }
 
 // Aviso NO fatal: imprime y sigue, sin alterar la semántica (a diferencia de

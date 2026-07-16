@@ -62,7 +62,7 @@ The example corpus is split for the V1→V3 transition (see `examples/v1/README.
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
 - **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (18 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-5/4-10, fig6-1/6-10, fig6-4v3-clean, fill_styles, line_patterns, markers-demo, primitives, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). `fig6-4v3-clean` entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF (fig2-3 no lo detecta: fija `font "italic"`). Su oráculo de calibración es `examples/fig6-4.png`.
 
-**Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (`ok=32`, ver "Build and test"). `src/main.cpp`, `src/Parser.cpp`, `src/lexmg.cpp` (front-end V1) quedan en el árbol pero **fuera del build**; V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
+**Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
 ## Architecture
 
@@ -293,6 +293,17 @@ Fix: acotar el contenido log con push/pop, como la lineal. `make` limpio, `gs` O
   que también absorbería el título manual de fig6-4.
 - **Lección 7** (`plan_plot.md`): en bloques de coordenadas `+`/`-` y `(` interactúan — o
   parentizas todas las coords o ninguna.
+- **`evalError` ahora es FATAL** (`ast.h`, `std::exit(1)`): antes imprimía y seguía, así que
+  un documento roto llegaba a la salida (`-nan` en el EPS) con **código 0** — archivo
+  inválido + "todo bien". Abortar es seguro: `buildFromSource` (parse+exec) corre entero
+  antes de que `main` abra el archivo, así que no queda salida a medias. `warn` sigue siendo
+  el no-fatal (color desconocido → negro). Cero churn (`ok=54`).
+- **Conteo impar de coordenadas = error de compilación** (`checkCoordPairs`, `parserv3.cpp`):
+  antes la coord sobrante se descartaba en silencio **sin evaluarla** (lazos `i+1 < size()`),
+  que es lo que esconde el footgun de arriba —`polyline { 1/u (u*u-u) }` colapsa a UNA coord
+  y la primitiva desaparece muda—. Se valida en parse-time (línea/columna, antes de evaluar)
+  en los 4 bloques que esperan pares: primitivas (**cada subtrayecto de `;` por separado**),
+  `text`, literal de path §9 y locus de `place`. Cero churn (`ok=54`).
 
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran

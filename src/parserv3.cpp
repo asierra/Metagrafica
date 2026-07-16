@@ -96,6 +96,31 @@ static void parseError(const Lexer &lx, const char *what) {
   std::exit(1);
 }
 
+// Paridad de un bloque de coordenadas (§4): van en pares `x y`, y cada subtrayecto
+// —los que abre ';'— se valida por separado. Sin esto una coord suelta se descarta
+// EN SILENCIO y ni se evalúa (los lazos por pares hacen `i + 1 < coords.size()`),
+// que es justo lo que esconde el footgun del identificador desnudo ante '(':
+// `polyline { 1/u (u*u-u) }` colapsa a UNA coord —`1/u(u*u-u)`, una llamada— y la
+// polilínea desaparece sin decir nada. Se valida en parse-time: es propiedad
+// estática del bloque, así el mensaje sale con línea y antes de evaluar nada.
+// `breaks` guarda los índices donde ';' corta; llamar con el lexer en '}'.
+static void checkCoordPairs(const Lexer &lx, const std::string &what,
+                            const std::vector<ExprPtr> &coords,
+                            const std::vector<size_t> &breaks) {
+  size_t start = 0;
+  for (size_t i = 0; i <= breaks.size(); i++) {
+    size_t end = (i < breaks.size()) ? breaks[i] : coords.size();
+    if ((end - start) % 2 != 0) {
+      const Tok &t = lx.peek();
+      std::fprintf(stderr, "Error de sintaxis en %d:%d: %s recibió un número impar de "
+                   "coordenadas (%zu); van en pares x y\n",
+                   t.line, t.col, what.c_str(), end - start);
+      std::exit(1);
+    }
+    start = end;
+  }
+}
+
 // --- Gramática de expresiones (§2) ------------------------------------------
 static ExprPtr parseExpression(Lexer &);
 static ExprPtr parseUnary(Lexer &);   // adelantada: parsePower la necesita
@@ -2181,6 +2206,7 @@ static StmtPtr parseStatement(Lexer &lx) {
         if (lx.accept(T_NEWLINE)) continue;
         st->coords.push_back(parseTerm(lx));
       }
+      checkCoordPairs(lx, name, st->coords, st->breaks);
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
     return st;
@@ -2201,6 +2227,7 @@ static StmtPtr parseStatement(Lexer &lx) {
         if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
         st->coords.push_back(parseTerm(lx));
       }
+      checkCoordPairs(lx, "text", st->coords, {});   // bloque vacío = pluma (§12.1); 0 es par
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
     return st;
@@ -2455,6 +2482,7 @@ static PathExprPtr parsePathExpr(Lexer &lx) {
       if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
       lit->coords.push_back(parseTerm(lx));
     }
+    checkCoordPairs(lx, "el literal de path", lit->coords, {});
     if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     return lit;
   }
@@ -2551,6 +2579,7 @@ static StmtPtr parsePlace(Lexer &lx) {
     if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
     st->coords.push_back(parseTerm(lx));
   }
+  checkCoordPairs(lx, "el locus de place", st->coords, {});
   if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
   return st;
 }

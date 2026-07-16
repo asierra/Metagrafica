@@ -205,6 +205,10 @@ Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posic
 
 **Coordenadas con expresiones.** Una coordenada del bloque puede ser una expresión, pero de nivel **`Term`** (§2): número, variable, `func(...)`, `a*b`, `a^b`, con `-` unario inicial. Como las coordenadas van **separadas por espacio**, un `-` **siempre inicia una coordenada nueva** (negada), no una resta binaria: `{ -0.2 -0.5 }` son dos puntos, no `-0.7`. Para **sumar o restar** dentro de una coordenada, se usan paréntesis: `{ (x+0.1) y }`.
 
+> ⚠️ **Las dos reglas interactúan.** Un identificador desnudo seguido de `(` es una **llamada a función**, aun con espacio en medio: al parentizar una coordenada puedes romper la de al lado, porque `{ 1/u  (u*u-u) }` se lee `1/u(u*u-u)` — una llamada, no dos coordenadas. *Regla práctica:* en un bloque con aritmética, **o parentizas todas las coordenadas, o ninguna**; nunca dejes una coordenada que termine en identificador desnudo junto a otra que abra con `(`.
+>
+> El compilador cubre las espaldas: un bloque con un número **impar** de coordenadas es **error de compilación** (`polyline recibió un número impar de coordenadas (1); van en pares x y`), y cada subtrayecto separado por `;` se valida por su cuenta. Es justo lo que delata el caso de arriba, donde las dos coordenadas colapsan en una.
+
 **Argumentos de estilo comunes (todos opcionales y nombrados):**
 - `color="blue"` / `color="#4080FF"` — color de trazo
 - `fill="red"` / `fill="#RRGGBB"` — color de relleno (activa relleno sólido)
@@ -1042,6 +1046,8 @@ No se necesita sintaxis adicional: MTST se deriva de la composición léxica de 
 ---
 
 ## 12. Posición de pluma y dibujo relativo
+
+> ⚠️ **No implementado en V3 (verificado 2026-07-15).** `moveto`/`step` no existen en el parser (`moveto(0,0)` falla como "struct no definida") y un bloque de posición vacío no dibuja: `text("x") { }` no estampa nada, en vez de usar el punto actual. Los generadores §13 y `repeat` §17 se hicieron **autocontenidos** (`at=`/`advance=`) y ningún ejemplo del corpus lo necesita, así que la sección describe un diseño **pendiente**, no el estado del compilador. Mientras tanto, la posición va siempre explícita en el bloque `{ }`.
 
 Además de las coordenadas absolutas, MetaGráfica mantiene una **posición de pluma** (el *punto actual*). Sirve para (a) secuencias de texto, (b) los generadores (§13) y (c) el dibujo incremental.
 

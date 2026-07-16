@@ -106,6 +106,27 @@ dónde se esconden los bugs. Se codifica aquí porque se repetirá en Fases 2–
    veía bien) cazan esta clase. Solo la caza comparar **qué se dibuja** entre backends (la
    **Capa 3**, HECHA 2026-07-15: el detector de "línea rellena sin trazo" en SVG la mecaniza).
    Se destapó **revisando las tres salidas por vista**, la disciplina de la Lección 3.
+7. **En un bloque de coordenadas, `+`/`-` y el paréntesis son minas** (§4, `parseTerm`).
+   Escribir fig4-5 (curvas de fórmula, no digitalizadas) pisó las dos en dos minutos:
+   `u*u/2-u` se lee como **dos** coordenadas (`u*u/2` y `-u`), y al parentizar la resta,
+   el vecino `1/u  (…)` pasa a leerse como **llamada a función** `u(…)`. Ambas reglas están
+   documentadas y son deliberadas —el espacio separa coords, así que `5 -3` son dos— pero
+   **interactúan**: parentizar una coordenada puede romper la de al lado. *Regla práctica:*
+   en un bloque con aritmética, **o todas las coords van parentizadas, o ninguna**; nunca
+   dejar una coord que termine en identificador desnudo junto a otra que abra con `(`.
+   *Corolario, ya cerrado:* un error de evaluación (`llamada inválida a función u`) **no
+   abortaba**: `mg` seguía, escribía el archivo con `-nan` dentro y salía con **código 0** —
+   un usuario recibía un EPS roto y un "todo bien" (lo cazó la compuerta `gs`,
+   `/undefined in -nan`). Desde 2026-07-15 `evalError` es **fatal** (`std::exit(1)`, seguro
+   porque `buildFromSource` corre entero antes de que main abra la salida → no deja archivo
+   a medias); `warn` sigue siendo el no-fatal para casos con respaldo. Cero churn (`ok=54`).
+   *Hueco hermano, también cerrado:* un bloque de coords con conteo **impar** descartaba la
+   sobrante en silencio sin evaluarla (los lazos `i + 1 < coords.size()`), que es lo que
+   esconde el footgun en una polilínea de 2 puntos: colapsa a UNA coord y la primitiva
+   desaparece muda. Ahora `checkCoordPairs` valida la paridad en **parse-time** (propiedad
+   estática → mensaje con línea/columna, antes de evaluar nada) en los 4 bloques que esperan
+   pares: primitivas (por subtrayecto de `;`, cada uno independiente), `text`, literal de
+   path §9 y locus de `place`. Cero churn (`ok=54`).
 
 ## TAREA — Automatizar las compuertas de la Lección 3 en `test/run.sh`
 
@@ -720,7 +741,7 @@ re-bendecir). Si no es exacto, el mapeo lineal está mal; **no seguir al Paso 4*
    - `Attribute`/`HatchAttr`/`Transform` → no tocar.
 3. Los ejes NO pasan por el mapper (igual que en el Paso 3).
 
-**Paso 5 — Los tres errores claros** (usar `evalError`, que imprime y sigue):
+**Paso 5 — Los tres errores claros** (usar `evalError`, que desde 2026-07-15 imprime y **aborta**):
 - Bandera de contexto global (junto a `g_structs`/`g_flags`) que `PlotStmt::exec` levanta
   mientras ejecuta contenido **en modo log**, y que consultan `InvokeStmt` (~655),
   `RepeatStmt` (~813), `FitStmt` (~860) y `PlaceStmt` (~963) al inicio de su `exec` →
