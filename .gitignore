@@ -18,3 +18,8 @@ man/mg.1
 # migración (deben versionarse), no artefactos de build.
 !examples/v1/reference/
 !examples/v1/reference/*.svg
+
+# Excepción: las figuras del README (docs/img/) se versionan — GitHub las
+# renderiza desde el repo. Se regeneran con bin/mg desde su .mg en examples/.
+!docs/img/
+!docs/img/*.svg

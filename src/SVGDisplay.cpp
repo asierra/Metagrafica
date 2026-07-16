@@ -188,6 +188,15 @@ void SVGDisplay::start() {
     fprintf(file, "<svg width=\"%fpt\" height=\"%fpt\" viewBox=\"0 %f %f %f\" xmlns=\"http://www.w3.org/2000/svg\">\n",
             dvx, dvy, -dvy, dvx, dvy);
 
+    // Fondo blanco explícito. EPS y PDF no lo necesitan (van a papel, que ya es
+    // blanco), pero un SVG se mira en pantalla: sin fondo queda transparente y una
+    // figura de líneas negras es ILEGIBLE en cualquier visor de tema oscuro (GitHub,
+    // un navegador en dark mode, un editor). Mismo criterio que matplotlib, que
+    // guarda con facecolor blanco por defecto incluso en SVG. Va antes del flip
+    // global, en coords de viewBox, para cubrir el lienzo entero.
+    fprintf(file, "<rect x=\"0\" y=\"%f\" width=\"%f\" height=\"%f\" fill=\"#ffffff\"/>\n",
+            -dvy, dvx, dvy);
+
     // MetaGráfica y PostScript crecen hacia arriba. SVG crece hacia abajo.
     // Aplicamos una transformación global para que nuestras matemáticas (y el
     // texto) funcionen igual que en EPS.

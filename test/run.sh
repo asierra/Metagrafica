@@ -39,7 +39,9 @@ FORMATS="eps svg pdf"
 # + math con superíndices + extend + ticks-in: la combinación donde se escondieron
 # los bugs de esta línea (plan_plot.md). fig_polybar es el único que ejercita
 # `polybar` (§4.12) y `fill`-SIN-`outlinefill` (relleno que no traza).
-EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig4-5 fig6-1 fig6-10 fig6-4 fig_polybar fill_styles line_patterns markers-demo primitives rpstest sines texto"
+# quickstart es el ejemplo del README: está aquí para que la portada del proyecto no
+# pueda romperse en silencio (es lo que le pasó al del man, hoy en sintaxis V1 muerta).
+EXAMPLES="arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig4-5 fig6-1 fig6-10 fig6-4 fig_polybar fill_styles line_patterns markers-demo primitives quickstart rpstest sines texto"
 
 export LC_ALL=C
 

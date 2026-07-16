@@ -2,106 +2,142 @@
 
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-14-blue.svg)
 ![License](https://img.shields.io/badge/License-GPL%203.0-green.svg)
+![Version](https://img.shields.io/badge/version-3.0.0-orange.svg)
 
-[English](#english) | [Español](#español)
+**A descriptive language for technical and scientific figures.**
 
-## Español
+You describe *what the figure is* — points, paths, structures, transformations — and
+`mg` compiles it to **EPS**, **SVG** or **PDF**. No GUI, no mouse: a figure is source
+code, so it can be versioned, diffed, parameterized and regenerated.
 
-MetaGráfica es un lenguaje gráfico vectorial 2D de construcción
-descriptiva. La versión original de finales de los 1980s controlaba
-directamente una impresora láser HP en una época en que no había
-buenas aplicaciones gráficas con salidas de la calidad requerida por
-un documento científico para publicación. En la versión de 2002 se
-migró al lenguaje `C++`, se aprovechó la biblioteca estándar de
-estructuras de datos STL y la orientación a objetos. Con esa versión
-la salida era exclusivamente Encapsulated PostScript y el texto usaba
-el código Latin1 o ISO 8859-1 que incluía todos los caracteres
-especiales usados en español y los símbolos matemáticos y griegos se
-conseguían con la fuente estándar `symbol`.  Esa versión fue usada
-para los libros de texto de Mecánica Cuántica de Luis de la
-Peña. PostScript se estancó en esos años, no alcanzó la revolución de
-Unicode, pero sigue siendo soportado por la mayoría de las
-aplicaciones gráficas y es trivial convertirlo al moderno PDF. Esta
-versión genera únicamente EPS y de ser necesario, integra una fuente
-de TeX para los símbolos griegos, matemáticos y físicos.
+MetaGráfica has been used to typeset the figures of Luis de la Peña's Quantum Mechanics
+textbooks.
 
-El tipo de datos elemental es el punto, definido por una pareja de
-coordenadas (x, y) en un espacio cartesiano bidimensional. La
-estructura de datos básica es el camino ("path"), formado por una
-serie de puntos, con lo que se puede definir cualquier objeto gráfico
-como curvas, polígonos, etc. Las características específicas como
-grosor de línea o color se definen mediante atributos. Maneja una
-versión limitada de texto matemático estilo LaTeX, que permite
-escribir símbolos griegos, super y subscripts y otros símbolos
-físicos. Su fortaleza es la definición de *estructuras*, que permiten
-combinar distintos primitivos gráficos con transformaciones lineales
-en coordenadas homogéneas, para generar gráficos más complejos, sin
-necesidad de usar otro lenguaje de programación. Es importante aclarar
-que Metagrafica no pretende ser un lenguaje de programación, es muy
-específico y limitado a la generación de figuras técnicas de alta
-calidad.
-
-Esta versión deberá ser compilada con el estándar 2014 de C++,
-con las recomendaciones del [C++ Ortodoxo]
-(https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b).
-
-### Uso
-
-```bash
-make
-./mg examples/primitives.mg
-```
-
-Ver ejemplo abajo.
----
-
-## English
-
-MetaGráfica is a 2D descriptive vector graphics language. The original version from late 1980s directly controlled an HP laser printer at a time when there were no good graphics applications with output of the quality required for a scientific publication. In the 2002 version, it was migrated to the C++ language, taking advantage of object oriented programming and the STL. With that version the output was exclusively Encapsulated PostScript and for text we used the Latin1 or ISO 8859-1 coding that included all the special characters used in Spanish and Western Europe languages; the mathematical and Greek symbols were achieved using the standard symbol font. That version was used for Luis de la Peña's Quantum Mechanics textbooks. PostScript stagnated in those years, falling short of the Unicode revolution, but it is still supported by most graphical applications and is trivial to convert to modern PDF. This version still generates only EPS and, if necessary, embedes a TeX font for Greek, mathematical and physical symbols.
-
-The elementary data type is the point, defined by a pair of coordinates (x, y) in a two-dimensional Cartesian space. The basic data structure is the path, formed by a series of points, with which any graphic object can be defined such as curves, polygons, etc. Specific characteristics such as line width or color are defined by attributes. It handles a limited version of LaTeX-style mathematical text, which allows you to write Greek symbols, super and subscripts and other physical symbols. Its strength is the definition of structures, which allow combining different graphic primitives with linear transformations in homogeneous coordinates, to generate more complex graphics, without the need to use another programming language. It is important to clarify that Metagrafica is not intended to be a programming language, it is very specific and limited to the generation of high quality technical figures.
-
-This version must be compiled with the C++ 2014 standard, following the recommendations of [Orthodox C++] (https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b).
-
-### Usage
-
-```bash
-make
-./mg examples/primitives.mg
-```
-
-### Quick Reference
-
-**Graphics Primitives**
-
-*   `PL x1 y1 ... }`: Polyline. Join all points of the path with straight lines.
-*   `CR r [dq [q0]] : x1 y1 ... }`: Circles or arcs of radius `r`.
-*   `BR x1 y1 x2 y2 }`: Rectangle defined by opposite corners.
-*   `PG x1 y1 ... }`: Filled polygon.
-*   `DOT r x1 y1 ... }`: Filled circles of radius `r`.
-*   `BZ x1 y1 ... }`: Bezier curve.
-*   `DT text`: Draw text at current position.
-*   `XYDT x y text`: Draw text at position `x y`.
-
-### Examples
-
-A simple MG file with a corner, a circle and a message:
+## Quick start
 
 ```text
-$D 12 8
-WW 0 24 0 16
+display_size 9 5.5
+font_size 9
+world_window -2 11 -1.5 5.5
 
-PL 12 15  12 8  20 8 }
-CR 6 : 12 8 }
+plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
+    line_width 0.8
+    polyline { 0 0  1 1  2 4  3 9  4 16  5 25  6 36  7 49  8 64  9 81  10 100 }
 
-XYDT 8 10 Hello World!
+    xaxis(step=2, label="x")
+    yaxis(step=25, label="$y = x^2$")
+}
 ```
 
+```bash
+bin/mg quickstart.mg quickstart.svg
+```
+
+![y = x² plotted by MetaGráfica](docs/img/quickstart.svg)
+
+That is the whole file ([`examples/quickstart.mg`](examples/quickstart.mg)). `plot` maps
+**data units** onto a physical box in centimetres; the axes inherit the `x=`/`y=` ranges
+and label themselves. The `$…$` in the axis label is math markup — MetaGráfica embeds a
+TeX font for Greek letters, symbols, superscripts and subscripts.
+
+## Building
+
+```bash
+make                 # builds bin/mg and the man page
+sudo make install    # optional: puts mg on your PATH
+```
+
+Requires a C++14 compiler (`clang++` or `g++`), `flex`, and `pandoc` for the man page.
+[libharu](http://libharu.org/) is vendored in `third_party/` for PDF output; there is
+nothing else to install.
+
+## Usage
+
+The output format is chosen by the **extension** of the output file:
+
+```bash
+bin/mg figure.mg              # → figure.eps
+bin/mg figure.mg out.svg      # → SVG
+bin/mg figure.mg out.pdf      # → PDF
+```
+
+| flag | |
+|---|---|
+| `-h` | help |
+| `-v` | version |
+
+## The language in one minute
+
+A **point** is a pair of coordinates; a **path** is a list of points. Every primitive
+takes a path in `{ }` and its style in `( )`:
+
+```text
+polyline { 0 0  1 2  3 1 }              % open polyline
+polyline(closed=true) { 0 0  1 0  1 1 } % closed outline
+polygon { 0 0  1 0  1 1 }               % filled
+circle(2) { 5 5  9 5 }                  % one circle per point
+rectangle(fill="steelblue") { 0 0  4 3 }
+text("mass $m_e$", align="center") { 5 1 }
+```
+
+**Structures** are the heart of the language: a named group you can place, scale, rotate
+and repeat, in homogeneous coordinates — no external programming language needed.
+
+```text
+struct Square() {
+    polyline(closed=true) { -1 -1  1 -1  1 1  -1 1 }
+}
+
+for i = 0 to 11 {
+    Square(rotate = i*7.5, scale = 1 + i*0.35)
+}
+```
+
+The full language is specified in [`especificacion_mg.md`](especificacion_mg.md), and
+`man mg` is the reference. MetaGráfica is deliberately **not** a general-purpose
+programming language: it has variables, expressions, `for` and `if`, and stops there.
+
+## Examples
+
+[`examples/`](examples/) holds the working corpus — every file there compiles with the
+current binary and is checked on every change:
+
+```bash
+bin/mg examples/fig6-4.mg out.svg
+```
+
+| | |
+|---|---|
+| `quickstart.mg` | the figure above |
+| `fig2-3.mg` | linear plot with grid and axis labels |
+| `fig6-4.mg` | **log** axis, math labels, data annotations |
+| `fig4-5.mg` | three panels, interior axes, analytic curves |
+| `fig_polybar.mg` | bar histogram with hatching |
+| `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | reference sheets |
+
+## Project status
+
+`mg` is the **V3** compiler (`MG_VERSION 3.0.0`). V1 — the original two-letter grammar
+(`PL`, `CR`, `GNNUM`…) — is frozen on the `v1-legacy` branch; its corpus lives in
+`examples/v1/` as the migration oracle. **V1 sources do not compile with this binary.**
+
+Every change is gated by a regression harness over the whole corpus (`bash test/run.sh
+check`): byte-exact goldens for the three backends, a Ghostscript pass over the EPS, and
+a cross-backend parity check.
+
+## History
+
+The original version, from the late 1980s, drove an HP laser printer directly, at a time
+when no graphics application produced output of the quality a scientific paper needed;
+it was used for the figures of the first published article. The 2002 version moved to
+C++ and the STL, and emitted Encapsulated PostScript only, with Latin-1 text and the
+standard `symbol` font for Greek and mathematics; that is the version behind de la Peña's
+textbooks. PostScript stagnated and never caught the Unicode revolution, but it is still
+widely supported and converts trivially to PDF.
+
+This version keeps the descriptive core and adds SVG and PDF backends, an isometric
+coordinate model, Latin Modern Math for symbols, and the `plot` family for data figures.
+
 ## License
 
-GPL 3.0
-
-## License
-
-GPL 3.0
-Copyright (c) 2024 Alejandro Aguilar Sierra (algsierra@gmail.com)
+GPL 3.0 — Copyright © 2024 Alejandro Aguilar Sierra (algsierra@gmail.com)
