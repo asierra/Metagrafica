@@ -78,7 +78,6 @@ void Rectangle::draw(Display &g) {
   }
 }
 
-
 void Polybar::draw(Display &g) {
   // Cada punto del path es el centro superior de una barra; se expande a un
   // rectángulo desde la base común (0) usando la primitiva rect() existente.

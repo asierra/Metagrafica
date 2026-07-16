@@ -16,14 +16,14 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-3.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=54 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=57 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15).** Corre el corpus
-de `examples/` (18 `.mg` × EPS/SVG/**PDF** = 54 goldens) y compara contra la red golden
+de `examples/` (19 `.mg` × EPS/SVG/**PDF** = 57 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=54 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=57 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -60,7 +60,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (18 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-5/4-10, fig6-1/6-10, fig6-4v3-clean, fill_styles, line_patterns, markers-demo, primitives, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). `fig6-4v3-clean` entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF (fig2-3 no lo detecta: fija `font "italic"`). Su oráculo de calibración es `examples/fig6-4.png`.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (19 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-5/4-10, fig6-1/6-10, fig6-4, fig_polybar, fill_styles, line_patterns, markers-demo, primitives, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF (fig2-3 no lo detecta: fija `font "italic"`).
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -312,6 +312,53 @@ Fix: acotar el contenido log con push/pop, como la lineal. `make` limpio, `gs` O
   y la primitiva desaparece muda—. Se valida en parse-time (línea/columna, antes de evaluar)
   en los 4 bloques que esperan pares: primitivas (**cada subtrayecto de `;` por separado**),
   `text`, literal de path §9 y locus de `place`. Cero churn (`ok=54`).
+
+### Cerrado en la sesión del 2026-07-16 (`polybar`: parser + Fig. 5 del primer artículo)
+
+**Cableado del parser HECHO** (`plan_polybar.md` Fase 1, `src/parserv3.cpp`).
+El motor YA tenía la clase `Polybar` y su `draw()` (expande cada punto a un `rect()`), y el
+mapeador log de `plot` ya contemplaba `GI_POLYBAR` — pero **el parser nunca lo despachaba**
+(`polybar` no estaba en `isPrim()`, nada llamaba a `setWidth`/`setHorizontal`). Dos cambios:
+`isPrim()` + construcción en `PrimStmt::exec` (`width` posicional o nombrado y **obligatorio**;
+`dir="horizontal"`). Cero cambios en los tres backends. Golden intacto (`ok=54`).
+
+**Las barras contiguas de un polybar no se tapan**: `rect()` hace fill dentro de `gsave` y
+stroke afuera **por barra**, así que la barra k+1 cubre el borde de la k con su relleno y acto
+seguido lo retraza. Requiere `outlinefill`; sin él un `fill` sólido las fusiona en una silueta.
+
+**`examples/fig_polybar.mg` HECHO** = Fig. 5 de `docs/first_article.pdf` (p. 13; espectros de
+CO₂ a 261 y 522 cm, área rayada = 0.374 µm). **Tres pasadas**, **3 decimales**, en el corpus
+golden (18→19 ejemplos, `ok=57`). Primero que ejercita `polybar` y `fill`-SIN-`outlinefill`.
+**Cero cambios al motor.** Verificado: checksum releído del `.mg` = 0.3695 (−1.2%, el número
+predicho) y pasadas 1/3 idénticas; trama a 8.25 px (EPS/PDF) / 8.33 (SVG) vs **8.07 del
+original** → `hatch_gap=1.4` fiel; bandas en los mismos valores en los 3 backends (la pasada
+blanca borra igual). Método, medidas del escaneo y datos completos en `plan_polybar.md`.
+Lo esencial que dejó:
+- **Aquí SÍ se vale digitalizar** (a diferencia de fig4-5): es de **1988**, V0 imprimía directo
+  a láser (no había EPS) y el PDF es un **escaneo** (JPEG 300 dpi + capa OCR, cero vectores).
+  No hay fórmula que recuperar: es un modelo de banda de Smith (1969), no un `1−exp(−τ)`.
+  **Verificador de la leyenda**: `Σ(a_522−a_261)·0.5 == 0.374 µm`; lo reconstruido da **0.3695
+  (−1.2%)**. Si ese número se mueve, algo se rompió.
+- **Bug de V0 fósil**: las etiquetas del eje y del escaneo están ~13.5 px **arriba** de su valor
+  (centrado vertical de texto corrido). El cero se toma de la **línea del eje**, no de ellas.
+  La meseta 14.0–16.0 está saturada en **1.000 exacto** (el tope del eje y cae en el mismo píxel).
+- **La figura son tres pasadas**, no una barra blanca encima de una rayada (eso habría borrado
+  los costados verticales, que sí están): trama sin contorno → blanco opaco sin contorno →
+  contorno solo. Salen con lo que ya hay: `hatch=` enciende el relleno y sin `color=` no hay
+  `outlinefill` (rellena sin trazar); un `polybar` pelado traza sin rellenar.
+- **La tinta bajo λ=12..20 del escaneo NO son marcas de eje**: son cantos de barra (en λ=22,
+  sin barra, no hay tinta) → el eje x va `ticks="none"`; el y sí lleva marcas adentro.
+- **`$\lambda(\mu/rm)$`**: el `/r` termina el comando `\mu` (cualquier no-alfabético lo cierra)
+  **y** pone la `m` en romano como el original; `\mu m` dejaría el espacio visible.
+- Digitalizar del **escaneo a 300 dpi**, no de `examples/polybar.png` (captura de pantalla del
+  mismo escaneo, **con el cursor del ratón encima**).
+- **Medir, no mirar**: la trama del SVG *parece* más densa en una comparación a baja resolución
+  (antialiasing del rasterizador); a 300 dpi los tres backends coinciden.
+
+Pendientes conocidos de polybar (ninguno lo pide un ejemplo todavía): `width` es miembro aparte
+(no va en el path) → el mapeador log de `plot` no lo alcanza y en un eje x **log** el ancho de
+barra queda mal; y no hay `base=` (las barras siempre crecen desde 0). Ambos en §4.12 y
+`plan_polybar.md`.
 
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran

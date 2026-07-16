@@ -506,7 +506,11 @@ polybar(width=0.8, fill="gray") { 1 40  2 55  3 30  4 70 }
 }
 ```
 
-Internamente `polybar` expande cada punto a un `rectangle` (§4.4) usando el `rect()` del motor, así que **no requiere lógica nueva en los backends**, y las barras heredan que `rectangle` es transformable. *(V0: se usó en el primer artículo publicado —los histogramas de espectro, `docs/first_article.pdf` figs. 4–6.)*
+Internamente `polybar` expande cada punto a un `rectangle` (§4.4) usando el `rect()` del motor, así que **no requiere lógica nueva en los backends**, y las barras heredan que `rectangle` es transformable. *(V0: se usó en el primer artículo publicado —los histogramas de espectro, `docs/first_article.pdf` figs. 4–6; `examples/fig_polybar.mg` reproduce la fig. 5.)*
+
+**Barras contiguas: no se tapan.** `rect()` rellena dentro de un `gsave` y traza **fuera**, barra por barra: la barra *k+1* cubre el borde de la *k* con su relleno pero acto seguido lo retraza. Requiere contorno (`outlinefill`, o `color=` junto al relleno); con un `fill` sólido pelado las barras se fusionan en una silueta.
+
+**Limitación — `width` en eje logarítmico.** `width` es un miembro de la primitiva, no una coordenada del path, así que el mapeador puntual de `plot` (§13.7, ruta log) **no lo alcanza**: en un eje x logarítmico todas las barras salen del mismo ancho físico en vez de seguir el mapeo. En eje lineal no hay problema (la matriz envolvente escala el `rect` completo). Sin resolver; ningún ejemplo lo pide todavía.
 
 ### 4.13 sine — segmento senoidal
 

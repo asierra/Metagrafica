@@ -1200,7 +1200,8 @@ struct PrimStmt : Stmt {
     // polyline/polygon/bezier admiten subtrayectos disjuntos separados por ';'
     // (§4): un item por subtrayecto, mismo estilo (distinto de compound, §9.4,
     // que combina en un solo relleno par-impar). El resto de primitivas ignora
-    // los ';' (no aplican: rectangle=pares, dot=posiciones, circle/arc=centros).
+    // los ';' (no aplican: rectangle=pares, dot=posiciones, circle/arc=centros,
+    // polybar=centros superiores).
     std::vector<std::unique_ptr<GraphicsItem>> items;
     // Marcadores en polyline (§4.11): si se piden, guardamos una copia de cada
     // subtrayecto para dispersar Dot(s) sobre el mismo path tras dibujar la ruta.
@@ -1278,6 +1279,23 @@ struct PrimStmt : Stmt {
       else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
+      else if (name == "polybar") {
+        // §4.12: cada coord es el centro superior de una barra; Polybar::draw la
+        // expande a un rect() desde la base común 0. `width` va en unidades de la
+        // ventana, es miembro aparte (no del path) → un eje log lo deja mal.
+        auto p = std::make_unique<Polybar>();
+        auto wit = named.find("width");
+        if (wit == named.end() && pos.empty())
+          evalError("polybar requiere `width` (polybar(w) o polybar(width=w))");
+        p->setWidth(posOr(s, 0, namedOr(s, "width", 1)));
+        auto dit = named.find("dir");
+        if (dit != named.end()) {
+          std::string dv = dit->second->eval(s).str;
+          if (dv == "horizontal") p->setHorizontal(true);
+          else if (dv != "vertical") evalError("dir debe ser \"vertical\" u \"horizontal\": ", dv);
+        }
+        p->setPath(path); item = std::move(p);
+      }
       if (item) items.push_back(std::move(item));
     }
     if (items.empty()) return;
@@ -2102,7 +2120,8 @@ static int transformOp(const std::string &n) {
 }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
-         n == "dot" || n == "arc" || n == "ellipse" || n == "bezier";
+         n == "dot" || n == "arc" || n == "ellipse" || n == "bezier" ||
+         n == "polybar";
 }
 
 static StmtPtr parseBlock(Lexer &);        // adelantadas (mutuamente recursivas)
