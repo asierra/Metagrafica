@@ -441,6 +441,14 @@ no genera `cap`/`join` salvo que se pidan explícitamente.)*
 
 ### 4.11 Patrones de relleno (`hatch`)
 
+> ⚠️ **No hay transparencia (`alpha`), y meterla no es un feature chico.** Lo pide material real
+> (`figure_02` rellena sus histogramas con `alpha=0.5`), pero **EPS no tiene alpha nativo**;
+> PDF y SVG sí. Añadirla rompería la paridad de los tres backends que la Capa 3 del harness
+> protege, o exigiría simular la mezcla en EPS (calcular el color compuesto contra un fondo
+> conocido — falso en cuanto haya solapamiento). Es una decisión de arquitectura, no un
+> atributo más: tomarla a propósito. La trama (`hatch`) cubre el caso de "dejar ver lo de
+> abajo" sin salirse del modelo opaco.
+
 En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **trama** de líneas paralelas. `hatch` está **sobrecargado**, exactamente en paralelo a `dash` (§4.10, que acepta un alias de cadena o un índice):
 
 - **Número** = ángulo (en grados) de **una** familia de líneas, **libre** (cualquier valor, no restringido a una tabla).
@@ -1088,6 +1096,97 @@ Los generadores producen series de elementos repetidos a partir de la posición 
 
 **Dos niveles.** `ticks`, `numbers` y `trail` (§13.1–§13.4) son los generadores *de bajo nivel*: exponen la pluma y el `step` directamente, y dan control total. Por encima de ellos, `axis` y `grid` (§13.5–§13.6) son construcciones *declarativas* que orquestan la pluma internamente: un humano describe el rango y la decoración, no la mecánica de avance. **Para ejes y retículas comunes, usa `axis`/`grid`; recurre a los generadores de bajo nivel solo para casos no estándar.**
 
+### 13.0 Anatomía de una gráfica: nomenclatura
+
+Esta sección fija **un nombre por cada parte de una gráfica**, y los reserva aunque la
+parte todavía no exista. Es normativa: el resto de §13 y §13.7 la usan.
+
+```text
+                        Absorción del CO₂                    ← title  (encabezado del plot)
+        a_B
+         ↑                                        ┌────────────────┐
+     1.0 ┤        ▟█████▙                         │ ▨▨  522 cm     │ ← legend
+         │      ▟█████████▙                       │ □□  261 cm     │   (entries)
+     0.5 ┤    ▟█████████████▙                     └────────────────┘
+         │  ▟█████████████████▙
+     0.0 ┼──┬────┬────┬────┬────┬──→  λ(µm)       ← label  (nombre del EJE + unidades)
+         ▲  12   14   16   18   20  ▲
+         │  └──────────┬─────────┘  └── axis      (la línea)
+         │        tick labels
+         └── ticks (las marcas)
+```
+
+| elemento | matplotlib | asymptote | **MG** |
+|---|---|---|---|
+| encabezado del plot | `title` / `suptitle` | — | **`plot(title=)`** ⚠️ reservado |
+| nombre del eje (+ unidades) | `xlabel` / `ylabel` | `Label` | **`axis(label=)`** |
+| los números/cadenas de las marcas | tick labels | `ticks` | **`axis(tick_labels=)`** |
+| las marcas (malla regular) | ticks | `ticks` | `axis(ticks=)`, `tick_size=` |
+| **valor notable** (umbral, retorno, nivel) | `axvline`/`axhline` | — | **`plot { rule(…) }`** ⚠️ reservado (§13.8) |
+| la línea del eje | spine | axis | `axis`, `extend=` |
+| retícula | grid | `grid` | `grid=`, `grid()` |
+| leyenda | `legend` | `legend` | **`legend`** ⚠️ reservado (§13.9) |
+| tabla inserta | `table` | — | **`table`** ⚠️ reservado (§13.10) |
+
+**Marcas y valores notables son cosas distintas** (§13.8): la malla se lee, el valor notable
+señala. No los metas en el mismo canal — `ticks_at=[…]` es el antipatrón, con evidencia.
+
+#### Las tres reglas
+
+**1. Las unidades van DENTRO de la cadena del label. No hay `units=`.** Es lo que hacen
+matplotlib, asymptote, gnuplot y ggplot, y no por pereza: separarlas obliga a la
+herramienta a fijar una política tipográfica que **no es universal** — el SI pide
+`λ / µm`, los libros de física escriben `λ(µm)`, otras disciplinas `[µm]`. Cualquier
+`units=` tendría que elegir una y estorbar a las demás. La cadena la escribe el autor:
+`label="$\lambda(\mu/rm)$"`.
+
+**2. `title` es el encabezado del PLOT, no el nombre del eje.** Es el uso universal del
+término, y el nombre queda reservado para cuando `plot` lo implemente. El nombre del eje
+es `label` — lo que matplotlib llama `xlabel`/`ylabel`.
+
+**3. `tick_labels` cubre sus tres modos con un argumento**, como ya hace `grid=`:
+
+```text
+tick_labels=true            % (default) automáticos: números formateados por decimals/strip_zero
+tick_labels=false           % sin rótulos (eje esquemático)
+tick_labels=["Ene","Feb"]   % explícitos, uno por marca, en orden  ⚠️ reservado
+```
+
+El tercer modo es la razón por la que **no** se llama `numbers=`: los rótulos de marca no
+siempre son números. `numbers()` (§13.2) sigue siendo el generador numérico de bajo nivel;
+son niveles distintos y no colisionan.
+
+#### Estilo: dos familias, un prefijo cada una
+
+`label_*` estiliza el **nombre del eje**; `tick_label_*`, los **rótulos de marca**. El
+prefijo `tick_*` ya designa lo que vive sobre las marcas (`tick_size`), así que
+`tick_label_*` extiende la convención en vez de inventar otra.
+
+| nombre del eje | rótulos de marca |
+|---|---|
+| `label`, `label_at`, `label_gap`, `label_font`, `label_size` | `tick_labels`, `tick_label_gap`, `tick_label_align`, `tick_label_valign`, `tick_label_font`, `tick_label_size` |
+
+`label_at=` (`"center"` default / `"start"` / `"end"`) elige entre las **dos convenciones
+reales**, ambas presentes en el corpus: centrado a lo largo del eje (matplotlib/asymptote,
+lo que hace fig2-3) o al extremo (estilo de libro, lo que quieren fig4-5, fig6-4 y
+fig_polybar). El default es `"center"`: es lo que espera quien llega de matplotlib.
+
+> ⚠️ **Colisión de nombre a resolver:** `rule` (§13.8) también quiere un `label_at=`, pero con
+> otro juego de valores (`"axis"`/`"legend"`). Mismo nombre, dominios distintos — defendible
+> (son objetos distintos, como `align`), pero es un olor. Decidir antes de implementar.
+
+> ⚠️ **Renombre pendiente — la spec va adelante del código.** Hoy el compilador usa
+> `axis(title=)` para el nombre del eje y `axis(labels=)` + `label_*` para los rótulos de
+> marca: los dos nombres que cualquiera alcanza primero significan **otra cosa** que en el
+> resto del ecosistema, y `title` ocupa el nombre del encabezado del plot, que MG no tiene.
+> El renombre es *breaking*, pero V3 no tiene usuarios externos y el churn es ~10 usos en
+> 3 archivos (fig2-3, fig6-4, fig4-5); dentro de veinte figuras, no.
+>
+> **Trampa del renombre:** `title=`/`labels=` pueden **fallar en compilación** apuntando al
+> nombre nuevo, pero `label_gap=` es válido antes y después **con distinto significado** —
+> cambia en silencio. No hay forma de detectarlo en el parser: la red golden es lo que lo
+> caza (fig_polybar usa `label_gap=2`, que debe volverse `tick_label_gap=2`).
+
 ### 13.1 ticks — marcas de eje
 
 ```text
@@ -1154,7 +1253,13 @@ Genera un path nombrado con `count` puntos, empezando en `start` y aplicando la 
 
 ### 13.5 axis — eje declarativo
 
-`axis` describe un eje completo (línea + marcas + etiquetas + título opcional) en una sola sentencia. El bloque `{ }` da los dos extremos físicos del eje; los argumentos describen el rango numérico y la decoración. Internamente es un `place` a lo largo de una línea (§10.1) que coloca marcas y etiquetas calculadas desde el rango — la pluma y el `step` se orquestan solos.
+`axis` describe un eje completo (línea + marcas + rótulos + nombre del eje opcional) en una sola sentencia. El bloque `{ }` da los dos extremos físicos del eje; los argumentos describen el rango numérico y la decoración. Internamente es un `place` a lo largo de una línea (§10.1) que coloca marcas y etiquetas calculadas desde el rango — la pluma y el `step` se orquestan solos.
+
+> ⚠️ **Los nombres de esta sección son los que el compilador acepta HOY, y §13.0 los renombra.**
+> `title=` es el **nombre del eje** (`label=` en §13.0, `xlabel` en matplotlib), no el encabezado
+> del plot; `labels=` y `label_*` son los **rótulos de marca** (`tick_labels=`/`tick_label_*` en
+> §13.0). La tabla de abajo describe el estado real del código; §13.0 es el destino. Al renombrar,
+> esta sección se sincroniza.
 
 ```text
 % Eje X: de (0,0) a (10,0), valores de 0 a 10, marca y etiqueta cada 2
@@ -1218,6 +1323,11 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 > - `format="%.1f"` / notación científica — formato de etiqueta más allá de `decimals`/`strip_zero`
 >   (con validación estricta del especificador).
 > - `at=v` — posición del eje cruzado (dibujar el eje X a la altura del cero).
+> - **Renombre a la nomenclatura de §13.0** (`title=`→`label=`, `labels=`→`tick_labels=`,
+>   `label_*`→`tick_label_*`) + **`label_at=`** (`"center"`/`"start"`/`"end"`): elige entre las dos
+>   convenciones reales, ambas en el corpus — centrado (fig2-3) o al extremo (fig4-5, fig6-4,
+>   fig_polybar, que hoy pagan con `text()` a mano). Ver la trampa del renombre en §13.0.
+> - **`tick_labels=[…]`** — rótulos de marca no numéricos (§13.0, modo 3).
 >
 > **Diferido:** `edge="bottom"|"top"|"left"|"right"` con `from`/`to` heredados del marco — **no**
 > se implementa suelto: requiere §16 (ventanas anidadas), que no existe. Se pliega dentro de
@@ -1233,6 +1343,12 @@ grid(xstep=2, ystep=2, dash="dotted")      { 0 0  10 8 } % retícula punteada
 ```
 
 **Argumentos:** `xstep` / `ystep` (intervalos en unidades de usuario), más los atributos de estilo comunes (`color`, `line_width`, `dash`). Útil como fondo de una gráfica antes de trazar datos y ejes.
+
+> **Pendiente — retícula por eje.** El `grid=` de `plot` (§13.7) barre **los dos** ejes; no hay
+> forma de pedir solo las horizontales. Es lo más común en gráficas de barras: `figure_02` usa
+> `ax.grid(axis='y', linestyle='--', alpha=0.7)` en sus cinco paneles — retícula **solo en y**,
+> punteada. Falta el selector (`grid="y"`, o `grid=` por-eje en `xaxis`/`yaxis`). Aquí, en el
+> `grid()` suelto, se obtiene omitiendo un `step`.
 
 ### 13.7 Graficar datos: el marco de datos
 
@@ -1367,6 +1483,109 @@ rebasarla, como la recta de ajuste de fig6-4). El `text()` de título horizontal
 libro, como `λ⁻¹(s)` de fig6-4) va manual, porque `yaxis(title=)` rota el título a lo largo del eje;
 lo mismo el título **al extremo** del eje (`V(x)`, `x` de fig4-5), porque `title=` lo centra.
 
+### 13.8 Marcas: malla regular y valores notables (`rule`) — reservado
+
+**Las marcas de un eje son DOS conceptos distintos, y `from`/`to`/`step` solo expresa uno.**
+
+| | **malla regular** | **valor notable** |
+|---|---|---|
+| para qué | *leer* coordenadas del eje | *señalar un hecho* de los datos |
+| de dónde sale | del rango (aritmética) | de la física (un umbral, un retorno, un nivel) |
+| cuántos | muchos, uniformes | pocos, arbitrarios |
+| qué rótulo lleva | el número, autoformateado | un **nombre** (`x₁`) o prosa (`ΔT₁ < 0 Confirmed ash`) |
+| estilo | uniforme | propio (rojo punteado), a veces con línea guía y punto |
+
+**El corpus ya lo demostraba y la spec no lo veía.** `fig4-5` es una figura de **100% valores
+notables y 0% malla**: sus siete `axis` van con `ticks="none", labels=false` —existen solo para
+dibujar la raya— y los puntos de retorno `x₁`, `x₂`, `x'₁` se construyen a mano, cada uno con
+tres sentencias sueltas más un `text()` colocado a ojo. `fig4-10` hace lo mismo en el otro eje
+(`dash "dashed"  Niveles()` = los niveles de energía E₁…E₄). Al otro extremo, `fig2-3`, `fig6-4`
+y `fig_polybar` son 100% malla y cero notables. **La mitad del corpus reconstruye a mano un
+concepto que el lenguaje no tiene.**
+
+> ⚠️ **Por eso `ticks_at=[…]` (una lista de posiciones colgada de `axis`) es el movimiento
+> equivocado:** vuelve a fundir los dos conceptos en un solo canal. La evidencia está en
+> `figure_02` (matplotlib), que hace exactamente eso —inyecta los umbrales en `set_xticks()`—
+> y paga el precio: rótulos encimados (`0.0  1.0` pegados en el panel a) y **código de borrado
+> de marcas cercanas** para que sobrevivan. Eso no es el modelo funcionando, es el modelo
+> peleando.
+>
+> 💡 **Y ahí está el premio del corte.** Ese borrado de colisiones es, palabra por palabra, lo
+> que el autor escribió a mano en Python (`ticks_limpios = [t for t in ticks_actuales if
+> all(abs(t - p) > distancia_segura for p in puntos_a_marcar)]`). matplotlib **no puede**
+> hacerlo por él porque no distingue malla de notable: para él las dos son `ticks`. Un lenguaje
+> que sí los distingue puede resolver la colisión solo —suprimir el rótulo de malla vecino a un
+> `rule`— porque sabe cuál cede. **El corte no solo evita el antipatrón: absorbe el código que
+> el antipatrón obliga a escribir.**
+
+**`rule` — el valor notable, hijo del `plot`** (decidido 2026-07-16):
+
+```text
+plot(x=(-0.95,0.95), y=(-0.1,0.85), box=(5.5,10, 25.5,37)) {
+    polyline { a1 Ea  a2 Ea }                                  % nivel de energía
+    rule(x=a1, to=Ea, label="$x_1$", dash="dashed", marker=dot(2.5))
+    xaxis(ticks="none", tick_labels=false)
+}
+```
+
+- **`x=v` / `y=v`** — el valor, en unidades de datos; dice de qué eje es hijo.
+- **`to=v`** — extensión. Default: toda la caja (el `axvline` de matplotlib). `to=Ea` = de la
+  línea del eje hasta `Ea` (la línea de cortesía de fig4-5, que va de la curva al eje).
+- **`label=`** + **`label_at=`** — `"axis"` (default) pone el nombre donde iría el rótulo de
+  marca de ese valor; `"legend"` lo manda a la leyenda (§13.9). Es la única diferencia entre
+  el `x₁` de fig4-5 y el `ΔT₁ < 0 Confirmed ash` de figure_02: **el mismo objeto, distinto
+  destino del nombre** — corto al eje, prosa a la leyenda.
+- **estilo propio** (`color`, `dash`, `line_width`) y **`marker=`** opcional (el `dot` de fig4-5).
+
+**Es hijo del `plot`, no del `axis`.** El eje no sabe dónde está la curva, así que no puede dar
+la extensión `to=Ea`; y la leyenda es del plot, no del eje. **Costo aceptado de esa elección:**
+el rótulo de un `rule` **no** hereda gratis el acomodo automático del eje (auto-align por lado,
+`tick_label_gap`) — con `label_at="axis"` el plot tiene que preguntarle al eje dónde pondría el
+rótulo de ese valor. Es la misma cuenta que ya hace para sus marcas; es acoplamiento, no
+maquinaria nueva.
+
+**Nombre provisional.** `rule` es la palabra tipográfica para una línea, y encaja con el caso de
+figure_02 (cruza el panel entero). Encaja peor con fig4-5, donde no cruza nada: es un valor
+anotado con una línea corta de cortesía. Sin resolver.
+
+**Abierto — un `rule` puede querer DOS rótulos.** En `figure_02` los umbrales llevan a la vez su
+**número en el eje** (`0.0`, `1.0`, para leer *dónde* caen) y su **prosa en la leyenda** (`ΔT₁ < 0
+Confirmed ash`, para saber *qué significan*). No son el mismo texto ni van al mismo sitio, así que
+`label=` + `label_at=` no basta: harían falta dos canales (¿`tick=true` para el número, `label=`
+para la prosa?). fig4-5 no lo pide (su `x₁` es un solo rótulo). Decidir con más figuras.
+
+### 13.9 legend — reservado (sin diseñar)
+
+El nombre queda reservado (§13.0). El diseño **espera más figuras**; lo que sí está fijado es de
+dónde salen las entradas, y son **dos fuentes distintas**:
+
+**1. Los `rule` (§13.8) — automática y limpia.** En `figure_02` hay correspondencia **1:1 exacta**
+entre entradas de leyenda y `axvline`: la leyenda no describe series, **describe valores
+notables**. Un `rule` con `label_at="legend"` se autocolecciona sin ambigüedad — lleva su nombre
+y su estilo, y la muestra ES su línea.
+
+**2. Las series — explícita.** Aquí no hay correspondencia que autocoleccionar: las dos series de
+`fig_polybar` son **tres** `polybar` (trama sin contorno → blanco opaco → contorno solo, §4.12).
+Un colector ingenuo daría tres entradas para dos series, y la muestra de "522 cm" —que es trama
+*y* contorno— no es ninguno de los tres items por separado. El autor declara la entrada y su
+muestra.
+
+> 💡 **Evidencia de campo contra la autocolección universal.** El propio `figure_02.py` **tiene
+> disponible** la autocolección de matplotlib (`axvline(…, label=…)` + `ax.legend()`) y **la
+> esquiva**: construye proxies `Line2D([0],[0], color='red', ls='--', lw=1.0, label=…)` —líneas
+> *sin datos*, que existen solo para ser la muestra— y repite el estilo, que ya estaba en el
+> `axvline`. Motivo: `sns.histplot` inyectaría su propia entrada, y el autor quiere mandar sobre
+> cuáles aparecen y en qué orden. La "repetición de estilo" que parecía el defecto de la leyenda
+> explícita es un precio que los usuarios de matplotlib **ya pagan por elección**.
+
+### 13.10 table — reservado (sin diseñar)
+
+El recuadro Mean/SD/Min/Max de `figure_02` **se parece a una leyenda y no lo es**: es
+`ax.table()`, otro constructo. Nombre reservado para no dejar que se lo trague `legend`. Su
+contenido es **dato derivado** (`data.mean()`, `data.std()`), lo que abre una pregunta de
+alcance sin responder: ¿MG calcula estadísticas, o el `.mg` recibe los números ya hechos? El
+resto del lenguaje dice lo segundo (`polybar` recibe bins, no datos crudos).
+
 ---
 
 ## 14. Texto matemático
@@ -1376,6 +1595,14 @@ El texto es procesado por un módulo independiente (`text_parser`) que se hereda
 ### 14.1 Markup del string
 
 El contenido del string soporta el siguiente markup, procesado en parse time:
+
+> **Pendiente — texto multilínea.** No hay salto de línea: un `text()` es siempre **un renglón**
+> (verificado en `text_parser.cpp`, que no maneja `\n` ni tiene interlínea). Lo pide el nombre de
+> eje de `figure_02`, donde las unidades van en su **propio renglón**:
+> `'$\Delta T_1$\n(BT 10.3 - 12.3 $\mu$m)'`. Eso **confirma** la regla de §13.0 (las unidades van
+> dentro de la cadena del label, no en un `units=`) y a la vez muestra que la cadena necesita dos
+> renglones. Es capacidad de **texto**, no de `axis`: la necesitan `text()`, `label=` y `legend`
+> por igual. Un `\n` en el markup + interlínea derivada de `font_size` sería lo mínimo.
 
 #### Modo matemático
 
