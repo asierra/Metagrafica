@@ -1175,17 +1175,22 @@ fig_polybar). El default es `"center"`: es lo que espera quien llega de matplotl
 > otro juego de valores (`"axis"`/`"legend"`). Mismo nombre, dominios distintos — defendible
 > (son objetos distintos, como `align`), pero es un olor. Decidir antes de implementar.
 
-> ⚠️ **Renombre pendiente — la spec va adelante del código.** Hoy el compilador usa
-> `axis(title=)` para el nombre del eje y `axis(labels=)` + `label_*` para los rótulos de
-> marca: los dos nombres que cualquiera alcanza primero significan **otra cosa** que en el
-> resto del ecosistema, y `title` ocupa el nombre del encabezado del plot, que MG no tiene.
-> El renombre es *breaking*, pero V3 no tiene usuarios externos y el churn es ~10 usos en
-> 3 archivos (fig2-3, fig6-4, fig4-5); dentro de veinte figuras, no.
+> ✅ **Renombre HECHO (2026-07-16).** Antes, el compilador usaba `axis(title=)` para el nombre
+> del eje y `axis(labels=)` + `label_*` para los rótulos de marca: los dos nombres que cualquiera
+> alcanza primero significaban **otra cosa** que en el resto del ecosistema, y `title` ocupaba el
+> nombre del encabezado del plot. Se hizo ahora porque V3 no tiene usuarios externos y el churn
+> era ~20 usos en 4 archivos; dentro de veinte figuras, no.
 >
-> **Trampa del renombre:** `title=`/`labels=` pueden **fallar en compilación** apuntando al
-> nombre nuevo, pero `label_gap=` es válido antes y después **con distinto significado** —
-> cambia en silencio. No hay forma de detectarlo en el parser: la red golden es lo que lo
-> caza (fig_polybar usa `label_gap=2`, que debe volverse `tick_label_gap=2`).
+> **Los nombres viejos fallan en compilación** apuntando al nuevo (`checkRenamedAxisArgs`,
+> `parserv3.cpp`): `title`, `title_font`, `title_size`, `title_gap`, `labels`, `label_align`,
+> `label_valign`. Así no se aceptan dos vocabularios en silencio.
+>
+> ⚠️ **La trampa, que sigue viva para quien lea código viejo:** `label_font`/`label_size`/
+> `label_gap` son válidos **antes y después con distinto significado** (antes = rótulos de marca;
+> ahora = nombre del eje). No pueden fallar, y el parser no puede verlo. **La red golden fue la
+> única guardia**: el renombre es *puro* —no cambia comportamiento— así que se verificó exigiendo
+> que los 57 goldens quedaran **byte-idénticos** (`ok=57`, sin re-bendecir). Cualquier sitio mal
+> portado habría movido un golden. Es la técnica a repetir en el próximo renombre.
 
 ### 13.1 ticks — marcas de eje
 
@@ -1255,18 +1260,17 @@ Genera un path nombrado con `count` puntos, empezando en `start` y aplicando la 
 
 `axis` describe un eje completo (línea + marcas + rótulos + nombre del eje opcional) en una sola sentencia. El bloque `{ }` da los dos extremos físicos del eje; los argumentos describen el rango numérico y la decoración. Internamente es un `place` a lo largo de una línea (§10.1) que coloca marcas y etiquetas calculadas desde el rango — la pluma y el `step` se orquestan solos.
 
-> ⚠️ **Los nombres de esta sección son los que el compilador acepta HOY, y §13.0 los renombra.**
-> `title=` es el **nombre del eje** (`label=` en §13.0, `xlabel` en matplotlib), no el encabezado
-> del plot; `labels=` y `label_*` son los **rótulos de marca** (`tick_labels=`/`tick_label_*` en
-> §13.0). La tabla de abajo describe el estado real del código; §13.0 es el destino. Al renombrar,
-> esta sección se sincroniza.
+> **Nomenclatura: §13.0.** `label` es el **nombre del eje** (el `xlabel`/`ylabel` de matplotlib),
+> **no** el encabezado del plot — ese nombre (`title`) está reservado para `plot`. Los rótulos de
+> marca son `tick_labels`/`tick_label_*`. Los nombres viejos (`title=`, `labels=`, `label_align=`…)
+> **fallan en compilación** apuntando al nuevo; ver la trampa del renombre en §13.0.
 
 ```text
 % Eje X: de (0,0) a (10,0), valores de 0 a 10, marca y etiqueta cada 2
-axis(from=0, to=10, step=2, ticks="out", labels=true, title="x / cm") { 0 0  10 0 }
+axis(from=0, to=10, step=2, ticks="out", tick_labels=true, label="x / cm") { 0 0  10 0 }
 
 % Eje Y: el mismo constructo, distinto par de extremos
-axis(from=0, to=8, step=1, ticks="out", labels=true) { 0 0  0 8 }
+axis(from=0, to=8, step=1, ticks="out", tick_labels=true) { 0 0  0 8 }
 ```
 
 **Argumentos:**
@@ -1278,22 +1282,22 @@ axis(from=0, to=8, step=1, ticks="out", labels=true) { 0 0  0 8 }
 | `start` | `from` | valor de la **primera** marca/etiqueta; sirve para omitir el origen (`start=0.1`) |
 | `ticks` | `"out"` | dirección de las marcas: `"out"`, `"in"`, `"both"`, `"none"`, `"grid"` (relativas a la línea; `"grid"` las alarga a través del campo, §13.6) |
 | `tick_size` | pequeño | longitud de las marcas, **cantidad física en pt** (§3.2) |
-| `labels` | `true` | mostrar etiquetas numéricas |
+| `tick_labels` | `true` | mostrar los rótulos de marca (§13.0). `false` = eje esquemático |
 | `decimals` | `0` | decimales en las etiquetas |
-| `label_gap` | auto | distancia de las etiquetas a la línea, **cantidad física en pt** |
+| `tick_label_gap` | `4` | distancia de los rótulos de marca a la línea, **cantidad física en pt** |
 | `field` | ventana | (solo `ticks="grid"`) largo perpendicular del barrido; default = rango de la ventana |
-| `title` | — | rótulo del eje (texto, admite markup matemático §14); centrado a lo largo del eje, rotado en ejes verticales (§19) |
-| `title_font`, `title_size` | ambiente | fuente/tamaño del título, para cuando difieren de las etiquetas |
-| `title_gap` | `label_gap+20` | distancia física (pt) del eje al título, desacoplada de `label_gap` |
-| `label_font`, `label_size` | ambiente | fuente/tamaño de las **etiquetas** numéricas (hermanos de `title_font`/`title_size`) |
-| `label_align`, `label_valign` | auto por lado | override de la alineación de etiquetas (`"left"`/`"center"`/`"right"`; `"baseline"`/`"top"`/`"middle"`/`"bottom"`) |
+| `label` | — | **nombre del eje** (texto, admite markup matemático §14); centrado a lo largo del eje, rotado en ejes verticales (§19) |
+| `label_font`, `label_size` | ambiente | fuente/tamaño del **nombre del eje**, para cuando difieren de los rótulos de marca |
+| `label_gap` | `tick_label_gap+20` | distancia física (pt) del eje a su nombre, desacoplada de `tick_label_gap` |
+| `tick_label_font`, `tick_label_size` | ambiente | fuente/tamaño de los **rótulos de marca** (hermanos de `label_font`/`label_size`) |
+| `tick_label_align`, `tick_label_valign` | auto por lado | override de la alineación de los rótulos de marca (`"left"`/`"center"`/`"right"`; `"baseline"`/`"top"`/`"middle"`/`"bottom"`) |
 | `line_width`, `color` | ambiente | estilo de la **línea del eje y sus marcas**, acotado al eje (desacopla el eje del estado del contenido, necesario dentro de `plot` §13.7) |
 | `extend` | `0` | alarga **solo la línea** más allá de sus extremos, en unidades del eje. Escalar = ambos lados; lista `(lo hi)` = antes de `p1` / después de `p2`. Reproduce el "sobrante estilo libro" |
 | `scale` | `"linear"` | `"log"`: eje logarítmico. `from`/`to` son **valores** (no exponentes, `>0`); marcas mayores en cada `step` décadas (entero); rótulos `10^n` (n=0 → `"1"`) |
 | `minor` | `false` | (solo `scale="log"`) marcas menores sin rótulo en `2·10ⁿ…9·10ⁿ` |
 | `strip_zero` | `false` | (ejes lineales) quita el cero inicial de las etiquetas: `"0.30"→".30"`, `"-0.30"→"-.30"` |
 
-> **`tick_size` y `label_gap` son físicos (pt), no de mundo.** Como `line_width`,
+> **`tick_size` y `tick_label_gap` son físicos (pt), no de mundo.** Como `line_width`,
 > `font_size` y los marcadores (§4.6), no los deforma la ventana ni el `stretch`: en un
 > marco de datos anisótropo (§13.7) las marcas y etiquetas quedan a la misma distancia
 > física en ambos ejes, sin compensar la escala por eje. El lado ("out") se deriva de la
@@ -1304,7 +1308,7 @@ axis(from=0, to=8, step=1, ticks="out", labels=true) { 0 0  0 8 }
 > "ticks largos") sin un `grid` aparte. El largo perpendicular se hereda de la ventana, o
 > se fija con `field=`.
 
-Las **marcas y etiquetas** van en `start, start+step, …` hasta `to` (`start` default = `from`). Las **etiquetas** heredan el estado de texto vigente (`font`, `font_size`, `align`, §7.3); solo el **título** admite override propio (`title_font`/`title_size`), porque suele diferir —p. ej. números en itálica y título en romana, como en fig2-3.
+Las **marcas y sus rótulos** van en `start, start+step, …` hasta `to` (`start` default = `from`). Los **rótulos de marca** heredan el estado de texto vigente (`font`, `font_size`, `align`, §7.3) y admiten override propio (`tick_label_font`/`tick_label_size`), igual que el **nombre del eje** (`label_font`/`label_size`), porque suelen diferir —p. ej. números en itálica y nombre en romana, como en fig2-3.
 
 La orientación de marcas y etiquetas se deriva de la dirección de la línea (la lógica de tangente del motor de placements), así que un eje horizontal, vertical o inclinado se escriben igual, cambiando solo los extremos del bloque. Aquí `step` es el **intervalo de valor** (como en el `for` loop, §6), no el `step` de avance de pluma (§12).
 
@@ -1314,8 +1318,10 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 > original ya está en la tabla de arriba, verificada contra fig2-3 y fig6-4:
 >
 > **Implementado:** `scale="log"` (con `minor`), `strip_zero`, `extend`, `ticks="in"`,
-> auto-alineación de etiquetas por lado (con override `label_align`/`label_valign`),
-> `line_width`/`color`/`label_font`/`label_size` por-eje, `title_gap` y título centrado/rotado.
+> auto-alineación de rótulos de marca por lado (con override `tick_label_align`/`tick_label_valign`),
+> `line_width`/`color`/`tick_label_font`/`tick_label_size` por-eje, `label_gap` y nombre de eje centrado/rotado.
+>
+> **Renombre a §13.0 HECHO (2026-07-16)**, verificado por goldens byte-idénticos (`ok=57`).
 >
 > **Pendiente (Fase 3, `plan_plot.md`):**
 > - `step` **automático** si se omite (familia 1/2/5·10ᵏ, ~5–8 marcas) y `decimals` **derivado
@@ -1323,8 +1329,7 @@ La orientación de marcas y etiquetas se deriva de la dirección de la línea (l
 > - `format="%.1f"` / notación científica — formato de etiqueta más allá de `decimals`/`strip_zero`
 >   (con validación estricta del especificador).
 > - `at=v` — posición del eje cruzado (dibujar el eje X a la altura del cero).
-> - **Renombre a la nomenclatura de §13.0** (`title=`→`label=`, `labels=`→`tick_labels=`,
->   `label_*`→`tick_label_*`) + **`label_at=`** (`"center"`/`"start"`/`"end"`): elige entre las dos
+> - **`label_at=`** (`"center"`/`"start"`/`"end"`): elige entre las dos
 >   convenciones reales, ambas en el corpus — centrado (fig2-3) o al extremo (fig4-5, fig6-4,
 >   fig_polybar, que hoy pagan con `text()` a mano). Ver la trampa del renombre en §13.0.
 > - **`tick_labels=[…]`** — rótulos de marca no numéricos (§13.0, modo 3).

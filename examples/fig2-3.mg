@@ -21,7 +21,7 @@ font_size 8
 world_window 0 12 0 8
 
 % x = temperatura relativa (0..1) ; y = capacidad calorífica (0..6).
-% box = rectángulo FÍSICO de datos, en cm; el margen para rótulos/títulos queda
+% box = rectángulo FÍSICO de datos, en cm; el margen para rótulos/nombres de eje queda
 % AFUERA de la caja.
 plot(x=(0,1), y=(0,6), box=(1.3,1.1, 11.5,7.5), grid=gray(0.5)) {
 
@@ -45,12 +45,12 @@ plot(x=(0,1), y=(0,6), box=(1.3,1.1, 11.5,7.5), grid=gray(0.5)) {
     % ── Ejes (from/to HEREDADOS de x=/y=; sin bloque de coords) ─────────
     % El estilo va SOBRE el eje (line_width/label_font), no como estado del bloque:
     % los ejes se dibujan fuera del envoltorio de contenido, así que un line_width/
-    % font suelto aquí NO les llegaría. Etiquetas en itálica; títulos en romana 10.
+    % font suelto aquí NO les llegaría. Rótulos de marca en itálica; nombre del eje en romana 10.
     % La x omite el 0 con start=0.1 (V1: 0.1..1.0).
-    xaxis(line_width=0.2, label_font="italic",
+    xaxis(line_width=0.2, tick_label_font="italic",
           step=0.1, start=0.1, decimals=1,
-          title="relative temperature", title_font="roman", title_size=10)
-    yaxis(line_width=0.2, label_font="italic",
+          label="relative temperature", label_font="roman", label_size=10)
+    yaxis(line_width=0.2, tick_label_font="italic",
           step=1, decimals=0,
-          title="heat capacity", title_font="roman", title_size=10)
+          label="heat capacity", label_font="roman", label_size=10)
 }

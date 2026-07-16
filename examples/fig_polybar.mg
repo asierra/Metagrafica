@@ -66,13 +66,13 @@ plot(x=(11.5,22.5), y=(0,1), box=(0,0, 12.46,8.0)) {
     }
 
     % Eje x: λ de 12 a 22 cada 2, SIN marcas (así está en el original).
-    xaxis(step=2, start=12, ticks="none", label_gap=2)
+    xaxis(step=2, start=12, ticks="none", tick_label_gap=2)
     % Eje y: a_B de 0 a 1 cada 0.2, marcas adentro y cortas.
-    yaxis(step=0.2, decimals=1, ticks="in", tick_size=1.5, label_gap=2)
+    yaxis(step=0.2, decimals=1, ticks="in", tick_size=1.5, tick_label_gap=2)
 }
 
 % Rótulos de eje al EXTREMO (estilo del libro), en coords de mundo fuera del plot:
-% title= los centraría. Posiciones tomadas del escaneo; λ(µm) comparte la línea
+% label= los centraría. Posiciones tomadas del escaneo; λ(µm) comparte la línea
 % base con los números del eje x.
 text("$a_B$") { -0.62 8.75 }
 text("$\lambda(\mu/rm)$") { 12.34 -0.28 }

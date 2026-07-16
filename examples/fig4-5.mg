@@ -50,8 +50,8 @@ plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
     text("$x_1$", align="center") { a1 -0.18 }
     text("$x_2$", align="center") { a2 -0.18 }
 
-    xaxis(ticks="none", labels=false, line_width=0.2)
-    yaxis(base=0, ticks="none", labels=false, line_width=0.2)
+    xaxis(ticks="none", tick_labels=false, line_width=0.2)
+    yaxis(base=0, ticks="none", tick_labels=false, line_width=0.2)
 }
 
 % ── b) Barrera coulombiana repulsiva: V = 1/r ─────────────────────────────────
@@ -80,8 +80,8 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     text("/iE") { 37.3 Eb }
     text("$x_1$", align="center") { b1 -0.075 }
 
-    xaxis(ticks="none", labels=false, line_width=0.2)
-    yaxis(ticks="none", labels=false, line_width=0.2)
+    xaxis(ticks="none", tick_labels=false, line_width=0.2)
+    yaxis(ticks="none", tick_labels=false, line_width=0.2)
 }
 
 % ── c) Potencial efectivo: V = 1/(2r²) − 1/r ──────────────────────────────────
@@ -126,15 +126,15 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     text("$x_1$")  { c1 0.033 }
     text("$x_2$", align="center") { c2 0.033 }
 
-    xaxis(base=0, ticks="none", labels=false, line_width=0.2)
-    yaxis(ticks="none", labels=false, line_width=0.2)
+    xaxis(base=0, ticks="none", tick_labels=false, line_width=0.2)
+    yaxis(ticks="none", tick_labels=false, line_width=0.2)
 }
 
 % ── Mobiliario de página: coords de la ventana ────────────────────────────────
 % Los rótulos de ordenada van a una misma altura en los tres paneles (decisión de
 % página, no de datos) y al extremo del eje, como en el libro; los de abscisa, al
-% final de su eje. Van aquí, y no como axis(title=), porque `title=` los centra a
-% lo largo del eje — ver `title_at=` en los pendientes de plan_plot.md.
+% final de su eje. Van aquí, y no como axis(label=), porque `label=` los centra a
+% lo largo del eje — ver `label_at=` en §13.0 de la spec.
 line_width 0.2
 font "roman"
 text("/iV(x)") { 1 35 }

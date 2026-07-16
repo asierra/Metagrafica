@@ -1588,6 +1588,32 @@ static int valignCodeFromStr(const std::string &v) {
   return -1;
 }
 
+// Renombre a la nomenclatura de §13.0 (2026-07-16). Los nombres viejos FALLAN en
+// compilación apuntando al nuevo, para que nadie los use por inercia ni queden
+// aceptándose en silencio dos vocabularios.
+//
+// ⚠️ No se puede hacer lo mismo con `label_font`/`label_size`/`label_gap`: son válidos
+// ANTES y DESPUÉS con DISTINTO significado (antes = rótulos de marca; ahora = nombre del
+// eje). Un `label_gap=2` viejo no es un error, es un cambio de sentido silencioso — el
+// parser no puede verlo. Ahí la red golden es la única guardia (§13.0, "trampa del
+// renombre"): el renombre es puro, así que cualquier golden que se mueva delata un sitio
+// mal portado.
+static void checkRenamedAxisArgs(const std::map<std::string, ExprPtr> &named) {
+  static const struct { const char *from, *to; } moved[] = {
+    { "title",         "label"             },   // era el NOMBRE DEL EJE, no el encabezado
+    { "title_font",    "label_font"        },
+    { "title_size",    "label_size"        },
+    { "title_gap",     "label_gap"         },
+    { "labels",        "tick_labels"       },
+    { "label_align",   "tick_label_align"  },
+    { "label_valign",  "tick_label_valign" },
+  };
+  for (const auto &m : moved)
+    if (named.count(m.from))
+      evalError((std::string("axis: `") + m.from + "=` se renombró a `" + m.to +
+                 "=` (§13.0 de la spec)").c_str());
+}
+
 struct AxisStmt : Stmt {
   std::map<std::string, ExprPtr> named;
   std::vector<ExprPtr> coords;              // 2 puntos: p1 p2
@@ -1599,15 +1625,18 @@ struct AxisStmt : Stmt {
     double step = namedNum(s, named, "step", 1);
     double startv = named.count("start") ? namedNum(s, named, "start", from) : from;
     std::string tdir = namedStr(s, named, "ticks"); if (tdir.empty()) tdir = "out";
-    bool labels = named.count("labels") ? namedNum(s, named, "labels", 1) != 0.0 : true;
+    checkRenamedAxisArgs(named);                              // §13.0 (ver arriba)
+    bool tickLabels = named.count("tick_labels") ? namedNum(s, named, "tick_labels", 1) != 0.0 : true;
     int decimals = (int)namedNum(s, named, "decimals", 0);
-    std::string title = namedStr(s, named, "title");
-    double titleSize = namedNum(s, named, "title_size", 0);
+    // label = NOMBRE DEL EJE (§13.0; el `xlabel`/`ylabel` de matplotlib). NO es el
+    // encabezado del plot: ese nombre (`title`) queda reservado para `plot`.
+    std::string axisLabel = namedStr(s, named, "label");
+    double labelSize = namedNum(s, named, "label_size", 0);
     double tickSize = namedNum(s, named, "tick_size", 3.0);   // pt
-    // label_gap: distancia FÍSICA (pt) del eje al BORDE cercano de la etiqueta (arriba
-    // para el eje X, derecha para el Y), tras la auto-alineación (Fase 1.5). Default 4:
-    // libra las marcas de 3 pt de `ticks="out"` con ~1 pt de margen sin quedar lejos.
-    double labelGap = namedNum(s, named, "label_gap", 4.0);   // pt
+    // tick_label_gap: distancia FÍSICA (pt) del eje al BORDE cercano del rótulo de marca
+    // (arriba para el eje X, derecha para el Y), tras la auto-alineación (Fase 1.5).
+    // Default 4: libra las marcas de 3 pt de `ticks="out"` con ~1 pt de margen sin quedar lejos.
+    double tickLabelGap = namedNum(s, named, "tick_label_gap", 4.0);   // pt
 
     // extend=: alarga SOLO la línea del eje más allá de sus extremos, en unidades
     // del eje (las mismas del bloque {p1 p2}), sin mover marcas/etiquetas. Escalar
@@ -1757,42 +1786,42 @@ struct AxisStmt : Stmt {
     }
 
     // 3. etiquetas numéricas (heredan el estado de texto vigente, §14)
-    if (labels) {
-      // Alineación de las etiquetas, derivada del lado del eje, para que NO se
-      // encimen con la línea (plan_plot.md Fase 1.5): eje ~horizontal → centradas
-      // y colgando bajo la marca (center/top); eje ~vertical → pegadas por la
-      // derecha y centradas en vertical (right/middle). Override explícito con
-      // label_align=/label_valign= (nombres = sentencias align/valign, §4.8).
+    if (tickLabels) {
+      // Alineación de los rótulos de marca, derivada del lado del eje, para que NO se
+      // encimen con la línea (plan_plot.md Fase 1.5): eje ~horizontal → centrados
+      // y colgando bajo la marca (center/top); eje ~vertical → pegados por la
+      // derecha y centrados en vertical (right/middle). Override explícito con
+      // tick_label_align=/tick_label_valign= (nombres = sentencias align/valign, §4.8).
       int alignCode  = horiz ? 1 : 2;    // 1=center, 2=right
       int valignCode = horiz ? 1 : 2;    // 1=top,    2=middle
-      if (named.count("label_align")) {
-        int c = alignCodeFromStr(namedStr(s, named, "label_align")); if (c >= 0) alignCode = c;
+      if (named.count("tick_label_align")) {
+        int c = alignCodeFromStr(namedStr(s, named, "tick_label_align")); if (c >= 0) alignCode = c;
       }
-      if (named.count("label_valign")) {
-        int c = valignCodeFromStr(namedStr(s, named, "label_valign")); if (c >= 0) valignCode = c;
+      if (named.count("tick_label_valign")) {
+        int c = valignCodeFromStr(namedStr(s, named, "tick_label_valign")); if (c >= 0) valignCode = c;
       }
-      // label_font/label_size: cara y tamaño de las etiquetas numéricas, hermanos de
-      // title_font/title_size. Sin label_font, FN_NOFACE = hereda la cara ambiente
-      // (comportamiento previo, cero churn). label_size se acota con el push/pop de
-      // alineación de abajo (AT_THEIGHT), como title_size.
-      std::string labelFont = namedStr(s, named, "label_font");
-      FontFace lff = labelFont.empty() ? FN_NOFACE
-                     : get_font_face_from_string(labelFont, g_flags.using_fontcmmi);
-      double labelSize = namedNum(s, named, "label_size", 0);
+      // tick_label_font/tick_label_size: cara y tamaño de los RÓTULOS DE MARCA, hermanos
+      // de label_font/label_size (que son los del NOMBRE DEL EJE, §13.0). Sin
+      // tick_label_font, FN_NOFACE = hereda la cara ambiente. tick_label_size se acota con
+      // el push/pop de alineación de abajo (AT_THEIGHT), como label_size.
+      std::string tickLabelFont = namedStr(s, named, "tick_label_font");
+      FontFace lff = tickLabelFont.empty() ? FN_NOFACE
+                     : get_font_face_from_string(tickLabelFont, g_flags.using_fontcmmi);
+      double tickLabelSize = namedNum(s, named, "tick_label_size", 0);
       // El prólogo EPS /cshow /rshow solo se emite si esta bandera se activó en
       // parse-time — exec() corre ANTES de EPSDisplay::start(), que la lee. Sin
       // ella el EPS llamaría al operador cshow REAL de PS y truena en typecheck
       // (misma clase de trampa que el proc /ellipse). Solo aplica a center/right.
       if (alignCode != 0) g_flags.using_textalign = true;
 
-      // Estado de alineación acotado con push/pop, igual que el título aísla
-      // title_size (AT_THEIGHT): no se filtra a los text() que sigan al eje.
+      // Estado de alineación acotado con push/pop, igual que el nombre del eje aísla
+      // label_size (AT_THEIGHT): no se filtra a los text() que sigan al eje.
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
       { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, alignCode);  out.push_back(std::move(a)); }
       { auto a = std::make_unique<Attribute>(); a->set(AT_TVALIGN, valignCode); out.push_back(std::move(a)); }
-      if (labelSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)labelSize); out.push_back(std::move(a)); }
+      if (tickLabelSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)tickLabelSize); out.push_back(std::move(a)); }
 
-      point g = physOut(labelGap);
+      point g = physOut(tickLabelGap);
       char fmt[8]; std::snprintf(fmt, sizeof fmt, "%%.%df", decimals < 0 ? 0 : decimals);
       for (double v : majors) {
         point q = posOf(v); char num[64];
@@ -1817,31 +1846,32 @@ struct AxisStmt : Stmt {
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
 
-    // 4. título. Eje vertical → texto girado con el ángulo de la línea (MTLC),
-    //    acotado con save/restore del dispositivo para cerrar el grupo de rotación.
-    if (!title.empty()) {
-      // title_gap: distancia FÍSICA (pt) del eje al título, DESACOPLADA de label_gap
-      // (que ahora es pequeño, ~4 pt). Default = label_gap + 20: libra la fila de
-      // etiquetas (~1 alto de fuente) y deja aire antes del título. Override propio.
-      double titleGap = namedNum(s, named, "title_gap", labelGap + 20.0);
+    // 4. NOMBRE DEL EJE (§13.0: `label`, el xlabel/ylabel de matplotlib — no el
+    //    encabezado del plot). Eje vertical → texto girado con el ángulo de la línea
+    //    (MTLC), acotado con save/restore del dispositivo para cerrar el grupo de rotación.
+    if (!axisLabel.empty()) {
+      // label_gap: distancia FÍSICA (pt) del eje a su nombre, DESACOPLADA de
+      // tick_label_gap (que es pequeño, ~4 pt). Default = tick_label_gap + 20: libra la
+      // fila de rótulos de marca (~1 alto de fuente) y deja aire. Override propio.
+      double labelGap = namedNum(s, named, "label_gap", tickLabelGap + 20.0);
       point m(p1.x + 0.5 * dx, p1.y + 0.5 * dy);
-      point t = physOut(titleGap);
+      point t = physOut(labelGap);
       point tp(m.x + t.x, m.y + t.y);
       double ang = horiz ? 0.0 : std::atan2(uy, ux) * 57.29577951308232;   // rad→grados
-      std::string titleFont = namedStr(s, named, "title_font");
-      // Cara del título: title_font la hornea en el Text (override propio, §13.5);
-      // sin él, FN_NOFACE → hereda la ambiente. title_size se aísla con push/pop.
-      FontFace tff = titleFont.empty() ? FN_NOFACE
-                     : get_font_face_from_string(titleFont, g_flags.using_fontcmmi);
-      // Título CENTRADO a lo largo del eje: align=center anclado al punto medio. En
+      std::string labelFont = namedStr(s, named, "label_font");
+      // Cara del nombre: label_font la hornea en el Text (override propio, §13.5);
+      // sin él, FN_NOFACE → hereda la ambiente. label_size se aísla con push/pop.
+      FontFace tff = labelFont.empty() ? FN_NOFACE
+                     : get_font_face_from_string(labelFont, g_flags.using_fontcmmi);
+      // Nombre CENTRADO a lo largo del eje: align=center anclado al punto medio. En
       // el eje X centra horizontalmente; en el Y (texto rotado) centra a lo largo de
       // la línea, ya que cshow/text-anchor operan sobre la base ROTADA. El estado se
       // acota con push/pop (no se filtra). using_textalign activa el prólogo /cshow
-      // de EPS (misma trampa que las etiquetas, §Fase 1.5); seguro en parse-time.
+      // de EPS (misma trampa que los rótulos de marca, §Fase 1.5); seguro en parse-time.
       g_flags.using_textalign = true;
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
       { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, 1); out.push_back(std::move(a)); }
-      if (titleSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)titleSize); out.push_back(std::move(a)); }
+      if (labelSize > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)labelSize); out.push_back(std::move(a)); }
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVSAVE));
       { auto gs = std::make_unique<GraphicsState>(); gs->setPosition(tp); out.push_back(std::move(gs)); }
       if (ang != 0.0) {
@@ -1849,7 +1879,7 @@ struct AxisStmt : Stmt {
         tr->setOperation(OPMRT); tr->setRotation(ang); tr->setPredefinedMatrix(MTLC);
         out.push_back(std::move(tr));
       }
-      out.push_back(parse_text(title, tff, g_flags.using_reencode, g_flags.using_fontcmmi));
+      out.push_back(parse_text(axisLabel, tff, g_flags.using_reencode, g_flags.using_fontcmmi));
       if (ang != 0.0) out.push_back(std::make_unique<GraphicsState>(GS_DEVRESTORE));
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
@@ -1991,7 +2021,7 @@ struct PlotStmt : Stmt {
         if (src->named.count("start"))
           g.named["start"] = ExprPtr(new NumExpr(namedNum(s, src->named, "start", from)));
         g.named["ticks"]      = ExprPtr(new StrExpr("grid"));
-        g.named["labels"]     = ExprPtr(new NumExpr(0));           // sin rótulos
+        g.named["tick_labels"] = ExprPtr(new NumExpr(0));          // sin rótulos de marca
         g.named["field"]      = ExprPtr(new NumExpr(field));
         g.named["line_width"] = ExprPtr(new NumExpr(0.1));
         g.named["color"]      = ExprPtr(new NumExpr((double)gridColor));

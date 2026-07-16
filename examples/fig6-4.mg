@@ -15,7 +15,7 @@
 display_size 9 6.7
 font_size 8
 
-% Lienzo exterior (world coords) con margen para el título del eje y y los isótopos.
+% Lienzo exterior (world coords) con margen para el nombre del eje y y los isótopos.
 world_window -1 7.2 -0.95 6.25
 
 % x = E^{-1/2} (0.30..0.50, lineal) ; y = λ⁻¹ (log). box=(0,0,6,5) = región de datos
@@ -38,12 +38,12 @@ plot(x=(0.30,0.50), y=(1e-20,1e5), yscale="log", box=(0,0, 6,5)) {
 
     % Eje x: E^{-1/2} lineal, .30..50 cada .05, marcas adentro, sobrante de línea.
     xaxis(line_width=0.2, step=0.05, decimals=2, strip_zero=true, ticks="in",
-          extend=0.4, title="$/iE^{/r-1/2} (MeV)^{/r-1/2} $")
+          extend=0.4, label="$/iE^{/r-1/2} (MeV)^{/r-1/2} $")
     % Eje y: λ⁻¹ log; rótulos 10^n desde 10^{-15} (start), 5 décadas por marca.
     yaxis(line_width=0.2, start=1e-15, step=5, ticks="in", extend=(0, 0.3))
 }
 
-% Título del eje y (horizontal, arriba — estilo del libro, NO rotado) e isótopos:
+% Nombre del eje y (horizontal, arriba — estilo del libro, NO rotado) e isótopos:
 % anotaciones en world coords, fuera del plot.
 text("${/gl^-1} (/rs)$") { -0.83 5.5 }
 text("$Po{^292}$") { 1.1 5.1 }
