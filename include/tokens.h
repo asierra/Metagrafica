@@ -27,7 +27,7 @@ enum Token {
   T_EQ, T_NE, T_LT, T_GT, T_LE, T_GE,
 
   // Palabras clave de control y conectores lógicos
-  T_STRUCT, T_FOR, T_TO, T_STEP, T_IF, T_ELSE, T_AND, T_OR, T_INCLUDE,
+  T_STRUCT, T_FOR, T_TO, T_STEP, T_IF, T_ELSE, T_AND, T_OR, T_NOT, T_INCLUDE,
 
   // Terminales con valor
   T_IDENTIFIER, T_NUMBER, T_STRING,

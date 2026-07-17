@@ -318,6 +318,17 @@ marker(0.12, shape="circle-dot") { … }             % círculo con punto ⊙ (f
 
 Color y relleno/contorno siguen §4 (`fill=` rellena; `color=` fija el trazo; en las formas de solo trazo —`cross`, `x`— manda `color=`). El radio `r` es **físico**: no se deforma bajo `stretch` ni bajo transformaciones —solo la posición se transforma.
 
+**Un struct como marcador.** Donde se pide una forma se acepta también **el nombre de un
+struct** del usuario, y no solo las del catálogo: `dot(6, marker="Punta")`. La geometría se
+extrae del struct y se estampa con el mismo tamaño físico. La orientación por defecto es
+**fija** —un struct no se sabe "flecha", a diferencia del builtin `arrow`— y se cambia con
+`marker_orient="auto"` para que siga la tangente.
+
+> ⚠️ **Estado (2026-07-16): esta sección va adelante del código.** La primitiva `marker(r,
+> shape=…)` **no existe**; lo implementado es `dot(r, marker="…")`, y su catálogo es
+> `circle`, `square`, `diamond`, `cross`, `x`, `arrow` — sin `disk` ni `circle-dot`, y con
+> `arrow`, que la tabla de arriba no lista. Sincronizar §4.6 con lo real está pendiente.
+
 *(V1: `DOT` (físico) y los marcadores con prefijo `MK`, inconclusos —ver `plan_marcadores.md`. La familia de **atributos** `marker_start`/`marker_mid`/`marker_end`, que decora los vértices de una curva en vez de dispersar puntos sueltos, comparte estas mismas formas y este render físico.)*
 
 ### 4.7 bezier — curva de Bézier cúbica
@@ -668,7 +679,10 @@ if r > 2 {
 }
 ```
 
-- Comparadores: `<`, `>`, `<=`, `>=`, `==`, `!=`; combinables con `and` / `or`.
+- Comparadores: `<`, `>`, `<=`, `>=`, `==`, `!=`; combinables con `and` / `or`, y negables
+  con `not`. Precedencia, de menor a mayor: `or` < `and` < `not` < comparación — la de los
+  lenguajes con operadores en palabra, así que `not a > b` es `not (a > b)`. `not` es
+  prefijo y encadenable (`not not x`). Cero es falso; cualquier otro valor, verdadero.
 - El bloque tiene ámbito léxico, como `for` y los bloques `{ }` (§7.1); la rama `else` es opcional.
 - Una variable que ya existe afuera puede asignarse en una rama y **conservar** el cambio al salir (§5.3): permite fijar un valor por defecto y sobrescribirlo solo en ciertos casos, sin necesitar un `else`.
 - Su uso principal es la condición de paro en structs recursivas (§8.1); también permite variantes de una struct según sus parámetros.

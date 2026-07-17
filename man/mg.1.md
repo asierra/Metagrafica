@@ -100,10 +100,10 @@ so one line can draw many things. A path is a series of points `x1 y1 x2 y2 …`
 `polyline { path }`
 :   Join the points with straight lines. `polyline(closed=true)` closes the outline
     without filling it. `marker_start=`, `marker_mid=`, `marker_end=` put a marker
-    on the first point, the interior ones or the last — and here the marker may be
-    **one of your own structures** by name, not only the shapes listed under `dot`.
-    An arrow turns to follow the line; `marker_orient="fixed"` stops it.
-    `marker_size=`, `marker_color=` and `marker_fill=` style it.
+    on the first point, the interior ones or the last. They take the same names as
+    `dot`'s `marker=`, structures included. An arrow turns to follow the line;
+    `marker_orient="fixed"` stops it. `marker_size=`, `marker_color=` and
+    `marker_fill=` style it.
 
 `polygon { path }`
 :   Closed and filled.
@@ -131,8 +131,10 @@ so one line can draw many things. A path is a series of points `x1 y1 x2 y2 …`
 :   A marker of diameter `d` **in typographic points** at every point — its size is
     physical, so it survives any scaling and never distorts. `marker=` picks the
     shape: `"circle"` (default), `"square"`, `"diamond"`, `"cross"`, `"x"`,
-    `"arrow"`. A bare `dot(d)` is a filled disc; `color=` without `fill=` leaves it
-    hollow.
+    `"arrow"`, **or the name of one of your own structures**. A bare `dot(d)` is a
+    filled disc; `color=` without `fill=` leaves it hollow. An `arrow` turns to
+    follow the path; anything else stays fixed unless you ask for
+    `marker_orient="auto"`.
 
 `polybar(width=w) { path }`
 :   One bar per point, from a common base, `w` wide in world units; each point is
@@ -281,7 +283,8 @@ string. Angles are in **radians** for these functions, but in **degrees** for
 :   Repeat, with `i` running from *a* to *b*.
 
 `if cond { … } else if cond { … } else { … }`
-:   Conditionals; comparisons are `== != < <= > >=`, joined with `and` and `or`.
+:   Conditionals; comparisons are `== != < <= > >=`, joined with `and` and `or` and
+    negated with `not`. Zero is false, anything else true.
 
 `include "file.mg"`
 :   Insert another file — how a library of structures is shared.

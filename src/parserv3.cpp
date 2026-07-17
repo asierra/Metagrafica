@@ -226,11 +226,21 @@ static ExprPtr parseComparison(Lexer &lx) {
   }
   return e;
 }
-static ExprPtr parseAnd(Lexer &lx) {          // Comparison ("and" Comparison)*
-  ExprPtr e = parseComparison(lx);
+// `not` (§6.1): liga MÁS que `and`/`or` y MENOS que la comparación, la convención de
+// los lenguajes con operadores en palabra — `not a > b` es `not (a > b)`, no
+// `(not a) > b`. Es prefijo y se puede encadenar (`not not x`).
+static ExprPtr parseNot(Lexer &lx) {          // "not" Not | Comparison
+  if (lx.peek().type == T_NOT) {
+    lx.next();
+    return ExprPtr(new NotExpr(parseNot(lx)));
+  }
+  return parseComparison(lx);
+}
+static ExprPtr parseAnd(Lexer &lx) {          // Not ("and" Not)*
+  ExprPtr e = parseNot(lx);
   while (lx.peek().type == T_AND) {
     lx.next();
-    e = ExprPtr(new BinExpr(T_AND, std::move(e), parseComparison(lx)));
+    e = ExprPtr(new BinExpr(T_AND, std::move(e), parseNot(lx)));
   }
   return e;
 }
@@ -1255,17 +1265,31 @@ struct PrimStmt : Stmt {
       else if (name == "dot") {
         auto p = std::make_unique<Dot>();
         p->setRadius(posOr(s, 0, namedOr(s, "size", 1)));
-        // marker= (§4.11): forma física alterna al círculo (square/diamond/cross/x/arrow).
+        // marker= (§4.11): forma física alterna al círculo. Acepta un builtin del
+        // catálogo (square/diamond/cross/x/arrow) O EL NOMBRE DE UN STRUCT del
+        // usuario, exactamente como marker_start/mid/end de polyline (§B): antes
+        // esta ruta solo miraba el catálogo y un struct moría con "marcador
+        // desconocido", así que `marker=` significaba cosas distintas según la
+        // primitiva que lo recibiera. El motor ya tenía todo (markerShapeFromStruct
+        // + setCustomShape); solo faltaba llamarlo aquí.
         MarkerId mid = MK_CIRCLE;
+        bool builtin = true;
         auto mit = named.find("marker");
         if (mit != named.end()) {
           std::string mname = mit->second->eval(s).str;
-          if (markerIdForName(mname, mid)) p->setMarker(mid);
-          else evalError("marcador desconocido: ", mname);
+          builtin = markerIdForName(mname, mid);
+          if (builtin) p->setMarker(mid);
+          else {
+            std::vector<Path> subs; bool fillable = false;
+            if (!markerShapeFromStruct(s, mg, mname, subs, fillable))
+              evalError("marcador desconocido (ni builtin ni struct): ", mname);
+            p->setCustomShape(subs, fillable);
+          }
         }
         // Orientación (§B.3): la flecha se orienta a la tangente local por default;
-        // el resto queda fijo. Sobreescribible con marker_orient="auto"|"fixed".
-        bool orient = (mid == MK_ARROW);
+        // el resto queda fijo —incluido un struct, que no se sabe "flecha", igual
+        // criterio que polyline. Sobreescribible con marker_orient="auto"|"fixed".
+        bool orient = builtin && (mid == MK_ARROW);
         auto oit = named.find("marker_orient");
         if (oit != named.end()) {
           std::string ov = oit->second->eval(s).str;

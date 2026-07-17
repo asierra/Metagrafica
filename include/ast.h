@@ -123,6 +123,17 @@ struct UnExpr : Expr {           // solo '-' unario (§2)
   }
 };
 
+// `not` lógico (§6.1). Aparte de UnExpr, que es el '-' aritmético: la verdad aquí
+// es la misma convención que usan T_AND/T_OR y la condición de `if` —cero es falso,
+// cualquier otra cosa verdadero— y el resultado se normaliza a 1.0/0.0.
+struct NotExpr : Expr {
+  ExprPtr e;
+  explicit NotExpr(ExprPtr x) : e(std::move(x)) {}
+  Value eval(Scope &sc) const override {
+    return Value(e->eval(sc).num == 0.0 ? 1.0 : 0.0);
+  }
+};
+
 struct BinExpr : Expr {          // + - * / ^   y comparación/lógicos (§6.1)
   int op;
   ExprPtr l, r;

@@ -163,14 +163,15 @@ MetaGráfica has been rewritten three times, and every version typeset something
 |---|---|---|---|
 | **0** | 1988 | Pascal + assembler | drove an HP laser printer directly — the first published paper |
 | **1** | 1991 | C | the first book |
-| **2** | 1999–2024 | C++ / STL | EPS only — three more books |
+| **2** | 1999–2024 | C++ / STL | EPS only — three more books, the first in 2002 |
 | **3** | 2026 | C++14 | EPS, SVG, PDF |
 
 Version 0 was written when no graphics application produced output of the quality a
-scientific paper needed. Version 2 emitted Encapsulated PostScript only, with Latin-1
-text and the standard `symbol` font for Greek and mathematics; PostScript stagnated and
-never caught the Unicode revolution, but it is still widely supported and converts
-trivially to PDF.
+scientific paper needed. Version 2 began in 1999 with the decision to emit Encapsulated
+PostScript — then *the* graphics language for publishing — and typeset its first book in
+2002. Its text was Latin-1, with the standard `symbol` font for Greek and mathematics.
+PostScript stagnated and never caught the Unicode revolution, but it is still widely
+supported and converts trivially to PDF.
 
 This version keeps the descriptive core and adds the SVG and PDF backends, an isometric
 coordinate model, Latin Modern Math for symbols, and the `plot` family for data figures.

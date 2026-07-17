@@ -90,6 +90,7 @@ STRING      \"[^\"]*\"
 "else"                  { return T_ELSE; }
 "and"                   { return T_AND; }
 "or"                    { return T_OR; }
+"not"                   { return T_NOT; }
 "include"               { return T_INCLUDE; }
 
  /* --- IDENTIFICADORES, NÚMEROS Y CADENAS --- */
