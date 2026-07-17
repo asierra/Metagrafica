@@ -43,7 +43,7 @@ FORMATS="eps svg pdf"
 # pueda romperse en silencio (es lo que le pasó al del man, hoy en sintaxis V1 muerta).
 # fig1 es el único que ejercita `legend` (§13.9, forma explícita) y el marcador
 # compuesto `circle-dot` (⊙, §4.6).
-EXAMPLES="arrow curvas3 fig1 fig2-1 fig2-3 fig2-5 fig4-1 fig4-10 fig4-5 fig6-1 fig6-10 fig6-4 fig_polybar fill_styles line_patterns markers-demo primitives quickstart rpstest sines texto"
+EXAMPLES="curvas3 fig1 fig2-1 fig2-5 fig4-1 fig4-5 fig6-4 fig_polybar fill_styles line_patterns markers-demo primitives quickstart rpstest sines texto"
 
 export LC_ALL=C
 

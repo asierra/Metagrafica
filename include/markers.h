@@ -59,10 +59,27 @@ inline MarkerShape markerShapeForId(MarkerId id) {
     shape.subpaths.push_back({ point(-1, -1), point(1, 1) });
     shape.subpaths.push_back({ point(-1, 1), point(1, -1) });
     break;
-  case MK_ARROW:
+  case MK_TRIANGLE:
+    // Triángulo relleno apuntando a +x (el `triangle_right` de matplotlib).
+    // Símbolo de datos ESTÁTICO: orientación fija por default (§4.6).
     shape.fillable = true;
     shape.subpaths.push_back({
       point(-1, -0.7), point(1, 0), point(-1, 0.7), point(-1, -0.7)
+    });
+    break;
+  case MK_ARROW:
+    // Arpón de contorno con lengüetas (la flecha del libro, ex `arrow.mg` →
+    // Arrowr): un lazo cerrado dibujado a TRAZO, no relleno. Es la geometría de
+    // Arrowr × 2/3, con la PUNTA en el origen (ancla) y el cuerpo hacia -x: así
+    // la punta cae EXACTAMENTE en el punto (p.ej. el extremo de la línea en
+    // fig4-1), y al orientar a la tangente rota alrededor de la punta, que queda
+    // fija (decisión durable: ancla = punta, no centro de bbox). Flecha
+    // DIRECCIONAL: se orienta a la tangente por default (§4.6/§B.3).
+    shape.fillable = false;
+    shape.subpaths.push_back({
+      point(0, 0),            point(-0.6667, 0.1333),  point(-1.3333, 0.3333),
+      point(-2, 0.6667),      point(-1.3333, 0),       point(-2, -0.6667),
+      point(-1.3333, -0.3333), point(-0.6667, -0.1333), point(0, 0)
     });
     break;
   }
@@ -77,6 +94,7 @@ inline bool markerIdForName(const std::string &name, MarkerId &out) {
   if (name == "diamond") { out = MK_DIAMOND; return true; }
   if (name == "cross")   { out = MK_CROSS;   return true; }
   if (name == "x")       { out = MK_X;       return true; }
+  if (name == "triangle"){ out = MK_TRIANGLE; return true; }
   if (name == "arrow")   { out = MK_ARROW;   return true; }
   if (name == "circle-dot") { out = MK_CIRCLE_DOT; return true; }
   return false;

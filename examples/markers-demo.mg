@@ -1,4 +1,4 @@
-% markers-demo.mg — Demostración V3 de los marcadores físicos (§4.6): las 6 formas
+% markers-demo.mg — Demostración V3 de los marcadores físicos (§4.6): las 7 formas
 % del catálogo, la orientación tangente sobre una curva (shape="arrow" se orienta
 % por default) y el color independiente marcador/curva.
 %
@@ -12,12 +12,16 @@
 % `shape` porque la primitiva ya ES el marcador.
 %
 % El tamaño es FÍSICO (size, en puntos): inmune a la ventana, solo la posición se
-% transforma. arrow se orienta a la tangente local por default; el resto queda fijo
-% (sobreescribible con marker_orient="auto"|"fixed").
+% transforma. arrow (el arpón del libro) se orienta a la tangente local por
+% default; el resto —triangle incluido— queda fijo (sobreescribible con
+% marker_orient="auto"|"fixed").
+%
+% triangle es el triángulo relleno estático (el `triangle_right` de matplotlib);
+% arrow es el arpón de contorno DIRECCIONAL. Son ejes distintos: forma vs papel.
 %
 % Relleno como en los círculos (§4.6): a secas = relleno; color= sin fill= = ABIERTO
-% (solo contorno); fill= = relleno en ese color. cross/x son siempre contorno
-% (geometría no cerrada). No hay forma "disk": el disco es `circle` relleno.
+% (solo contorno); fill= = relleno en ese color. cross/x/arrow son siempre contorno
+% (geometría a trazo). No hay forma "disk": el disco es `circle` relleno.
 
 display_size 12 12
 world_window 0 12 0 12
@@ -25,13 +29,21 @@ world_window 0 12 0 12
 align "center"
 text("{/bMarcadores estándar y orientación tangente}") { 6 11.4 }
 
-% --- 1. Fila con los 6 marcadores estándar con sus defaults ---
-marker(size=8, shape="circle")  { 1.5 10 }
-marker(size=8, shape="square")  { 3.5 10 }
-marker(size=8, shape="diamond") { 5.5 10 }
-marker(size=8, shape="cross")   { 7.5 10 }
-marker(size=8, shape="x")       { 9.5 10 }
-marker(size=8, shape="arrow")   { 11.5 10 }
+% --- 1. Fila con los 7 marcadores estándar con sus defaults ---
+marker(size=8, shape="circle")   { 1.2 10 }
+marker(size=8, shape="square")   { 2.9 10 }
+marker(size=8, shape="diamond")  { 4.6 10 }
+marker(size=8, shape="cross")    { 6.3 10 }
+marker(size=8, shape="x")        { 8.0 10 }
+marker(size=8, shape="triangle") { 9.7 10 }
+marker(size=8, shape="arrow")    { 11.4 10 }
+
+% --- 1b. Orientación por ÁNGULO FIJO (marker_orient=grados): el triángulo (▶ por
+%     default) rota a ▲ 90 / ◀ 180 / ▼ 270; un ángulo sirve para cualquier forma. ---
+marker(size=8, shape="triangle", marker_orient=90)  { 3.5 8.6 }
+marker(size=8, shape="triangle", marker_orient=180) { 5.5 8.6 }
+marker(size=8, shape="triangle", marker_orient=270) { 7.5 8.6 }
+marker(size=8, shape="square",   marker_orient=45)  { 9.5 8.6 }
 
 % --- 2. Flechas orientadas siguiendo la tangente de una curva ---
 color "blue"

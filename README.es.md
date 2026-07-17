@@ -6,19 +6,17 @@
 
 **Español** · [English](README.md)
 
-**Un lenguaje descriptivo para figuras técnicas y científicas.**
+**Un lenguaje gráfico descriptivo para figuras técnicas y científicas de alta calidad.**
 
-Describes *qué es la figura* —puntos, paths, structs, transformaciones— y `mg` la compila
-a **EPS**, **SVG** o **PDF**. Sin interfaz gráfica ni ratón: una figura es código fuente,
-así que se versiona, se compara, se parametriza y se regenera.
+Describes *qué es la figura* —puntos, paths, structs, transformaciones— y `mg` la compila a cualquiera de los formatos **EPS**, **SVG** o **PDF** para publicaciones tradicionales o en línea. Sin necesidad de una interfaz gráfica ni ratón: una figura es código fuente, así que se versiona, se compara, se parametriza y se regenera.
 
-Con él se compusieron las figuras de Ana María Cetto y Luis de la Peña, *[Quantum
-Mechanics: A Physical Approach](https://doi.org/10.1017/9781009679633)* (Cambridge
-University Press, 2025) y, en versiones anteriores, las de *[Introducción a la mecánica
-cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* de Luis de la
-Peña (FCE/UNAM, 3ª ed.).
+Creado originalmente para publicaciones científicas como los libros de texto de Mecánica Cuántica de Ana María Cetto y Luis de la Peña *[Quantum
+Mechanics: A Physical Approach](https://doi.org/10.1017/9781009679633)* (Cambridge University Press, 2025) y *[Introducción a la mecánica
+cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* de Luis de la Peña (FCE/UNAM, 3ª ed.) y otros artículos científicos, ha evolucionado escalonadamente durante cerca de cuatro décadas.
 
 ## Inicio rápido
+
+Nada mejor que un ejemplo para una primera impresión del lenguaje.
 
 ```text
 display_size 9 5.5
@@ -50,16 +48,11 @@ bin/mg quickstart.mg quickstart.svg
 
 ![y = x² graficada con MetaGráfica](docs/img/quickstart.svg)
 
-Ese es el archivo completo ([`examples/quickstart.mg`](examples/quickstart.mg)). `plot`
-mapea **unidades de datos** a una caja física en centímetros; los ejes heredan los rangos
-`x=`/`y=` y se rotulan solos. El `$…$` del rótulo es notación matemática: MetaGráfica
-incrusta una fuente de TeX para letras griegas, símbolos, superíndices y subíndices.
+Ese es el archivo completo ([`examples/quickstart.mg`](examples/quickstart.mg)). `plot` mapea **unidades de datos** a una caja física en centímetros; los ejes heredan los rangos `x=`/`y=` y se rotulan solos. El `$…$` del rótulo es notación matemática (subconjunto de LaTeX): MetaGráfica incrusta una fuente de TeX para letras griegas, símbolos, superíndices y subíndices.
 
-## No solo gráficas
+## Ilustraciones
 
-Las gráficas de datos son un uso. El lenguaje se hizo para **ilustraciones** —diagramas
-de aparatos, esquemas, lo que un artículo necesite— y ahí es donde los structs, la
-colocación sobre arcos, las flechas y el texto matemático se ganan su lugar:
+Es poderoso en las gráficas, pero MetaGráfica también luce en **ilustraciones** —diagramas de aparatos, esquemas, lo que un artículo necesite— y ahí es donde las estructuras, la colocación sobre arcos, las flechas y el texto matemático resaltan:
 
 ![Aparato de difracción de electrones](docs/img/fig2-5.svg)
 
@@ -68,8 +61,7 @@ colocación sobre arcos, las flechas y el texto matemático se ganan su lugar:
 > [doi:10.1017/9781009679633](https://doi.org/10.1017/9781009679633) — reproducida aquí
 > como [`examples/fig2-5.mg`](examples/fig2-5.mg), el código que la compuso.
 
-Menos de 60 líneas de MetaGráfica: el detector es un struct colocado a 37°, las flechas
-del haz son otro struct barrido sobre un arco, y la `φ` va en Latin Modern Math.
+Menos de 60 líneas de MetaGráfica: el detector es una `struct` (asociación de varios elementos gráficos) colocado a 37°, las flechas del haz y del giro del detector son marcadores que **se orientan solos** a su línea o arco —sin ángulos ni posiciones calculados a mano— y la `φ` va en Latin Modern Math.
 
 ## Compilación
 
@@ -78,9 +70,7 @@ make                 # compila bin/mg y la página de manual
 sudo make install    # opcional: deja mg en el PATH
 ```
 
-Necesita un compilador de C++14 (`clang++` o `g++`), `flex`, y `pandoc` para la página de
-manual. [libharu](http://libharu.org/) viene incluida en `third_party/` para la salida
-PDF; no hay nada más que instalar.
+Se requiere un compilador de C++14 (`clang++` o `g++`), `flex`, y `pandoc` para la página de manual. La biblioteca para la salida PDF, [libharu](http://libharu.org/), viene incluida en `third_party/` y no hace falta nada más que instalar.
 
 ## Uso
 
@@ -99,8 +89,7 @@ bin/mg figura.mg sal.pdf      # → PDF
 
 ## El lenguaje en un minuto
 
-Un **punto** es una pareja de coordenadas; un **path** es una lista de puntos. Cada
-primitiva lleva su path entre `{ }` y su estilo entre `( )`:
+Un **punto** es una pareja de coordenadas; un **path** es una lista de puntos. Cada primitiva lleva su path entre `{ }` y su estilo entre `( )`:
 
 ```text
 polyline { 0 0  1 2  3 1 }              % polilínea abierta
@@ -111,12 +100,11 @@ rectangle(fill="steelblue") { 0 0  4 3 }
 text("masa $m_e$", align="center") { 5 1 }
 ```
 
-Los **structs** son el corazón del lenguaje: un grupo con nombre que puedes colocar,
-escalar, girar y repetir, en coordenadas homogéneas, sin recurrir a otro lenguaje de
-programación.
+Los **structs** son el corazón del lenguaje: puedes agrupar distintos elementos gráficos con sus atributos y colocarlos, escalarlos, girarlos y repetirlos juntos, en coordenadas homogéneas, usando solamente el nombre.
 
 ```text
 struct Cuadro() {
+	circle(0.5) { 0 0 }
     polyline(closed=true) { -1 -1  1 -1  1 1  -1 1 }
 }
 
@@ -125,14 +113,12 @@ for i = 0 to 11 {
 }
 ```
 
-El lenguaje completo está en [`especificacion_mg.md`](especificacion_mg.md), y `man mg`
-es la referencia. MetaGráfica **no** pretende ser un lenguaje de programación de
-propósito general: tiene variables, expresiones, `for` e `if`, y ahí se detiene.
+El lenguaje completo está en [`especificacion_mg.md`](especificacion_mg.md), y `man mg` es la referencia. MetaGráfica **no** pretende ser un lenguaje de programación de
+propósito general: tiene variables, expresiones, `for` e `if`, expresiones lógicas y no mucho más.
 
 ## Ejemplos
 
-En [`examples/`](examples/) está el corpus vivo: todos sus archivos compilan con el
-binario actual y se verifican en cada cambio.
+En [`examples/`](examples/) está el corpus vivo donde se pueden ver diferentes funcionalidades: todos sus archivos compilan con el binario actual y se verifican en cada cambio.
 
 ```bash
 bin/mg examples/fig6-4.mg sal.svg
@@ -142,7 +128,6 @@ bin/mg examples/fig6-4.mg sal.svg
 |---|---|
 | `quickstart.mg` | la gráfica de arriba |
 | `fig2-5.mg` | la ilustración de arriba (structs, arcos, flechas) |
-| `fig2-3.mg` | gráfica lineal con retícula y rótulos de eje |
 | `fig6-4.mg` | eje **logarítmico**, rótulos matemáticos, anotaciones sobre los datos |
 | `fig4-5.mg` | tres paneles, ejes interiores, curvas analíticas |
 | `fig_polybar.mg` | histograma de barras con trama |
@@ -150,53 +135,35 @@ bin/mg examples/fig6-4.mg sal.svg
 
 ## Estado del proyecto
 
-**Esto es una beta**, y de ahí se siguen dos cosas. El **lenguaje todavía puede cambiar**:
-los nombres y los argumentos no están congelados —`axis` acaba de renombrar `title` a
-`label` y `labels` a `tick_labels`—, así que una figura que compila hoy puede necesitar un
-ajuste mañana (los nombres viejos fallan de forma ruidosa, nunca en silencio). Y **faltan
-piezas**: la especificación describe cosas que aún no existen. Lo que sí está se ejercita
-con el corpus de regresión en cada cambio, y ha compuesto libros publicados.
+**Esta versión es aún beta**, y de ahí se siguen dos cosas. El **lenguaje todavía puede cambiar**: los nombres y los argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste mañana (los nombres viejos fallan de forma ruidosa, nunca en silencio). Y **faltan piezas**: la especificación describe cosas que aún no existen. Lo que sí está se ejercita
+con el corpus de regresión en cada cambio.
 
-Faltan tres cosas para el 1.0 ([§22.7](especificacion_mg.md)):
+Faltan por lo menos cuatro cosas para el release ([§22.7](especificacion_mg.md)):
 
 1. **Congelar la gramática** — que una figura que compila siga compilando.
-2. **Terminar `plot`** — `rule`, `legend` y `table` están reservados y sin construir; cada
-   uno espera figuras que lo pidan.
-3. **Texto en UTF-8** — hoy el texto se convierte a Latin-1, una restricción de PostScript
-   que se impone a los tres backends. Las matemáticas no están afectadas (van por Latin
-   Modern Math).
+2. **Terminar `plot`** — `rule` y `table` están reservados y sin construir; cada uno espera figuras que lo pidan.
+3. **Texto en UTF-8** — hoy el texto se convierte a Latin-1, una restricción de PostScript que se impone a los tres backends. Las ecuaciones no están afectadas (van por Latin Modern Math).
+4. **Referencia** — aunque se cuenta con este README y un manual, falta un documento único que sirva de referencia completa para usuarios finales.
 
-`mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática vieja de
-dos letras (`PL`, `CR`, `GNNUM`…) quedó congelada en la rama `v1-legacy`, y su corpus vive
-en [`examples/v1/`](examples/v1/) como oráculo de migración. **Esos archivos no compilan
-con este binario.**
+`mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática antigua de dos letras (`PL`, `CR`, `GNNUM`…) quedó congelada en la rama `v1-legacy`, y su corpus vive en [`examples/v1/`](examples/v1/) como oráculo de migración. **Esos archivos no compilan con este binario.**
 
-Cada cambio pasa por una red de regresión sobre todo el corpus (`bash test/run.sh check`):
-comparación byte a byte contra la salida bendecida de los tres backends, una pasada de
-Ghostscript sobre el EPS, y una prueba de paridad entre backends.
+Cada cambio pasa por una red de regresión sobre todo el corpus (`bash test/run.sh check`): comparación byte a byte contra la salida bendecida de los tres backends, una pasada de Ghostscript sobre el EPS, y una prueba de paridad entre backends.
 
 ## Historia
 
-MetaGráfica se ha reescrito tres veces, y cada versión compuso algo:
+MetaGráfica se ha reescrito cuatro veces, y cada versión evoluciona. Como otros lenguajes gráficos, al principio se inspiró superficialmente en MetaPost (de ahí algunas convenciones, como los comentarios `%`). Su salida puede incluirse en un documento LaTeX:
 
-| | año | lenguaje | salida |
+| Versión | Año | Lenguaje | Salida |
 |---|---|---|---|
-| **0** | 1988 | Pascal + ensamblador | manejaba directo una impresora láser HP — el primer artículo publicado |
-| **1** | 1991 | C | el primer libro |
-| **2** | 1999–2024 | C++ / STL | solo EPS — tres libros más, el primero en 2002 |
+| **0** | 1988 | Pascal + ensamblador | primer artículo publicado |
+| **1** | 1991 | C | primer libro con figuras insertadas en TeX|
+| **2** | 1999–2024 | C++ / STL | solo EPS — más libros y artículos |
 | **3** | 2026 | C++14 | EPS, SVG, PDF |
 
-La versión 0 se escribió cuando ninguna aplicación gráfica daba la calidad que un
-documento científico necesitaba para publicarse. La versión 2 arrancó en 1999 con la
-decisión de generar Encapsulated PostScript —entonces *el* lenguaje gráfico por excelencia
-para publicaciones— y compuso su primer libro en 2002. Su texto iba en Latin-1, con la
-fuente `symbol` para griegas y matemáticas; PostScript se estancó y no alcanzó la
-revolución de Unicode, pero sigue soportado por casi todo y se convierte a PDF sin
-dificultad.
+La versión 0 controlaba directamente una impresora láser y se escribió cuando ninguna aplicación gráfica daba la calidad que un documento científico necesitaba para publicarse. La versión 2 arrancó en 1999 con la decisión de generar Encapsulated PostScript —entonces *el* lenguaje gráfico por excelencia
+para publicaciones. Su texto iba en Latin-1, con la fuente `symbol` para griegas y matemáticas; PostScript se estancó y no alcanzó la revolución de Unicode, pero sigue soportado por casi todo y se convierte a PDF sin dificultad.
 
-Esta versión conserva el núcleo descriptivo y agrega los backends SVG y PDF, un modelo de
-coordenadas isométrico, Latin Modern Math para los símbolos, y la familia `plot` para
-figuras de datos. La gramática de dos letras desapareció; ver *Estado del proyecto*.
+Esta versión conserva el núcleo descriptivo y agrega los backends SVG y PDF, un modelo de coordenadas isométrico, Latin Modern Math para los símbolos, y la familia `plot` para figuras de datos. La gramática de dos letras desapareció y el lenguaje dejó de parecer lenguaje ensamblador y ahora es mucho más poderoso. Ver *Estado del proyecto*.
 
 ## Licencia
 

@@ -1299,10 +1299,11 @@ struct PrimStmt : Stmt {
         bool orient = builtin && (mid == MK_ARROW);
         auto oit = named.find("marker_orient");
         if (oit != named.end()) {
-          std::string ov = oit->second->eval(s).str;
-          if (ov == "auto") orient = true;
-          else if (ov == "fixed") orient = false;
-          else evalError("marker_orient debe ser \"auto\" o \"fixed\": ", ov);
+          Value ov = oit->second->eval(s);
+          if (ov.type == Value::NUMBER) { orient = false; p->setFixedAngle(ov.num); }  // ángulo fijo en grados
+          else if (ov.str == "auto") orient = true;
+          else if (ov.str == "fixed") orient = false;
+          else evalError("marker_orient debe ser \"auto\", \"fixed\" o un ángulo en grados: ", ov.str);
         }
         p->setOrient(orient);
         p->setPath(path); item = std::move(p);
@@ -1355,6 +1356,13 @@ struct PrimStmt : Stmt {
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
     emitMarkers(s, mg, out, markerPaths);   // §4.11: marcadores sobre la ruta (encima)
+    // §4.11 en arco: marcador en el extremo, con el punto y la tangente derivados
+    // de los parámetros del arco (no del path, que son centros). Solo start/end.
+    if (name == "arc") {
+      double r = posOr(s, 0, 1);
+      emitArcMarkers(s, mg, out, evalPath(s, 0, coords.size()), r, r,
+                     namedOr(s, "from", 0), namedOr(s, "to", 360));
+    }
   }
 
   // Marcadores (§4.11) sobre polyline: tras la ruta, dispersa Dot(s) en los
@@ -1363,18 +1371,34 @@ struct PrimStmt : Stmt {
   // relleno negro por default (como dot); su tamaño es FÍSICO (marker_size, def 4).
   void emitMarkers(Scope &s, MetaGrafica &mg, GraphicsItemList &out, const std::vector<Path> &paths) const {
     if (paths.empty()) return;
-    // Override global de orientación; por default la flecha se orienta (§B.3).
-    int orientOv = 0;   // 0=por forma (arrow→auto), +1=auto, -1=fixed
-    auto oit = named.find("marker_orient");
-    if (oit != named.end()) {
-      std::string ov = oit->second->eval(s).str;
-      if (ov == "auto") orientOv = 1;
-      else if (ov == "fixed") orientOv = -1;
-      else evalError("marker_orient debe ser \"auto\" o \"fixed\": ", ov);
-    }
+    // Orientación (§B.3), global + override por extremo (paridad con arc). Modo:
+    // 0=default (por forma: arrow→auto, resto→fixed), 1=auto (tangente), 2=fixed
+    // (+x), 3=reverse (tangente+180°), 4=ángulo absoluto en grados. marker_orient
+    // fija el global; marker_start_orient/marker_end_orient lo sobreescriben por extremo.
+    auto parseSpec = [&](const char *key, int &mode, double &angle) {
+      auto it = named.find(key);
+      if (it == named.end()) { mode = 0; return; }
+      Value ov = it->second->eval(s);
+      if (ov.type == Value::NUMBER)  { mode = 4; angle = ov.num; }
+      else if (ov.str == "auto")     mode = 1;
+      else if (ov.str == "fixed")    mode = 2;
+      else if (ov.str == "reverse")  mode = 3;
+      else evalError("marker_orient debe ser \"auto\", \"fixed\", \"reverse\" o un ángulo en grados: ", ov.str);
+    };
+    int gMode, sMode, eMode; double gAng = 0, sAng = 0, eAng = 0;
+    parseSpec("marker_orient", gMode, gAng);
+    parseSpec("marker_start_orient", sMode, sAng);
+    parseSpec("marker_end_orient", eMode, eAng);
     double msize = namedOr(s, "marker_size", 4);
+    // §B: desplazamiento del marcador de extremo SOBRE su segmento (el `shift` de
+    // LNST). shift∈[0,1]: 1 (default) = en el vértice; 0 = en el vértice adyacente
+    // interior; intermedio = lerp. Solo start/end (mid/all no tienen "segmento").
+    bool hasStartShift = named.count("marker_start_shift") != 0;
+    bool hasEndShift   = named.count("marker_end_shift") != 0;
+    double startShift = namedOr(s, "marker_start_shift", 1.0);
+    double endShift   = namedOr(s, "marker_end_shift", 1.0);
     GraphicsItemList mk;
-    auto emit = [&](MarkerRange range, const Expr *e) {
+    auto emit = [&](MarkerRange range, const Expr *e, bool useShift, double shift, int omode, double oang) {
       std::string nm = e->eval(s).str;
       MarkerId id;
       bool builtin = markerIdForName(nm, id);
@@ -1382,39 +1406,77 @@ struct PrimStmt : Stmt {
       if (!builtin && !markerShapeFromStruct(s, mg, nm, subs, fillable)) {
         evalError("marcador desconocido (ni builtin ni struct): ", nm); return;
       }
-      // Orientación: builtin sigue el default por forma (arrow→auto); una struct
-      // no se sabe "flecha", así que default fixed salvo marker_orient="auto" (§B.3).
-      bool orient = builtin ? ((orientOv > 0) || (orientOv == 0 && id == MK_ARROW))
-                            : (orientOv > 0);
+      // Resuelve el modo a orient/reverse/ángulo. Default por forma: arrow→auto,
+      // resto (incl. struct, que no se sabe "flecha")→fixed (§B.3).
+      bool orient, reverse = false, hasAngle = false; double fixedA = 0;
+      switch (omode) {
+        case 1:  orient = true;  break;                                 // auto (tangente)
+        case 2:  orient = false; break;                                 // fixed (+x)
+        case 3:  orient = true; reverse = true; break;                  // reverse (tangente+180°)
+        case 4:  orient = false; hasAngle = true; fixedA = oang; break; // ángulo absoluto
+        default: orient = builtin && id == MK_ARROW; break;             // por forma
+      }
       for (const Path &p : paths) {
+        if (useShift && p.size() >= 2) {
+          // Marcador desplazado sobre el segmento del extremo: en vez de dispersar
+          // en el vértice, un Dot de un punto en lerp(adj, ancla, shift) con el
+          // ángulo del segmento (mismo patrón que los marcadores de arco).
+          point anchor, adj;
+          if (range == MR_LAST) { anchor = p[p.size()-1]; adj = p[p.size()-2]; }
+          else                  { anchor = p[0];          adj = p[1]; }
+          point P(adj.x + shift*(anchor.x-adj.x), adj.y + shift*(anchor.y-adj.y));
+          // Tangente en el sentido de avance (v0→v1 al inicio, v[n-2]→v[n-1] al fin).
+          point fwd = (range == MR_LAST) ? point(anchor.x-adj.x, anchor.y-adj.y)
+                                         : point(adj.x-anchor.x, adj.y-anchor.y);
+          double useAng;
+          if (hasAngle)    useAng = fixedA;                                            // absoluto
+          else if (orient) { useAng = std::atan2(fwd.y, fwd.x)*180.0/M_PI; if (reverse) useAng += 180.0; }
+          else             useAng = reverse ? 180.0 : 0.0;                             // fixed: +x, o -x si reverse
+          auto d = std::make_unique<Dot>();
+          d->setPath({P});
+          if (builtin) d->setMarker(id); else d->setCustomShape(subs, fillable);
+          d->setRadius(msize); d->setFixedAngle(useAng);
+          mk.push_back(std::move(d));
+          continue;
+        }
         auto d = std::make_unique<Dot>();
         d->setPath(p);          // copia: comparte la forma del subtrayecto
         if (builtin) d->setMarker(id);
         else         d->setCustomShape(subs, fillable);
         d->setRange(range); d->setOrient(orient); d->setRadius(msize);
+        d->setReverse(reverse);
+        if (hasAngle) d->setFixedAngle(fixedA);
         mk.push_back(std::move(d));
       }
     };
     bool hasSpecific = named.count("marker_start") || named.count("marker_mid") || named.count("marker_end");
     auto all = named.find("marker");
     if (all != named.end() && !hasSpecific) {
-      emit(MR_ALL, all->second.get());                  // atajo: un Dot(MR_ALL) por subtrayecto
+      emit(MR_ALL, all->second.get(), false, 1.0, gMode, gAng);   // atajo: un Dot(MR_ALL) por subtrayecto
     } else {
       const Expr *fallback = (all != named.end()) ? all->second.get() : nullptr;  // `marker` rellena ausentes
-      auto chan = [&](const char *key, MarkerRange range) {
+      // El modo por extremo cae al override si se dio (mode!=0), si no al global.
+      auto chan = [&](const char *key, MarkerRange range, bool useShift, double shift, int cmode, double cang) {
+        int m = (cmode != 0) ? cmode : gMode;
+        double a = (cmode != 0) ? cang : gAng;
         auto it = named.find(key);
-        if (it != named.end())  emit(range, it->second.get());
-        else if (fallback)      emit(range, fallback);
+        if (it != named.end())  emit(range, it->second.get(), useShift, shift, m, a);
+        else if (fallback)      emit(range, fallback, useShift, shift, m, a);
       };
-      chan("marker_start", MR_FIRST);
-      chan("marker_mid",   MR_MID);
-      chan("marker_end",   MR_LAST);
+      chan("marker_start", MR_FIRST, hasStartShift, startShift, sMode, sAng);
+      chan("marker_mid",   MR_MID,   false,         1.0,        0,     0);   // mid: solo global
+      chan("marker_end",   MR_LAST,  hasEndShift,   endShift,   eMode, eAng);
     }
+    wrapMarkers(s, out, mk);
+  }
+
+  // Envuelve los Dots de marcador (mk) en su alcance de estado (§B.4): marker_color
+  // fija trazo+relleno (un valor sirve para formas rellenas y para cruz/x);
+  // marker_fill sobreescribe solo el relleno ("none" = abierto). Sin ninguno:
+  // relleno negro por default (como dot); el trazo (cruz/x) hereda el ambiente.
+  // Compartido por los marcadores de polyline (emitMarkers) y de arco (emitArcMarkers).
+  void wrapMarkers(Scope &s, GraphicsItemList &out, GraphicsItemList &mk) const {
     if (mk.empty()) return;
-    // Alcance propio (§B.4): marker_color fija trazo+relleno (un valor sirve para
-    // formas rellenas y para cruz/x); marker_fill sobreescribe solo el relleno
-    // ("none" = abierto). Sin ninguno: relleno negro por default (como dot); el
-    // trazo (cruz/x) hereda el estado ambiente.
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     bool haveFill = named.count("marker_fill") != 0;
     if (named.count("marker_color")) {
@@ -1433,6 +1495,69 @@ struct PrimStmt : Stmt {
     out.push_back(std::make_unique<GraphicsState>(open ? GS_NOFILL : GS_FILL));
     for (auto &it : mk) out.push_back(std::move(it));
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+
+  // §4.11 en `arc`: marcador en el EXTREMO del arco (start/end), orientado a su
+  // TANGENTE. A diferencia de polyline —donde el path SON los vértices— el path de
+  // un arco son CENTROS; el punto y su tangente se calculan de (centro, rx, ry,
+  // a0, a1). Solo start/end tienen sentido (un arco no tiene vértices interiores);
+  // `marker` a secas = ambos extremos. `marker_orient` ajusta el sentido: ausente/
+  // "auto" = tangente del barrido; "reverse" = tangente + 180° (flecha al revés);
+  // "fixed" = +x; un número = ángulo absoluto en grados.
+  void emitArcMarkers(Scope &s, MetaGrafica &mg, GraphicsItemList &out,
+                      const Path &centers, double rx, double ry, double a0, double a1) const {
+    const Expr *start = named.count("marker_start") ? named.at("marker_start").get()
+                      : named.count("marker")       ? named.at("marker").get() : nullptr;
+    const Expr *end   = named.count("marker_end")   ? named.at("marker_end").get()
+                      : named.count("marker")       ? named.at("marker").get() : nullptr;
+    if (!start && !end) return;
+    double msize = namedOr(s, "marker_size", 4);
+    double dir = (a1 >= a0) ? 1.0 : -1.0;             // sentido del barrido
+    // Override de orientación (§B.3): "auto"=tangente, "reverse"=+180°, "fixed"=+x,
+    // número=absoluto. Modos: 0=tangente, 1=reverse, 2=fixed, 3=absoluto. `marker_orient`
+    // fija el global; `marker_start_orient`/`marker_end_orient` lo sobreescriben por
+    // extremo (para invertir SOLO uno — la flecha curva bidireccional).
+    auto parseOrient = [&](const char *key, int gMode, double gAbs, int &mode, double &abs) {
+      auto it = named.find(key);
+      if (it == named.end()) { mode = gMode; abs = gAbs; return; }
+      Value ov = it->second->eval(s);
+      mode = 0; abs = 0;
+      if (ov.type == Value::NUMBER)  { mode = 3; abs = ov.num; }
+      else if (ov.str == "auto")     mode = 0;
+      else if (ov.str == "reverse")  mode = 1;
+      else if (ov.str == "fixed")    mode = 2;
+      else evalError("marker_orient debe ser \"auto\", \"reverse\", \"fixed\" o un ángulo en grados: ", ov.str);
+    };
+    int gMode, eMode, sMode; double gAbs, eAbs, sAbs;
+    parseOrient("marker_orient", 0, 0, gMode, gAbs);          // global (default tangente)
+    parseOrient("marker_start_orient", gMode, gAbs, sMode, sAbs);
+    parseOrient("marker_end_orient",   gMode, gAbs, eMode, eAbs);
+    GraphicsItemList mk;
+    auto add = [&](const Expr *e, double angDeg, int mode, double abs) {
+      std::string nm = e->eval(s).str;
+      MarkerId id; bool builtin = markerIdForName(nm, id);
+      std::vector<Path> subs; bool fillable = false;
+      if (!builtin && !markerShapeFromStruct(s, mg, nm, subs, fillable)) {
+        evalError("marcador desconocido (ni builtin ni struct): ", nm); return;
+      }
+      double th = angDeg * M_PI / 180.0;
+      // Tangente = sentido · d/dθ (rx cosθ, ry sinθ) = sentido · (-rx sinθ, ry cosθ).
+      double tang = std::atan2(dir * ry * std::cos(th), dir * (-rx) * std::sin(th)) * 180.0 / M_PI;
+      double useAng = tang;
+      if      (mode == 1) useAng = tang + 180.0;   // reverse
+      else if (mode == 2) useAng = 0.0;            // fixed (+x)
+      else if (mode == 3) useAng = abs;            // absoluto
+      for (const point &c : centers) {
+        auto d = std::make_unique<Dot>();
+        d->setPath({ point(c.x + rx * std::cos(th), c.y + ry * std::sin(th)) });
+        if (builtin) d->setMarker(id); else d->setCustomShape(subs, fillable);
+        d->setRadius(msize); d->setFixedAngle(useAng);
+        mk.push_back(std::move(d));
+      }
+    };
+    if (start) add(start, a0, sMode, sAbs);
+    if (end)   add(end, a1, eMode, eAbs);
+    wrapMarkers(s, out, mk);
   }
 };
 

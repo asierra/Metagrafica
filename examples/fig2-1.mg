@@ -7,18 +7,17 @@
 % solos, sin línea explícita que los conecte. Relleno tramado con contorno.
 
 display_size 3 3
-include "arrow.mg"                 % marcadores de flecha: Arrowr
 
 struct Fg1() {
-    % figura radiante (hairline)
+    % figura radiante (hairline). Las dos flechas de los extremos son marcadores del
+    % propio polyline (§B): marker_start/marker_end orientados a la pendiente local.
+    % Antes eran dos place(Arrowr) encimados (V1 LNST) que obligaban a incluir
+    % arrow.mg; marker_start_shift corre la de arranque adentro, sobre su segmento.
     line_width 0.1
-    polyline { -1.11111 -0.046   0.7071 0.7071   0 -1   -0.7071 0.7071
+    polyline(marker_start="arrow", marker_start_shift=0.9, marker_end="arrow",
+             marker_size=2.5) { -1.11111 -0.046   0.7071 0.7071   0 -1   -0.7071 0.7071
                1 0   -0.7071 -0.7071   0 0.8 }
 
-    % flechas orientadas con la pendiente de la línea (§10.1); el marcador cae en
-    % el 2º punto. Antes había que calcular el ángulo y rotar a mano (SCST/RTST).
-    place(Arrowr, scale=0.04) { -1.11111 -0.046   -0.93 0.03 }
-    place(Arrowr, scale=0.04) { -0.7071 -0.7071    0 0.8 }
 
     % caja con orificio: polilínea + arco en UN path cerrado (compound), tramado.
     % V1: FPATRN -8 → hatch 135°, paso 2, con contorno (negativo = contornear).

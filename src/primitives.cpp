@@ -8,6 +8,8 @@ MetaGrafica:  Human descriptive language to generate publication quality graphic
     Version:  2024
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
+#include <cmath>       // M_PI, cos/sin (ángulo fijo de marcador)
+
 #include "primitives.h"
 #include "Display.h"
 #include "markers.h"   // markerShapeForId / MarkerShape (resolución de la forma del Dot)
@@ -129,7 +131,15 @@ void Dot::draw(Display &g) {
       g.setFilled(savedFill);
       continue;
     }
-    point d = orient ? pathTangent(path, i) : point(0, 0);         // tangente local si se orienta
+    // Dirección para la rotación de la forma: tangente local si se orienta;
+    // si no, un ángulo fijo (cosθ,sinθ) o (0,0) = como se dibuja (+x).
+    point d(0, 0);
+    if (orient) d = pathTangent(path, i);
+    else if (has_angle) { double a = angle_deg * M_PI / 180.0; d = point(std::cos(a), std::sin(a)); }
+    if (reverse_dir) {                              // "reverse": 180° sobre la dirección
+      if (d.x == 0 && d.y == 0) d = point(-1, 0);   // +x fijo → -x
+      else { d.x = -d.x; d.y = -d.y; }
+    }
     g.marker(p.x, p.y, shape, r, d.x, d.y);
   }
 }

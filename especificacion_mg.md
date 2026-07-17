@@ -313,11 +313,14 @@ marker(6, shape="Punta", marker_orient="auto") { … }  % un struct del usuario,
 | `"diamond"` | ◇ rombo |
 | `"cross"` | + |
 | `"x"` | × |
-| `"arrow"` | → flecha (la única que se orienta sola) |
+| `"triangle"` | ▶ triángulo relleno apuntando a +x (el `triangle_right` de matplotlib) |
+| `"arrow"` | ⟩ flecha de arpón (la del libro) — la única que se orienta sola |
 | `"circle-dot"` | ⊙ anillo + punto central |
 | *un nombre de struct* | lo que dibuje el struct |
 
-**No hay forma `"disk"`, y es a propósito: la forma y el relleno son ejes independientes** (§4). El disco es `circle` **relleno**, que es el default; `color=` sin `fill=` da el círculo **abierto**. Duplicar el catálogo por relleno (disk/circle, square-lleno/square-vacío…) sería redundante. `cross` y `x` son siempre trazo, por geometría no cerrada, y ahí manda `color=`.
+**No hay forma `"disk"`, y es a propósito: la forma y el relleno son ejes independientes** (§4). El disco es `circle` **relleno**, que es el default; `color=` sin `fill=` da el círculo **abierto**. Duplicar el catálogo por relleno (disk/circle, square-lleno/square-vacío…) sería redundante. `cross`, `x` y `arrow` son siempre trazo, por geometría no cerrada (el arpón es un lazo dibujado a contorno), y ahí manda `color=`.
+
+**`triangle` vs `arrow` — forma y papel son ejes distintos (act. 2026-07-17).** `triangle` es el triángulo relleno *estático*: un símbolo de datos como cuadro/rombo, con orientación **fija** por default. `arrow` es el arpón de contorno con lengüetas —la flecha que el libro usa a manos llenas— y es la **única** forma que se orienta a la **tangente por default** (`marker_orient="auto"`), porque su papel es *direccional* (marca flujo/sentido), no ser un símbolo puntual. Cualquiera de las dos se puede forzar al otro modo con `marker_orient="fixed"|"auto"`. Antes `arrow` nombraba al triángulo; al entrar el arpón built-in (que retira el `include "arrow.mg"` de las figuras que lo usan como marcador; ver `fig4-1.mg`), el triángulo pasó a llamarse `triangle` y `arrow` quedó para el arpón. El arpón es la geometría de `Arrowr` (× 2/3), con la **punta en el ancla** (no centrado en bbox, a diferencia de los símbolos simétricos): así la punta cae exactamente en el punto —el extremo de la línea en un `marker_end`— y al orientarse a la tangente rota alrededor de la punta, que queda fija. Su tamaño es **físico** en pt (inmune a la ventana), a diferencia del viejo struct de `arrow.mg`, cuyo tamaño iba por `scale` (cantidad de mundo).
 
 **`circle-dot` (⊙, añadido 2026-07-17, con `fig1.mg`)** es la excepción a "la forma y el
 relleno son ejes independientes": es una forma COMPUESTA con relleno mixto por construcción
@@ -329,9 +332,26 @@ se resuelve como DOS `dot()` reales superpuestos —anillo (`setFilled(false)`) 
 polígono. Proporción tomada de la digitalización de Fig. 1 (`plan_fig1.md`): anillo ~23px, punto
 central ~6px de diámetro.
 
-**Un struct como marcador.** Donde se pide una forma se acepta también **el nombre de un struct** del usuario: `marker(6, shape="Punta")`. La geometría se extrae del struct y se estampa con el mismo tamaño físico. La orientación por defecto es **fija** —un struct no se sabe "flecha", a diferencia del builtin `arrow`— y se cambia con `marker_orient="auto"` para que siga la tangente. Es el mismo catálogo, y las mismas reglas, que los atributos `marker_start`/`marker_mid`/`marker_end` de `polyline`.
+**Orientación (`marker_orient=`).** Tres modos, un solo argumento:
+- `"auto"` — sigue la **tangente** local de la curva (default del arpón `arrow`).
+- `"fixed"` — como se dibuja: el símbolo apunta a **+x** (default del resto).
+- **un número en grados** — ángulo **fijo**, rota la forma esa cantidad. Así `triangle`
+  apunta arriba con `marker_orient=90` (▲), a la izquierda con `180` (◀), abajo con `270`
+  (▼); y sirve para cualquier forma (`square` a `45` = ◆). El ángulo es relativo al marco
+  del mundo (bajo `stretch`/rotación de marco lo acompaña), no al papel; reusa la misma
+  rotación que la tangente, así que es consistente en los tres backends (respeta el flip
+  de SVG). No hay familia `triangle-up/down/left/right` a la matplotlib: una casilla por
+  dirección duplicaría el catálogo cuando un ángulo lo cubre todo.
+
+**Un struct como marcador.** Donde se pide una forma se acepta también **el nombre de un struct** del usuario: `marker(6, shape="Punta")`. La geometría se extrae del struct y se estampa con el mismo tamaño físico. La orientación por defecto es **fija** —un struct no se sabe "flecha", a diferencia del builtin `arrow`— y se cambia con `marker_orient="auto"` (tangente) o un ángulo en grados. Es el mismo catálogo, y las mismas reglas, que los atributos `marker_start`/`marker_mid`/`marker_end` de `polyline`.
+
+**Orientación en `polyline` (`marker_orient` + por extremo).** Mismos valores que en `arc`: ausente = **por forma** (`arrow`→tangente, el resto→`fixed`); `"auto"` = tangente local; `"fixed"` = +x; **`"reverse"`** = tangente + 180° (la flecha apunta hacia atrás en la curva); un número = ángulo absoluto en grados. `marker_orient` es **global**; **`marker_start_orient`/`marker_end_orient`** lo sobreescriben por extremo — p. ej. `marker_start="arrow", marker_end="arrow", marker_start_orient="reverse"` deja las dos cabezas apuntando **hacia afuera** (la cota de toda la vida). `reverse` funciona también con `marker`=todos (cada instancia invierte su tangente local), porque se resuelve en draw-time sobre la dirección.
+
+**Desplazar el marcador de extremo sobre su segmento (`marker_start_shift`/`marker_end_shift`).** Por default el marcador de `polyline` cae en el **vértice** del extremo. Para una **cota** (flecha adentro de la línea, no en la punta) `marker_end_shift=` lo corre a lo largo del último segmento, en `[0,1]`: **1** (default) = en el vértice; **0** = en el vértice adyacente interior; intermedio = interpolación. `marker_start_shift=` hace lo análogo sobre el primer segmento. El marcador conserva la orientación de ese segmento (o lo que fije `marker_orient`, incluido `reverse` y los overrides por extremo). Es el `shift` de `LNST` (V1), ahora como atributo del marcador; aplica solo a `start`/`end` (`mid` y `marker`=todos no tienen "segmento de extremo").
 
 > **Los dos `marker` no son lo mismo, y no colisionan.** `marker(shape=…)` es la **primitiva**: estampa un símbolo por punto. `polyline(marker=…)` es el **atributo** que decora los vértices de una curva. Ahí el argumento se llama `marker` porque nombra *qué* se pone; en la primitiva se llama `shape` porque la primitiva ya *es* el marcador.
+
+**Marcadores en `arc` (§4.5).** Un `arc` acepta `marker_start`/`marker_end` (y `marker` = ambos extremos): `arc(2, from=20, to=160, marker_end="arrow")` = **flecha curva** (punta en el extremo del arco, orientada a su tangente). A diferencia de `polyline` —donde el path SON los vértices y el marcador se dispersa sobre ellos— el path de un `arc` son **centros**; el punto del marcador y su orientación se **derivan de los parámetros** del arco (`centro + r·(cos θ, sin θ)` en `from`/`to`, tangente = perpendicular al radio, en el sentido del barrido). Por eso solo `start`/`end` tienen sentido (un arco no tiene vértices interiores). `marker_orient` ajusta el sentido: ausente o `"auto"` = tangente del barrido (default); **`"reverse"`** = la flecha apunta al revés (tangente + 180°, sin mover el extremo ni invertir `from`/`to`); `"fixed"` = +x; un número = ángulo absoluto en grados. `marker_orient` es **global** (afecta ambos extremos); **`marker_start_orient`/`marker_end_orient`** lo sobreescriben por extremo, para invertir **solo uno** — p. ej. `marker="arrow", marker_start_orient="reverse"` deja las dos cabezas apuntando hacia afuera (flecha curva **bidireccional**). El resto de primitivas de forma cerrada (`polygon`, `circle`, `bezier`) aún no llevan marcadores —esperan una figura que los pida.
 
 El radio `r` es **físico**: no se deforma bajo `stretch` ni bajo transformaciones —solo la posición se transforma.
 

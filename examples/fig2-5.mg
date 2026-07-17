@@ -20,16 +20,20 @@
 % matemático usa Latin Modern Math (V1 usaba Times + la fuente `symbol`), así que la
 % φ tiene otro trazo e inclinación. Es un cambio deliberado del proyecto.
 %
-% Valida dos piezas de diseño que ninguna otra figura usaba:
+% Valida piezas de diseño que ninguna otra ilustración usaba:
 %  · rotate= en la invocación: el Detector se coloca girado 37° (escala uniforme,
 %    así que rotación y escala conmutan → sin ambigüedad de orden);
-%  · place sobre ARCO: los ARCST de V1 (5 números posicionales) quedan claros con
-%    from/to nombrados —igual que `arc`— y both_sides explícito (V1: escala < 0).
-% ⚠ Sólo verificación de render (parser V3): rayos con ticks y cotas por calibrar.
+%  · MARCADORES declarativos en vez de flechas colocadas a mano. El giro del
+%    detector es un `arc(marker_end/start="arrow", marker_start_orient="reverse")`
+%    (flecha curva bidireccional); el haz y la cota son `polyline(marker_end="arrow"
+%    …)` con `marker_end_shift` para meter la punta adentro. Los marcadores se
+%    ORIENTAN SOLOS a la tangente local y se anclan al vértice: CERO ángulos y
+%    posiciones calculados a mano. En V1 esto era SCST/RTST (calcular el ángulo y
+%    rotar la punta); en el paso intermedio, `place(Arrowr)` con puntos de locus
+%    escogidos a ojo. Ahora es una propiedad del propio trazo y NO incluye arrow.mg.
 
 display_size 12 4
 font_size 8
-include "arrow.mg"
 
 % ── Pila (batería) ───────────────────────────────────────────────────────────
 struct Pila() {
@@ -81,7 +85,7 @@ fit(Pila, stretch=true) { 2 -0.4  2.6 0 }
 
 % cota
 line_width 0.1
-polyline { 8 1.25  8.9 1.25  7.19 -0.0552 }
+polyline(marker_end="arrow", marker_end_shift=0.75) { 8 1.25  8.9 1.25  7.19 -0.0552 }
 
 % Rayos catódicos (V1 TICKS punteados) — ⚠ params por calibrar
 {
@@ -102,9 +106,8 @@ for i = 0 to 9 {
 % Flechas de haz: sobre arco (both_sides) y sobre línea. Antes ARCST/LNST con
 % 5 números; ahora place con from/to nombrados (como `arc`, §4.5) y both_sides.
 color "blue"
-place(Arrowr, scale=0.04, both_sides=true, r=2.39, from=197.35, to=237.35) { 8.9 1.25 }
+arc(2.39, from=197.35, to=237.35, marker_size=3, marker_end="arrow", marker_start_orient="reverse", marker_start="arrow") { 8.9 1.25 }
 color "black"
-place(Arrowr, scale=0.04) { 8.9 1.25  7.5 0.1816 }
 
 % Arco del ángulo φ (V1 CR .7 38 180)
 arc(0.7, from=180, to=218) { 8.9 1.25 }

@@ -30,7 +30,7 @@ display_size 14.25 9.35
 font_size 9.5
 line_width 0.4
 
-world_window -0.8 13.45 -0.4 8.95
+world_window -1 13.43 -0.4 8.95
 
 % x = λ (µm, lineal), y = a_B (absortividad de banda, 0..1).
 % El tope del eje y y la meseta 14.0-16.0 caen en el MISMO píxel del escaneo:
@@ -68,11 +68,11 @@ plot(x=(11.5,22.5), y=(0,1), box=(0,0, 12.46,8.0)) {
     % Eje x: λ de 12 a 22 cada 2, SIN marcas (así está en el original).
     xaxis(step=2, start=12, ticks="none", tick_label_gap=2)
     % Eje y: a_B de 0 a 1 cada 0.2, marcas adentro y cortas.
-    yaxis(step=0.2, decimals=1, ticks="in", tick_size=1.5, tick_label_gap=2)
+    yaxis(step=0.2, decimals=1, ticks="in", tick_size=1.5, tick_label_gap=2, label="$a_B$")
 }
 
 % Rótulos de eje al EXTREMO (estilo del libro), en coords de mundo fuera del plot:
 % label= los centraría. Posiciones tomadas del escaneo; λ(µm) comparte la línea
 % base con los números del eje x.
-text("$a_B$") { -0.62 8.75 }
+%text("$a_B$") { -0.62 8.75 }
 text("$\lambda(\mu/rm)$") { 12.34 -0.28 }

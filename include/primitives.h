@@ -294,7 +294,7 @@ private:
 // Marcadores físicos de dot (§4.11): formas alternas al círculo, dispersadas
 // en cada punto del path. La geometría vive en markers.h (fuera del parser);
 // aquí solo el identificador, para que Dot lo cargue sin ciclo de includes.
-enum MarkerId { MK_CIRCLE, MK_SQUARE, MK_DIAMOND, MK_CROSS, MK_X, MK_ARROW, MK_CIRCLE_DOT };
+enum MarkerId { MK_CIRCLE, MK_SQUARE, MK_DIAMOND, MK_CROSS, MK_X, MK_TRIANGLE, MK_ARROW, MK_CIRCLE_DOT };
 
 // Rango de vértices donde un Dot dispersa su marcador (§4.11 marker_start/mid/end):
 // todo el path, o solo el primero / interiores / último. La tangente se calcula
@@ -312,6 +312,14 @@ public:
   void setMarker(MarkerId m) { marker_id = m; }
   void setOrient(bool o) { orient = o; }
   void setRange(MarkerRange r_) { range = r_; }
+  // §B.3: ángulo FIJO en grados (0 = como se dibuja, +x). Rota la forma sin seguir
+  // la tangente; la dirección se pasa al backend como (cosθ,sinθ), mismo pipeline
+  // que la tangente. Ignorado si orient=true (la tangente manda).
+  void setFixedAngle(double deg) { angle_deg = deg; has_angle = true; }
+  // §B.3: invierte 180° la dirección resultante (marker_orient="reverse"): la
+  // tangente (o el +x fijo) apunta al revés. Se aplica en draw-time sobre la
+  // dirección, así que sirve al caso disperso (la tangente se calcula por vértice).
+  void setReverse(bool r) { reverse_dir = r; }
 
   // Marcador definido por una struct del usuario (§B): en vez de un MarkerId del
   // catálogo, lleva sus subtrayectos crudos (caja del propio struct; ancla = su
@@ -324,6 +332,9 @@ private:
   double r = 1;
   MarkerId marker_id = MK_CIRCLE;
   bool orient = false;         // §B.3: orienta la forma a la tangente local del path
+  bool has_angle = false;      // §B.3: hay un ángulo fijo (setFixedAngle)
+  double angle_deg = 0;        // ángulo fijo en grados (si has_angle y !orient)
+  bool reverse_dir = false;    // §B.3: invierte 180° la dirección (marker_orient="reverse")
   MarkerRange range = MR_ALL;  // §4.11: subconjunto de vértices a marcar (start/mid/end)
   std::vector<Path> custom_subpaths;   // §B: geometría de un marcador-struct (vacío = builtin)
   bool custom_fillable = false;

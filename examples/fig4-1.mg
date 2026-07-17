@@ -11,7 +11,6 @@
 display_size 11 7.7
 font_size 8
 
-include "arrow.mg"       % marcadores de flecha: Arrowr…
 include "curvas3.mg"     % curvas de onda TRANSPUESTAS: SenDeriv2Sym / SenCosDeriv2Sym
 
 % ── Aparato: pantallas con rendijas (fiel al V1) ─────────────────────────────
@@ -25,16 +24,18 @@ struct Marco() {
 }
 
 % ── Haz de flechas de electrones ─────────────────────────────────────────────
-% Dos haces VERTICALES de 9 flechas (Arrowr apunta a la derecha), a la izquierda
-% de cada pantalla. repeat = traslación pura hacia arriba (advance), sin rotar.
+% Dos haces VERTICALES de 9 flechas (el arpón built-in `arrow` se orienta a la
+% tangente → apunta a la derecha), a la izquierda de cada pantalla. repeat =
+% traslación pura hacia arriba (advance), sin rotar. Antes venían de arrow.mg
+% (struct Arrowr) con include; hoy es el marcador built-in (tamaño físico en pt).
 struct Flechas() {
     world_window 0 2.2 0 1
     line_width 0.2
     for i = 0 to 8 {
         y = .1 + i*0.1
-        polyline(marker_end="Arrowr", marker_size=3) { .01 y .28 y }
-        polyline(marker_end="Arrowr", marker_size=3) { 1.3 y 1.58 y }
-    }    
+        polyline(marker_end="arrow", marker_size=4.5) { .01 y .28 y }
+        polyline(marker_end="arrow", marker_size=4.5) { 1.3 y 1.58 y }
+    }
 }
 
 % Base común de ambos paneles: pantallas + haz de electrones.
