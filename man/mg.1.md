@@ -101,7 +101,9 @@ so one line can draw many things. A path is a series of points `x1 y1 x2 y2 …`
 :   Join the points with straight lines. `polyline(closed=true)` closes the outline
     without filling it. `marker_start=`, `marker_mid=`, `marker_end=` put a marker
     on the first point, the interior ones or the last. They take the same names as
-    `dot`'s `marker=`, structures included. An arrow turns to follow the line;
+    `marker`'s `shape=`, structures included — here the argument is called `marker`
+    because it names *what* you put, while in the primitive it is `shape` because
+    the primitive already *is* the marker. An arrow turns to follow the line;
     `marker_orient="fixed"` stops it. `marker_size=`, `marker_color=` and
     `marker_fill=` style it.
 
@@ -127,14 +129,18 @@ so one line can draw many things. A path is a series of points `x1 y1 x2 y2 …`
 `sine(amplitude=, half_cycles=, phase=) { x1 y1  x2 y2 }`
 :   A sine segment between two points.
 
+`marker(d, shape="…") { path }`
+:   A symbol of diameter `d` **in typographic points** at every point — its size is
+    physical, so it survives any scaling and never distorts. `shape=` is
+    `"circle"` (default), `"square"`, `"diamond"`, `"cross"`, `"x"`, `"arrow"`, **or
+    the name of one of your own structures**. Filled by default; `color=` without
+    `fill=` leaves it hollow — there is no separate "disc" shape because shape and
+    fill are independent. An `arrow` turns to follow the path; anything else stays
+    fixed unless you ask for `marker_orient="auto"`.
+
 `dot(d) { path }`
-:   A marker of diameter `d` **in typographic points** at every point — its size is
-    physical, so it survives any scaling and never distorts. `marker=` picks the
-    shape: `"circle"` (default), `"square"`, `"diamond"`, `"cross"`, `"x"`,
-    `"arrow"`, **or the name of one of your own structures**. A bare `dot(d)` is a
-    filled disc; `color=` without `fill=` leaves it hollow. An `arrow` turns to
-    follow the path; anything else stays fixed unless you ask for
-    `marker_orient="auto"`.
+:   Shorthand for the common case, a filled disc: `dot(d)` is `marker(d)`. It takes
+    no `shape=` — for any other shape the primitive is `marker`.
 
 `polybar(width=w) { path }`
 :   One bar per point, from a common base, `w` wide in world units; each point is

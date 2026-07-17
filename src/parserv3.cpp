@@ -1262,19 +1262,26 @@ struct PrimStmt : Stmt {
       Path path = evalPath(s, 0, coords.size());
       std::unique_ptr<GraphicsItem> item;
       if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
-      else if (name == "dot") {
+      else if (name == "dot" || name == "marker") {
+        // §4.6: `marker(r, shape=…)` es la primitiva; `dot(r)` es su atajo para el
+        // caso común (el disco), y NO lleva shape= — un `dot` que dibuja un cuadrado
+        // sería un nombre mentiroso. Misma clase (Dot) para las dos.
         auto p = std::make_unique<Dot>();
         p->setRadius(posOr(s, 0, namedOr(s, "size", 1)));
-        // marker= (§4.11): forma física alterna al círculo. Acepta un builtin del
-        // catálogo (square/diamond/cross/x/arrow) O EL NOMBRE DE UN STRUCT del
-        // usuario, exactamente como marker_start/mid/end de polyline (§B): antes
-        // esta ruta solo miraba el catálogo y un struct moría con "marcador
-        // desconocido", así que `marker=` significaba cosas distintas según la
-        // primitiva que lo recibiera. El motor ya tenía todo (markerShapeFromStruct
-        // + setCustomShape); solo faltaba llamarlo aquí.
+        // shape= (§4.6): la forma física. Acepta un builtin del catálogo
+        // (circle/square/diamond/cross/x/arrow) O EL NOMBRE DE UN STRUCT del usuario,
+        // igual que marker_start/mid/end de polyline (§B). No hay forma "disk": el
+        // disco es `circle` RELLENO — la forma y el relleno son ejes independientes
+        // (§4), y duplicar el catálogo por relleno sería redundante.
+        if (named.count("marker"))
+          evalError(name == "dot"
+                    ? "dot no lleva forma; usa `marker(r, shape=…)` (§4.6)"
+                    : "marker: `marker=` se renombró a `shape=` (§4.6)");
+        if (name == "dot" && named.count("shape"))
+          evalError("dot es el atajo del disco y no lleva `shape=`; usa `marker(r, shape=…)` (§4.6)");
         MarkerId mid = MK_CIRCLE;
         bool builtin = true;
-        auto mit = named.find("marker");
+        auto mit = named.find("shape");
         if (mit != named.end()) {
           std::string mname = mit->second->eval(s).str;
           builtin = markerIdForName(mname, mid);
@@ -1331,7 +1338,7 @@ struct PrimStmt : Stmt {
     // dot: relleno por defecto = disco (§4.6). `color=` SIN `fill=` = círculo
     // ABIERTO (trazo en color de línea): se apaga el relleno. `dot(r)` a secas =
     // disco negro; `fill=` ya activó el relleno en emitPrimStyle.
-    if (name == "dot") {
+    if (name == "dot" || name == "marker") {
       if (named.count("color") && !named.count("fill")) {
         attrs.push_back(std::make_unique<GraphicsState>(GS_NOFILL));
       } else if (!named.count("fill")) {
@@ -2191,7 +2198,7 @@ static int transformOp(const std::string &n) {
 }
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
-         n == "dot" || n == "arc" || n == "ellipse" || n == "bezier" ||
+         n == "dot" || n == "marker" || n == "arc" || n == "ellipse" || n == "bezier" ||
          n == "polybar";
 }
 

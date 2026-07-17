@@ -293,41 +293,36 @@ arc(1, from=190, to=530) { 0 0 } % barrido de 340° CCW desde 190° (V1 CR 1 340
 
 Ambos estampan un símbolo en cada posición del bloque. Son **marcadores de tamaño físico**: su **posición** la transforma el sistema de coordenadas vigente, pero su **tamaño** (el radio `r`) es una cantidad **física, en puntos (pt)** —como `line_width` y `font_size`, §3.2— y **no** lo afectan la ventana ni las transformaciones, a diferencia del radio de `circle`, que es cantidad de mundo. Por eso son el primitivo correcto para marcar datos dentro de un marco `stretch` (§13.7): los símbolos caen donde deben y no se deforman por la anisotropía del marco.
 
-**`dot(r)`** es el caso base: un disco de radio físico `r`. Por defecto relleno; con `color=` y sin `fill=`, un círculo **abierto** (convención §4). Se conserva por brevedad y compatibilidad.
+**`marker(r, shape="…")`** es la primitiva: un símbolo de radio físico `r`, que cabe en un círculo de ese radio para que las formas queden comparables entre sí.
 
-**`marker(r, shape="…")`** generaliza `dot` a una familia de formas, todas de radio físico `r` (el símbolo cabe en un círculo de radio `r`, para que queden comparables). `dot(r)` ≡ `marker(r, shape="disk")`.
+**`dot(r)`** es su **atajo** para el caso común, el disco: `dot(r)` ≡ `marker(r)`. **No lleva `shape=`** —un `dot` que dibujara un cuadrado sería un nombre mentiroso—; si quieres otra forma, la primitiva es `marker`.
 
 ```text
-dot(0.15) { 2 3  4 3 }                             % disco relleno (atajo)
-marker(0.1, shape="circle", color="black") { … }  % círculos abiertos (fig2-3)
-marker(0.12, shape="cross") { … }                  % cruces +           (fig1)
-marker(0.12, shape="circle-dot") { … }             % círculo con punto ⊙ (fig1)
+dot(4) { 2 3  4 3 }                                % disco relleno (atajo)
+marker(3, shape="circle", color="black") { … }     % círculos abiertos (fig2-3)
+marker(4, shape="cross") { … }                     % cruces +
+marker(6, shape="Punta", marker_orient="auto") { … }  % un struct del usuario, sobre la tangente
 ```
 
-**Formas:**
+**Formas** (`shape=`):
 
-| `shape` | Símbolo | Relleno/contorno |
-|---|---|---|
-| `"disk"` (= `dot`) | ● disco | relleno (o abierto con `color=` sin `fill=`) |
-| `"circle"` | ○ círculo | abierto/relleno según §4 |
-| `"square"` | □ cuadro | abierto/relleno según §4 |
-| `"diamond"` | ◇ rombo | abierto/relleno según §4 |
-| `"cross"` | + | solo trazo |
-| `"x"` | × | solo trazo |
-| `"circle-dot"` | ⊙ círculo con punto | compuesto: contorno + punto central relleno |
+| `shape` | Símbolo |
+|---|---|
+| `"circle"` (default, = `dot`) | ○ / ● círculo |
+| `"square"` | □ cuadro |
+| `"diamond"` | ◇ rombo |
+| `"cross"` | + |
+| `"x"` | × |
+| `"arrow"` | → flecha (la única que se orienta sola) |
+| *un nombre de struct* | lo que dibuje el struct |
 
-Color y relleno/contorno siguen §4 (`fill=` rellena; `color=` fija el trazo; en las formas de solo trazo —`cross`, `x`— manda `color=`). El radio `r` es **físico**: no se deforma bajo `stretch` ni bajo transformaciones —solo la posición se transforma.
+**No hay forma `"disk"`, y es a propósito: la forma y el relleno son ejes independientes** (§4). El disco es `circle` **relleno**, que es el default; `color=` sin `fill=` da el círculo **abierto**. Duplicar el catálogo por relleno (disk/circle, square-lleno/square-vacío…) sería redundante. `cross` y `x` son siempre trazo, por geometría no cerrada, y ahí manda `color=`.
 
-**Un struct como marcador.** Donde se pide una forma se acepta también **el nombre de un
-struct** del usuario, y no solo las del catálogo: `dot(6, marker="Punta")`. La geometría se
-extrae del struct y se estampa con el mismo tamaño físico. La orientación por defecto es
-**fija** —un struct no se sabe "flecha", a diferencia del builtin `arrow`— y se cambia con
-`marker_orient="auto"` para que siga la tangente.
+**Un struct como marcador.** Donde se pide una forma se acepta también **el nombre de un struct** del usuario: `marker(6, shape="Punta")`. La geometría se extrae del struct y se estampa con el mismo tamaño físico. La orientación por defecto es **fija** —un struct no se sabe "flecha", a diferencia del builtin `arrow`— y se cambia con `marker_orient="auto"` para que siga la tangente. Es el mismo catálogo, y las mismas reglas, que los atributos `marker_start`/`marker_mid`/`marker_end` de `polyline`.
 
-> ⚠️ **Estado (2026-07-16): esta sección va adelante del código.** La primitiva `marker(r,
-> shape=…)` **no existe**; lo implementado es `dot(r, marker="…")`, y su catálogo es
-> `circle`, `square`, `diamond`, `cross`, `x`, `arrow` — sin `disk` ni `circle-dot`, y con
-> `arrow`, que la tabla de arriba no lista. Sincronizar §4.6 con lo real está pendiente.
+> **Los dos `marker` no son lo mismo, y no colisionan.** `marker(shape=…)` es la **primitiva**: estampa un símbolo por punto. `polyline(marker=…)` es el **atributo** que decora los vértices de una curva. Ahí el argumento se llama `marker` porque nombra *qué* se pone; en la primitiva se llama `shape` porque la primitiva ya *es* el marcador.
+
+El radio `r` es **físico**: no se deforma bajo `stretch` ni bajo transformaciones —solo la posición se transforma.
 
 *(V1: `DOT` (físico) y los marcadores con prefijo `MK`, inconclusos —ver `plan_marcadores.md`. La familia de **atributos** `marker_start`/`marker_mid`/`marker_end`, que decora los vértices de una curva en vez de dispersar puntos sueltos, comparte estas mismas formas y este render físico.)*
 
