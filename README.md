@@ -146,6 +146,14 @@ fail loudly, never silently). And **parts are unbuilt**: the specification descr
 features that do not exist yet. What is here is exercised by the regression corpus on
 every change, and has typeset published books.
 
+Three things stand between here and 1.0 ([§22.7](especificacion_mg.md)):
+
+1. **Freezing the grammar** — a figure that compiles keeps compiling.
+2. **Finishing `plot`** — `rule`, `legend` and `table` are reserved but unbuilt; each is
+   waiting for figures that ask for it.
+3. **UTF-8 text** — today text is converted to Latin-1, a PostScript restriction imposed
+   on all three backends. Mathematics is not affected (it goes through Latin Modern Math).
+
 `mg` is the **version 3** compiler (`MG_VERSION 3.0.0-beta`). The earlier two-letter grammar
 (`PL`, `CR`, `GNNUM`…) is frozen on the `v1-legacy` branch, and its corpus lives in
 [`examples/v1/`](examples/v1/) as the migration oracle. **Those sources do not compile

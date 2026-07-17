@@ -1662,13 +1662,31 @@ El contenido del string soporta el siguiente markup, procesado en parse time:
 > `FN_NOFACE` resuelve contra la cara por default — exactamente lo que ya hacía un `text()` normal,
 > que hornea `FN_DEFAULT`. Así `axis(label="/ix")` sale itálico igual que `text("/ix")`.
 
-> **Pendiente — texto multilínea.** No hay salto de línea: un `text()` es siempre **un renglón**
-> (verificado en `text_parser.cpp`, que no maneja `\n` ni tiene interlínea). Lo pide el nombre de
-> eje de `figure_02`, donde las unidades van en su **propio renglón**:
-> `'$\Delta T_1$\n(BT 10.3 - 12.3 $\mu$m)'`. Eso **confirma** la regla de §13.0 (las unidades van
-> dentro de la cadena del label, no en un `units=`) y a la vez muestra que la cadena necesita dos
-> renglones. Es capacidad de **texto**, no de `axis`: la necesitan `text()`, `label=` y `legend`
-> por igual. Un `\n` en el markup + interlínea derivada de `font_size` sería lo mínimo.
+#### Multilínea — especificado, sin implementar
+
+Un `text()` es hoy **un solo renglón**: `text_parser.cpp` no rompe línea ni tiene interlínea.
+
+**Diseño (decidido 2026-07-16, pendiente de implementar):** **`/n`** rompe el renglón. No es un
+escape del lexer —las cadenas de MG **no** tienen escapes tipo C (§14.1)—: llega a `parse_text`
+como los dos caracteres que es, igual que `/i` o `\alpha`. El motor lo resuelve emitiendo **un
+`Text`/`TextLine` por renglón**, desplazados en vertical; la interlínea sale de `font_size`. Sin
+motor de layout: es apilar renglones, no componer párrafos.
+
+> ⚠️ **`\n` NO puede usarse, y conviene saber por qué** (medido 2026-07-16, antes de
+> implementar). `\` **consume todo lo alfabético que sigue** —así se leen `\alpha` y `\nabla`—,
+> así que `text("uno\ndos")` no ve `\n` + `dos`: ve el símbolo **`ndos`**, y hoy avisa
+> `symbol name unknown ndos`. Tratar `\n` como caso especial rompería `\nabla` (quedaría salto
+> de línea + `abla`), y condicionarlo a "solo si no sigue letra" haría que `text("uno\n dos")`
+> funcionara y `text("uno\ndos")` no — una trampa peor que no tenerlo. `/` no tiene el problema:
+> consume **un** carácter, y `/n` hoy no significa nada (se imprime literal), así que el hueco
+> está libre y es inequívoco.
+
+Aplica a **todo texto**, no solo a `axis`: `text()`, `label=` y la futura `legend` lo heredan.
+
+Lo pide el nombre de eje de `figure_02`, con las unidades en su propio renglón —
+`'$\Delta T_1$\n(BT 10.3 - 12.3 $\mu$m)'` — lo que de paso **confirma** la regla de §13.0: las
+unidades van dentro de la cadena del label, no en un `units=`. Ninguna figura del corpus lo pide
+todavía, así que **no bloquea beta** (§22.7).
 
 #### Modo matemático
 
@@ -1772,6 +1790,34 @@ La fuente base determina el punto de partida del markup interno; los `/b`, `/i`,
 La alineación vertical se controla con `valign`: `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Es ortogonal a `align` (horizontal), así que ambos se combinan y se fijan por separado, también como estado (§7.3).
 
 ---
+
+### 14.4 Texto en Latin-1 — pendiente, y condición para salir de beta
+
+El texto corrido se convierte a **ISO-8859-1 (Latin-1)** en `parse_text()`
+(`UTF8toISO8859_1`, `text_parser.cpp`), un byte por carácter. Lo que no cabe en esos 256
+codepoints **se descarta con un aviso**: `“ ”`, `—`, `…`, `′`. Lo que sí cabe cubre el
+español y la física ordinaria: acentos, `ñ`, `¿¡`, `«»`, `°`, `×`, `±`, `µ`.
+
+**Los símbolos matemáticos no pasan por ahí** y no están limitados: se escriben `\comando`
+y se resuelven por `map_symbol`/`map_tex_cmmi` → Unicode → LM Math (§14, `plan_lmmath.md`).
+La restricción es solo del texto corrido.
+
+**Es una restricción de EPS, impuesta a los tres backends.** La conversión ocurre en
+`parse_text()`, *antes* de que exista un Display, y viene de la tabla `ISOLatin1Encoding`
+de las fuentes estándar de PostScript. Pero **SVG es UTF-8 nativo** y **PDF ya tiene su
+ruta Unicode abierta** (`HPDF_UseUTFEncodings`): los dos pagan una limitación que no es
+suya. Y ni siquiera es insalvable en EPS — `font_lmmath_eps.h` ya embebe LM Math como
+**Type42** con su propio `/Encoding`, o sea que la técnica para salirse de Latin-1 en EPS
+ya está en el árbol, funcionando, solo que aplicada al math.
+
+**Migrar el texto a UTF-8 es CONDICIÓN PARA SALIR DE BETA** (decidido 2026-07-16). El
+texto debe viajar en Unicode hasta el backend y que cada uno resuelva: SVG lo emite tal
+cual, PDF por su encoder UTF, EPS por Type42 o por un vector de codificación propio.
+
+**Orden recomendado:** hacer primero **P1 de `plan_lmmath.md`** (migrar `map_symbol` de
+Symbol → LM Math). Cuando esté, el pipeline ya llevará codepoints Unicode hasta los tres
+backends para los símbolos, y quitar Latin-1 del texto corrido será casi una consecuencia
+en vez de un cambio de arquitectura suelto.
 
 ## 15. Importar archivos
 
@@ -2112,4 +2158,36 @@ ejemplo, el `rectangle` transformable (§4.4).
 3. **`mg1to2.py`** (§20) — tras el parser; el corpus de prueba ya está listo como par
    `examples/v1/` ↔ `examples/v3/`.
 4. **Refactor `DeviceBackend`** (§22.3) — oportunista, cuando el manejo de matrices estorbe.
+
+### 22.7 Qué falta para salir de beta
+
+`MG_VERSION` es **3.0.0-beta**. La palabra dice dos cosas a la vez: el lenguaje **todavía
+puede cambiar** (nombres y argumentos no están congelados) y **faltan piezas** de esta
+spec. Lo que sí está se ejercita con el corpus en cada cambio y ha compuesto libros.
+
+**Las tres condiciones** (decididas 2026-07-16). No hay más:
+
+1. **Congelar la gramática.** Es lo que hace que la beta sea beta. Solo en la última
+   sesión se movieron `axis(title=)`→`label=`, `labels=`→`tick_labels=` y
+   `dot(marker=)`→`marker(shape=)`. Congelar significa que un `.mg` que compila hoy
+   seguirá compilando, y que un renombre pasa a costar una migración de verdad. (Los
+   nombres viejos fallan en compilación apuntando al nuevo, nunca en silencio; esa
+   escalera se retira al congelar.)
+2. **Cerrar lo aparcado de `plot`**: `rule` (§13.8), `legend` (§13.9) y `table` (§13.10),
+   hoy reservados y sin construir. Cada uno espera **figuras que lo pidan** — es la regla
+   del proyecto: no especular sin ejemplo.
+3. **Texto en UTF-8** (§14.4): quitar la conversión a Latin-1, que es una restricción de
+   EPS impuesta a los tres backends antes de que exista un Display.
+
+**Lo que NO bloquea beta**, aunque importe:
+
+- **`mg1to2.py`** (§20). Del material V1 solo queda el corpus del libro de QM, y las
+  figuras más difíciles ya se tradujeron —y se *transformaron*— a mano. El traductor
+  sigue siendo importante para seguir importando figuras, pero no es condición.
+- **Texto multilínea** (§14.1). Especificado, sin implementar; ninguna figura del corpus
+  lo pide todavía.
+- **Pseudo-3D** (`plan_pseudo3d.md`). Tema aparte y con poco avance. **MG no se va a
+  convertir en 3D**: la meta es *simular* volumen con proyección oblicua (`shear`), por
+  composición de primitivas 2D, sin z-buffer ni cámara. Ver `lib/pseudo3d.mg` y
+  `examples/simulate3d/`.
 

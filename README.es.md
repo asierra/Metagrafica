@@ -147,6 +147,15 @@ ajuste mañana (los nombres viejos fallan de forma ruidosa, nunca en silencio). 
 piezas**: la especificación describe cosas que aún no existen. Lo que sí está se ejercita
 con el corpus de regresión en cada cambio, y ha compuesto libros publicados.
 
+Faltan tres cosas para el 1.0 ([§22.7](especificacion_mg.md)):
+
+1. **Congelar la gramática** — que una figura que compila siga compilando.
+2. **Terminar `plot`** — `rule`, `legend` y `table` están reservados y sin construir; cada
+   uno espera figuras que lo pidan.
+3. **Texto en UTF-8** — hoy el texto se convierte a Latin-1, una restricción de PostScript
+   que se impone a los tres backends. Las matemáticas no están afectadas (van por Latin
+   Modern Math).
+
 `mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática vieja de
 dos letras (`PL`, `CR`, `GNNUM`…) quedó congelada en la rama `v1-legacy`, y su corpus vive
 en [`examples/v1/`](examples/v1/) como oráculo de migración. **Esos archivos no compilan

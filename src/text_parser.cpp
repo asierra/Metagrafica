@@ -135,6 +135,7 @@ string UTF8toISO8859_1(const char * in)
     std::string out;
     if (in == NULL)
         return out;
+    const char *start = in;   // solo para el aviso: la cadena entera como contexto
 
     unsigned int codepoint = 0;   // inicializado: ante UTF-8 malformado (byte de
                                   // continuación sin líder) no se usa sin definir
@@ -165,7 +166,20 @@ string UTF8toISO8859_1(const char * in)
               // PostScript. Un codepoint Unicode > 255 no cabe → se descarta con
               // aviso. Los símbolos griegos/matemáticos NO pasan por aquí: se
               // escriben como \comando y se resuelven vía map_symbol/map_tex_cmmi.
-              fprintf(stderr, "Caracter fuera de límites %c\n", ch);
+              //
+              // Migrar el texto a UTF-8 es CONDICIÓN PARA SALIR DE BETA (§14.4):
+              // Latin-1 es una restricción de las fuentes estándar de PostScript
+              // que se impone aquí —antes del backend— a los tres, aunque SVG es
+              // UTF-8 nativo y PDF ya tiene su ruta Unicode.
+              //
+              // El aviso dice el CODEPOINT y la cadena: antes imprimía `ch`, que a
+              // esta altura es el último byte de continuación del carácter (un
+              // 0x9C suelto, ilegible), y no decía dónde. Con el texto delante, el
+              // autor ve cuál es y lo sustituye (p.ej. “…” → «…», que sí es
+              // Latin-1 y además es la comilla correcta en español).
+              fprintf(stderr,
+                      "Aviso: carácter U+%04X fuera de Latin-1, se descarta — texto: \"%s\"\n",
+                      codepoint, start);
             }
         }
     }
