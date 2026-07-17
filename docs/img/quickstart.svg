@@ -16,6 +16,14 @@
 <path d="M 39.2489 104.936 L 215.869 104.936 " fill="none" stroke-width="0.1" stroke="#808080" />
 <path d="M 39.2489 127.014 L 215.869 127.014 " fill="none" stroke-width="0.1" stroke="#808080" />
 <path d="M 39.2489 38.7038 L 56.911 39.5869 L 74.573 42.2362 L 92.235 46.6517 L 109.897 52.8334 L 127.559 60.7813 L 145.221 70.4955 L 162.883 81.9758 L 180.545 95.2223 L 198.207 110.235 L 215.869 127.014 " fill="none" stroke-width="0.8" stroke="#000000" />
+<polyline points="51.1448,47.5348 59.1448,47.5348 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="55.1448,43.5348 55.1448,51.5348 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="79.404,51.9503 87.404,51.9503 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="83.404,47.9503 83.404,55.9503 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="109.429,65.1969 117.429,65.1969 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="113.429,61.1969 113.429,69.1969 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="154.468,91.8665 162.468,91.8665 " fill="none" stroke="#000000" stroke-width="0.800000" />
+<polyline points="158.468,87.8665 158.468,95.8665 " fill="none" stroke="#000000" stroke-width="0.800000" />
 <path d="M 39.2489 38.7038 L 215.869 38.7038 " fill="none" stroke-width="1" stroke="#000000" />
 <path d="M 39.2489 38.7038 L 39.2489 35.7038 " fill="none" stroke-width="1" stroke="#000000" />
 <path d="M 74.573 38.7038 L 74.573 35.7038 " fill="none" stroke-width="1" stroke="#000000" />
@@ -47,5 +55,10 @@
 <text x="22.957440" y="-87.898873" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="6.300000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="italic" font-weight="normal">2</text>
 </g>
 </g>
+<path d="M 54.2489 110.014 L 64.2489 110.014 " fill="none" stroke-width="1" stroke="#000000" />
+<text x="74.248940" y="-107.613931" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Theoretical</text>
+<polyline points="56.2489,96.0139 62.2489,96.0139 " fill="none" stroke="#000000" stroke-width="1.000000" />
+<polyline points="59.2489,93.0139 59.2489,99.0139 " fill="none" stroke="#000000" stroke-width="1.000000" />
+<text x="74.248940" y="-93.613931" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Experimental</text>
 </g>
 </svg>
