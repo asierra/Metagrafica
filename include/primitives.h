@@ -294,7 +294,7 @@ private:
 // Marcadores físicos de dot (§4.11): formas alternas al círculo, dispersadas
 // en cada punto del path. La geometría vive en markers.h (fuera del parser);
 // aquí solo el identificador, para que Dot lo cargue sin ciclo de includes.
-enum MarkerId { MK_CIRCLE, MK_SQUARE, MK_DIAMOND, MK_CROSS, MK_X, MK_ARROW };
+enum MarkerId { MK_CIRCLE, MK_SQUARE, MK_DIAMOND, MK_CROSS, MK_X, MK_ARROW, MK_CIRCLE_DOT };
 
 // Rango de vértices donde un Dot dispersa su marcador (§4.11 marker_start/mid/end):
 // todo el path, o solo el primero / interiores / último. La tangente se calcula

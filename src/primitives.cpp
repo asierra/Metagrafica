@@ -107,15 +107,28 @@ void Dot::draw(Display &g) {
     case MR_LAST:  lo = (n >= 1) ? n - 1 : 0; hi = n;                        break;
   }
   // Resuelve la forma UNA vez: struct del usuario (§B) o builtin del catálogo.
-  // El círculo builtin no pasa por marker() (usa g.dot(), un arco real).
+  // El círculo builtin no pasa por marker() (usa g.dot(), un arco real); circle-dot
+  // (⊙) tampoco: son DOS arcos reales (anillo sin relleno + punto central relleno),
+  // que un MarkerShape de subpaths no puede expresar (un solo `fillable` para toda
+  // la forma, y el anillo necesita un arco real, no un polígono aproximado).
   bool useCircle = !has_custom && marker_id == MK_CIRCLE;
+  bool useCircleDot = !has_custom && marker_id == MK_CIRCLE_DOT;
   MarkerShape shape;
-  if (has_custom)       { shape.subpaths = custom_subpaths; shape.fillable = custom_fillable; }
-  else if (!useCircle)  shape = markerShapeForId(marker_id);
+  if (has_custom)                     { shape.subpaths = custom_subpaths; shape.fillable = custom_fillable; }
+  else if (!useCircle && !useCircleDot) shape = markerShapeForId(marker_id);
 
   for (std::size_t i = lo; i < hi; i++) {
     const point &p = path[i];
     if (useCircle) { g.dot(p.x, p.y, r); continue; }               // círculo = arco real
+    if (useCircleDot) {
+      // Proporción del original digitalizado (plan_fig1.md): anillo ~23px,
+      // punto central ~6px de diámetro ⇒ radio interior ≈ 0.26 del exterior.
+      bool savedFill = g.isFilled();
+      g.setFilled(false); g.dot(p.x, p.y, r);          // anillo
+      g.setFilled(true);  g.dot(p.x, p.y, r * 0.3);    // punto central
+      g.setFilled(savedFill);
+      continue;
+    }
     point d = orient ? pathTangent(path, i) : point(0, 0);         // tangente local si se orienta
     g.marker(p.x, p.y, shape, r, d.x, d.y);
   }

@@ -16,14 +16,14 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-3.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=57 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=63 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
-**Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15).** Corre el corpus
-de `examples/` (19 `.mg` × EPS/SVG/**PDF** = 57 goldens) y compara contra la red golden
+**Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
+de `examples/` (21 `.mg` × EPS/SVG/**PDF** = 63 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=57 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=63 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -60,7 +60,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (19 `.mg`: arrow, curvas3, fig2-1/2-3/2-6, fig4-1/4-5/4-10, fig6-1/6-10, fig6-4, fig_polybar, fill_styles, line_patterns, markers-demo, primitives, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF (fig2-3 no lo detecta: fija `font "italic"`).
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (21 `.mg`: arrow, curvas3, fig1, fig2-1/2-3/2-5, fig4-1/4-5/4-10, fig6-1/6-10, fig6-4, fig_polybar, fill_styles, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF (fig2-3 no lo detecta: fija `font "italic"`).
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -396,10 +396,54 @@ los *tick labels* — los dos nombres que cualquiera alcanza primero significaba
 
 **`plot` EN PAUSA (2026-07-16), con ejemplos completos y funcionales:** fig2-3 (lineal), fig6-4
 (log), fig4-5 (3 paneles + `base=` + `label_at`), fig_polybar (`polybar` + 3 pasadas). Aparcado en
-la spec, **sin implementar**: `rule` (§13.8, valores notables — hijo del `plot`, decidido), `legend`
-(§13.9, dos fuentes), `table` (§13.10); y los huecos que destapó `figure_02.pdf`: **texto
-multilínea** (§14.1), **retícula por eje** (§13.6) y **`alpha`** (§4.11 — EPS no lo tiene nativo;
-es decisión de arquitectura, no un atributo). Los tres primeros esperan figuras a propósito.
+la spec, **sin implementar**: `rule` (§13.8, valores notables — hijo del `plot`, decidido), `table`
+(§13.10); y los huecos que destapó `figure_02.pdf`: **texto multilínea** (§14.1), **retícula por
+eje** (§13.6) y **`alpha`** (§4.11 — EPS no lo tiene nativo; es decisión de arquitectura, no un
+atributo). Esperan figuras a propósito. `legend` (§13.9) se cerró (forma explícita) el
+2026-07-17, ver abajo.
+
+### Cerrado en la sesión del 2026-07-17 (`legend`, forma explícita; §13.9)
+
+**Fig. 1** de `docs/first_article.pdf` (p. 8) desbloqueó `legend` (§13.9), como preveía
+`plan_fig1.md`: 1 curva + 2 series de marcadores, digitalizada y portada a
+`examples/fig1.mg` con la leyenda **a mano** primero (línea + 2 markers, sin caja) y
+luego sustituida por el `legend { entry(...) { ... } }` real. Solo la fuente **explícita**
+(§13.9 punto 2) quedó implementada; la automática vía `rule` (punto 1) sigue esperando a que
+`rule` exista.
+
+- **`legend` es hijo de `plot`**, como `xaxis`/`yaxis`: coords EXTERIORES (la caja física),
+  nunca mapeada por datos, dibujada AL FINAL (encima de contenido y ejes). Cero elementos
+  gráficos nuevos — reusa `FitStmt::fitMatrix` (MEET, `stretch=false`) para ajustar la muestra
+  de cada `entry` (un bloque arbitrario en caja unitaria 0..1) sin deformarla a elipse, y
+  `AT_TALIGN`/`AT_TVALIGN`/`AT_THEIGHT` (los mismos que usa el nombre de eje de `axis`) para el
+  texto.
+- **`at="top-right"/"top-left"/"bottom-right"/"bottom-left"`** ancla una esquina de la caja del
+  plot con `margin=` (pt) de inset. **Insight de diseño:** el lado (`"left"`/`"right"`) fija el
+  borde de la COLUMNA DE MUESTRAS, no el del texto — el compilador no puede medir el ancho de
+  una cadena en parse-time (los tres backends lo resuelven en DRAW-TIME, cada uno con su propio
+  mecanismo: `stringwidth` en EPS, `HPDF_Page_TextWidth` en PDF, `text-anchor` en SVG). Con
+  `"...-right"` la muestra TERMINA en el margen y el texto CRECE a la izquierda desde ahí con
+  `align="right"` nativo del backend — compone sin medir texto en ningún caso.
+- Estilo físico (pt), como `tick_size`/`label_gap`: `margin`/`sample_width`/`sample_height`/
+  `gap`/`row_gap`/`font_size`. Sin marco/fondo todavía (ninguna figura lo pide); `border=`/
+  `fill=` esperan a la que lo pida, mismo criterio que el resto del lenguaje.
+- Verificado en los tres backends (EPS+gs, SVG, PDF) — idénticos.
+
+**`circle-dot` (⊙) añadido a §4.6**, resolviendo el pendiente #5 de `plan_fig1.md`: la serie de
+Houghton en la Fig. 1 es ⊙, no ○ (`fig1.mg` usaba `"circle"` como aproximación). Es la
+EXCEPCIÓN a "forma y relleno son ejes independientes" (§4.6): una forma compuesta con relleno
+mixto por construcción. No pasa por `MarkerShape`/subpaths (polígonos rectos en caja unitaria;
+un anillo necesita arco real y una sola forma no puede tener dos subtrayectos con relleno
+distinto) — se resuelve en `Dot::draw` (`src/primitives.cpp`) como DOS `g.dot()` reales
+superpuestos (anillo `setFilled(false)` + punto central al 30% del radio `setFilled(true)`),
+igual que `circle` ya se resolvía como arco real y no polígono. Proporción de la digitalización
+de Fig. 1 (anillo ~23px, punto ~6px de diámetro). Cero cambios de backend — reusa `Display::dot`/
+`setFilled` en los tres. `make` limpio (sin warnings nuevos).
+
+**`fig1.mg` entró al corpus golden** (`test/run.sh`, 19→20 ejemplos, `ok=63`): es el único que
+ejercita `legend` y `circle-dot`. Ajuste de nombre en el `EXAMPLES=` del harness; sin cambios al
+motor. Los ajustes finos de posición de los `label` de los ejes se dejaron como están —
+Alejandro los revisó y decidió no perseguirlos ("es complicarse demasiado").
 
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran

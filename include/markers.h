@@ -33,6 +33,10 @@ inline MarkerShape markerShapeForId(MarkerId id) {
     // El círculo se enruta a Display::dot (arco real); vacío por robustez,
     // nunca se consulta.
     break;
+  case MK_CIRCLE_DOT:
+    // ⊙: anillo + punto central, dos arcos reales (Dot::draw); vacío por
+    // robustez, nunca se consulta (mismo trato que MK_CIRCLE).
+    break;
   case MK_SQUARE:
     shape.fillable = true;
     shape.subpaths.push_back({
@@ -74,6 +78,7 @@ inline bool markerIdForName(const std::string &name, MarkerId &out) {
   if (name == "cross")   { out = MK_CROSS;   return true; }
   if (name == "x")       { out = MK_X;       return true; }
   if (name == "arrow")   { out = MK_ARROW;   return true; }
+  if (name == "circle-dot") { out = MK_CIRCLE_DOT; return true; }
   return false;
 }
 

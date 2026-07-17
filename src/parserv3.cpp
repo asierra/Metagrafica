@@ -1956,6 +1956,100 @@ struct CompoundStmt : Stmt {
   }
 };
 
+// legend (§13.9, forma EXPLÍCITA de series): hijo de `plot`, coords EXTERIORES
+// (física, la caja) — nunca mapeada por datos, así que su tamaño no se deforma
+// con plot log ni con el stretch (mismo trato que xaxis/yaxis). Cada `entry()`
+// declara su propia muestra: un bloque arbitrario en caja unitaria 0..1, ajustado
+// con el fitMatrix MEET-centrado de `fit`/colocación de struct (stretch=false) —
+// preserva forma, así un marker circular no sale elipse.
+//
+// at= ancla una ESQUINA de la caja del plot con margin= (pt) de inset. El lado
+// ("left"/"right") fija el borde de la COLUMNA DE MUESTRAS, no del texto: el
+// compilador no puede medir el ancho de una cadena en parse-time (ningún backend
+// lo expone ahí — EPS usa `stringwidth`, PDF `HPDF_Page_TextWidth`, SVG
+// `text-anchor`, los tres en DRAW-TIME). "-left" arranca la muestra en el margen
+// y el texto CRECE a la derecha (align=left, natural); "-right" TERMINA la
+// muestra en el margen y el texto CRECE a la izquierda desde ahí (align=right,
+// nativo del backend) — cero necesidad de medir texto en ningún caso.
+struct LegendEntry { ExprPtr label; std::vector<StmtPtr> sample; };
+struct LegendStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  std::vector<LegendEntry> entries;
+  double boxX0 = 0, boxY0 = 0, boxX1 = 1, boxY1 = 1;   // caja del plot; PlotStmt la fija antes de exec()
+
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (entries.empty()) return;
+    std::string at = namedStr(s, named, "at"); if (at.empty()) at = "top-right";
+    bool top    = at.compare(0, 3, "top") == 0;
+    bool bottom = at.compare(0, 6, "bottom") == 0;
+    bool right  = at.size() >= 5 && at.compare(at.size() - 5, 5, "right") == 0;
+    bool left   = at.size() >= 4 && at.compare(at.size() - 4, 4, "left") == 0;
+    if ((!top && !bottom) || (!left && !right)) {
+      evalError("legend: at= debe ser \"top-left\"/\"top-right\"/\"bottom-left\"/\"bottom-right\": ", at);
+      return;
+    }
+
+    double margin       = namedNum(s, named, "margin", 6.0);        // pt
+    double sampleWidth  = namedNum(s, named, "sample_width", 18.0); // pt
+    double sampleHeight = namedNum(s, named, "sample_height", 10.0);// pt
+    double gap          = namedNum(s, named, "gap", 4.0);           // pt
+    double rowGap        = namedNum(s, named, "row_gap", 4.0);       // pt (aire extra entre renglones)
+    double fontSize      = namedNum(s, named, "font_size", 8.0);     // pt
+
+    // Escala física (cm por unidad de usuario), como axis (§13.5): pt→mundo por eje.
+    double dcx, dcy; mg.getDimension(dcx, dcy);
+    double wx, wy, wdx, wdy; mg.getWindow(wx, wy, wdx, wdy);
+    double scx = dcx / wdx, scy = dcy / wdy;
+    if (!mg.getStretch()) { double m = scx < scy ? scx : scy; scx = scy = m; }
+    const double PT_PER_CM = 72.0 / 2.54;
+    auto ptX = [&](double pt) { return (pt / PT_PER_CM) / scx; };
+    auto ptY = [&](double pt) { return (pt / PT_PER_CM) / scy; };
+
+    double rowH = ptY(std::max(sampleHeight, fontSize * 1.2) + rowGap);
+    double marginX = ptX(margin), marginY = ptY(margin);
+    double n = (double)entries.size();
+    double topEdgeY = top ? (boxY1 - marginY) : (boxY0 + marginY + n * rowH);
+
+    double sw = ptX(sampleWidth), sh = ptY(sampleHeight), gp = ptX(gap);
+    double sampleLeft, sampleRight;
+    if (right) { sampleRight = boxX1 - marginX; sampleLeft = sampleRight - sw; }
+    else       { sampleLeft  = boxX0 + marginX; sampleRight = sampleLeft + sw; }
+    double textX = right ? (sampleLeft - gp) : (sampleRight + gp);
+    int alignCode = right ? 2 : 0;   // 0=left, 2=right (nativo del backend, sin medir texto)
+
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, alignCode); out.push_back(std::move(a)); }
+    { auto a = std::make_unique<Attribute>(); a->set(AT_TVALIGN, 2); out.push_back(std::move(a)); }   // middle
+    { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)fontSize); out.push_back(std::move(a)); }
+    if (alignCode != 0) g_flags.using_textalign = true;   // prólogo /cshow de EPS (align=right)
+
+    Box unit{0, 0, 1, 1};
+    for (size_t i = 0; i < entries.size(); i++) {
+      double cy = topEdgeY - (i + 0.5) * rowH;
+
+      // Muestra: fit MEET-centrado (preserva forma) de la caja unitaria al rectángulo
+      // de esta fila. Inline con OPMPUSH/OPMPOP, como fit de struct.
+      Matrix M = FitStmt::fitMatrix(unit, sampleLeft, cy - sh / 2, sampleRight, cy + sh / 2, /*stretch=*/false);
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
+      for (auto &st : entries[i].sample) st->exec(s, mg, out);
+      popTransforms(countTransforms(entries[i].sample), out);
+      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+
+      // Texto de la entrada (hereda align/valign/font_size del push de arriba).
+      Value lv = entries[i].label->eval(s);
+      std::string str;
+      if (lv.type == Value::STRING) str = lv.str;
+      else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", lv.num); str = buf; }
+      auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(textX, cy));
+      out.push_back(std::move(gs));
+      out.push_back(parse_text(str, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));
+    }
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
 // plot (§13.7): marco de datos declarativo. Bloque de contenido (sentencias de
 // datos, EN UNIDADES DE DATOS) + rangos como args (x=/y=) + caja física box=
 // (world coords; default = ventana vigente). El contenido se mapea datos→caja;
@@ -1971,6 +2065,7 @@ struct PlotStmt : Stmt {
   std::map<std::string, ExprPtr> named;    // x, y, xscale, yscale, box
   std::vector<StmtPtr> content;            // sentencias de datos (mapeadas)
   std::unique_ptr<AxisStmt> xaxis, yaxis;  // ejes interceptados (coords exteriores)
+  std::unique_ptr<LegendStmt> legend;      // leyenda interceptada (coords exteriores, §13.9)
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
     // Rangos de datos (x=(from,to), y=(from,to)). Deben ser TUPLAS, igual que box=:
@@ -2183,6 +2278,12 @@ struct PlotStmt : Stmt {
     if (yaxis) {
       double xb = baseOf(*yaxis, x0, x1, bx0, bx1, xlog, bx0, "yaxis");
       setup(*yaxis, xb, by0, xb, by1, y0, y1, yscale); yaxis->exec(s, mg, out);
+    }
+    // Leyenda: ENCIMA de contenido+ejes (última en pintarse), en coords exteriores
+    // (la caja física, no mapeada por datos).
+    if (legend) {
+      legend->boxX0 = bx0; legend->boxY0 = by0; legend->boxX1 = bx1; legend->boxY1 = by1;
+      legend->exec(s, mg, out);
     }
   }
 };
@@ -2454,6 +2555,34 @@ static StmtPtr parseBlock(Lexer &lx) {
 // plot(args) { contenido… xaxis(...) yaxis(...) }  (§13.7). Calcado de parseCompound:
 // args nombrados + loop de parseStatement hasta '}', INTERCEPTANDO xaxis/yaxis (que
 // solo son válidos aquí) → AxisStmt sin bloque de coords (plot fija p1 p2 y from/to).
+// legend( ... ) { entry("texto") { <bloque de la muestra, coords 0..1> } ... }
+// Solo válido dentro de plot (como xaxis/yaxis); `entry` solo dentro de legend.
+static std::unique_ptr<LegendStmt> parseLegendBody(Lexer &lx) {
+  auto st = std::make_unique<LegendStmt>();
+  if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+  if (!lx.accept(T_LBRACE)) parseError(lx, "'{' tras legend(...)");
+  while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+    if (lx.accept(T_NEWLINE)) continue;
+    if (lx.peek().type != T_IDENTIFIER || lx.peek().str != "entry")
+      parseError(lx, "'entry(...)' dentro de legend");
+    lx.next();
+    LegendEntry e;
+    if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras entry");
+    e.label = parseExpression(lx);
+    if (!lx.accept(T_RPAREN)) parseError(lx, "')' tras el texto de entry");
+    while (lx.accept(T_NEWLINE)) {}              // '{' puede ir en la línea siguiente
+    if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del cuerpo de entry");
+    while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+      if (lx.accept(T_NEWLINE)) continue;
+      e.sample.push_back(parseStatement(lx));
+    }
+    if (!lx.accept(T_RBRACE)) parseError(lx, "'}' del cuerpo de entry");
+    st->entries.push_back(std::move(e));
+  }
+  if (!lx.accept(T_RBRACE)) parseError(lx, "'}' de legend");
+  return st;
+}
+
 static StmtPtr parsePlot(Lexer &lx) {
   auto st = std::make_unique<PlotStmt>();
   if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
@@ -2469,6 +2598,11 @@ static StmtPtr parsePlot(Lexer &lx) {
       // Sin bloque { }: plot suministra coords y from/to. Un bloque aquí es error.
       if (lx.peek().type == T_LBRACE) parseError(lx, "xaxis/yaxis dentro de plot no llevan bloque { }");
       if (isX) st->xaxis = std::move(ax); else st->yaxis = std::move(ax);
+      continue;
+    }
+    if (tk.type == T_IDENTIFIER && tk.str == "legend") {
+      lx.next();
+      st->legend = parseLegendBody(lx);
       continue;
     }
     st->content.push_back(parseStatement(lx));

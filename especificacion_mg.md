@@ -314,9 +314,20 @@ marker(6, shape="Punta", marker_orient="auto") { … }  % un struct del usuario,
 | `"cross"` | + |
 | `"x"` | × |
 | `"arrow"` | → flecha (la única que se orienta sola) |
+| `"circle-dot"` | ⊙ anillo + punto central |
 | *un nombre de struct* | lo que dibuje el struct |
 
 **No hay forma `"disk"`, y es a propósito: la forma y el relleno son ejes independientes** (§4). El disco es `circle` **relleno**, que es el default; `color=` sin `fill=` da el círculo **abierto**. Duplicar el catálogo por relleno (disk/circle, square-lleno/square-vacío…) sería redundante. `cross` y `x` son siempre trazo, por geometría no cerrada, y ahí manda `color=`.
+
+**`circle-dot` (⊙, añadido 2026-07-17, con `fig1.mg`)** es la excepción a "la forma y el
+relleno son ejes independientes": es una forma COMPUESTA con relleno mixto por construcción
+(anillo abierto + disco relleno), no una casilla más del catálogo relleno/vacío. No pasa por
+`MarkerShape`/subpaths como el resto (esos son polígonos rectos en caja unitaria; un anillo
+necesita un arco real, y una sola forma no puede tener dos subtrayectos con relleno distinto):
+se resuelve como DOS `dot()` reales superpuestos —anillo (`setFilled(false)`) y punto central al
+30% del radio (`setFilled(true)`)—, igual que `circle` se resuelve como un arco real y no como
+polígono. Proporción tomada de la digitalización de Fig. 1 (`plan_fig1.md`): anillo ~23px, punto
+central ~6px de diámetro.
 
 **Un struct como marcador.** Donde se pide una forma se acepta también **el nombre de un struct** del usuario: `marker(6, shape="Punta")`. La geometría se extrae del struct y se estampa con el mismo tamaño físico. La orientación por defecto es **fija** —un struct no se sabe "flecha", a diferencia del builtin `arrow`— y se cambia con `marker_orient="auto"` para que siga la tangente. Es el mismo catálogo, y las mismas reglas, que los atributos `marker_start`/`marker_mid`/`marker_end` de `polyline`.
 
@@ -1134,7 +1145,7 @@ parte todavía no exista. Es normativa: el resto de §13 y §13.7 la usan.
 | **valor notable** (umbral, retorno, nivel) | `axvline`/`axhline` | — | **`plot { rule(…) }`** ⚠️ reservado (§13.8) |
 | la línea del eje | spine | axis | `axis`, `extend=` |
 | retícula | grid | `grid` | `grid=`, `grid()` |
-| leyenda | `legend` | `legend` | **`legend`** ⚠️ reservado (§13.9) |
+| leyenda | `legend` | `legend` | **`legend`** (§13.9; forma explícita implementada, `rule` pendiente) |
 | tabla inserta | `table` | — | **`table`** ⚠️ reservado (§13.10) |
 
 **Marcas y valores notables son cosas distintas** (§13.8): la malla se lee, el valor notable
@@ -1607,21 +1618,31 @@ Confirmed ash`, para saber *qué significan*). No son el mismo texto ni van al m
 `label=` + `label_at=` no basta: harían falta dos canales (¿`tick=true` para el número, `label=`
 para la prosa?). fig4-5 no lo pide (su `x₁` es un solo rótulo). Decidir con más figuras.
 
-### 13.9 legend — reservado (sin diseñar)
+### 13.9 legend
 
-El nombre queda reservado (§13.0). El diseño **espera más figuras**; lo que sí está fijado es de
-dónde salen las entradas, y son **dos fuentes distintas**:
+Hay **dos fuentes** de entradas, y son distintas:
 
-**1. Los `rule` (§13.8) — automática y limpia.** En `figure_02` hay correspondencia **1:1 exacta**
-entre entradas de leyenda y `axvline`: la leyenda no describe series, **describe valores
-notables**. Un `rule` con `label_at="legend"` se autocolecciona sin ambigüedad — lleva su nombre
-y su estilo, y la muestra ES su línea.
+**1. Los `rule` (§13.8) — automática y limpia, sin implementar todavía.** En `figure_02` hay
+correspondencia **1:1 exacta** entre entradas de leyenda y `axvline`: la leyenda no describe
+series, **describe valores notables**. Un `rule` con `label_at="legend"` se autocolecciona sin
+ambigüedad — lleva su nombre y su estilo, y la muestra ES su línea. Espera a que `rule` exista.
 
-**2. Las series — explícita.** Aquí no hay correspondencia que autocoleccionar: las dos series de
-`fig_polybar` son **tres** `polybar` (trama sin contorno → blanco opaco → contorno solo, §4.12).
-Un colector ingenuo daría tres entradas para dos series, y la muestra de "522 cm" —que es trama
-*y* contorno— no es ninguno de los tres items por separado. El autor declara la entrada y su
-muestra.
+**2. Las series — explícita, IMPLEMENTADA (2026-07-17, con `fig1.mg`).** Aquí no hay
+correspondencia que autocoleccionar: las dos series de `fig_polybar` son **tres** `polybar`
+(trama sin contorno → blanco opaco → contorno solo, §4.12). Un colector ingenuo daría tres
+entradas para dos series, y la muestra de "522 cm" —que es trama *y* contorno— no es ninguno de
+los tres items por separado. El autor declara la entrada y su muestra:
+
+```text
+plot(...) {
+  ...
+  legend(at="top-right", margin=10, sample_width=20, gap=5, font_size=8) {
+    entry("Adem (1967)/Garduño and Adem (1988)")  { polyline { 0 0.5  1 0.5 } }
+    entry("Houghton (1971)/Holton (1979)")         { marker(3, shape="circle", color="black") { 0.5 0.5 } }
+    entry("Peixoto and Oort (1984)/Holton (1979)") { marker(size=4, shape="cross") { 0.5 0.5 } }
+  }
+}
+```
 
 > 💡 **Evidencia de campo contra la autocolección universal.** El propio `figure_02.py` **tiene
 > disponible** la autocolección de matplotlib (`axvline(…, label=…)` + `ax.legend()`) y **la
@@ -1630,6 +1651,30 @@ muestra.
 > `axvline`. Motivo: `sns.histplot` inyectaría su propia entrada, y el autor quiere mandar sobre
 > cuáles aparecen y en qué orden. La "repetición de estilo" que parecía el defecto de la leyenda
 > explícita es un precio que los usuarios de matplotlib **ya pagan por elección**.
+
+**`legend` es hijo de `plot`**, como `xaxis`/`yaxis` (§13.7): se ejecuta en coordenadas
+**exteriores** (la caja física), nunca mapeada por datos — su tamaño físico no se deforma con
+`plot log` ni con el stretch, y se dibuja AL FINAL (encima de contenido y ejes).
+
+**La muestra de cada `entry` es un bloque arbitrario**, no un enum `sample="line"/"marker"`: es
+la caja unitaria 0..1 que se ajusta con el `fitMatrix` MEET-centrado de `fit`/colocación de
+struct (`stretch=false`) al rectángulo `sample_width`×`sample_height` de esa fila — preserva
+forma, así que un `marker(shape="circle")` sale círculo, no elipse, aunque la fila no sea
+cuadrada.
+
+**`at=`** (`"top-right"`/`"top-left"`/`"bottom-right"`/`"bottom-left"`) ancla una esquina de la
+caja del plot, con `margin=` (pt) de inset. El lado (`"left"`/`"right"`) fija el borde de la
+**columna de muestras**, no el del texto: el compilador **no puede medir el ancho de una
+cadena en parse-time** — los tres backends lo calculan en DRAW-TIME con su propio mecanismo
+(EPS `stringwidth`, PDF `HPDF_Page_TextWidth`, SVG `text-anchor`), y ninguno lo expone antes.
+`"...-left"` arranca la muestra en el margen y el texto **crece a la derecha** (`align="left"`,
+natural); `"...-right"` **termina** la muestra en el margen y el texto **crece a la izquierda**
+desde ahí (`align="right"`, nativo del backend) — así ningún caso necesita medir texto.
+
+Estilo: `margin`/`sample_width`/`sample_height`/`gap`/`row_gap`/`font_size`, todos **físicos**
+(pt), como `tick_size`/`label_gap` (§13.5). Sin marco/fondo por ahora (`fig1.mg` no lo
+usa); `border=`/`fill=` se añaden cuando una figura los pida (mismo criterio que el resto del
+lenguaje: la abstracción espera a la figura que la necesita).
 
 ### 13.10 table — reservado (sin diseñar)
 
