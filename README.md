@@ -4,6 +4,8 @@
 ![License](https://img.shields.io/badge/License-GPL%203.0-green.svg)
 ![Version](https://img.shields.io/badge/version-3.0.0--beta-orange.svg)
 
+**English** · [Español](README.es.md)
+
 **A descriptive language for technical and scientific figures.**
 
 You describe *what the figure is* — points, paths, structures, transformations — and
