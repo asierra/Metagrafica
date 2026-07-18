@@ -54,7 +54,7 @@ Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regener
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`.
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
 
 **Política V1 (2026-07-15):** todo el trabajo actual es desarrollo de **V3**; **no se trackea material V1 nuevo**. Los `.mg` crudos de V1 y sus traducciones literales se quedan en el árbol **sin commitear** (p. ej. `examples/fig4-5v1.mg`, `fig4-5v3.mg`, y los de fig6-4). Lo ya trackeado en `examples/v1/` (31 archivos: corpus congelado + oráculo) **se queda como está** — la política aplica de aquí en adelante, no se borra nada.
 

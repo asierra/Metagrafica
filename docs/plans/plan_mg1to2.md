@@ -525,11 +525,11 @@ NINGUNO es bug del traductor. Son de dos tipos:
    - **Radio de `dot` ×2:** V1 `DOT 4` → `setRadius(2)` → el oráculo rindió **r=1** (el
      `Dot::draw` viejo lo halveaba). El `bin/mg` actual rinde `dot(2)` → **r=2** (lineal,
      confirmado con un dot(1)/dot(2) suelto). El traductor emite `dot(2)` (misma semántica
-     que V1); el 2× es del render. Afecta fig2-6, fig6-10. ⚠ **DECISIÓN PENDIENTE de
-     Alejandro** (es de convención, no la tomé sola): ¿los dots migrados deben verse como
-     el original (chico) → el traductor emitiría `dot(diam/4)` para calibrar contra el
-     oráculo, como pide el TODO en `handle_DOT`; o usar la convención V3 `dot(r)=radio r`
-     (grande)? Un solo cambio de línea en `handle_DOT` si se elige lo primero.
+     que V1); el 2× es del render. Afecta fig2-6, fig6-10. ✅ **DECISIÓN ZANJADA (2026-07-17):
+     mantener `dot(diam/2)`** — la traducción FIEL. `DOT 4` = diámetro 4 = radio 2, exactamente
+     lo que produce el front-end V1 actual (`Parser.cpp:238`) y lo que V3 dibuja. El oráculo
+     r=1 es un ARTEFACTO de un `bin/mg` viejo (halving corregido en V1 y V3); calibrar a él
+     con `dot(diam/4)` **reintroduciría ese bug**. El diff 2× es deriva de backend, no error.
    - **IDs de patrón de hatch:** `mgpat_<idx>_<color>` (oráculo) → `mgpat_<ang>_<gap>_<color>`
      (backend actual, del trabajo de patterns). Mismos rectángulos/posiciones → render
      equivalente. Todo el diff de fill_styles (20) es esto.

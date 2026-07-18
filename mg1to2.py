@@ -645,7 +645,13 @@ def emit_gnpath_dot_loop(state, out, name, r):
 
 
 def handle_DOT(sc, state, out):
-    # ⚠ calibrar factor de tamaño fisico contra el oraculo (plan_mg1to2.md §6.4/§1).
+    # Radio = diametro/2, FIEL al front-end V1 actual (Parser.cpp GI_DOT:
+    # `r = yylval.f / 2.0; d->setRadius(r)`) y a V3 (`Dot::draw` pasa r a
+    # g.dot() sin re-dividir). DECISION 2026-07-17: NO se calibra al oraculo.
+    # El oraculo dibuja `DOT 4` con r=1 (mitad), pero es un ARTEFACTO de un
+    # bin/mg viejo cuyo Dot::draw halveaba de mas -- ya corregido en V1 y V3.
+    # Emitir dot(diam/4) reintroduciria ese bug (dots a la mitad de su tamano
+    # real). El diff 2x vs oraculo es deriva de backend (plan §11), no un error.
     reopen_lc_if_pending(state, out)
     diam = sc.expect_num('(diametro de DOT)')
     r = diam / 2.0
