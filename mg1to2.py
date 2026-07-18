@@ -225,18 +225,115 @@ def combine_scale(pending, factor):
     return fmt(float(pending) * factor)
 
 
-def fmt_block(state, ref_or_pts):
+class Affine:
+    """Matriz afin 2x3 (fila-mayor; fila inferior [0,0,1] implicita) que replica
+    include/matrix.h EXACTAMENTE: `translate`/`scale` POST-multiplican (M = M.A,
+    mismo orden que Matrix::matmat) y `apply` es Matrix::transform. Es el canal PT
+    (mtpt) del ground truth: acumula TLPT/SCPT hasta un IDPT. Solo se usa para
+    resolver `BZ/PL/PG &nombre` (ver resolve_raw_through_mtpt)."""
+    __slots__ = ('a', 'b', 'c', 'd', 'e', 'f')
+
+    def __init__(self, a=1.0, b=0.0, c=0.0, d=0.0, e=1.0, f=0.0):
+        self.a, self.b, self.c, self.d, self.e, self.f = a, b, c, d, e, f
+
+    def translate(self, tx, ty):  # M = M . T
+        self.c = self.a * tx + self.b * ty + self.c
+        self.f = self.d * tx + self.e * ty + self.f
+
+    def scale(self, sx, sy):      # M = M . S
+        self.a *= sx
+        self.d *= sx
+        self.b *= sy
+        self.e *= sy
+
+    def apply(self, x, y):        # Matrix::transform
+        return (self.a * x + self.b * y + self.c,
+                self.d * x + self.e * y + self.f)
+
+
+def current_body_extent(state):
+    """(wdx, wdy) de la world_window vigente del cuerpo (unitaria si no hay)."""
+    if state.body_ww is None:
+        return (1.0, 1.0)
+    x0, x1, y0, y1 = state.body_ww
+    return (x1 - x0, y1 - y0)
+
+
+def current_body_origin(state):
+    """(wmx, wmy) de la world_window vigente del cuerpo (origen si no hay)."""
+    if state.body_ww is None:
+        return (0.0, 0.0)
+    x0, _x1, y0, _y1 = state.body_ww
+    return (x0, y0)
+
+
+def resolve_raw_through_mtpt(state, pts):
+    """Aplica el canal PT (mtpt) a un path CRUDO y lo devuelve en unidades de
+    DATO de la ventana vigente, tal como V1 dibuja `BZ &nombre`. En V1
+    process_path(mtpt, crudo) da coords NORMALIZADAS [0,1]^2 (mtpt compone
+    traslaciones YA normalizadas por WW -- TLPT hace mt.translate(dx/wdx,dy/wdy)
+    -- y escalas dimensionales); el punto NO se re-normaliza. Como V3 SI
+    re-normaliza lo que emitimos, hay que des-normalizar (x*wd+wm) para que la
+    ida y vuelta coincida con el dibujo de V1."""
+    wdx, wdy = current_body_extent(state)
+    wmx, wmy = current_body_origin(state)
+    out = []
+    for x, y in pts:
+        nx, ny = state.path_mtpt.apply(x, y)
+        out.append((nx * wdx + wmx, ny * wdy + wmy))
+    return out
+
+
+def _concat_dist2(a, b):
+    return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
+
+
+def concat_paths_py(a, b):
+    """Replica src/splines.cpp concat_paths(a, b): suelda dos paths por el par
+    de extremos MAS CERCANO (invierte a/b si conviene), traslada b para que
+    empiece donde termina a y salta el punto duplicado. Sin dependencia de la
+    orientacion de los operandos (RPPT tesela N copias identicas asi)."""
+    p1, p2 = list(a), list(b)
+    if not p1:
+        return p2
+    if not p2:
+        return p1
+    a0, a1 = p1[0], p1[-1]
+    b0, b1 = p2[0], p2[-1]
+    d = [_concat_dist2(a1, b0), _concat_dist2(a1, b1),
+         _concat_dist2(a0, b0), _concat_dist2(a0, b1)]
+    best = d.index(min(d))       # primer minimo (empata al indice menor, como el for <)
+    if best in (2, 3):
+        p1.reverse()             # p1 termina en el punto comun
+    if best in (1, 3):
+        p2.reverse()             # p2 empieza en el punto comun
+    tail, head = p1[-1], p2[0]
+    dx, dy = tail[0] - head[0], tail[1] - head[1]
+    for i in range(1, len(p2)):  # salta el punto duplicado
+        p1.append((p2[i][0] + dx, p2[i][1] + dy))
+    return p1
+
+
+def fmt_block(state, ref_or_pts, apply_mtpt=False):
     """Formatea un bloque de coordenadas ya leido por read_coords_or_ref. Una
     referencia &nombre se resuelve a puntos LITERALES si el traductor conoce
-    ese path (computed_paths = resultado de PWPT, se consume una vez -- ver
+    ese path (computed_paths = resultado de PWPT/RPPT, se consume una vez -- ver
     State.computed_paths --, o raw_paths = literal de biblioteca §9); si no,
-    se deja como &nombre (referencia real a un path V3, caso no usado hoy)."""
+    se deja como &nombre (referencia real a un path V3, caso no usado hoy).
+
+    `apply_mtpt` (solo lo pasan las primitivas de puntos PL/PG/BZ/SP): un `&ref`
+    CRUDO se transforma por el canal PT (mtpt) + des-normalizacion, igual que
+    parsePath -> process_path(mtpt, ...) en V1. El buffer (computed_paths) NO se
+    transforma: ya viene en coords de dato (PWPT/RPPT lo dejaron listo)."""
     kind, val = ref_or_pts
     if kind == 'ref':
         if val in state.computed_paths:
             return fmt_pts(state.computed_paths.pop(val))
         if val in state.raw_paths:
-            return fmt_pts(state.raw_paths[val])
+            pts = state.raw_paths[val]
+            if apply_mtpt:
+                pts = resolve_raw_through_mtpt(state, pts)
+            return fmt_pts(pts)
         return f'&{val}'
     return fmt_pts(val)
 
@@ -306,6 +403,12 @@ class State:
         # (x0, y0, dx, dy, n); el consumidor real es `DOT s &nombre`, que se
         # traduce a un for-loop (no existe trail() en el parser V3).
         self.path_step = (0.0, 0.0)
+        # Canal PT como MATRIZ afin real (TLPT/SCPT/IDPT que ACUMULAN, ground
+        # truth Parser.cpp mtpt): lo usan `BZ/PL/PG &nombre` y RPPT (fig4-10).
+        # path_step (arriba) se conserva aparte para el for-loop de GNPATH+DOT
+        # (fig6-10), que solo ve TLPT/IDPT (traslacion pura) -- son dos vistas
+        # del mismo canal; se actualizan juntas en handle_pt_transform.
+        self.path_mtpt = Affine()
         self.named_paths = {}  # nombre -> (x0, y0, dx, dy, n)
         self.gensym_counter = 0
         # &nombre a nivel de sentencia (fuera de OPST): literales de path que
@@ -442,7 +545,7 @@ def handle_point_primitive(sc, state, out, v3name):
         if block[0] == 'pts' and not block[1]:
             break
         head = state.build_head(v3name, [])
-        state.out_line(out, f'{head} {{ {fmt_block(state, block)} }}')
+        state.out_line(out, f'{head} {{ {fmt_block(state, block, apply_mtpt=True)} }}')
         if not consume_trailing_punct(sc):
             break
 
@@ -898,7 +1001,7 @@ def handle_OPST(sc, state, out):
     state.struct_local_stack.append((
         state.marked_struct, state.pending_struct_scale, state.pending_struct_rotate,
         state.rs_transform_parts, state.pen, state.advance, state.path_step,
-        state.body_ww, state.body_patch_from,
+        state.path_mtpt, state.body_ww, state.body_patch_from,
     ))
     state.marked_struct = None
     state.pending_struct_scale = None
@@ -907,6 +1010,7 @@ def handle_OPST(sc, state, out):
     state.pen = (0.0, 0.0)
     state.advance = (0.0, 0.0)
     state.path_step = (0.0, 0.0)
+    state.path_mtpt = Affine()
     state.body_ww = None
     state.body_patch_from = len(out)
 
@@ -919,7 +1023,7 @@ def handle_CLST(sc, state, out):
     state.out_line(out, '}')
     (state.marked_struct, state.pending_struct_scale, state.pending_struct_rotate,
      state.rs_transform_parts, state.pen, state.advance, state.path_step,
-     state.body_ww, state.body_patch_from) = state.struct_local_stack.pop()
+     state.path_mtpt, state.body_ww, state.body_patch_from) = state.struct_local_stack.pop()
     # El marcador de parcheo del padre no puede apuntar ANTES de esta struct
     # (patch_window_change re-escalaria lineas del cuerpo interno, que viven
     # en su propio espacio): se adelanta al presente. Un WW del padre tras
@@ -1103,6 +1207,32 @@ def handle_PWPT(sc, state, out):
     ]
 
 
+def handle_RPPT(sc, state, out):
+    """RPPT nombre N: tesela (repite) el path CRUDO `nombre` N veces al buffer,
+    soldando cada copia con la anterior. Ground truth Parser.cpp YRPPT:
+    `for i<N: concat_paths(bufferpt, listmap[name], mtpt)` -- CADA copia se
+    transforma por el MISMO mtpt vigente (la tesela nace de la soldadura por
+    extremo mas cercano de concat_paths, no de mtpt) y se suelda al buffer.
+    RPPT no dibuja; lo consume la siguiente `&buffer`.
+
+    Se suelda en coords NORMALIZADAS (donde V1 opera bufferpt) y al final se
+    des-normaliza a coords de dato, la convencion de computed_paths['buffer']
+    (misma que PWPT)."""
+    name = sc.expect_string('(nombre de path en RPPT)')
+    n = int(sc.expect_num('(N de RPPT)'))
+    pts = state.raw_paths.get(name)
+    if pts is None:
+        raise TranslateError(
+            f'RPPT: el path {name!r} no se encontro (falta su INPUT o &{name})')
+    buf = []
+    for _ in range(n):
+        copy = [state.path_mtpt.apply(x, y) for x, y in pts]  # normalizado
+        buf = concat_paths_py(buf, copy)
+    wdx, wdy = current_body_extent(state)
+    wmx, wmy = current_body_origin(state)
+    state.computed_paths['buffer'] = [(x * wdx + wmx, y * wdy + wmy) for x, y in buf]
+
+
 def handle_identifier_placement(word, sc, state, out):
     """Invocacion directa V1 (`cuadro .1 .75 }`): coloca UNA instancia en un
     punto -- no es un place() (no hay locus), sino Nombre(at=(x, y)) (§10.1
@@ -1253,15 +1383,25 @@ def handle_rs_transform(mm, args, state, out):
 
 
 def handle_pt_transform(mm, args, state, out):
-    """PT (MTPT): paso usado por GNPATH (TLPT/IDPT); ver State.path_step."""
+    """PT (MTPT): canal de matriz de los paths con nombre. Dos vistas del mismo
+    estado (ver State.path_mtpt): `path_step` (dx,dy) para el for-loop de
+    GNPATH+DOT (fig6-10, solo TLPT/IDPT) y `path_mtpt` (Affine real) para
+    `BZ/PL/PG &nombre` y RPPT (fig4-10). En V1 TLPT normaliza por la WW vigente
+    (mt.translate(dx/wdx, dy/wdy)); SCPT es dimensional; ambos POST-multiplican."""
     if mm == 'ID':
         state.path_step = (0.0, 0.0)
+        state.path_mtpt = Affine()
         return
     if mm == 'TL':
         # Acumula, igual que mtpt en V1 (compone traslaciones hasta IDPT).
         state.path_step = (state.path_step[0] + args[0], state.path_step[1] + args[1])
-    else:
-        raise TranslateError(f'{mm}PT: sin caso vivo en el corpus objetivo, falta mapear')
+        wdx, wdy = current_body_extent(state)
+        state.path_mtpt.translate(args[0] / wdx, args[1] / wdy)
+        return
+    if mm == 'SC':
+        state.path_mtpt.scale(args[0], args[1])
+        return
+    raise TranslateError(f'{mm}PT: sin caso vivo en el corpus objetivo, falta mapear')
 
 
 def handle_matrix_op(mm, df, sc, state, out):
@@ -1337,6 +1477,7 @@ WORD_HANDLERS = {
     # exactamente donde FIG1's espejo usa LWIDTH).
     'LSTYLE': handle_LWIDTH,
     'PWPT': handle_PWPT,
+    'RPPT': handle_RPPT,
 }
 
 # Comandos V1 reales (keyword_map de src/mgpp.l) que busca_key SI reconoce
@@ -1348,7 +1489,7 @@ WORD_HANDLERS = {
 # reverse/normalize) mas los realmente obsoletos/no usados en el corpus.
 KNOWN_UNIMPLEMENTED_COMMANDS = {
     'EXIT', 'MAXDEEP', 'MKMR', 'MR', 'INTXT', 'XYTXT',
-    'GNBZPATH', 'INVPT', 'NORMPT', 'RPPT', 'CTPT',
+    'GNBZPATH', 'INVPT', 'NORMPT', 'CTPT',
 }
 
 

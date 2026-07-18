@@ -30,9 +30,12 @@ V1DIR="$ROOT/examples/v1"
 GOLD="$ROOT/test/golden_translator"
 
 FORMATS="svg"
-# Los 16 del corpus V1<->V3 (plan_mg1to2.md §1), MENOS sines/texto: esos dos
+# Los 15 del corpus V1<->V3 (plan_mg1to2.md §1), MENOS sines/texto: esos dos
 # no tienen fuente V1 (nunca existio examples/v1/sines.mg ni texto.mg -- se
-# escribieron directo en V3 para ejercitar la gramatica, no son traduccion de
+# escribieron directo en V3 para ejercitar la gramatica, no son traduccion de.
+# (markers-demo se removio 2026-07-17: era prototipo de la era V3 del diseno de
+# marcadores, en sintaxis V1 pero SIN figura de libro detras -- no es traduccion.
+# Con el se fue examples/v1/markers.mg, su libreria de structs Mk*, ya sin uso.)
 # nada). Incluirlos aqui solo produce un ERROR "file not found" perpetuo, no
 # una senal sobre el traductor. `bzsinepaths` no es uno de los 16 (es una
 # biblioteca, ver bzsinepaths.mg) pero SI se incluye: fig4-10/fig6-1 la
@@ -43,7 +46,7 @@ FORMATS="svg"
 # No todos estan cubiertos todavia por mg1to2.py (ver plan_mg1to2.md, orden
 # de implementacion §7); los que fallan en la traduccion se reportan ERROR,
 # no rompen el harness.
-EXAMPLES="arrow bzsinepaths curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10 fill_styles line_patterns markers-demo primitives rpstest"
+EXAMPLES="arrow bzsinepaths curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10 fill_styles line_patterns primitives rpstest"
 
 export LC_ALL=C
 

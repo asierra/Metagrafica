@@ -17,7 +17,7 @@ coincidir con el del original** (mismo dibujo).
 
 ---
 
-## 1. El recurso más importante: ya existen 16 pares traducidos a mano
+## 1. El recurso más importante: ya existen 15 pares traducidos a mano
 
 **No empieces de cero.** Para cada `examples/v1/X.mg` existe una traducción a
 mano `examples/X.mg`, hecha durante el desarrollo del parser V3. Son la
@@ -31,8 +31,14 @@ traducciones a mano.
 - `examples/v1/reference/*.svg` — **oráculo de render** (lo que produce el
   compilador V1). Es la verdad de fondo para verificar.
 
-Los 16: `arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10
-fill_styles line_patterns markers-demo primitives rpstest sines texto`.
+Los 15: `arrow curvas3 fig2-1 fig2-3 fig2-6 fig4-1 fig4-10 fig6-1 fig6-10
+fill_styles line_patterns primitives rpstest sines texto`.
+
+> **`markers-demo` removido del corpus (2026-07-17):** era un prototipo de la era V3
+> del diseño de marcadores (sintaxis V1 pero con el control temporal `$O 1`, sin figura
+> de libro detrás) que quedó por accidente en `examples/v1/`. No es traducción de nada.
+> Con él se borró `examples/v1/markers.mg` (su librería de structs `Mk*`, ya sin uso).
+> Los marcadores V3 se ejercitan con `examples/markers-demo.mg`, escrito directo en V3.
 
 **Actualización 2026-07-11:** `fig6-10` y `fig4-10` se re-portaron **fielmente**
 al original V1 (puntos de ocupación, huecos de letrero, encuadre medido contra el
@@ -494,3 +500,90 @@ reset-en-`OPST`/pop-en-`CLST` igual que el resto del canal — hoy no existe)
 para convertir puntos normalizados de vuelta a unidades de dato antes de
 emitir, como se derivó a mano para este caso (a diferencia de `PWPT`, aquí NO
 cancela solo).
+
+---
+
+## 11. Estado (act. 2026-07-17, sesión autónoma)
+
+**Corpus a 14** (se quitó `markers-demo` + su lib `markers.mg`, ver §1: eran prototipo
+de la era V3, no traducción). **Red de goldens del traductor ACTIVADA** por primera vez:
+`test/golden_translator/` no existía; `bash test/run_translator.sh capture` la creó (13
+goldens). `check` da **ok=13 fail=0 error=1** (el error es `fig4-10`, ver abajo). Antes la
+red estaba escrita pero sin goldens → no protegía nada. **NO están en git** (se regeneran).
+
+### Auditoría de fidelidad vs. oráculo (los 10 con oráculo)
+
+Se tradujo cada uno, compiló con `bin/mg` actual y comparó el SVG contra
+`examples/v1/reference/*.svg` (método §2). Diff de líneas: line_patterns **0**, fig2-1 2,
+primitives 2, fig2-3 4, fig2-6 11, fill_styles 20, rpstest 26, fig4-1 32, fig6-1 45,
+fig6-10 111. **CONCLUSIÓN: el traductor es FIEL.** Todos los diffs se clasificaron y
+NINGUNO es bug del traductor. Son de dos tipos:
+
+1. **Deriva del backend** — el oráculo es un artefacto CONGELADO de un `bin/mg` viejo, y
+   el backend SVG evolucionó desde entonces (mismo backend produce texto idéntico para
+   gráficos idénticos, así que un diff aquí = el backend cambió, no el traductor):
+   - **Radio de `dot` ×2:** V1 `DOT 4` → `setRadius(2)` → el oráculo rindió **r=1** (el
+     `Dot::draw` viejo lo halveaba). El `bin/mg` actual rinde `dot(2)` → **r=2** (lineal,
+     confirmado con un dot(1)/dot(2) suelto). El traductor emite `dot(2)` (misma semántica
+     que V1); el 2× es del render. Afecta fig2-6, fig6-10. ⚠ **DECISIÓN PENDIENTE de
+     Alejandro** (es de convención, no la tomé sola): ¿los dots migrados deben verse como
+     el original (chico) → el traductor emitiría `dot(diam/4)` para calibrar contra el
+     oráculo, como pide el TODO en `handle_DOT`; o usar la convención V3 `dot(r)=radio r`
+     (grande)? Un solo cambio de línea en `handle_DOT` si se elige lo primero.
+   - **IDs de patrón de hatch:** `mgpat_<idx>_<color>` (oráculo) → `mgpat_<ang>_<gap>_<color>`
+     (backend actual, del trabajo de patterns). Mismos rectángulos/posiciones → render
+     equivalente. Todo el diff de fill_styles (20) es esto.
+   - **Grupos `<g></g>` vacíos:** el backend viejo los emitía (structs/transforms vacíos),
+     el actual no. Benigno (grupo vacío = nada). Es TODO el diff de rpstest (26, por eso su
+     AE de píxeles daba 0), fig2-1 (2) y primitives (2).
+2. **Por diseño** — cambios V3 deliberados: **fuente math** LM Math (`ϕ`) vs Times+symbol
+   V1 (`φ`), documentado; y el **reencuadre declarativo** de fig2-3/fig4-1/fig6-1 (§8, no
+   son objetivo de píxel). El grueso de fig4-1/fig6-1 es esto + dots.
+
+**Nota metodológica:** `imagemagick compare -metric AE` resultó ruido inútil aquí
+(rasterización de SVG: line_patterns diff-texto=0 daba AE=475; rpstest diff=26 daba AE=0).
+El **diff de texto SVG (ignorando header/dims) es la señal fiable** — mismo backend.
+
+### fig4-10 — CERRADO (2026-07-17, sesión atendida): SCPT/mtpt/RPPT hechos; encuadre por diseño
+
+**El bloqueador (`SCPT`) está resuelto.** El canal PT dejó de ser un par `(dx,dy)` que cada
+`TLPT`/`SCPT` sobreescribía y pasó a ser una **matriz afín real** (`class Affine` en
+`mg1to2.py`, réplica EXACTA de `include/matrix.h`: `translate`/`scale` POST-multiplican como
+`Matrix::matmat`, `apply` = `Matrix::transform`). Tres piezas nuevas, verificadas paso a paso
+contra el ground truth (`Parser.cpp`):
+
+1. **`handle_pt_transform`** actualiza `state.path_mtpt` (nuevo, en el stack de struct junto a
+   `path_step`): `TL` normaliza por la WW vigente (`mt.translate(dx/wdx, dy/wdy)`, como
+   `oldParseMatrix` OPMTL), `SC` es dimensional, `ID` = identidad. `path_step` (pares) se
+   conserva intacto para el for-loop de GNPATH+DOT de fig6-10 (solo ve TLPT/IDPT) — son dos
+   vistas del mismo canal.
+2. **`BZ/PL/PG &ref` crudo** ahora se transforma por `mtpt` + **des-normalización** por la WW
+   del cuerpo (`resolve_raw_through_mtpt`, invocada con `apply_mtpt=True` desde
+   `handle_point_primitive`). En V1 `process_path(mtpt, crudo)` da coords NORMALIZADAS que V1
+   dibuja sin re-normalizar; como V3 SÍ re-normaliza lo emitido, hay que des-normalizar
+   (`x*wd+wm`) para cerrar la ida-vuelta. El buffer (PWPT/RPPT) NO se toca: ya viene en coords
+   de dato. Cero riesgo a fig6-1/fig4-1: ellos usan `&buffer` (computed_paths), no `&ref` crudo,
+   y con `mtpt` identidad + ventana unitaria la des-normalización es no-op.
+3. **`RPPT nombre N`** implementado (`handle_RPPT` + `concat_paths_py`, réplica fiel de
+   `src/splines.cpp concat_paths`: soldadura por par de extremos más cercano, reversa e
+   inserción saltando el punto duplicado). Cada copia se transforma por el mismo `mtpt`; la
+   tesela nace de la soldadura. Sale del `KNOWN_UNIMPLEMENTED`.
+
+**Verificación:** fig4-10 pasa de `error` a traducir y compilar limpio en EPS/SVG/PDF + `gs`;
+las **formas de φ₁–φ₄ y ρ₁–ρ₄ coinciden con el oráculo** (medido: la física cuadra — φ₁
+medio-seno sobre el nivel 1 con amplitud ~2, φ₄ = `sin2pi` teselado ×2, etc.). Harness del
+traductor: `error=0`, los otros 13 intactos. **`bzsinepaths` debe traducirse al workdir** (sus
+`&name` V1 → `path name = {…}`); el `include` que emite fig4-10 lo consume — el harness ya lo
+hace (tiene `bzsinepaths` en `EXAMPLES`).
+
+**Encuadre: diferencia POR DISEÑO, no se persigue** (decisión de Alejandro). El contenido llena
+la mitad inferior; medido, el Y queda corto por **exactamente `wdy/wdx = 21/10 = 2.106`**. Causa
+raíz (documentada, no un bug): **V1 forzaba el aspect ratio** — renderiza anisótropo con `SCST`
+como transformación de **dispositivo ambiente** (`mtst` está DECLARADA pero SIN USAR en
+`Parser.cpp:718`; `SCST`→MTST se empuja como `Transform` a la lista, y `StructurePath::draw`
+hace `pushMatrix(MTST)` alrededor de cada placement con escala **isótropa** `docwmin`). V3 es
+isométrico y **ya no fuerza el aspecto**, así que la figura se letterboxea en lugar de estirarse.
+No hay fix global limpio: `docwmin` es load-bearing en el corpus (line_patterns 14×7, fill_styles,
+fig2-1 son anisótropas y dependen de él); hornear escala por-eje los movería. Es la "Lección
+durable" de fig6-10 (aspecto de `world_window` ≠ `display_size`). El golden del traductor se
+bendice con el encuadre isométrico: es la salida correcta del modelo V3.
