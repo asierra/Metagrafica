@@ -573,6 +573,8 @@ sine(half_cycles=3, amplitude=1.2) { 0 5  10 5 }   % 3 jorobas de seno sobre la 
 
 Internamente `sine` se aproxima con curvas bezier (las de `bzsinepaths`). Los desfases y extensiones **múltiplos de 90°** (cuarto de ciclo) caen en frontera de segmento, así que se arman con piezas enteras (el coseno, `phase=90`, no recorta nada); un `phase` o `half_cycles` **no alineado a 90°** recorta el spline con de Casteljau —se implementa cuando el corpus lo pida. El caso `squared` usa la aproximación de coseno levantado (el `&cos2pi` del V1). Todo invisible: el autor solo da jorobas, amplitud y, si acaso, fase.
 
+`sine` también puede usarse como **expresión de path** del álgebra §9 (`path p = sine(...) { base }`): la misma onda, como datos concatenables. Con `phase=90`/`270` cada llamada es un medio ciclo de coseno que baja/sube entre extremos con pendiente cero — la pieza natural para funciones de onda con envolvente por tramo (`concat` de piezas con `amplitude` distinta; caso guía: fig16-9).
+
 *(V1: se ensamblaba a mano con `BZ &sinpi`/`&sin2pi`/`&cos2pi` + `RPPT` (tile) + la pila de matrices de path `IDPT`/`TLPT`/`SCPT`. `sine` colapsa todo eso. Caso guía: fig4-10, los niveles del pozo infinito.)*
 
 ---
@@ -893,9 +895,18 @@ path norm    = normalize(&sinpi)             % normalizar al rango [0,1]
 path fitted  = fitrect(&sinpi) { 1 1  9 7 }  % escalar al rectángulo dado
 path wave    = concat(&sinpi, &rev)          % unir dos paths
 
+% Generadores como expresión de path: sine (§4.13) y smooth (§9.2)
+path fall    = sine(half_cycles=1, phase=90, amplitude=1) { 0 0  1 0 }
+
 % Dibujar un path nombrado
 bezier(&sinpi)
 ```
+
+> **Estado (2026-07-18):** implementados literales, `&ref`, `transpose`/`flip_x`/
+> `flip_y`/`reverse`, `concat` **variádico y sin auto-reversión** (la semántica de
+> abajo), y `sine`/`smooth` como generadores (caso guía: fig16-9, funciones de onda
+> por medios ciclos de coseno con envolvente). `tile`/`normalize`/`fitrect` siguen
+> reservados.
 
 > Las dos operaciones "ajustar a rectángulo" tienen nombres distintos según su operando: `fitrect(&path)` produce un path (álgebra, esta sección); `fit(Struct)` (§10.2) coloca una struct. Igual con la repetición: `tile(&path)` concatena un path; `repeat(Struct)` (§17) repite una struct.
 
@@ -930,6 +941,8 @@ path s = smooth { 0 0  2 3  5 1  8 4 }
 ```
 
 Ajusta segmentos Bézier que pasan **exactamente** por los puntos dados, calculando las tangentes automáticamente. A diferencia de `spline` (donde los puntos son de *control*), aquí los puntos son *nodos* por los que la curva pasa. *(V1: `GNBZPATH name path`.)*
+
+**Implementado (2026-07-18)** como expresión de path (§9). El motor (`path_to_bezier`) consume primer y último punto como ayudas de tangente; `smooth` extiende los extremos por **reflexión** (`p0′ = 2·p0 − p1`) para que la curva pase también por ellos con tangente natural — el dup manual que exigía `GNBZPATH` ya no hace falta (y duplicar daría distancia cero → NaN en la parametrización).
 
 ### 9.3 trail — path por avance
 

@@ -445,6 +445,42 @@ ejercita `legend` y `circle-dot`. Ajuste de nombre en el `EXAMPLES=` del harness
 motor. Los ajustes finos de posición de los `label` de los ejes se dejaron como están —
 Alejandro los revisó y decidió no perseguirlos ("es complicarse demasiado").
 
+### Cerrado en la sesión del 2026-07-18 (álgebra §9 madura + fig16-9 Franck-Condon)
+
+**Motor/parser** (todo verificado con golden; único churn: fig4-1, raster idéntico px a px):
+- **`concat` variádico y SIN auto-reversión** (semántica de la spec §9; la heurística de
+  extremos más cercanos elegía mal con piezas cortas — una recta de media unidad + un medio
+  ciclo de coseno se soldaban por el extremo equivocado, 0.25 vs 1.25 de distancia).
+  **`reverse()`** nuevo (inline en `splines.h`) es la forma explícita de orientar.
+  `curvas3.mg` migró a `concat(reverse(flip_x(&H)), &H)`.
+- **`sine` como expresión de path §9** (`PathSine`; generación extraída a `sineBezierPath`,
+  parseo compartido `parseSineArgs`). Con `phase=90/270` cada llamada es un medio ciclo de
+  coseno entre extremos con pendiente cero → funciones de onda con envolvente por tramo se
+  arman con `concat` de piezas de distinta `amplitude`, C1 gratis (uniones en extremos).
+  *(El `phase` por cuartos de ciclo YA estaba implementado —commit `2e1ba32`— aunque
+  `plan_sine.md` y el header de `sines.mg` decían lo contrario; actualizados.)*
+- **`smooth { }` §9.2 implementado** (`path_to_bezier` ya existía): extiende extremos por
+  REFLEXIÓN (duplicarlos da distancia 0 → NaN en `get_bezier_tangents`, que no tiene las
+  guardas del spline).
+
+**`examples/fig16-9.mg`** (Franck-Condon, dos Morse + funciones de onda vibracionales
+rellenas) en el corpus golden (16→17 ejemplos, `ok=51`). Único que ejercita sine-como-path,
+concat variádico, `reverse` y bezier con `fill`+`outlinefill`. Lecciones del port:
+- Las ψ **no son senoides**: tocan la base con pendiente cero y sus extremos caen en las
+  uniones. La pieza es el medio ciclo de coseno (`sine(phase=90/270)`), no `sine` pelada.
+- **Semántica V1 descubierta midiendo el render** (el EPS "V1" pasó por Illustrator y no es
+  legible): `BZ` = controles bezier CRUDOS (el código de `Parser.cpp` manda; ambos modelos
+  ajustan igual, rms ~1.2 px); `SCPT`/`SCST` COMPONEN (multiplicativo hasta `IDPT`/`IDST` —
+  lo prueba que pw6 cierra en la base); `PWST tx ty sx sy` = trasladar+escalar en unidades
+  de ventana; placement de struct lleva el factor `docwmin=1.3` en ambos ejes.
+- Colocaciones convertidas a UNA ventana en cm (los 2 `WW` de V1 eran solo mecanismo de
+  colocación); niveles verificados a ±1 px contra el oráculo; rects de las curvas por
+  mínimos cuadrados (rms 1.3 px). La figura publicada trae la rama izquierda inferior
+  **extendida a mano** (edición Illustrator) → se replica con una polyline por la tangente.
+- El punto 32 de la curva V1 sobra del agrupamiento 1+3k y se descarta (igual que V1);
+  texto rotado: `{ translate x y  rotate 90  text(...) { 0 0 } }` (el ancla se da en el
+  marco YA transformado — `rotate` solo + ancla original la manda fuera del lienzo).
+
 Siguiente concreto — el traductor **`mg1to2.py`** (`plan_mg1to2.md`, actualizado 2026-07-11 con
 los mapeos correctos: GNPATH+DOT→for/dot, SCST, LNST gap, aspecto de ventana) es el gran
 pendiente para migrar el material V1. Otros: `spline`/`smooth` §9 (motor `splines.cpp` listo,

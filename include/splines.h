@@ -40,10 +40,15 @@ Path transpose_path(const Path &p);
 Path flip_x_path(const Path &p);
 Path flip_y_path(const Path &p);
 
+// reverse(p): el mismo path recorrido al revés (§9). Con concat sin
+// auto-reversión, es la forma explícita de orientar un segmento antes de
+// soldarlo (concat pega el INICIO de cada operando al final del anterior).
+inline Path reverse_path(const Path &p) { return Path(p.rbegin(), p.rend()); }
+
 // concat_paths(a, b): suelda dos paths en uno continuo (álgebra de paths §9).
-// Empareja los extremos MÁS CERCANOS (invierte a/b según convenga) y traslada b
-// para que su inicio coincida con el final de a; el resultado no depende de la
-// orientación de los operandos. Operación gráfica sobre los datos, no de parseo.
+// Traslada b para que su INICIO continúe desde el FINAL de a, sin invertir
+// ningún operando (spec §9: sin auto-reversión; el autor orienta con reverse()).
+// Operación gráfica sobre los datos, no de parseo.
 Path concat_paths(const Path &a, const Path &b);
 
 void normalize_path(Path& path);

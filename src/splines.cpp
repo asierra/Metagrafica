@@ -188,31 +188,20 @@ Path flip_y_path(const Path &p) {
   return r;
 }
 
-static double concat_dist2(const point &p, const point &q) {
-  double dx = p.x - q.x, dy = p.y - q.y; return dx * dx + dy * dy;
-}
-
-// concat_paths(a, b): suelda dos paths en uno continuo. Elige el emparejamiento
-// de extremos MÁS CERCANO (invierte a/b según convenga) y traslada b para que su
-// inicio coincida con el final de a. Así el usuario no hace reverse ni coloca, y
-// el resultado no depende de la orientación de los operandos: p. ej. una media
-// curva H y su espejo flip_x(H) comparten el pico, y concat(&H, flip_x(&H)) los
-// suelda ahí, formando un perfil simétrico de UN pico central (§9).
+// concat_paths(a, b): suelda dos paths en uno continuo (§9). Traslada b para
+// que su INICIO continúe desde el FINAL de a; no invierte ningún operando (spec
+// §9: sin auto-reversión — una heurística de extremos más cercanos elige mal en
+// cuanto las piezas son cortas, p. ej. una recta de media unidad seguida de un
+// medio ciclo de coseno; el autor orienta explícitamente con reverse()). El
+// punto de unión duplicado se salta, lo que preserva la aritmética 3k+1 de los
+// paths de control bezier.
 Path concat_paths(const Path &a, const Path &b) {
-  Path p1 = a, p2 = b;
-  if (p1.empty()) return p2;
-  if (p2.empty()) return p1;
-  point a0 = p1.front(), a1 = p1.back(), b0 = p2.front(), b1 = p2.back();
-  double d[4] = { concat_dist2(a1, b0), concat_dist2(a1, b1),
-                  concat_dist2(a0, b0), concat_dist2(a0, b1) };
-  int best = 0;
-  for (int i = 1; i < 4; i++) if (d[i] < d[best]) best = i;
-  if (best == 2 || best == 3) std::reverse(p1.begin(), p1.end());  // p1 termina en el punto común
-  if (best == 1 || best == 3) std::reverse(p2.begin(), p2.end());  // p2 empieza en el punto común
-  point tail = p1.back(), head = p2.front();
-  double dx = tail.x - head.x, dy = tail.y - head.y;               // suelda (traslada b)
-  for (size_t i = 1; i < p2.size(); i++)                           // salta el punto duplicado
-    p1.push_back(point(p2[i].x + dx, p2[i].y + dy));
+  if (a.empty()) return b;
+  if (b.empty()) return a;
+  Path p1 = a;
+  double dx = p1.back().x - b.front().x, dy = p1.back().y - b.front().y;
+  for (size_t i = 1; i < b.size(); i++)                            // salta el punto duplicado
+    p1.push_back(point(b[i].x + dx, b[i].y + dy));
   return p1;
 }
 

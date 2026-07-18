@@ -6,8 +6,9 @@
 % path (IDPT/TLPT/SCPT). Cada `sine` recibe base (2 puntos), nº de medios ciclos y
 % amplitud; la onda oscila perpendicular a la base.
 %
-% ⚠ phase=90 (coseno) aún no está implementado (ver plan_sine.md); este ejemplo
-% usa solo phase=0 y squared, que ya renderizan.
+% phase (múltiplos de 90°: coseno etc.) está implementado por cuartos de ciclo;
+% este ejemplo muestra phase=0 y squared. `sine` también puede usarse como
+% expresión de path del álgebra §9 (ver fig16-9.mg).
 
 display_size 12 10
 font_size 9

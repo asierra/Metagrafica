@@ -666,28 +666,55 @@ struct PathRef : PathExpr {
   }
 };
 
-// Ops unarias (§9): transpose/flip_x/flip_y. La geometría vive en splines.cpp
-// (álgebra de datos, no de parseo); aquí solo se despacha sobre el path evaluado.
+// Ops unarias (§9): transpose/flip_x/flip_y/reverse. La geometría vive en
+// splines.cpp/.h (álgebra de datos, no de parseo); aquí solo se despacha sobre
+// el path evaluado.
 struct PathUnary : PathExpr {
-  enum Op { TRANSPOSE, FLIP_X, FLIP_Y } op = TRANSPOSE;
+  enum Op { TRANSPOSE, FLIP_X, FLIP_Y, REVERSE } op = TRANSPOSE;
   PathExprPtr arg;
   Path evalPath(Scope &s) const override {
     Path p = arg->evalPath(s);
     if (op == TRANSPOSE) return transpose_path(p);
     if (op == FLIP_X)    return flip_x_path(p);
-    return flip_y_path(p);
+    if (op == FLIP_Y)    return flip_y_path(p);
+    return reverse_path(p);
   }
 };
 
-// concat(a, b): suelda dos paths en uno continuo (§9). La soldadura vive en
-// concat_paths() (splines.cpp) —álgebra de datos, no de parseo—: empareja los
-// extremos MÁS CERCANOS y re-suelda, de modo que p. ej. una media curva H y su
-// espejo flip_x(H), que comparten el pico, formen un perfil simétrico de UN pico
-// central con `concat(&H, flip_x(&H))`.
+// concat(a, b, …): suelda paths en uno continuo (§9, variádico). La soldadura
+// vive en concat_paths() (splines.cpp) —álgebra de datos, no de parseo—: cada
+// operando se traslada para que su INICIO continúe desde el final del acumulado,
+// sin auto-reversión (el autor orienta con reverse()). Así una media curva H y
+// su espejo forman un perfil simétrico con `concat(reverse(flip_x(&H)), &H)`.
 struct PathConcat : PathExpr {
-  PathExprPtr a, b;
+  std::vector<PathExprPtr> parts;
   Path evalPath(Scope &s) const override {
-    return concat_paths(a->evalPath(s), b->evalPath(s));
+    Path acc;
+    for (auto &e : parts) acc = concat_paths(acc, e->evalPath(s));
+    return acc;
+  }
+};
+
+// smooth { pts } (§9.2): Bézier suave que pasa EXACTAMENTE por los puntos
+// dados (tangentes automáticas, path_to_bezier de splines.cpp). El motor
+// consume el primer y último punto como ayudas de tangente, así que aquí se
+// extienden los extremos por REFLEXIÓN (p0′ = 2·p0 − p1): la curva pasa
+// también por los extremos con tangente natural, y no se degenera la
+// parametrización por distancias (un duplicado daría distancia cero → NaN).
+// (V1: GNBZPATH, que exigía el mismo truco a mano en los datos.)
+struct PathSmooth : PathExpr {
+  std::vector<ExprPtr> coords;                 // pares x y
+  Path evalPath(Scope &s) const override {
+    Path p;
+    for (size_t i = 0; i + 1 < coords.size(); i += 2)
+      p.push_back(point(coords[i]->eval(s).num, coords[i + 1]->eval(s).num));
+    if (p.size() < 2) { evalError("smooth requiere al menos 2 puntos"); return Path(); }
+    size_t n = p.size();
+    Path ext;
+    ext.push_back(point(2 * p[0].x - p[1].x, 2 * p[0].y - p[1].y));
+    for (auto &q : p) ext.push_back(q);
+    ext.push_back(point(2 * p[n-1].x - p[n-2].x, 2 * p[n-1].y - p[n-2].y));
+    return path_to_bezier(ext);
   }
 };
 
@@ -1080,79 +1107,105 @@ struct PlaceStmt : Stmt {
 };
 
 // sine (§4.13): onda senoidal aproximada por bezier a lo largo de la base p1→p2,
-// oscilando perpendicular. Se expande a un Polyline(GI_BEZIER) (sin clase de
-// motor). Puntos de control = los de V1 (bzsinepaths.mg) → coincide con el oráculo.
-// Núcleo: phase=0 (jorobas &sinpi con signo alterno) + squared (bumps sin²,
-// &cos2pi invertido). phase!=0 y half_cycles fraccionario: diferidos (plan_sine.md).
+// oscilando perpendicular. Puntos de control = los de V1 (bzsinepaths.mg) →
+// coincide con el oráculo. Núcleo: phase=0 (jorobas &sinpi con signo alterno) +
+// squared (bumps sin², &cos2pi invertido) + phase múltiplo de 90° (cuartos de
+// ciclo). half_cycles fraccionario: diferido (plan_sine.md).
+// La GEOMETRÍA vive aquí, compartida por la sentencia de dibujo (SineStmt) y la
+// forma de expresión de path §9 (PathSine): devuelve el path de CONTROL bezier
+// (3k+1 puntos), vacío si los parámetros no dan onda.
+static Path sineBezierPath(point p1, point p2, double n, double A,
+                           double phase, bool squared) {
+  Path path;
+  if (n <= 0) return path;
+  double dx = p2.x - p1.x, dy = p2.y - p1.y, L = std::sqrt(dx * dx + dy * dy);
+  if (L == 0.0) return path;
+  double ux = dx / L, uy = dy / L, vx = -uy, vy = ux;   // base y perpendicular (+90°)
+  double w = L / n;                                     // ancho de una joroba (unidades de base)
+  int ni = (int)(n + 0.5);                              // nº entero de jorobas (fraccionario diferido)
+  auto W = [&](double lx, double ly) {                 // local (base, perp) → mundo
+    return point(p1.x + lx * ux + ly * vx, p1.y + lx * uy + ly * vy);
+  };
+
+  // phase≠0 (no squared): descomposición en CUARTOS de ciclo (§4.13, plan_sine.md).
+  // Cada cuarto (90°) es una cúbica derivada de &sinpi2; la fase (múltiplo de 90°)
+  // rota el cuarto de arranque. half_cycles=n → 2n cuartos. phase=90 = coseno
+  // (arranca en el máximo). fig6-1 (WKB).
+  if (phase != 0.0 && !squared) {
+    // {C1x,C1y, C2x,C2y, Px,Py, startY} por cuarto (x∈[0,1] del cuarto; y = seno)
+    static const double Q[4][7] = {
+      {0.417,  0.6667, 0.693,  1.0,    1.0,  1.0,  0.0},   // Q0 sube 0→+1
+      {0.307,  1.0,    0.583,  0.6667, 1.0,  0.0,  1.0},   // Q1 baja +1→0
+      {0.417, -0.6667, 0.693, -1.0,    1.0, -1.0,  0.0},   // Q2 baja 0→−1
+      {0.307, -1.0,    0.583, -0.6667, 1.0,  0.0, -1.0},   // Q3 sube −1→0
+    };
+    int startQ = (int)std::lround(phase / 90.0) % 4;
+    if (startQ < 0) startQ += 4;
+    double wq = L / (2.0 * ni);                          // ancho de un cuarto
+    path.push_back(W(0.0, Q[startQ][6] * A));            // moveto en la y inicial del 1er cuarto
+    for (int i = 0; i < 2 * ni; i++) {
+      const double *q = Q[(startQ + i) % 4];
+      double base = i * wq;
+      path.push_back(W(base + q[0] * wq, q[1] * A));
+      path.push_back(W(base + q[2] * wq, q[3] * A));
+      path.push_back(W(base + q[4] * wq, q[5] * A));
+    }
+    return path;
+  }
+
+  path.push_back(W(0.0, 0.0));                          // moveto (arranque)
+  for (int k = 0; k < ni; k++) {
+    double x0 = k * w;
+    if (squared) {                                      // bump sin²(πt): &cos2pi invertido (todas +)
+      path.push_back(W(x0 + 0.1825 * w, 0)); path.push_back(W(x0 + 0.3175 * w, A)); path.push_back(W(x0 + 0.5 * w, A));
+      path.push_back(W(x0 + 0.6825 * w, A)); path.push_back(W(x0 + 0.8175 * w, 0)); path.push_back(W(x0 + 1.0 * w, 0));
+    } else {                                            // joroba &sinpi, signo alterno (pico = A)
+      double cy = ((k % 2 == 0) ? 1.0 : -1.0) * A * 1.335;
+      path.push_back(W(x0 + 0.41 * w, cy)); path.push_back(W(x0 + 0.59 * w, cy)); path.push_back(W(x0 + 1.0 * w, 0));
+    }
+  }
+  return path;
+}
+
+// Evaluación común de los argumentos de sine (sentencia y expresión de path):
+// half_cycles/amplitude/phase/squared + base de 2 puntos en el bloque.
+static Path sinePathFromArgs(Scope &s, const std::map<std::string, ExprPtr> &named,
+                             const std::vector<ExprPtr> &coords) {
+  double n = namedNum(s, named, "half_cycles", 1);
+  double A = namedNum(s, named, "amplitude", 1);
+  double phase = namedNum(s, named, "phase", 0);
+  bool squared = named.count("squared") && named.at("squared")->eval(s).num != 0.0;
+  if (coords.size() < 4) { evalError("sine requiere una base (2 puntos)"); return Path(); }
+  if (phase != 0.0 && squared)
+    std::fprintf(stderr, "sine: phase!=0 con squared aún no implementado; se dibuja phase=0\n");
+  point p1(coords[0]->eval(s).num, coords[1]->eval(s).num);
+  point p2(coords[2]->eval(s).num, coords[3]->eval(s).num);
+  return sineBezierPath(p1, p2, n, A, phase, squared);
+}
+
+// sine como SENTENCIA (§4.13): dibuja la onda — un Polyline(GI_BEZIER), sin
+// clase de motor.
 struct SineStmt : Stmt {
   std::map<std::string, ExprPtr> named;   // half_cycles, amplitude, phase, squared
   std::vector<ExprPtr> coords;            // 2 puntos = base
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
-    double n = namedNum(s, named, "half_cycles", 1);
-    double A = namedNum(s, named, "amplitude", 1);
-    double phase = namedNum(s, named, "phase", 0);
-    bool squared = named.count("squared") && named.at("squared")->eval(s).num != 0.0;
-    if (coords.size() < 4) { evalError("sine requiere una base (2 puntos)"); return; }
-    if (n <= 0) return;
-    if (phase != 0.0 && squared)
-      std::fprintf(stderr, "sine: phase!=0 con squared aún no implementado; se dibuja phase=0\n");
-
-    point p1(coords[0]->eval(s).num, coords[1]->eval(s).num);
-    point p2(coords[2]->eval(s).num, coords[3]->eval(s).num);
-    double dx = p2.x - p1.x, dy = p2.y - p1.y, L = std::sqrt(dx * dx + dy * dy);
-    if (L == 0.0) return;
-    double ux = dx / L, uy = dy / L, vx = -uy, vy = ux;   // base y perpendicular (+90°)
-    double w = L / n;                                     // ancho de una joroba (unidades de base)
-    int ni = (int)(n + 0.5);                              // nº entero de jorobas (fraccionario diferido)
-    auto W = [&](double lx, double ly) {                 // local (base, perp) → mundo
-      return point(p1.x + lx * ux + ly * vx, p1.y + lx * uy + ly * vy);
-    };
-
-    // phase≠0 (no squared): descomposición en CUARTOS de ciclo (§4.13, plan_sine.md).
-    // Cada cuarto (90°) es una cúbica derivada de &sinpi2; la fase (múltiplo de 90°)
-    // rota el cuarto de arranque. half_cycles=n → 2n cuartos. phase=90 = coseno
-    // (arranca en el máximo). fig6-1 (WKB).
-    if (phase != 0.0 && !squared) {
-      // {C1x,C1y, C2x,C2y, Px,Py, startY} por cuarto (x∈[0,1] del cuarto; y = seno)
-      static const double Q[4][7] = {
-        {0.417,  0.6667, 0.693,  1.0,    1.0,  1.0,  0.0},   // Q0 sube 0→+1
-        {0.307,  1.0,    0.583,  0.6667, 1.0,  0.0,  1.0},   // Q1 baja +1→0
-        {0.417, -0.6667, 0.693, -1.0,    1.0, -1.0,  0.0},   // Q2 baja 0→−1
-        {0.307, -1.0,    0.583, -0.6667, 1.0,  0.0, -1.0},   // Q3 sube −1→0
-      };
-      int startQ = (int)std::lround(phase / 90.0) % 4;
-      if (startQ < 0) startQ += 4;
-      double wq = L / (2.0 * ni);                          // ancho de un cuarto
-      Path qp;
-      qp.push_back(W(0.0, Q[startQ][6] * A));              // moveto en la y inicial del 1er cuarto
-      for (int i = 0; i < 2 * ni; i++) {
-        const double *q = Q[(startQ + i) % 4];
-        double base = i * wq;
-        qp.push_back(W(base + q[0] * wq, q[1] * A));
-        qp.push_back(W(base + q[2] * wq, q[3] * A));
-        qp.push_back(W(base + q[4] * wq, q[5] * A));
-      }
-      auto pq = std::make_unique<Polyline>(GI_BEZIER);
-      pq->setPath(qp);
-      out.push_back(std::move(pq));
-      return;
-    }
-
-    Path path;
-    path.push_back(W(0.0, 0.0));                          // moveto (arranque)
-    for (int k = 0; k < ni; k++) {
-      double x0 = k * w;
-      if (squared) {                                      // bump sin²(πt): &cos2pi invertido (todas +)
-        path.push_back(W(x0 + 0.1825 * w, 0)); path.push_back(W(x0 + 0.3175 * w, A)); path.push_back(W(x0 + 0.5 * w, A));
-        path.push_back(W(x0 + 0.6825 * w, A)); path.push_back(W(x0 + 0.8175 * w, 0)); path.push_back(W(x0 + 1.0 * w, 0));
-      } else {                                            // joroba &sinpi, signo alterno (pico = A)
-        double cy = ((k % 2 == 0) ? 1.0 : -1.0) * A * 1.335;
-        path.push_back(W(x0 + 0.41 * w, cy)); path.push_back(W(x0 + 0.59 * w, cy)); path.push_back(W(x0 + 1.0 * w, 0));
-      }
-    }
+    Path path = sinePathFromArgs(s, named, coords);
+    if (path.empty()) return;
     auto p = std::make_unique<Polyline>(GI_BEZIER);
     p->setPath(path);
     out.push_back(std::move(p));
+  }
+};
+
+// sine como EXPRESIÓN DE PATH (§9): la misma onda, como datos de control bezier
+// para el álgebra (concat/reverse/…). Con phase=90/270 cada llamada es un medio
+// ciclo de coseno que cae/sube entre extremos con pendiente cero — la pieza con
+// la que se ensamblan funciones de onda con envolvente por tramo (fig16-9).
+struct PathSine : PathExpr {
+  std::map<std::string, ExprPtr> named;
+  std::vector<ExprPtr> coords;
+  Path evalPath(Scope &s) const override {
+    return sinePathFromArgs(s, named, coords);
   }
 };
 
@@ -2440,6 +2493,8 @@ static StmtPtr parsePlot(Lexer &);
 static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 static PathExprPtr parsePathExpr(Lexer &);   // álgebra de paths (§9)
+static void parseSineArgs(Lexer &, std::map<std::string, ExprPtr> &,
+                          std::vector<ExprPtr> &);   // `(args) { base }` de sine
 
 // Un nombre de atributo puede coincidir con una palabra de control: `to`/`step`
 // son keywords (for i = a to b) pero también nombres nombrados (arc(from=, to=)).
@@ -2450,9 +2505,10 @@ static PathExprPtr parsePathExpr(Lexer &);   // álgebra de paths (§9)
 static bool startsPathExpr(const Lexer &lx) {
   int tt = lx.peek().type;
   if (tt == T_AMP) return true;
-  if (tt == T_IDENTIFIER) {
+  if (tt == T_IDENTIFIER && lx.peek(1).type != T_ASSIGN) {  // `sine=` sería arg nombrado
     const std::string &n = lx.peek().str;
-    return n == "transpose" || n == "flip_x" || n == "flip_y" || n == "concat";
+    return n == "transpose" || n == "flip_x" || n == "flip_y" || n == "reverse" ||
+           n == "concat" || n == "sine" || n == "smooth";
   }
   return false;
 }
@@ -2859,28 +2915,47 @@ static PathExprPtr parsePathExpr(Lexer &lx) {
   }
   if (t.type == T_IDENTIFIER) {
     std::string n = t.str;
-    if (n == "transpose" || n == "flip_x" || n == "flip_y") {
+    if (n == "transpose" || n == "flip_x" || n == "flip_y" || n == "reverse") {
       lx.next();
       if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras la operación de path");
       auto u = std::make_unique<PathUnary>();
       u->op = (n == "transpose") ? PathUnary::TRANSPOSE
-            : (n == "flip_x")    ? PathUnary::FLIP_X : PathUnary::FLIP_Y;
+            : (n == "flip_x")    ? PathUnary::FLIP_X
+            : (n == "flip_y")    ? PathUnary::FLIP_Y : PathUnary::REVERSE;
       u->arg = parsePathExpr(lx);
       if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
       return u;
     }
-    if (n == "concat") {
+    if (n == "concat") {                         // variádico (§9): concat(a, b, c, …)
       lx.next();
       if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras concat");
       auto c = std::make_unique<PathConcat>();
-      c->a = parsePathExpr(lx);
-      if (!lx.accept(T_COMMA)) parseError(lx, "',' en concat(a, b)");
-      c->b = parsePathExpr(lx);
+      c->parts.push_back(parsePathExpr(lx));
+      while (lx.accept(T_COMMA)) c->parts.push_back(parsePathExpr(lx));
+      if (c->parts.size() < 2) parseError(lx, "al menos dos paths en concat(a, b, …)");
       if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
       return c;
     }
+    if (n == "sine") {                           // sine(args) { base } como path (§9/§4.13)
+      lx.next();
+      auto ps = std::make_unique<PathSine>();
+      parseSineArgs(lx, ps->named, ps->coords);
+      return ps;
+    }
+    if (n == "smooth") {                         // smooth { pts } (§9.2)
+      lx.next();
+      if (!lx.accept(T_LBRACE)) parseError(lx, "'{' de los puntos de smooth");
+      auto sm = std::make_unique<PathSmooth>();
+      while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+        if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
+        sm->coords.push_back(parseTerm(lx));
+      }
+      checkCoordPairs(lx, "smooth", sm->coords, {});
+      if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+      return sm;
+    }
   }
-  parseError(lx, "un path: '{…}', &nombre, transpose/flip_x/flip_y/concat(…)");
+  parseError(lx, "un path: '{…}', &nombre, transpose/flip_x/flip_y/reverse/concat/sine/smooth(…)");
   return nullptr;                                // inalcanzable (parseError hace exit)
 }
 
@@ -2948,24 +3023,31 @@ static StmtPtr parsePlace(Lexer &lx) {
   return st;
 }
 
-static StmtPtr parseSine(Lexer &lx) {
+// `(args nombrados) { base }` de sine — compartido por la sentencia (parseSine)
+// y la expresión de path (parsePathExpr).
+static void parseSineArgs(Lexer &lx, std::map<std::string, ExprPtr> &named,
+                          std::vector<ExprPtr> &coords) {
   if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras sine");
-  auto st = std::make_unique<SineStmt>();
   if (lx.peek().type != T_RPAREN) {             // args nombrados: half_cycles=, amplitude=, …
     do {
       std::string k;
       if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (half_cycles=, amplitude=, …)");
       lx.next(); lx.next();
-      st->named[k] = parseExpression(lx);
+      named[k] = parseExpression(lx);
     } while (lx.accept(T_COMMA));
   }
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
   if (!lx.accept(T_LBRACE)) parseError(lx, "'{' de la base de sine");
   while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
     if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
-    st->coords.push_back(parseTerm(lx));
+    coords.push_back(parseTerm(lx));
   }
   if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+}
+
+static StmtPtr parseSine(Lexer &lx) {
+  auto st = std::make_unique<SineStmt>();
+  parseSineArgs(lx, st->named, st->coords);
   return st;
 }
 

@@ -30,10 +30,15 @@ Verificado: analítico (amplitud, alternancia, bumps positivos) + estructura de
 fig4-10 (phi n=1..4 → 1,2,3,4 cúbicas; rho → 2,4,6,8). fig4-10 NO es byte-exacto
 al oráculo por diseño (es un rediseño limpio de encuadre; §22.6).
 
-## Diferido 1 — `phase` (fig6-1 lo pide: `phase=90` = coseno)
+## Diferido 1 — `phase` — **HECHO** (commit `2e1ba32`, enfoque de cuartos; rama conservadora)
 
-Hoy `phase!=0` emite un aviso y dibuja `phase=0`. El caso del corpus es
-`sine(half_cycles=2, phase=90, amplitude=1)` (WKB, fig6-1).
+Implementado tal como se recomienda abajo (rama de cuartos SOLO para phase≠0;
+el núcleo phase=0 quedó intacto). Además (2026-07-18) `sine` es también
+**expresión de path** del álgebra §9 (`path p = sine(...) { base }`): con
+phase=90/270 cada llamada es un medio ciclo de coseno entre extremos con
+pendiente cero — la pieza con que fig16-9 arma funciones de onda con
+envolvente por tramo vía `concat`. Sigue pendiente solo `half_cycles`
+fraccionario y `phase`+`squared` (aviso y dibuja phase=0).
 
 ### Enfoque recomendado: generalizar a **cuartos de ciclo** (piezas de 90°)
 
