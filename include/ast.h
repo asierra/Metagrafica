@@ -59,9 +59,29 @@ inline void warn(const char *msg, const std::string &extra = "") {
   std::fprintf(stderr, "Aviso: %s%s\n", msg, extra.c_str());
 }
 
+// Adelantadas: el álgebra de paths (§9, PathExpr) vive en parserv3.cpp, fuera
+// de esta jerarquía (un Path no es un Value, ver el comentario allá). Scope
+// solo necesita ligar {expr, ámbito del llamador} sin conocer su AST completo.
+struct PathExpr;
+struct Scope;
+
+// Ligadura de un parámetro path de struct (§8.x: `struct Nivel(&onda, w)`).
+// `scope` es el ámbito del LLAMADOR, no el de la struct que declara el
+// parámetro: PathRef::evalPath reenvía el ámbito VIGENTE, así que sin guardar
+// el del llamador aparte, un path pasado como argumento resolvería sus propias
+// referencias (p.ej. un `sine(amplitude=a)` con `a` local del llamador) en el
+// ámbito equivocado. El PathExpr no muta ni se posee aquí: vive en g_paths o
+// en el AST de quien invocó (InvokeStmt/FitStmt), y ese nodo sobrevive a la
+// ejecución del cuerpo (dueño del marco de exec del llamador).
+struct PathBinding {
+  const PathExpr *expr = nullptr;
+  Scope *scope = nullptr;
+};
+
 // --- Ámbito léxico: variables encadenadas al padre --------------------------
 struct Scope {
   std::map<std::string, Value> vars;
+  std::map<std::string, PathBinding> pathBindings;   // parámetros &onda (§8.x)
   Scope *parent = nullptr;
   explicit Scope(Scope *p = nullptr) : parent(p) {}
 
@@ -69,6 +89,14 @@ struct Scope {
     for (Scope *s = this; s; s = s->parent) {
       auto it = s->vars.find(name);
       if (it != s->vars.end()) return &it->second;
+    }
+    return nullptr;
+  }
+
+  PathBinding *findPath(const std::string &name) {
+    for (Scope *s = this; s; s = s->parent) {
+      auto it = s->pathBindings.find(name);
+      if (it != s->pathBindings.end()) return &it->second;
     }
     return nullptr;
   }

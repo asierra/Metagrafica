@@ -124,6 +124,10 @@ static void checkCoordPairs(const Lexer &lx, const std::string &what,
 // --- Gramática de expresiones (§2) ------------------------------------------
 static ExprPtr parseExpression(Lexer &);
 static ExprPtr parseUnary(Lexer &);   // adelantada: parsePower la necesita
+// path_width(&p) (§8.x/§9): puente Expr↔PathExpr. parseAtom la necesita (más
+// abajo) pero PathExpr/parsePathExpr viven mucho más adelante en el archivo
+// (álgebra de paths, §9); declarada aquí, definida junto a parsePathExpr.
+static ExprPtr parsePathWidthCall(Lexer &);
 
 static ExprPtr parseAtom(Lexer &lx) {
   const Tok &t = lx.peek();
@@ -157,6 +161,10 @@ static ExprPtr parseAtom(Lexer &lx) {
     case T_IDENTIFIER: {
       std::string name = lx.next().str;
       if (lx.accept(T_LPAREN)) {              // llamada a función
+        // path_width(&p) (§8.x/§9): reducción path→número, no una función de
+        // CallExpr (su argumento es un PathExpr, no un Expr). Antes de armar
+        // el CallExpr genérico para que no lo intercepte como nombre desconocido.
+        if (name == "path_width") return parsePathWidthCall(lx);
         auto *call = new CallExpr(name);
         if (lx.peek().type != T_RPAREN) {
           call->args.push_back(parseExpression(lx));
@@ -590,6 +598,7 @@ struct StructDef {
   std::string name;
   std::vector<std::string> params;
   std::vector<ExprPtr> defaults;   // paralelo a params; null si no hay default
+  std::vector<bool> paramIsPath;   // paralelo a params (§8.x): true si se declaró `&nombre`
   std::vector<StmtPtr> body;
   // Ventana local (world_window DENTRO del cuerpo): define la caja de coordenadas
   // que place/fit normalizan al locus/rectángulo (§10, §16). 4 exprs
@@ -607,6 +616,20 @@ static Box structBox(Scope &s, const StructDef *def) {
   }
   return Box{0, 0, 1, 1};
 }
+
+// Bbox de un path (§9): caja fuente de fit(<PathExpr>) y de path_width (paso 5
+// de plan_struct_params.md, factorizado de FitStmt::exec). Vacío = caja nula;
+// el llamador decide qué hacer (fit-de-path ya comprueba path.empty() antes).
+static Box path_bbox(const Path &path) {
+  if (path.empty()) return Box{0, 0, 0, 0};
+  double minx = path[0].x, miny = path[0].y, maxx = path[0].x, maxy = path[0].y;
+  for (const point &p : path) {
+    if (p.x < minx) minx = p.x; if (p.x > maxx) maxx = p.x;
+    if (p.y < miny) miny = p.y; if (p.y > maxy) maxy = p.y;
+  }
+  return Box{minx, miny, maxx - minx, maxy - miny};
+}
+
 // Registro global (§15: nombres globales). Posee las definiciones.
 static std::map<std::string, std::unique_ptr<StructDef>> g_structs;
 
@@ -641,6 +664,71 @@ struct PathExpr {
 };
 using PathExprPtr = std::unique_ptr<PathExpr>;
 
+// path_width(&p) (§8.x/§9, decisión 6 de plan_struct_params.md): reducción
+// path→número (extensión en x del bbox), no un CallExpr más — su argumento es
+// un PathExpr, no un Expr (la misma razón por la que Path vive aparte de
+// Value, ver el comentario de arriba; aquí la fuga va al revés: lo que sale
+// es un double corriente). Nombre PROVISIONAL: primer miembro construido de
+// una familia reservada (path_height, path_x_bounds — decisión 7), se refina
+// cuando todo funcione.
+struct PathWidthExpr : Expr {
+  PathExprPtr arg;
+  Value eval(Scope &s) const override {
+    return Value(path_bbox(arg->evalPath(s)).dx);
+  }
+};
+
+// Argumento de invocación de struct (§8.x): exactamente uno de los dos se
+// llena, nunca ambos. Un solo tipo para posicionales y nombrados, en vez de
+// una lista de paths aparte, para que el índice posicional siga
+// correspondiendo 1:1 con StructDef::params/paramIsPath (decisión 4 de
+// plan_struct_params.md) — con listas paralelas separadas, `Nivel(&pw0, 3)`
+// perdería la correspondencia entre el path y el parámetro 0.
+struct Arg { ExprPtr e; PathExprPtr p; };
+
+// Liga los parámetros de una struct al ámbito local — compartido por
+// InvokeStmt y FitStmt (§8.x, §10.2): ambos colocan una invocación, solo
+// cambia cómo se posiciona el resultado después. Un parámetro &path liga
+// {expr, ámbito del LLAMADOR} en pathBindings en vez de evaluarse aquí
+// (decisión 2 de plan_struct_params.md: el PathExpr no se evalúa al ligar,
+// PathRef::evalPath lo resuelve diferido cada vez que el cuerpo lo usa); el
+// resto evalúa a Value en el ámbito del llamador, o el default en el ámbito
+// local (los defaults ya pueden referirse a parámetros anteriores).
+//
+// Dos pasadas, no una: TODOS los params path se ligan antes de evaluar
+// CUALQUIER default (decisión 6/paso 5), sin importar el orden de
+// declaración — un default como `w = path_width(&onda)` necesita encontrar
+// `onda` ya ligado aunque `&onda` no sea el parámetro anterior.
+static void bindStructParams(Scope &local, Scope &caller, StructDef *def,
+                             std::vector<Arg> &pos, std::map<std::string, Arg> &named) {
+  auto argFor = [&](size_t i, const std::string &pn) -> const Arg * {
+    if (i < pos.size()) return &pos[i];
+    auto nit = named.find(pn);
+    return nit != named.end() ? &nit->second : nullptr;
+  };
+  for (size_t i = 0; i < def->params.size(); i++) {
+    if (!(i < def->paramIsPath.size() && def->paramIsPath[i])) continue;
+    const std::string &pn = def->params[i];
+    const Arg *arg = argFor(i, pn);
+    if (!arg)    { evalError("falta el argumento path del parámetro &", pn); return; }
+    if (!arg->p) { evalError("se esperaba un path (&nombre) para el parámetro ", pn); return; }
+    local.pathBindings[pn] = PathBinding{arg->p.get(), &caller};
+  }
+  for (size_t i = 0; i < def->params.size(); i++) {
+    if (i < def->paramIsPath.size() && def->paramIsPath[i]) continue;
+    const std::string &pn = def->params[i];
+    const Arg *arg = argFor(i, pn);
+    if (arg) {
+      if (!arg->e) { evalError("no se esperaba un path para el parámetro ", pn); return; }
+      local.vars[pn] = arg->e->eval(caller);
+    } else if (def->defaults[i]) {
+      local.vars[pn] = def->defaults[i]->eval(local);
+    } else {
+      local.vars[pn] = Value(0);
+    }
+  }
+}
+
 // Registro global de paths nombrados (§9), calcado de g_structs.
 static std::map<std::string, PathExprPtr> g_paths;
 
@@ -656,10 +744,14 @@ struct PathLiteral : PathExpr {
 };
 
 // Referencia &ID a un path nombrado; se resuelve en g_paths al evaluar (diferido,
-// para que un path pueda referir a otro declarado antes).
+// para que un path pueda referir a otro declarado antes). Un parámetro path de
+// struct (§8.x) ENSOMBRECE un path global del mismo nombre dentro del cuerpo
+// (decisión 3 de plan_struct_params.md): por eso pathBindings se consulta
+// PRIMERO, subiendo por la cadena de ámbitos como las variables.
 struct PathRef : PathExpr {
   std::string name;
   Path evalPath(Scope &s) const override {
+    if (PathBinding *b = s.findPath(name)) return b->expr->evalPath(*b->scope);
     auto it = g_paths.find(name);
     if (it == g_paths.end()) { evalError("path no definido: ", name); return Path(); }
     return it->second->evalPath(s);
@@ -729,38 +821,31 @@ struct PathDeclStmt : Stmt {
 
 struct InvokeStmt : Stmt {
   std::string name;
-  std::vector<ExprPtr> pos;
-  std::map<std::string, ExprPtr> named;      // incluye at/rotate/scale (aún ignorados)
+  std::vector<Arg> pos;
+  std::map<std::string, Arg> named;      // incluye at/rotate/scale (aún ignorados)
   void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
     if (logPlotBlocksStruct("invoke")) return;
     auto it = g_structs.find(name);
     if (it == g_structs.end()) { evalError("struct no definida: ", name); return; }
     StructDef *def = it->second.get();
-    // Ámbito de la struct: hijo del GLOBAL (léxico), con los parámetros ligados.
-    // Los args se evalúan en el ámbito del LLAMADOR; los defaults, en el de la struct.
+    // Ámbito de la struct: hijo del GLOBAL (léxico), con los parámetros ligados
+    // (bindStructParams: args en el ámbito del llamador, defaults en el local).
     Scope local(caller.root());
-    for (size_t i = 0; i < def->params.size(); i++) {
-      const std::string &pn = def->params[i];
-      auto nit = named.find(pn);
-      if (i < pos.size())          local.vars[pn] = pos[i]->eval(caller);
-      else if (nit != named.end()) local.vars[pn] = nit->second->eval(caller);
-      else if (def->defaults[i])   local.vars[pn] = def->defaults[i]->eval(local);
-      else                         local.vars[pn] = Value(0);
-    }
+    bindStructParams(local, caller, def, pos, named);
     // Modificadores de colocación (§8): at/rotate/scale → marco canónico fijo
     // T·R·S (post-multiplicación: escala/gira en el marco local, luego traslada;
     // el orden de escritura es irrelevante). Se evalúan en el ámbito del llamador.
-    // Nombres reservados: no son parámetros de la struct.
+    // Nombres reservados: no son parámetros de la struct (nunca paths).
     Matrix frame;
     bool hasFrame = false;
     auto ait = named.find("at"), rit = named.find("rotate"), sit = named.find("scale");
-    if (ait != named.end()) {
-      Value v = ait->second->eval(caller);
+    if (ait != named.end() && ait->second.e) {
+      Value v = ait->second.e->eval(caller);
       if (v.type == Value::LIST && v.items.size() >= 2) { frame.translate(v.items[0].num, v.items[1].num); hasFrame = true; }
     }
-    if (rit != named.end()) { frame.rotate(rit->second->eval(caller).num); hasFrame = true; }
-    if (sit != named.end()) {
-      Value v = sit->second->eval(caller);
+    if (rit != named.end() && rit->second.e) { frame.rotate(rit->second.e->eval(caller).num); hasFrame = true; }
+    if (sit != named.end() && sit->second.e) {
+      Value v = sit->second.e->eval(caller);
       if (v.type == Value::LIST && v.items.size() >= 2) frame.scale(v.items[0].num, v.items[1].num);
       else                                              frame.scale(v.num, v.num);
       hasFrame = true;
@@ -941,6 +1026,10 @@ struct FitStmt : Stmt {
   PathExprPtr pathArg;                    // fit de un path (§9) en vez de struct
   ExprPtr stretchE;                       // stretch= (null = proporcional/meet)
   std::vector<ExprPtr> coords;            // 4 Terms = 2 esquinas del rectángulo
+  // fit(Struct(args), …) (§10.2, decisión de plan_struct_params.md): args de la
+  // invocación interior, vacíos si se escribió `fit(Struct, …)` sin paréntesis.
+  std::vector<Arg> invokePos;
+  std::map<std::string, Arg> invokeNamed;
 
   // Construye la matriz window→rectángulo (misma lógica para struct y path). El
   // orden de las esquinas refleja (escala con signo); stretch deforma, si no meet.
@@ -976,12 +1065,7 @@ struct FitStmt : Stmt {
     if (pathArg) {
       Path path = pathArg->evalPath(caller);
       if (path.empty()) return;
-      double minx = path[0].x, miny = path[0].y, maxx = path[0].x, maxy = path[0].y;
-      for (const point &p : path) {
-        if (p.x < minx) minx = p.x; if (p.x > maxx) maxx = p.x;
-        if (p.y < miny) miny = p.y; if (p.y > maxy) maxy = p.y;
-      }
-      Box w{minx, miny, maxx - minx, maxy - miny};
+      Box w = path_bbox(path);
       Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);
       auto p = std::make_unique<Polyline>(GI_POLYLINE);
       p->setPath(process_path(M, path));
@@ -993,11 +1077,14 @@ struct FitStmt : Stmt {
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (fit): ", structName); return; }
     StructDef *def = it->second.get();
+    // at=/rotate=/scale= de la invocación interior competirían con la matriz del
+    // propio fit (decisión 5 de plan_struct_params.md): error, no se ignoran.
+    if (invokeNamed.count("at") || invokeNamed.count("rotate") || invokeNamed.count("scale"))
+      { evalError("at=/rotate=/scale= no van dentro de fit(Struct(...)): compiten con la matriz del fit"); return; }
     // Ámbito LOCAL (con params ligados) ANTES de structBox: el world_window del
     // cuerpo puede referirse a un parámetro (p.ej. `world_window 0 w -2 2`).
     Scope local(caller.root());
-    for (size_t i = 0; i < def->params.size(); i++)
-      local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
+    bindStructParams(local, caller, def, invokePos, invokeNamed);
     Box w = structBox(local, def);
     Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);   // window → rectángulo (esquinas firmadas)
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
@@ -2544,6 +2631,27 @@ static void parseArgList(Lexer &lx, std::vector<ExprPtr> &pos,
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
 }
 
+// Lista de args mixta (§8.x): como parseArgList, pero cada arg es Expression O
+// PathExpr (nunca ambos, ver `Arg`) — solo la usan la invocación de struct
+// (InvokeStmt) y la invocación interior de fit (§10.2), que son las únicas
+// formas que aceptan un parámetro &path.
+static void parseMixedArgList(Lexer &lx, std::vector<Arg> &pos,
+                              std::map<std::string, Arg> &named) {
+  if (lx.peek().type != T_RPAREN) {
+    do {
+      std::string k;
+      bool isNamed = attrNameHere(lx, k);
+      if (isNamed) { lx.next(); lx.next(); }      // nombre y '='
+      Arg a;
+      if (startsPathExpr(lx)) a.p = parsePathExpr(lx);
+      else                    a.e = parseExpression(lx);
+      if (isNamed) named[k] = std::move(a);
+      else         pos.push_back(std::move(a));
+    } while (lx.accept(T_COMMA));
+  }
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+}
+
 static StmtPtr parseStatement(Lexer &lx) {
   const Tok &t = lx.peek();
   if (t.type == T_LBRACE) return parseBlock(lx);      // bloque anónimo (§7.1)
@@ -2802,10 +2910,12 @@ static StmtPtr parseStructDef(Lexer &lx) {
   auto def = std::make_unique<StructDef>();
   def->name = lx.next().str;
   if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras el nombre de la struct");
-  if (lx.peek().type != T_RPAREN) {            // parámetros: ID [= default]
+  if (lx.peek().type != T_RPAREN) {            // parámetros: [&]ID [= default]  (§8.x: & = tipo path)
     do {
+      bool isPath = lx.accept(T_AMP);
       if (lx.peek().type != T_IDENTIFIER) parseError(lx, "un nombre de parámetro");
       def->params.push_back(lx.next().str);
+      def->paramIsPath.push_back(isPath);
       def->defaults.push_back(lx.accept(T_ASSIGN) ? parseExpression(lx) : nullptr);
     } while (lx.accept(T_COMMA));
   }
@@ -2963,6 +3073,17 @@ static PathExprPtr parsePathExpr(Lexer &lx) {
   return nullptr;                                // inalcanzable (parseError hace exit)
 }
 
+// path_width(&p) (paso 5 de plan_struct_params.md): puente Expr↔PathExpr,
+// declarada junto a parseUnary (parseAtom la necesita) y definida aquí, donde
+// PathWidthExpr y parsePathExpr ya son visibles. El '(' inicial ya se consumió
+// en parseAtom (case T_IDENTIFIER); esta función consume el resto.
+static ExprPtr parsePathWidthCall(Lexer &lx) {
+  auto e = std::make_unique<PathWidthExpr>();
+  e->arg = parsePathExpr(lx);
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  return e;
+}
+
 static StmtPtr parseRepeat(Lexer &lx) {
   if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras repeat");
   auto st = std::make_unique<RepeatStmt>();
@@ -2987,6 +3108,9 @@ static StmtPtr parseFit(Lexer &lx) {
   } else {
     if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct o un path (&…)");
     st->structName = lx.next().str;
+    if (lx.accept(T_LPAREN)) {                   // fit(Struct(args), …) { rect } (§10.2)
+      parseMixedArgList(lx, st->invokePos, st->invokeNamed);
+    }
   }
   while (lx.accept(T_COMMA)) {                   // argumentos nombrados (stretch=…)
     std::string k;
@@ -3059,7 +3183,7 @@ static StmtPtr parseInvoke(Lexer &lx, const std::string &name) {
   auto st = std::make_unique<InvokeStmt>();
   st->name = name;
   lx.next();                                   // consume '('
-  parseArgList(lx, st->pos, st->named);
+  parseMixedArgList(lx, st->pos, st->named);
   return st;
 }
 
