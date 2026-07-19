@@ -771,7 +771,9 @@ struct InvokeStmt : Stmt {
     // de colocación (device = … · frame · N · coord) para que el at/rotate/scale
     // posicione la caja ya centrada/normalizada. Sin esto, la invocación directa
     // ignoraba world_window (el detector de fig2-5 no se centraba ni agrandaba).
-    Box w = structBox(caller, def);
+    // Ámbito LOCAL (no el del llamador): un world_window que use un parámetro de
+    // la struct (p.ej. `world_window 0 w -2 2`) necesita verlo ya ligado.
+    Box w = structBox(local, def);
     bool needN = (w.x != 0.0 || w.y != 0.0 || w.dx != 1.0 || w.dy != 1.0);
 
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));  // aísla estado (como structure())
@@ -991,11 +993,13 @@ struct FitStmt : Stmt {
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (fit): ", structName); return; }
     StructDef *def = it->second.get();
-    Box w = structBox(caller, def);
-    Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);   // window → rectángulo (esquinas firmadas)
+    // Ámbito LOCAL (con params ligados) ANTES de structBox: el world_window del
+    // cuerpo puede referirse a un parámetro (p.ej. `world_window 0 w -2 2`).
     Scope local(caller.root());
     for (size_t i = 0; i < def->params.size(); i++)
       local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
+    Box w = structBox(local, def);
+    Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);   // window → rectángulo (esquinas firmadas)
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
     for (auto &st : def->body) st->exec(local, mg, out);
@@ -1015,7 +1019,7 @@ static Structure *buildStructure(StructDef *def, MetaGrafica &mg, Scope &caller)
   for (size_t i = 0; i < def->params.size(); i++)
     local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
   GraphicsItemList prlist;
-  Box w = structBox(caller, def);
+  Box w = structBox(local, def);   // ámbito LOCAL: el world_window del cuerpo puede usar un parámetro
   bool needN = (w.x != 0.0 || w.y != 0.0 || w.dx != 1.0 || w.dy != 1.0);
   if (needN) {
     Matrix N; N.scale(1.0 / w.dx, 1.0 / w.dy); N.translate(-w.x, -w.y);   // ventana→unidad
