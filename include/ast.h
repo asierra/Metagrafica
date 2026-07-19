@@ -231,6 +231,15 @@ struct CallExpr : Expr {         // función builtin: sin(x), mod(a,b), len(l)�
     if (fn == "sqrt"  && need(1)) return Value(std::sqrt(a[0].num));
     if (fn == "abs"   && need(1)) return Value(std::fabs(a[0].num));
     if (fn == "atan2" && need(2)) return Value(std::atan2(a[0].num, a[1].num));
+    // exp/ln (§5.2): entran porque el corpus las exige — un potencial de Morse,
+    // D(1-exp(-a(r-re)))², no es escribible sin ellas, y con ellas sus puntos de
+    // retorno salen en forma cerrada en vez de medirse sobre la curva dibujada.
+    if (fn == "exp"   && need(1)) return Value(std::exp(a[0].num));
+    if (fn == "ln"    && need(1)) {
+      if (a[0].num <= 0)
+        return evalError("ln: argumento no positivo: ", std::to_string(a[0].num));
+      return Value(std::log(a[0].num));
+    }
     if (fn == "mod"   && need(2)) return Value(std::fmod(a[0].num, a[1].num));
     if (fn == "len"   && need(1)) return Value((double)a[0].items.size());
     // str(x): número→cadena en formato mínimo (reusa valueToStr). str(x, dec):
