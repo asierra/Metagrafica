@@ -878,6 +878,38 @@ Rama(5, 2)
 
 Como red de seguridad, `max_depth n` (§18) limita la profundidad de expansión. Nótese que `exit` (§18) **no** sirve como condición de paro: detiene el parseo del archivo, no la expansión de una struct. *(V1: "una estructura puede contenerse a sí misma, permitiendo sorprendentes efectos" —artículo de 1991—, con `MAXDEEP n` como límite; era frágil porque la pluma y las matrices eran estado global.)*
 
+### 8.2 Parámetros de tipo path
+
+Un parámetro puede declararse de tipo **path** con el sigilo `&`, para que la struct reciba un path completo (no un número) y lo dibuje con él:
+
+```text
+struct Nivel(&onda, w = path_width(&onda)) {
+    world_window 0 w -2 2
+    polyline { 0 0  w 0 }
+    bezier(&onda)
+}
+
+Nivel(&pw0)                          % w sale del propio path (default)
+Nivel(&pw0, 6)                       % w explícito, pisa el default
+fit(Nivel(&pw0), stretch=true) { 1.84615 0.44169  3.46615 1.48169 }
+```
+
+- El parámetro se liga en el ámbito del **llamador**, no en el de la struct: un path pasado como argumento resuelve sus propias referencias internas (p. ej. una variable usada dentro de un `sine(amplitude=...)`) en el sitio donde se escribió la llamada, no en el cuerpo que lo recibe.
+- Un parámetro path **ensombrece** un path global del mismo nombre dentro del cuerpo — deliberado, no un accidente de resolución.
+- El `world_window` local del cuerpo (§16) **puede** usar un parámetro de la struct (arriba, `world_window 0 w -2 2`).
+- Pasar un número donde se espera un path (o viceversa), o invocar sin el argumento path requerido, es error de compilación con mensaje claro.
+- **`fit` acepta la misma invocación** (§10.2): `fit(Struct(args), ...) { rect }`. `place`/`repeat` todavía no (nadie lo ha necesitado).
+
+**`path_width(&p)`** — reduce un path a su extensión en x (`max x − min x`). Es el primer miembro construido de una familia reservada de accesores path→escalar (nombres **provisionales**, se refinan cuando estén todos):
+
+```text
+path_width(&p)              % construido — extensión en x
+path_height(&p)             % reservado
+path_x_bounds(&p, at_y=E)   % reservado
+```
+
+Exacto cuando el path es monótono en x (los extremos son entonces los puntos inicial y final, que sí están sobre la curva); sobre una Bézier genuinamente curva en esa zona, opera sobre el polígono de **control**, no sobre la curva — misma advertencia que `getXBoundsAtY` (motor, `splines.cpp`), el otro miembro de la familia.
+
 ---
 
 ## 9. Paths como objetos de datos
@@ -906,7 +938,9 @@ bezier(&sinpi)
 > `flip_y`/`reverse`, `concat` **variádico y sin auto-reversión** (la semántica de
 > abajo), y `sine`/`smooth` como generadores (caso guía: fig16-9, funciones de onda
 > por medios ciclos de coseno con envolvente). `tile`/`normalize`/`fitrect` siguen
-> reservados.
+> reservados. `path_width(&p)` (§8.2) es una operación hermana: reduce un path a un
+> escalar en vez de a otro path — sirve al default de un parámetro de struct
+> (`w = path_width(&onda)`), no se usa suelta como las de arriba.
 
 > Las dos operaciones "ajustar a rectángulo" tienen nombres distintos según su operando: `fitrect(&path)` produce un path (álgebra, esta sección); `fit(Struct)` (§10.2) coloca una struct. Igual con la repetición: `tile(&path)` concatena un path; `repeat(Struct)` (§17) repite una struct.
 
@@ -1029,6 +1063,8 @@ fit(Panel, stretch=true) { 0 0  10 8 }  % deforma para llenar el rectángulo exa
 Por default preserva la proporción de la struct: escala uniforme al mayor tamaño que cabe en el rectángulo, con el contenido centrado (misma semántica *meet* de §3.1). Con `stretch=true` se deforma para ocupar el rectángulo exacto, que a veces es lo deseado.
 
 **El orden de las esquinas importa: refleja.** El bloque `{ p1 p2 }` mapea la caja de la struct a esas dos esquinas *en ese orden*; si un eje queda decreciente —p. ej. `{ .5 0  0 1 }`, con la x de `p1` mayor que la de `p2`— el contenido se **refleja** en ese eje. Es un idiom compacto para espejar un panel: `curvas3.mg` lo usa para armar un patrón de difracción simétrico a partir de media curva. *(Motor: `StructureRectangle::draw` vía `Matrix::to_rectangle`, que admite escala negativa.)*
+
+**Invocación paramétrica.** Si la struct tiene parámetros, `fit` acepta la misma sintaxis de invocación que una llamada directa: `fit(Struct(args), stretch=…) { rect }` (§8.2) — típicamente para pasar un parámetro path (`fit(Nivel(&pw0), stretch=true) { … }`). Los modificadores de colocación `at=`/`rotate=`/`scale=` (§8) **no** se aceptan dentro de esa invocación —competirían con la matriz que arma el propio `fit`— y son error de compilación si se escriben ahí.
 
 **V1:** `PWST` / `PVPT` (siempre deformaban al rectángulo; el orden de esquinas ya reflejaba).
 
@@ -1934,6 +1970,8 @@ La ventana local rige hasta el final del bloque; al salir se recupera la ventana
 La ventana anidada se mapea **isométricamente** a su región, igual que la global (§3.1): declarar una ventana local nunca deforma el contenido de la struct. `stretch=true` y `align=` aplican igual que en la ventana global.
 
 > Relación con §11: la `world_window` remapea las coordenadas de usuario al cuadrado unitario interno; las transformaciones `transform` (§11) operan **después** de ese remapeo.
+
+> Si el bloque es el cuerpo de una struct con parámetros, la `world_window` local puede referirse a ellos (§8.2): `struct Nivel(&onda, w) { world_window 0 w -2 2  … }`.
 
 ---
 

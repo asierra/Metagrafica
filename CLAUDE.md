@@ -497,6 +497,60 @@ posición exacta. Los 0.026 pt de `x` son el redondeo de la inversión a 3 decim
 sigue fuera, y bien: es el **nombre del eje** (mobiliario de página, horizontal-arriba), no una
 anotación de datos.
 
+### Cerrado en la sesión del 2026-07-18 (structs parametrizadas por path + `fit` de invocación; `plan_struct_params.md`)
+
+**Hueco 3 primero, en commit aparte** (`00feb03`): `structBox` recibía el ámbito del
+LLAMADOR en los tres sitios que lo invocan (`InvokeStmt`, `FitStmt`, `buildStructure`), así
+que un `world_window` del cuerpo que usara un parámetro (`world_window 0 w -2 2`) fallaba
+con `variable no definida: w`. Los tres pasan ahora el ámbito LOCAL, con los parámetros ya
+ligados. Verificado sin mover bytes (`ok=51`): ningún `world_window` del corpus llevaba
+identificadores.
+
+**Parámetro de tipo path** (`struct Nivel(&onda, w = path_width(&onda))`, commit `1c28197`):
+el sigilo `&` en la lista de parámetros marca el tipo (`StructDef::paramIsPath`, paralelo a
+`params`). `Scope` gana `pathBindings`: un mapa con `PathBinding{expr, scope}` — el `scope`
+es el ámbito del LLAMADOR, no el de la struct que declara el parámetro, así que un path
+pasado como argumento resuelve sus propias referencias (p. ej. un `sine(amplitude=a)` con
+`a` local del llamador) donde corresponde, no en el ámbito del cuerpo que lo recibe.
+`PathRef::evalPath` consulta `pathBindings` ANTES que `g_paths`: un parámetro path
+**ensombrece** un path global homónimo, deliberado. Un solo tipo `Arg{ExprPtr e; PathExprPtr
+p;}` (nunca ambos) mantiene la lista de argumentos en el mismo índice que
+`params`/`paramIsPath` — con listas paralelas separadas, `Nivel(&pw0, 3)` perdería la
+correspondencia posicional. `bindStructParams` (compartida por `InvokeStmt`/`FitStmt`) liga
+en DOS pasadas: todos los parámetros path antes que cualquier default, para que
+`w = path_width(&onda)` encuentre `onda` ligado sin depender del orden de declaración.
+
+**`fit(Struct(args), stretch=…) { rect }`**: `fit` acepta la misma invocación paramétrica
+que la llamada directa (desambiguación por `T_LPAREN` tras el nombre, sin tocar la rama de
+`fit(&path)` de §9). `at=`/`rotate=`/`scale=` dentro de esa invocación son **error**, no se
+ignoran: competirían con la matriz del propio `fit`.
+
+**`path_width(&p)`** (reducción path→número, extensión en x del bbox; `path_bbox()`
+factorizado de la rama `fit(&path)` existente): puente Expr↔PathExpr en `parseAtom` (antes
+de armar el `CallExpr` genérico), declarado junto a `parseUnary` y definido junto a
+`parsePathExpr` — evita reordenar el archivo, el punto de enganche vive muy por encima de
+donde vive `PathExpr`. Nombre **provisional**: primer miembro construido de una familia
+reservada (`path_height`, `path_x_bounds` — ver `getXBoundsAtY` en `splines.cpp`, el cambio
+suelto de Alejandro que motivó la familia); hereda su advertencia (exacto sobre paths
+monótonos en x, como las ondas de fig16-9; sobre una bezier genuinamente curva opera sobre
+el polígono de control, no la curva).
+
+**`examples/fig16-9.mg`** (commit `1311eda`): las 7 structs casi idénticas `Nivel0..Nivel6`
+colapsan a una — `struct Nivel(&onda, w = path_width(&onda))` —, y los 13 `fit` pasan a
+`fit(NivelN(&pwK), stretch=true)` con los mismos rectángulos. Refactor puro, golden
+byte-idéntico (`ok=51`) en cada paso, incluida la reescritura del ejemplo.
+
+Errores verificados a mano (sin corpus, cero cobertura del golden): path donde va número,
+número donde va path, `&nombre` no definido, argumento path faltante (aridad), y
+`at=`/`rotate=`/`scale=` dentro de `fit(Struct(...))` — los cinco con mensaje claro y
+`exit 1`. Vida del `Scope*` de `PathBinding`: segura por construcción — apunta siempre a un
+ámbito ANCESTRO en la misma cadena de llamadas síncrona (`exec()` anidado, sin nada
+diferido ni asíncrono), verificado también con reenvío de dos niveles (`Outer(&onda)` que
+hace `fit(Inner(&onda), ...)` en su cuerpo).
+
+Pendiente (decisión 8, nadie lo pide todavía): `place`/`repeat` tienen el mismo hueco 1 (no
+aceptan invocación paramétrica) pero se dejan sin construir.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
