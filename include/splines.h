@@ -64,4 +64,19 @@ void get_bezier_tangents(point p0, point p1, point p2, point p3, point &t1, poin
    ready to be used in PostScript.
  */
 Path path_to_bezier(Path controlpoints);
+
+/**
+   Extensión en x del path al nivel y dado: xmin/xmax de sus cruces con la
+   recta horizontal y = y_level. Devuelve false (y NO toca xmin/xmax) si el
+   path no la cruza — el llamador debe verificar el retorno antes de leerlos.
+
+   Segundo miembro de la familia de reducciones path→número, junto a
+   path_width (ver `plan_struct_params.md`). Hereda su advertencia: opera
+   sobre el polígono de los puntos del path. Sobre paths monótonos en x
+   (las ondas de fig16-9) es exacto; sobre una bezier genuinamente curva el
+   polígono de control puede cruzar y_level en x distintos —y en distinto
+   número de veces— que la curva.
+ */
+bool path_x_bounds_at_y(const Path &path, double y_level, double &xmin, double &xmax);
+
 #endif

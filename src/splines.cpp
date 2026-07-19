@@ -16,6 +16,7 @@ Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 
 #include "splines.h"
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <stdio.h>
 #include <math.h>
@@ -251,4 +252,48 @@ Path path_to_bezier(Path cp) {
   }
   outpath.push_back(p2);
   return outpath;
+}
+
+
+// Cruces del path con la recta y = y_level; xmin/xmax de sus abscisas.
+// El contrato del retorno está en splines.h: false = no cruza, xmin/xmax
+// quedan intactos y el llamador NO debe leerlos.
+bool path_x_bounds_at_y(const Path &path, double y_level, double &xmin, double &xmax) {
+  if (path.size() < 2)
+    return false;  // hace falta al menos un segmento (2 puntos) para cruzar
+
+  // Tolerancia para los segmentos horizontales y la división del reparto.
+  const double eps = 1e-9;
+
+  std::vector<double> crossings;
+  crossings.reserve(8);
+
+  for (size_t i = 0; i + 1 < path.size(); ++i) {
+    const point &p1 = path[i];
+    const point &p2 = path[i + 1];
+
+    // Segmento horizontal sobre la recta: aporta sus dos extremos.
+    if (std::abs(p1.y - y_level) < eps && std::abs(p2.y - y_level) < eps) {
+      crossings.push_back(p1.x);
+      crossings.push_back(p2.x);
+      continue;
+    }
+
+    // min/max para no depender de si el trazo sube o baja. Un vértice justo
+    // sobre la recta lo cuentan los dos segmentos que lo comparten; da igual
+    // para un mínimo y un máximo.
+    if (y_level >= std::min(p1.y, p2.y) && y_level <= std::max(p1.y, p2.y) &&
+        std::abs(p2.y - p1.y) > eps) {
+      crossings.push_back(p1.x + (p2.x - p1.x) * ((y_level - p1.y) / (p2.y - p1.y)));
+    }
+  }
+
+  if (crossings.empty())
+    return false;
+
+  std::pair<std::vector<double>::iterator, std::vector<double>::iterator> mm =
+      std::minmax_element(crossings.begin(), crossings.end());
+  xmin = *mm.first;
+  xmax = *mm.second;
+  return true;
 }
