@@ -128,6 +128,8 @@ static ExprPtr parseUnary(Lexer &);   // adelantada: parsePower la necesita
 // abajo) pero PathExpr/parsePathExpr viven mucho más adelante en el archivo
 // (álgebra de paths, §9); declarada aquí, definida junto a parsePathExpr.
 static ExprPtr parsePathWidthCall(Lexer &);
+// path_x_min_at_y/path_x_max_at_y(&p, y [, expand]): misma clase de puente.
+static ExprPtr parsePathXBoundCall(Lexer &, bool wantMax);
 
 static ExprPtr parseAtom(Lexer &lx) {
   const Tok &t = lx.peek();
@@ -165,6 +167,8 @@ static ExprPtr parseAtom(Lexer &lx) {
         // CallExpr (su argumento es un PathExpr, no un Expr). Antes de armar
         // el CallExpr genérico para que no lo intercepte como nombre desconocido.
         if (name == "path_width") return parsePathWidthCall(lx);
+        if (name == "path_x_min_at_y") return parsePathXBoundCall(lx, false);
+        if (name == "path_x_max_at_y") return parsePathXBoundCall(lx, true);
         auto *call = new CallExpr(name);
         if (lx.peek().type != T_RPAREN) {
           call->args.push_back(parseExpression(lx));
@@ -675,6 +679,36 @@ struct PathWidthExpr : Expr {
   PathExprPtr arg;
   Value eval(Scope &s) const override {
     return Value(path_bbox(arg->evalPath(s)).dx);
+  }
+};
+
+// path_x_min_at_y/path_x_max_at_y(&p, y [, expand]): abscisas donde el path
+// cruza la horizontal y — los puntos de retorno de una curva de potencial.
+// Van DOS expresiones porque una expresión de MG devuelve un número (§5.2) y
+// aquí salen dos; cada una calcula ambas y devuelve su lado.
+//
+// `expand` ensancha el par por FRACCIÓN del tramo (no por una cantidad
+// absoluta): a-f·(b-a), b+f·(b-a). La fracción es lo que permite escribirlo
+// sin conocer de antemano el ancho en cm — es justo lo que se necesita para
+// alojar una onda con colas planas, donde f = 0.5/(path_width(&onda)-1).
+struct PathXBoundExpr : Expr {
+  PathExprPtr arg;
+  ExprPtr level;
+  ExprPtr expand;                    // opcional (nulo = 0)
+  bool wantMax = false;
+  Value eval(Scope &s) const override {
+    const double y = level->eval(s).num;
+    double xmin = 0, xmax = 0;
+    if (!path_x_bounds_at_y(arg->evalPath(s), y, xmin, xmax))
+      evalError(wantMax ? "path_x_max_at_y: el path no cruza y = "
+                        : "path_x_min_at_y: el path no cruza y = ",
+                std::to_string(y));
+    if (expand) {
+      const double f = expand->eval(s).num * (xmax - xmin);
+      xmin -= f;
+      xmax += f;
+    }
+    return Value(wantMax ? xmax : xmin);
   }
 };
 
@@ -3080,6 +3114,18 @@ static PathExprPtr parsePathExpr(Lexer &lx) {
 static ExprPtr parsePathWidthCall(Lexer &lx) {
   auto e = std::make_unique<PathWidthExpr>();
   e->arg = parsePathExpr(lx);
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  return e;
+}
+
+// path_x_min_at_y/path_x_max_at_y(&p, y [, expand]) — el '(' ya se consumió.
+static ExprPtr parsePathXBoundCall(Lexer &lx, bool wantMax) {
+  auto e = std::make_unique<PathXBoundExpr>();
+  e->wantMax = wantMax;
+  e->arg = parsePathExpr(lx);
+  if (!lx.accept(T_COMMA)) parseError(lx, "',' y la altura y del corte");
+  e->level = parseExpression(lx);
+  if (lx.accept(T_COMMA)) e->expand = parseExpression(lx);
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
   return e;
 }
