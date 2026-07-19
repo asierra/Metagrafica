@@ -1,10 +1,15 @@
 # plan_struct_params.md — Structs parametrizadas por path + `fit` de una invocación
 
-Estado: **PLANEADO, sin implementar.** Redactado 2026-07-18 al cerrar la sesión de
-fig16-9; la discusión de diseño está cerrada y las decisiones tomadas (abajo).
-Baseline verificado en ese punto: commit `5ee2d85` + los cambios sueltos de
-Alejandro (C++17, `getXBoundsAtY`), `make` limpio y `bash test/run.sh check` →
-**ok=51 fail=0 error=0 psfail=0 c3fail=0**.
+Estado: **IMPLEMENTADO** (commits `00feb03`, `1c28197`, `1311eda`, `2fb3add`; los tres
+huecos cerrados y fig16-9 colapsada de 7 structs a 1). La familia de reducciones de la
+decisión 7 se completó después, el 2026-07-18 (`fe7115d`, `f2edb71`) — ver esa decisión
+y las dos secciones de medición al final, que resuelven la advertencia de teselado.
+
+Redactado 2026-07-18 al cerrar la sesión de fig16-9; la discusión de diseño está cerrada
+y las decisiones tomadas (abajo). Baseline en ese punto: commit `5ee2d85` + los cambios
+sueltos de Alejandro (C++17, `getXBoundsAtY`), `make` limpio y `bash test/run.sh check` →
+**ok=51 fail=0 error=0 psfail=0 c3fail=0**. *(El C++17 se revirtió en `fe7115d`: sus
+únicas dos construcciones eran evitables.)*
 
 **Revisión 2026-07-18 (2ª pasada, contra el código):** la primera redacción daba por
 funcionando algo que no funciona (apareció el **Hueco 3**, abajo) y dejaba dos
@@ -167,21 +172,35 @@ parámetro, no.
    de §13 costó dos fases para no colisionar.
 
    ```text
-   path_width(&p)              % CONSTRUIDO ahora  — extensión en x
-   path_height(&p)             % reservado
-   path_x_bounds(&p, at_y=E)   % reservado — el getXBoundsAtY expuesto
+   path_width(&p)                        % CONSTRUIDO — extensión en x
+   path_height(&p)                       % reservado
+   path_x_min_at_y(&p, y [, expand])     % CONSTRUIDO 2026-07-18
+   path_x_max_at_y(&p, y [, expand])     % CONSTRUIDO 2026-07-18
    ```
 
-   **Nomenclatura PROVISIONAL**: se refina cuando todo funcione (acordado con Alejandro
-   el 2026-07-18). Lo que se fija ahora es que hay familia, no los nombres finales.
+   **Resuelto el 2026-07-18** (commits `fe7115d`, `f2edb71`). En C++ la reducción es
+   `path_x_bounds_at_y` (un `bool` + dos salidas por referencia); expuesta a MG son
+   **dos** expresiones, porque una expresión de MG devuelve **un** número. Se descartó
+   `b = path_x_bounds(&m, at_y=E)` + `b[0]`/`b[1]`: `IndexExpr` indexa una **variable
+   nombrada**, no una expresión (`ast.h:169`), así que la forma de lista no sirve donde
+   más se necesita —el default de la decisión 6, `w = path_width(&onda)`—. Dos funciones
+   escalares componen en cualquier posición. Cada una calcula ambos cruces por dentro.
 
-   `path_width` debe ser **escalar**, no azúcar sobre los bounds: el default de la
-   decisión 6 necesita un número, y `IndexExpr` indexa una **variable nombrada**, no una
-   expresión (`ast.h:169`) → `path_x_bounds(&m, at_y=E)[0]` no parsearía ahí. Cuando se
-   construya el tercero, el uso natural será `b = path_x_bounds(&m, at_y=E)` y luego
-   `b[0]`/`b[1]` (que además evalúa la intersección una sola vez). Pendiente para
-   entonces: el `[[nodiscard]] bool` no traduce a MG — hay que decidir si "no hay
-   intersección" es `evalError` fatal o lista vacía.
+   El "no hay intersección" quedó **`evalError` fatal**, coherente con la decisión de que
+   un documento roto no llegue a la salida.
+
+   El tercer argumento `expand` ensancha por **fracción del tramo**, no por cantidad
+   absoluta: es lo que permite alojar una onda con colas planas sin conocer de antemano
+   el ancho en unidades de la figura, que es justo lo que se estaría calculando.
+
+   ⚠️ **Sin uso en el corpus.** El caso que motivó la familia —derivar de la curva de
+   Morse los rects de las ondas de fig16-9— resultó NO ser el suyo, por dos razones
+   medidas: (a) los rects publicados **no son** los puntos de retorno (los exceden hasta
+   17 pt, con sesgo creciente y monótono — la figura se armó a ojo, ver abajo); (b) para
+   una curva con fórmula los retornos salen en **forma cerrada** y eso es más exacto y
+   más barato que intersecar la curva ya dibujada (`examples/franck_condon.mg`). Su lugar
+   es una curva **empírica**, sin fórmula que recuperar. Si en unos meses sigue sin
+   usarse, revertir `f2edb71` es lo correcto.
 8. **Solo `fit` recibe la invocación ahora.** `place` (`parserv3.cpp:3003`) y
    `repeat` tienen el mismo hueco 1 y por consistencia deberían aceptarla igual,
    pero **ninguna figura lo pide**: se deja la sintaxis *diseñada* en la spec §10
@@ -331,3 +350,60 @@ Tres apuntes para cuando se use:
   nomenclatura de familia reservada (`path_x_bounds(&p, at_y=E)` sería ésta expuesta al
   lenguaje) y para lo que falta decidir al exponerla: el `[[nodiscard]] bool` no traduce
   a MG (¿`evalError` fatal, o lista vacía?).
+
+### Sesgo del polígono de control: MEDIDO (2026-07-18)
+
+La advertencia de arriba pedía medir antes de decidir si hace falta teselar la bezier.
+Medido sobre los 7 niveles del pozo inferior de fig16-9 (cruce de la curva real por
+bisección vs. cruce del polígono de control, en pt de página):
+
+```
+niv  y_nivel |  curva x0        x1 |  polig x0        x1 |  error x0  error x1
+  0   0.9617 |    2.5092    3.0221 |    2.4869    3.0230 |    -0.63     +0.03
+  1   1.5786 |    2.3237    3.3738 |    2.3233    3.3738 |    -0.01     -0.00
+  2   2.1150 |    2.2182    3.6498 |    2.2167    3.6467 |    -0.04     -0.09
+  3   2.6246 |    2.1680    3.9204 |    2.1564    3.9195 |    -0.33     -0.02
+  4   3.0805 |    2.1280    4.2108 |    2.1025    4.2088 |    -0.72     -0.06
+  5   3.4828 |    2.0955    4.5055 |    2.0771    4.4824 |    -0.52     -0.66
+  6   3.8315 |    2.0689    4.8028 |    2.0565    4.8028 |    -0.35     -0.00
+```
+
+**Veredicto: no hace falta teselar.** Máximo 0.72 pt (0.25 mm), típico 0.1–0.5 pt,
+siempre hacia afuera en la rama izquierda (la empinada, donde el polígono corta cuerda)
+— tal como predecía la advertencia, pero un orden de magnitud por debajo de lo que
+importa. Queda **por debajo del ruido de la digitalización misma** (los rects de fig16-9
+se ajustaron por mínimos cuadrados con rms 1.3 px). Si algún día se usa sobre una bezier
+de curvatura mucho más fuerte, volver a medir; el método está en el bloque de abajo.
+
+### Lo que la medición destapó, y que vale más que la función
+
+Los rects publicados **no son los puntos de retorno**, ni por asomo: en el nivel 0 la
+curva cruza en 2.51–3.02 y el rect va de 1.85 a 3.47. La diferencia es estructural —cada
+`pwN` es `concat(&plana, …, &plana)`, con media unidad plana de cola a cada lado sobre un
+ancho total `w`, así que el rect encierra la onda COMPLETA y los retornos delimitan solo
+la parte oscilante—. Pero corrigiendo por eso (expandir por `f = 0.5/(w-1)`) **tampoco**
+ajusta:
+
+```
+  niv 0: f_teorico=0.500  f_libro=1.011  razon=2.02   descentrado= -2.80 pt
+  niv 3: f_teorico=0.125  f_libro=0.327  razon=2.62   descentrado= -4.67 pt
+  niv 6: f_teorico=0.071  f_libro=0.190  razon=2.66   descentrado= -7.75 pt
+```
+
+La razón va de 2.02 a 2.85 sin ley clara y el descentrado a la izquierda **crece monótono
+con el nivel**. Esa firma —error suave y creciente— es la de un dibujo hecho a ojo, y la
+asimetría que aproximaba es real (en un Morse el retorno externo se dispara hacia la
+disociación). Además, varios rects publicados empiezan a la IZQUIERDA de donde arranca la
+curva digitalizada (x=1.96667): están sobre la pared extendida a mano, que no es dato.
+
+**Consecuencia para el proyecto**: derivar los rects de fig16-9 de su curva sería
+**rediseñar** la figura, no refactorizarla (hasta 17 pt de corrimiento, ondas ~30% más
+angostas). fig16-9 se queda como port fiel. La forma correcta de tener una figura
+Franck-Condon con retornos exactos es la **paramétrica**, con la curva en forma cerrada:
+`examples/franck_condon.mg`, donde `r± = re - ln(1 ∓ sqrt(E/D))/a` y no hay curva que
+intersecar. Ver §5.2 (`exp`/`ln`).
+
+Scripts de la medición: fueron de un solo uso, como la inversión píxel→dato de
+`plan_polybar.md`. El método: reconstruir los segmentos bezier con el agrupamiento 1+3k
+del motor, bisecar cada uno contra la horizontal, y mapear a coords de página con el
+`fit` del struct.

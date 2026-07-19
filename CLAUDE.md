@@ -16,14 +16,14 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=48 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=54 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (16 `.mg` × EPS/SVG/**PDF** = 48 goldens) y compara contra la red golden
+de `examples/` (18 `.mg` × EPS/SVG/**PDF** = 54 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=48 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=54 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -60,7 +60,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (16 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-5, fig6-4, fig_polybar, fill_styles, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (18 `.mg`: curvas3, fig1, fig16-9, fig2-1, fig2-5, fig4-1, fig4-5, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -496,6 +496,71 @@ en `y` (el eje log) de las que el autor había fijado a mano — o sea, el remap
 posición exacta. Los 0.026 pt de `x` son el redondeo de la inversión a 3 decimales. El `λ⁻¹(s)`
 sigue fuera, y bien: es el **nombre del eje** (mobiliario de página, horizontal-arriba), no una
 anotación de datos.
+
+### Cerrado en la sesión del 2026-07-18 (`exp`/`ln` + `franck_condon.mg` paramétrico)
+
+**`exp`/`ln` (§5.2)** entran por la vía que la spec tenía reservada —"solo cuando el
+corpus lo exija"— con la figura que las exige (`c61a67e`). **Un potencial de Morse no es
+escribible sin ellas**: por eso la curva de `fig16-9` está digitalizada, no por
+preferencia. `ln` de argumento no positivo es `evalError` FATAL.
+
+**`examples/franck_condon.mg`** (corpus golden, 17→18 ejemplos, `ok=54`) — diagrama de
+Franck-Condon donde **nada está medido**, contraparte de `fig16-9.mg`, que se queda como
+port fiel de la figura publicada. Se dan `a`, `re`, `we`, `xe` de cada estado electrónico
+más `Te`, y salen en forma cerrada la curva `D(1-exp(-a(r-re)))²`, los niveles
+`we(v+½)-we·xe(v+½)²`, los retornos `re - ln(1∓sqrt(E/D))/a` y `vmax = 1/(2·xe)-½`.
+Único que ejercita `exp`/`ln` y la construcción de path inline en una invocación de
+struct. Lo durable:
+
+- **`D` NO es parámetro libre**: la relación de Morse `D = we/(4·xe)` lo fija. Darlo por
+  separado mete niveles sobre la disociación y el retorno externo deja de existir. Lo
+  cazó el `evalError` de `ln` — un error de **física** reportado como error de
+  compilación. Es el argumento más fuerte a favor de que `evalError` sea fatal.
+- **El nivel v lleva v+2 medios ciclos** alternos (v+1 lóbulos = v nodos), **no v+1**: un
+  medio ciclo es un tramo **monótono**, no un lóbulo. Verificable contra las piezas de
+  fig16-9 (`pw0 = plana+sube10+baja10+plana`, ancho 3 = v+3).
+- 💡 **La invocación de struct acepta una EXPRESIÓN DE PATH INLINE** —
+  `Nivel(concat(&plana, sine(half_cycles=v+2, …), &plana))`— así que un `for` construye la
+  onda con su propia `v`. Es la vía para no declarar N paths casi iguales, y **no requiere
+  tocar el lenguaje**: 240 líneas → 150, dos lazos de 12. (Las **listas no admiten paths**
+  §5.1, y **no hay funciones escalares definibles**, así que una fórmula repetida sí se
+  reescribe. Documentado en §5.2.)
+- La vertical de Franck-Condon aterriza en v'=6 del excitado (7.777 eV, entre 7.749 y
+  7.934) **sin que nadie la coloque ahí**, y las alturas de las ondas salen del
+  espaciamiento al siguiente nivel → se achatan solas hacia la disociación (el efecto que
+  V1 había puesto a mano).
+
+**Familia de reducciones path→número completada** (`fe7115d`, `f2edb71`, decisión 7 de
+`plan_struct_params.md`): `path_x_min_at_y`/`path_x_max_at_y(&p, y [, expand])`. Van
+**dos** expresiones porque una expresión de MG devuelve **un** número; `expand` ensancha
+por **fracción del tramo**, no cantidad absoluta (permite alojar colas sin conocer de
+antemano el ancho, que es lo que se estaría calculando). ⚠️ **Sin uso en el corpus** —
+commit aparte a propósito, para que revertirlo sea trivial si en unos meses sigue así.
+
+**La medición que las dejó sin caso** (detalle y tablas en `plan_struct_params.md`):
+- El **sesgo del polígono de control** frente a la bezier real es ≤0.72 pt (típico
+  0.1–0.5), por debajo del ruido de la digitalización → **no hace falta teselar**,
+  resolviendo la advertencia que el plan dejaba abierta.
+- Pero **los rects publicados de fig16-9 no son los puntos de retorno**: los exceden
+  hasta 17 pt, con la razón de ensanche derivando 2.02→2.85 y el descentrado creciendo
+  monótono (−2.8→−7.8 pt). Varios empiezan a la **izquierda de donde arranca la curva
+  digitalizada**, o sea sobre la pared extendida a mano, que no es dato. Esa firma —error
+  suave y creciente— es la de un dibujo **a ojo**. Derivarlos sería **rediseñar** la
+  figura, no refactorizarla; por eso fig16-9 se queda como está y la versión con retornos
+  exactos es la paramétrica.
+- **Para una curva con fórmula, la forma cerrada gana**: más exacta y más barata que
+  intersecar la curva ya dibujada. El lugar de estas funciones es una curva **empírica**.
+
+**Higiene del cambio suelto de Alejandro** (`fe7115d`): `getXBoundsAtY` →
+`path_x_bounds_at_y` (snake_case como el resto de `splines.h`), contrato del retorno al
+header, y **vuelta a C++14** — el bump a C++17 lo pedían solo un `[[nodiscard]]` y un
+binding estructurado, ambos evitables, y el `[[nodiscard]]` estaba en la **definición**,
+donde ningún llamador lo ve (verificado compilando uno de prueba).
+
+⚠️ **`git status` no basta para saber si el árbol está limpio.** Un archivo reescrito con
+el mismo tamaño y el mtime restaurado se salta la comparación de contenido por el
+stat-cache: en esta sesión `examples/fig16-9.mg` traía 12 líneas de más (una curva de
+depuración) que `status` no reportaba y `git diff HEAD` sí.
 
 ### Cerrado en la sesión del 2026-07-18 (structs parametrizadas por path + `fit` de invocación; `plan_struct_params.md`)
 
