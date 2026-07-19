@@ -43,49 +43,15 @@ path pw5 = concat(&plana, &baja10, &sube20, &baja20, &sube20, &baja20, &sube20, 
 path pw6 = concat(&plana, &sube20, &baja26, &sube13, &baja13, &sube13, &baja13, &sube26, &baja20, &plana)
 
 % ---- un nivel: base gris tenue + onda rellena de gris con contorno negro --
-% Ventana local: x = ancho de la onda (medio + n+2 medios ciclos + medio),
-% y simetrica -2..2 para que la base quede centrada en el rect del fit.
-struct Nivel0() {
-    world_window 0 3 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  3 0 }
+% Ventana local: x = ancho de la onda (medio + n+2 medios ciclos + medio) —
+% es la extension en x del propio path, asi que path_width lo deriva solo
+% (plan_struct_params.md, decision 6) —, y simetrica -2..2 para que la base
+% quede centrada en el rect del fit.
+struct Nivel(&onda, w = path_width(&onda)) {
+    world_window 0 w -2 2
+    line_width 0.1   color "lightgray"   polyline { 0 0  w 0 }
     fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw0)
-}
-struct Nivel1() {
-    world_window 0 4 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  4 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw1)
-}
-struct Nivel2() {
-    world_window 0 5 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  5 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw2)
-}
-struct Nivel3() {
-    world_window 0 6 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  6 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw3)
-}
-struct Nivel4() {
-    world_window 0 7 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  7 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw4)
-}
-struct Nivel5() {
-    world_window 0 8 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  8 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw5)
-}
-struct Nivel6() {
-    world_window 0 9 -2 2
-    line_width 0.1   color "lightgray"   polyline { 0 0  9 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
-    bezier(&pw6)
+    bezier(&onda)
 }
 
 % ---- potencial de Morse (curva digitalizada del V1, control points bezier) --
@@ -119,13 +85,13 @@ fit(Morse, stretch=true) { 1.96667 0.66008  8.08333 5.34715 }
 line_width 0.6
 polyline { 1.96667 5.34715  1.85106 7.29845 }
 
-fit(Nivel0, stretch=true) { 1.84615 0.44169  3.46615 1.48169 }
-fit(Nivel1, stretch=true) { 1.66154 1.05856  3.82154 2.09856 }
-fit(Nivel2, stretch=true) { 1.53846 1.59497  4.23846 2.63497 }
-fit(Nivel3, stretch=true) { 1.41538 2.15655  4.33138 3.09255 }
-fit(Nivel4, stretch=true) { 1.35385 2.70609  4.61977 3.45489 }
-fit(Nivel5, stretch=true) { 1.29231 3.14584  4.83816 3.81976 }
-fit(Nivel6, stretch=true) { 1.26154 3.59559  5.05117 4.06734 }
+fit(Nivel(&pw0), stretch=true) { 1.84615 0.44169  3.46615 1.48169 }
+fit(Nivel(&pw1), stretch=true) { 1.66154 1.05856  3.82154 2.09856 }
+fit(Nivel(&pw2), stretch=true) { 1.53846 1.59497  4.23846 2.63497 }
+fit(Nivel(&pw3), stretch=true) { 1.41538 2.15655  4.33138 3.09255 }
+fit(Nivel(&pw4), stretch=true) { 1.35385 2.70609  4.61977 3.45489 }
+fit(Nivel(&pw5), stretch=true) { 1.29231 3.14584  4.83816 3.81976 }
+fit(Nivel(&pw6), stretch=true) { 1.26154 3.59559  5.05117 4.06734 }
 
 % niveles no resueltos, cerca de la disociacion
 line_width 0.1
@@ -146,12 +112,12 @@ text("0") { 1.72308 0.96169 }
 % PWST .02 0 1 .9 del V1: corrimiento x +.02 y escala y 0.9, en su ventana.
 fit(Morse, stretch=true) { 2.03077 5.27333  8.18462 9.49719 }
 
-fit(Nivel0, stretch=true) { 1.90769 5.10836  3.70769 6.14836 }
-fit(Nivel1, stretch=true) { 1.72308 5.72523  4.12308 6.76523 }
-fit(Nivel2, stretch=true) { 1.60000 6.26163  4.60000 7.30163 }
-fit(Nivel3, stretch=true) { 1.47692 6.82322  5.07692 7.75922 }
-fit(Nivel4, stretch=true) { 1.41538 7.37276  5.19538 8.12156 }
-fit(Nivel5, stretch=true) { 1.35385 7.81251  5.67385 8.48643 }
+fit(Nivel(&pw0), stretch=true) { 1.90769 5.10836  3.70769 6.14836 }
+fit(Nivel(&pw1), stretch=true) { 1.72308 5.72523  4.12308 6.76523 }
+fit(Nivel(&pw2), stretch=true) { 1.60000 6.26163  4.60000 7.30163 }
+fit(Nivel(&pw3), stretch=true) { 1.47692 6.82322  5.07692 7.75922 }
+fit(Nivel(&pw4), stretch=true) { 1.41538 7.37276  5.19538 8.12156 }
+fit(Nivel(&pw5), stretch=true) { 1.35385 7.81251  5.67385 8.48643 }
 
 line_width 0.1
 polyline { 1.32308 8.40000  5.90769 8.40000 }
