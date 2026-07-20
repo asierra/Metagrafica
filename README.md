@@ -49,7 +49,7 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
 ```
 
 ```bash
-bin/mg quickstart.mg quickstart.svg
+bin/mg examples/quickstart.mg quickstart.svg
 ```
 
 ![y = x² plotted by MetaGráfica](docs/img/quickstart.svg)
@@ -132,10 +132,10 @@ for i = 0 to 11 {
 }
 ```
 
-The full language is specified in [`especificacion_mg.md`](especificacion_mg.md), and
-`man mg` is the reference. MetaGráfica is deliberately **not** a general-purpose
-programming language: it has variables, expressions, `for` and `if`, logical
-expressions, and not much more.
+The full language is specified in [`especificacion_mg.md`](especificacion_mg.md) *(in
+Spanish)*; `man mg` is the reference in English. MetaGráfica is deliberately **not** a
+general-purpose programming language: it has variables, expressions, `for` and `if`,
+logical expressions, and not much more.
 
 ## Examples
 
@@ -175,9 +175,11 @@ At least four things stand between here and release ([§22.7](especificacion_mg.
    serves as a complete reference for end users is still missing.
 
 `mg` is the **version 3** compiler (`MG_VERSION 3.0.0-beta`). The earlier two-letter grammar
-(`PL`, `CR`, `GNNUM`…) is frozen on the `v1-legacy` branch, and its corpus lives in
-[`examples/v1/`](examples/v1/) as the migration oracle. **Those sources do not compile
-with this binary.**
+(`PL`, `CR`, `GNNUM`…) — **version 2** in the table above — is frozen on the `v1-legacy`
+branch, and its corpus lives in [`examples/v1/`](examples/v1/) as the migration oracle.
+*(Branch and directory were named before the numbering was aligned with the publication
+history, and keep the old name so existing links do not break.)* **Those sources do not
+compile with this binary.**
 
 Every change is gated by a regression harness over the whole corpus (`bash test/run.sh
 check`): byte-exact goldens for the three backends, a Ghostscript pass over the EPS, and

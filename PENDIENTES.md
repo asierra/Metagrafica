@@ -6,11 +6,11 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-17**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-19**.
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=48 … c3fail=0** (3 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=51 … c3fail=0** (3 compuertas).
 
 ---
 
@@ -44,6 +44,18 @@ Es lo único que bloquea salir de beta. **No hay más.**
 - [ ] **Pseudo-3D** (`plan_pseudo3d.md`): refinamientos acotados (`hatch` como parámetro
       de `plano`, refactor de `fig10-2v3`). MG **no** se vuelve 3D — simula volumen con
       shear por composición 2D.
+- [ ] **Sección "figura paramétrica" en el README** (ambos idiomas) — `franck_condon.mg`
+      prueba lo único que la portada afirma y **hoy nadie demuestra**: «a figure is source
+      code, so it can be *parameterized* and regenerated». Versionar y hacer diff se ven
+      solas; parametrizar no (`fig2-5` es magnífica, pero con coordenadas puestas a mano).
+      Das `a`, `re`, `we`, `xe`, `Te` y caen la curva de Morse, `D=we/(4·xe)`, los niveles,
+      los retornos, la envolvente WKB y `vmax`. **El gancho:** la vertical de Franck-Condon
+      aterriza en v'≈6 *sin que nadie la coloque ahí* — sale del desplazamiento `re1`→`re2`.
+      Eso es lo que ninguna herramienta de dibujo puede hacer.
+      **Lo que falta decidir (el trabajo real):** qué parámetro se varía y generar el **par
+      de renders comparativos** que responda "¿qué pasa si cambio un número?"; el texto es
+      lo fácil. `quickstart.mg` se queda simple **a propósito** — es un quickstart.
+      *No lleva `plan_*.md`: cero motor, cero compuertas; el plan duraría más que el trabajo.*
 
 ---
 

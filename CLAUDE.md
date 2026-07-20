@@ -16,14 +16,14 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=54 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=51 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (18 `.mg` × EPS/SVG/**PDF** = 54 goldens) y compara contra la red golden
+de `examples/` (17 `.mg` × EPS/SVG/**PDF** = 51 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=54 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=51 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -683,7 +683,15 @@ anula en el retorno, decae hacia afuera, y **más en la pared tendida que en la 
   asimétricamente (`rm−gL … rp+gR`, `g=t·sx`, `sx=(rp−rm)/(v+2)`), la oscilación sigue cayendo
   exacta en `[rm,rp]` y cada cola ocupa su voladizo. El fit afín preserva las proporciones.
 
-`ok=54`. `especificacion_mg.md` §9 documenta `path +=`.
+**`examples/fig16-9.mg` RETIRADO** en el mismo commit (`5fc995a`): la figura fue **eliminada
+del libro**, así que el port fiel dejó de tener original al que ser fiel. Sale de `test/run.sh`
+y del corpus (18→**17** ejemplos, `ok=54`→**`ok=51`**); el puntero de `sines.mg` se reapuntó.
+Las notas de sesiones anteriores que lo describen en el corpus siguen siendo válidas como
+historia; su cobertura **no se perdió** (verificado por grep sobre el corpus): sine-como-path
+→ `franck_condon`/`sines`, `concat` → `franck_condon`/`curvas3`, `reverse` → `curvas3`/`fig2-5`,
+structs parametrizadas por path (`&`, `path_width`) → `franck_condon`.
+
+`ok=51`. `especificacion_mg.md` §9 documenta `path +=`.
 
 ## Code style
 

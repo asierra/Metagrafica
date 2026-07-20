@@ -43,7 +43,7 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
 ```
 
 ```bash
-bin/mg quickstart.mg quickstart.svg
+bin/mg examples/quickstart.mg quickstart.svg
 ```
 
 ![y = x² graficada con MetaGráfica](docs/img/quickstart.svg)
@@ -145,7 +145,7 @@ Faltan por lo menos cuatro cosas para el release ([§22.7](especificacion_mg.md)
 3. **Texto en UTF-8** — hoy el texto se convierte a Latin-1, una restricción de PostScript que se impone a los tres backends. Las ecuaciones no están afectadas (van por Latin Modern Math).
 4. **Referencia** — aunque se cuenta con este README y un manual, falta un documento único que sirva de referencia completa para usuarios finales.
 
-`mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática antigua de dos letras (`PL`, `CR`, `GNNUM`…) quedó congelada en la rama `v1-legacy`, y su corpus vive en [`examples/v1/`](examples/v1/) como oráculo de migración. **Esos archivos no compilan con este binario.**
+`mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática antigua de dos letras (`PL`, `CR`, `GNNUM`…) —la **versión 2** de la tabla de arriba— quedó congelada en la rama `v1-legacy`, y su corpus vive en [`examples/v1/`](examples/v1/) como oráculo de migración. *(La rama y el directorio se nombraron antes de alinear la numeración con la historia editorial, y conservan el nombre viejo para no romper enlaces existentes.)* **Esos archivos no compilan con este binario.**
 
 Cada cambio pasa por una red de regresión sobre todo el corpus (`bash test/run.sh check`): comparación byte a byte contra la salida bendecida de los tres backends, una pasada de Ghostscript sobre el EPS, y una prueba de paridad entre backends.
 
