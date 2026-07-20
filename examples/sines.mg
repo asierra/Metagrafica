@@ -8,7 +8,7 @@
 %
 % phase (múltiplos de 90°: coseno etc.) está implementado por cuartos de ciclo;
 % este ejemplo muestra phase=0 y squared. `sine` también puede usarse como
-% expresión de path del álgebra §9 (ver fig16-9.mg).
+% expresión de path del álgebra §9 (ver franck_condon.mg).
 
 display_size 12 10
 font_size 9

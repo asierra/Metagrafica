@@ -71,6 +71,7 @@ STRING      \"[^\"]*\"
 "!="                    { return T_NE; }
 "<="                    { return T_LE; }
 ">="                    { return T_GE; }
+"+="                    { return T_PLUSASSIGN; }  /* solo `path w += pieza` (§9) */
 "="                     { return T_ASSIGN; }
 "<"                     { return T_LT; }
 ">"                     { return T_GT; }

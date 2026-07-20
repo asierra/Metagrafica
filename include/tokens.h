@@ -25,6 +25,7 @@ enum Token {
   // Operadores (los de dos caracteres se emiten como un solo token)
   T_ASSIGN, T_PLUS, T_MINUS, T_STAR, T_SLASH, T_CARET,
   T_EQ, T_NE, T_LT, T_GT, T_LE, T_GE,
+  T_PLUSASSIGN,   // '+=', solo para acumular paths: `path w += pieza` (§9)
 
   // Palabras clave de control y conectores lógicos
   T_STRUCT, T_FOR, T_TO, T_STEP, T_IF, T_ELSE, T_AND, T_OR, T_NOT, T_INCLUDE,

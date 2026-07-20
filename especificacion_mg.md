@@ -955,6 +955,21 @@ bezier(&sinpi)
 - **Sin auto-reversión.** El empalme pega el *inicio* de cada operando al final del anterior. Si un segmento debe recorrerse al revés, se envuelve explícitamente en `reverse(&seg)` (evita heurísticas de dirección frágiles).
 - **Variádico.** `concat(&a, &b, &c, …)` une la secuencia en orden. Para tamaños distintos por segmento, se transforma cada operando antes (p. ej. con `fitrect`); `concat` solo une, no escala.
 
+**Acumulación en un lazo (`path +=`).** `concat` es variádico pero de aridad fija en el fuente; para construir una curva cuyo **número de piezas depende de una variable** (un `for`), se acumula con `+=`:
+
+```text
+path w = &plana                       % semilla (o el primer '+=' la crea)
+for k = 1 to n {
+    amp = ...                          % cada pieza con su propio parámetro
+    path w += sine(half_cycles=1, phase=ph, amplitude=amp) { 0 0  1 0 }
+}
+path w += &plana
+```
+
+- **`+=` evalúa YA** (al ejecutar la sentencia), a diferencia de `path w = <expr>`, que es **diferido** (guarda el árbol y lo evalúa al dibujar). Por eso `+=` puede leer variables del lazo: lee el path actual, le concatena la pieza en el ámbito vigente y **congela** el resultado. El empalme es el de `concat` (C0: traslada cada pieza al final de la anterior).
+- Si el nombre **no existe** aún, `+=` lo **crea** con la pieza (permite sembrar sin un `=` previo). Un `path w = <expr>` dentro del `for` **re-siembra** en cada vuelta (la declaración es re-ejecutable).
+- Es lo que permite curvas paramétricas pieza-a-pieza sin declarar N paths ni encadenar un `concat` de longitud fija: p. ej. las funciones de onda con **envolvente WKB** (amplitud por lóbulo) de `examples/franck_condon.mg`. *(Implementado 2026-07-19.)*
+
 *(V1: `CTPT`/`RPPT` con la matriz `PT` y `SCPT` entre appends. La traslación de empalme la hacía el motor —`concat_paths`— pero asumía que el frente de cada segmento estaba en x=0 (precondición no documentada, corregida 2026-07-06 para alinear en ambos ejes). La continuidad C1 en las uniones queda como posible extensión futura, p. ej. `join="smooth"`.)*
 
 ### 9.1 spline con control de nodos

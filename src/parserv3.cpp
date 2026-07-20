@@ -844,12 +844,49 @@ struct PathSmooth : PathExpr {
   }
 };
 
-// path ID = <PathExpr>: registra la definición (diferida) en g_paths. Posee el árbol.
+// Delegado NO-propietario: g_paths[name] apunta al árbol que POSEE un PathDeclStmt,
+// sin moverlo. Así la declaración es RE-EJECUTABLE (necesario cuando `path w = …`
+// vive dentro de un `for` — p.ej. el sembrado del acumulador §9). El AST sobrevive a
+// todo el exec/draw, así que el puntero crudo es seguro.
+struct PathAlias : PathExpr {
+  PathExpr *target;
+  explicit PathAlias(PathExpr *t) : target(t) {}
+  Path evalPath(Scope &s) const override { return target->evalPath(s); }
+};
+
+// path ID = <PathExpr>: registra la definición (diferida) en g_paths. El Stmt POSEE
+// el árbol; g_paths guarda un alias, para no moverlo y poder re-ejecutar (ver arriba).
 struct PathDeclStmt : Stmt {
   std::string name;
   PathExprPtr expr;
   void exec(Scope &, MetaGrafica &, GraphicsItemList &) override {
-    g_paths[name] = std::move(expr);
+    g_paths[name] = std::make_unique<PathAlias>(expr.get());
+  }
+};
+
+// Path YA evaluado a puntos concretos (sin dependencia de ámbito). Lo produce `+=`.
+struct FrozenPath : PathExpr {
+  Path pts;
+  Path evalPath(Scope &) const override { return pts; }
+};
+
+// path ID += <PathExpr>: acumulación (§9). Evalúa YA (no diferido, a diferencia de
+// `=`): lee el path actual, le concatena la pieza en el ámbito vigente y CONGELA el
+// resultado en g_paths. Así un `for` construye una curva pieza a pieza con su propia
+// variable de lazo (envolvente WKB, amplitud por lóbulo…). El empalme es el de
+// concat_paths (join C0: traslada cada pieza al final de la anterior). Si el nombre no
+// existe aún, `+=` lo CREA con la pieza (permite sembrar sin un `=` previo).
+struct PathAppendStmt : Stmt {
+  std::string name;
+  PathExprPtr expr;
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &) override {
+    Path base;
+    auto it = g_paths.find(name);
+    if (it != g_paths.end()) base = it->second->evalPath(s);
+    Path add = expr->evalPath(s);
+    auto fr = std::make_unique<FrozenPath>();
+    fr->pts = concat_paths(base, add);
+    g_paths[name] = std::move(fr);
   }
 };
 
@@ -2706,10 +2743,17 @@ static StmtPtr parseStatement(Lexer &lx) {
   lx.next();                                   // consume el nombre del comando
 
   if (name == "path") {                        // path ID = <PathExpr>  (§9)
-    auto st = std::make_unique<PathDeclStmt>();
     if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre del path");
-    st->name = lx.next().str;
-    if (!lx.accept(T_ASSIGN)) parseError(lx, "'=' en la declaración de path");
+    std::string pname = lx.next().str;
+    if (lx.accept(T_PLUSASSIGN)) {             // path ID += <PathExpr>: acumular (§9)
+      auto st = std::make_unique<PathAppendStmt>();
+      st->name = pname;
+      st->expr = parsePathExpr(lx);
+      return st;
+    }
+    if (!lx.accept(T_ASSIGN)) parseError(lx, "'=' o '+=' en la declaración de path");
+    auto st = std::make_unique<PathDeclStmt>();
+    st->name = pname;
     st->expr = parsePathExpr(lx);
     return st;
   }

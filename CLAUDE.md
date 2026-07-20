@@ -60,7 +60,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (18 `.mg`: curvas3, fig1, fig16-9, fig2-1, fig2-5, fig4-1, fig4-5, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (17 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-5, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -516,9 +516,18 @@ struct. Lo durable:
   separado mete niveles sobre la disociación y el retorno externo deja de existir. Lo
   cazó el `evalError` de `ln` — un error de **física** reportado como error de
   compilación. Es el argumento más fuerte a favor de que `evalError` sea fatal.
-- **El nivel v lleva v+2 medios ciclos** alternos (v+1 lóbulos = v nodos), **no v+1**: un
-  medio ciclo es un tramo **monótono**, no un lóbulo. Verificable contra las piezas de
-  fig16-9 (`pw0 = plana+sube10+baja10+plana`, ancho 3 = v+3).
+- **La onda son v+1 lóbulos ψ que CRUZAN la línea de nivel**, cada uno un medio ciclo
+  entre extremos consecutivos (pendiente cero en la unión → empalme liso). ⚠️ **La
+  construcción de `franck_condon.mg` cambió el 2026-07-19** de jorobas |ψ|² (una `sine`
+  pelada, apoyada sobre la línea) a ψ con signo + envolvente WKB, armada con `path +=` (ver
+  la sesión de 2026-07-19 abajo). El resto de esta nota es sobre fig16-9, que **no** cambió.
+- **fig16-9 — ψ verdadera por lista explícita:** piezas `sine(half_cycles=1, phase=270/90)`
+  con **amplitudes alternas** — las dos exteriores a la mitad (`sube10`/`baja10`), las
+  interiores completas (`sube20`/`baja20`) —, **v+2 piezas → v+1 lóbulos**. Arranca y acaba
+  en 0 con pendiente cero (empalma liso con las colas) y cruza el eje. El desnivel de
+  paridad no aparece porque el autor elige `sube`/`baja` de arranque según la paridad. La
+  cuenta v+2 vale para ESTA construcción (extremo-a-extremo); la de un solo `sine(phase=270)`
+  necesitaba 2v+2 y salía chueca en v impar — por eso se abandonó (ver 2026-07-19).
 - 💡 **La invocación de struct acepta una EXPRESIÓN DE PATH INLINE** —
   `Nivel(concat(&plana, sine(half_cycles=v+2, …), &plana))`— así que un `for` construye la
   onda con su propia `v`. Es la vía para no declarar N paths casi iguales, y **no requiere
@@ -615,6 +624,66 @@ hace `fit(Inner(&onda), ...)` en su cuerpo).
 
 Pendiente (decisión 8, nadie lo pide todavía): `place`/`repeat` tienen el mismo hueco 1 (no
 aceptan invocación paramétrica) pero se dejan sin construir.
+
+### Cerrado en la sesión del 2026-07-19 (`path +=` acumulación + envolvente WKB en franck_condon)
+
+**`path w += pieza` (§9)** — construir una curva cuyo nº de piezas depende de una variable
+(un `for`), que `concat` (variádico pero de aridad fija en el fuente) no cubre. Motivado por
+la figura de Franck-Condon de Wikipedia: ψ **con signo** (cruza la línea de nivel) y con
+**envolvente WKB** (amplitud por lóbulo). Huella mínima: token `T_PLUSASSIGN` (`+=`, solo en
+la rama `path`), y en `parserv3.cpp` `FrozenPath` (path ya evaluado a puntos) + `PathAppendStmt`.
+Cero cambios en los tres backends.
+- **`+=` evalúa YA** (exec-time), a diferencia de `path w = <expr>` que es **diferido**
+  (guarda el árbol, se evalúa al dibujar). Por eso `+=` puede leer variables del lazo: lee el
+  path actual, concatena en el ámbito vigente y **congela**. Verificado byte-idéntico a un
+  `concat` explícito equivalente.
+- 🐞 **Bug latente arreglado de paso:** `PathDeclStmt::exec` hacía `std::move(expr)` → un
+  `path w = &plana` **dentro de un `for`** se anulaba en la 2ª vuelta. Nunca disparó porque
+  ningún path se declaraba en un lazo. Ahora g_paths guarda un `PathAlias` **no-propietario**
+  al árbol que posee el Stmt (el AST sobrevive a exec/draw) → la declaración es re-ejecutable,
+  necesario para re-sembrar el acumulador cada vuelta.
+- **No hay aliasing draw-time:** las primitivas evalúan su path en exec-time y lo **congelan**
+  en el `GraphicsItem` (`PrimStmt::exec`, `parserv3.cpp:1413`), así que reasignar `w` en la
+  siguiente vuelta no afecta a las ondas ya emitidas. Esto es lo que hace seguro el patrón.
+
+**`examples/franck_condon.mg` — ondas ψ con envolvente WKB, y UN solo lazo para los dos pozos:**
+- La envolvente sale en forma cerrada de lo que el archivo ya tenía: amplitud del lóbulo ∝
+  `(E−V(r))^(−¼)` (WKB), evaluada en la posición de cada pico. **La masa y ħ se cancelan** al
+  normalizar al rect del `fit`, así que —a diferencia de la profundidad de penetración— **no**
+  pide ningún parámetro nuevo. Grande cerca de los retornos, **máxima en el externo** (pared
+  tendida): asimetría físicamente correcta, como Wikipedia y `pw6` de fig16-9 (que la aproxima
+  a ojo, simétrica).
+- **Cada lóbulo es un medio ciclo entre extremos consecutivos** (pico en el JOIN, pendiente
+  cero → empalme liso). El `for k` acumula con `+=`; amplitud de la pieza = |swing|/2, phase
+  270/90 según dirección. Todas las 14 ondas vuelven a nivel (verificado: primer y = último y).
+- **Los dos pozos colapsan a un lazo** con los parámetros en **listas §5.1** indexadas por
+  `pozo` (`aa=[a1,a2]`, `TT=[0,Te]`, `lab0=["$v''=0$","$v'=0$"]`…) — así la construcción WKB
+  aparece UNA vez, no duplicada. Ejercita listas-con-variable + `+=` juntas. (Verificado que
+  un literal de lista acepta variables: `TT=[0, Te]`.)
+- Este ejemplo pasó de |ψ|² (jorobas apoyadas) a ψ con signo: es la forma que **explica** por
+  qué ciertos traslapes de Franck-Condon se cancelan (el argumento es `|⟨ψ'|ψ''⟩|²`, con signo).
+  El caption original (confirmado por Alejandro: la figura fue **eliminada del libro**) no
+  menciona funciones de onda → las ondas son ilustración, pero valía hacerlas fieles.
+- La vertical de Franck-Condon aterriza en v'≈6 del excitado **como resultado**, no colocada
+  (sale del desplazamiento `re1=1.15` vs `re2=1.48`); los números de nivel la hacen legible.
+
+**Penetración asimétrica en la región prohibida (efecto túnel), añadida después:** ψ no se
+anula en el retorno, decae hacia afuera, y **más en la pared tendida que en la empinada**.
+- ⚠️ **La fórmula "sencilla" tiene trampa:** la longitud de penetración NO es `1/√(V−E)` (que
+  **diverge** en el retorno, donde `V−E=0`, porque ahí WKB se rompe y manda Airy). Es la
+  **escala de Airy** `d ∝ |V'(retorno)|^(−⅓)` — raíz **cúbica** de la pendiente.
+- **El cociente entre paredes sale sin masa ni ħ:** con `|V'(r±)| = 2a√(DE)(1∓s)`, `s=√(E/D)`,
+  el factor común se cancela → `d_out/d_in = ((1+s)/(1−s))^⅓`. Solo `s`. ≈1 en v bajo, →2 en
+  v=6 (verificado: colas 5.1↔5.9 pt en v=0, 4.2↔8.3 pt en v=6, monótono). La profundidad
+  ABSOLUTA sí llevaría m/ħ (por eso se fija una escala visual, media geométrica 0.5); la
+  ASIMETRÍA no. Es más fiel que Wikipedia, que la dibuja simétrica y a ojo.
+- **Implementación sin motor nuevo:** las colas planas pasaron de `&plana` (ancho fijo 0.5) a
+  `sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (t) 0 }` — una pieza **plana de ancho
+  paramétrico** (amplitude=0 → línea recta). Con anchos `tL≠tR` y el rect del `fit` extendido
+  asimétricamente (`rm−gL … rp+gR`, `g=t·sx`, `sx=(rp−rm)/(v+2)`), la oscilación sigue cayendo
+  exacta en `[rm,rp]` y cada cola ocupa su voladizo. El fit afín preserva las proporciones.
+
+`ok=54`. `especificacion_mg.md` §9 documenta `path +=`.
 
 ## Code style
 
