@@ -173,9 +173,15 @@ bin/mg examples/fig6-4.mg out.svg
 | `quickstart.mg` | the figure above |
 | `fig2-5.mg` | the illustration above (structures, arcs, arrows) |
 | `fig6-4.mg` | **log** axis, math labels, data annotations |
-| `fig4-5.mg` | three panels, interior axes, analytic curves |
+| `fig4-4.mg` | three panels, interior axes, analytic curves |
+| `franck_condon.mg`, `turning_points.mg` | **fully computed figures**: you give the physical parameters and the geometry follows |
 | `fig_polybar.mg` | bar histogram with hatching |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | reference sheets |
+
+**[Computing instead of measuring](docs/computing_instead_of_measuring.md)** develops that
+last case: figures whose geometry comes out of the formulas rather than out of measuring a
+drawing. Change one number —the anharmonicity of a potential, the node count of a state— and
+the whole figure rearranges itself, because everything else is derived.
 
 ## Project status
 

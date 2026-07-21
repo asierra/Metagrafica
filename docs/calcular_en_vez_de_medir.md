@@ -1,5 +1,7 @@
 # Calcular en vez de medir
 
+**Español** · [English](computing_instead_of_measuring.md)
+
 Casi todas las figuras de un libro de física se **dibujan**: alguien decide dónde va
 cada curva y cada marca, y el resultado se parece a lo que la física dice. Este documento
 trata de las otras — las que se **calculan**, donde la geometría sale de las fórmulas y

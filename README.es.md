@@ -139,9 +139,15 @@ bin/mg examples/fig6-4.mg sal.svg
 | `quickstart.mg` | la gráfica de arriba |
 | `fig2-5.mg` | la ilustración de arriba (structs, arcos, flechas) |
 | `fig6-4.mg` | eje **logarítmico**, rótulos matemáticos, anotaciones sobre los datos |
-| `fig4-5.mg` | tres paneles, ejes interiores, curvas analíticas |
+| `fig4-4.mg` | tres paneles, ejes interiores, curvas analíticas |
+| `franck_condon.mg`, `turning_points.mg` | **figuras enteramente calculadas**: se dan los parámetros físicos y la geometría se deduce |
 | `fig_polybar.mg` | histograma de barras con trama |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | láminas de referencia |
+
+**[Calcular en vez de medir](docs/calcular_en_vez_de_medir.md)** desarrolla ese último caso:
+figuras cuya geometría sale de las fórmulas y no de medir un dibujo. Cambias un número —la
+anarmonicidad de un potencial, el número de nodos de un estado— y la figura entera se
+reacomoda sola, porque todo lo demás se deduce.
 
 ## Estado del proyecto
 
