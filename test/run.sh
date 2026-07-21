@@ -44,11 +44,19 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MG="$ROOT/bin/mg"
 EXDIR="$ROOT/examples"
 GOLD="$ROOT/test/golden"
-# Renders publicados (EN GIT, a diferencia de $GOLD). Un ejemplo entra a esta
-# compuerta por el mero hecho de tener aquí un .svg con su nombre: la presencia del
-# archivo ES la declaración, así que añadir una imagen al README no obliga a tocar
-# ninguna lista. `images` solo REFRESCA las que ya existen — nunca crea una nueva,
-# que es siempre una decisión deliberada.
+# Renders publicados (EN GIT, a diferencia de $GOLD). La compuerta itera sobre lo que
+# HAY en este directorio, no sobre $EXAMPLES: la presencia del .svg ES la declaración,
+# así que añadir una imagen a un documento no obliga a tocar ninguna lista, y ningún
+# .svg de aquí puede quedar sin vigilar por no estar su nombre en el corpus.
+#
+# El fuente de cada X.svg se busca en dos sitios, en este orden:
+#   1. examples/X.mg    — el ejemplo del corpus (quickstart, fig2-5…)
+#   2. docs/img/X.mg    — un .mg que vive JUNTO a su render
+# El segundo caso son las VARIANTES: figuras que existen para un documento, no para el
+# corpus (p. ej. el mismo ejemplo con un parámetro cambiado, para mostrar un antes y
+# después). Ponerlas en examples/ ensuciaría el corpus, pero sin fuente versionado el
+# render no sería ni reproducible ni verificable — que es justo lo que esta compuerta
+# existe para impedir.
 IMGDIR="$ROOT/docs/img"
 
 # PDF entra a la red golden (antes solo eps/svg, "PDF se verifica por vista"):
@@ -88,18 +96,31 @@ if [ ! -x "$MG" ]; then
     exit 2
 fi
 
+# img_source <nombre> -> imprime el .mg fuente de docs/img/<nombre>.svg, o nada.
+img_source() {
+    if   [ -f "$EXDIR/$1.mg" ];   then echo "$EXDIR/$1.mg"
+    elif [ -f "$IMGDIR/$1.mg" ];  then echo "$IMGDIR/$1.mg"
+    fi
+}
+
 # Modo `images`: regenera la salida publicada y termina. No toca el golden ni
 # ejecuta compuertas — es la acción que se toma DESPUÉS de haber verificado con
 # `check` que el cambio de salida es el que se quería.
 if [ "$MODE" = "images" ]; then
     img_n=0
-    for example in $EXAMPLES; do
-        [ -f "$IMGDIR/$example.svg" ] || continue
-        ( cd "$EXDIR" && "$MG" "$example.mg" "$IMGDIR/$example.svg" ) >/dev/null 2>&1 || {
-            echo "ERROR $example.svg (mg falló al regenerar)" >&2
+    for svg in "$IMGDIR"/*.svg; do
+        [ -f "$svg" ] || continue
+        name="$(basename "$svg" .svg)"
+        src="$(img_source "$name")"
+        if [ -z "$src" ]; then
+            echo "ERROR docs/img/$name.svg no tiene fuente ($name.mg en examples/ ni aquí)" >&2
+            exit 1
+        fi
+        ( cd "$(dirname "$src")" && "$MG" "$(basename "$src")" "$svg" ) >/dev/null 2>&1 || {
+            echo "ERROR $name.svg (mg falló al regenerar)" >&2
             exit 1
         }
-        echo "regenerado docs/img/$example.svg"
+        echo "regenerado docs/img/$name.svg"
         img_n=$((img_n + 1))
     done
     echo "---"
@@ -188,18 +209,6 @@ for example in $EXAMPLES; do
             fi
         fi
 
-        # docs/img al día: el render publicado tiene que coincidir con lo que el
-        # compilador produce HOY. Independiente del golden y de $MODE (como gs y la
-        # Capa 3): en `capture` avisa de que falta regenerar, pero NO lo hace — ver
-        # el bloque del encabezado. La comparación es directa porque la salida SVG
-        # ya es determinista y no embebe la ruta (normalize svg = identidad).
-        if [ "$fmt" = "svg" ] && [ -f "$IMGDIR/$example.svg" ]; then
-            if ! diff -q "$IMGDIR/$example.svg" "$outfile" >/dev/null 2>&1; then
-                echo "IMGFAIL docs/img/$example.svg (rancio: no es lo que compila hoy; './run.sh images' lo regenera)"
-                imgfail_count=$((imgfail_count + 1))
-            fi
-        fi
-
         normfile="$tmpdir/$base.norm"
         normalize "$fmt" "$outfile" > "$normfile"
 
@@ -245,6 +254,37 @@ for example in $EXAMPLES; do
             c3fail_count=$((c3fail_count + 1))
         fi
     fi
+done
+
+# --- Compuerta 4: docs/img al día -------------------------------------------
+# El render publicado tiene que coincidir con lo que el compilador produce HOY.
+# Independiente del golden y de $MODE (como gs y la Capa 3): en `capture` avisa de
+# que falta regenerar, pero NO lo hace — ver el bloque del encabezado. La comparación
+# es directa porque la salida SVG ya es determinista y no embebe la ruta.
+#
+# Se itera sobre docs/img/*.svg, no sobre $EXAMPLES: así también entran las variantes
+# (con su .mg al lado) y ningún render publicado puede quedarse sin vigilar.
+for svg in "$IMGDIR"/*.svg; do
+    [ -f "$svg" ] || continue
+    name="$(basename "$svg" .svg)"
+    src="$(img_source "$name")"
+    if [ -z "$src" ]; then
+        echo "IMGFAIL docs/img/$name.svg (huérfano: no hay $name.mg en examples/ ni junto al render)"
+        imgfail_count=$((imgfail_count + 1))
+        continue
+    fi
+    imgtmp="$(mktemp -d)"
+    if ( cd "$(dirname "$src")" && "$MG" "$(basename "$src")" "$imgtmp/$name.svg" ) >/dev/null 2>&1 \
+       && [ -s "$imgtmp/$name.svg" ]; then
+        if ! diff -q "$svg" "$imgtmp/$name.svg" >/dev/null 2>&1; then
+            echo "IMGFAIL docs/img/$name.svg (rancio: no es lo que compila hoy; './run.sh images' lo regenera)"
+            imgfail_count=$((imgfail_count + 1))
+        fi
+    else
+        echo "IMGFAIL docs/img/$name.svg (mg falló al compilar su fuente $src)"
+        imgfail_count=$((imgfail_count + 1))
+    fi
+    rm -rf "$imgtmp"
 done
 
 echo "---"

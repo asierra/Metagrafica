@@ -1,23 +1,21 @@
 # Calcular en vez de medir
 
-> ⚠️ **BORRADOR** — para discusión, no enlazado todavía desde los README.
->
-> **Convención de revisión mientras dure el borrador:** Alejandro edita la prosa
-> directamente y deja lo estructural como `[[AS: ...]]`. Antes de dar el documento por
-> terminado hay que **barrer que no quede ninguna** (`grep -n '\[\[AS:' docs/*.md`) y
-> quitar este bloque de aviso completo.
-
 Casi todas las figuras de un libro de física se **dibujan**: alguien decide dónde va
 cada curva y cada marca, y el resultado se parece a lo que la física dice. Este documento
 trata de las otras — las que se **calculan**, donde la geometría sale de las fórmulas y
 nadie coloca nada a ojo.
 
 MetaGráfica no es una herramienta de análisis de datos y no pretende serlo. La frontera es
-deliberada y vale la pena decirla de entrada:
+deliberada y vale la pena decirla de entrada: **MG calcula la geometría de una ilustración
+a partir de su modelo.** No reduce datos. Pero **el paquete trae los puentes**. Cuando los
+datos vienen de una hoja de cálculo o de un archivo de medidas, `tools/hist2mg.py` los lee
+con pandas, calcula los intervalos y las estadísticas que la figura va a necesitar, y
+escribe un `.mg` que se incluye directamente. Y si tienes figuras antiguas hechas con
+versiones anteriores de MG, `tools/mg1to2.py` traduce esas figuras a la sintaxis actual.
 
-> **MG calcula la geometría de una ilustración a partir de su modelo.** No reduce datos:
-> `polybar` recibe intervalos ya contados, no observaciones. Cuando hay que ir de 54 000
-> filas a 30 barras, eso ocurre **fuera** del compilador (`tools/hist2mg.py`).
+La división es la que uno querría: **reducir es un paso, dibujar es otro**, y cada uno se
+puede rehacer sin tocar el otro. Si mañana llegan más mediciones, se vuelve a correr el
+puente y la figura se regenera sin que haya que reabrirla.
 
 Lo que sí ocurre dentro es el otro caso, y es el que este documento defiende: cuando la
 figura tiene un **modelo** detrás —un potencial, una condición de cuantización, un punto
@@ -51,15 +49,18 @@ De ahí salen, sin que nadie las coloque:
 | la amplitud de cada lóbulo | envolvente semiclásica WKB, `∝ (E−V)^(−¼)` |
 | cuánto penetra la onda en la región prohibida | escala de Airy, `∝ |V′(retorno)|^(−⅓)` |
 
-**La prueba está en el diff.** Cambiar un solo número —la anarmonicidad `xe1`, de `0.028`
-a `0.045`— reacomoda la figura entera de forma coherente: el pozo se hace menos profundo
-(`D` pasa de 5.0 a 3.1), la línea de disociación baja con él, los niveles se separan y se
-apiñan antes, y las ondas se reajustan a sus nuevos puntos de retorno. La anarmonicidad
-también decide **cuántos estados ligados admite el potencial**: el último pasa de v = 17 a
-v = 10, porque `vmax = 1/(2·xe) − ½`.
+**La prueba es cambiar un número.** Basta mover uno solo —la anarmonicidad `xe1`, de
+`0.028` a `0.045`— para que la figura entera se reacomode de forma coherente: el pozo se
+hace menos profundo (`D` pasa de 5.0 a 3.1), la línea de disociación baja con él, los
+niveles se separan y se apiñan antes, y las ondas se reajustan a sus nuevos puntos de
+retorno. La anarmonicidad también decide **cuántos estados ligados admite el potencial**:
+el último pasa de v = 17 a v = 10, porque `vmax = 1/(2·xe) − ½`.
 
-> *(Aquí va el par de renders. Están generados y verificados; entran a `docs/img/` cuando
-> acordemos el formato.)*
+| `xe1 = 0.028` | `xe1 = 0.045` |
+|:---:|:---:|
+| ![Franck-Condon con anarmonicidad 0.028](img/franck_condon.svg) | ![La misma figura con anarmonicidad 0.045](img/franck_condon_anarm.svg) |
+
+Las dos imágenes salen del **mismo archivo**; entre una y otra se cambió un carácter.
 
 Ninguna de esas consecuencias está escrita en el archivo. Están escritas las **fórmulas**,
 y la figura es lo que se deduce de ellas.
@@ -94,17 +95,26 @@ otras dos **no tienen ninguna libertad**: es la misma partícula, así que es la
 constante. Cambiar el número de nodos del estado ligado de 3 a 4 arrastra a las tres —la
 ligada pasa de 3 a 4 lóbulos, y las otras dos de 23 a 30 y de 13 a 16— sin tocar nada más.
 
+| `nodos = 3` | `nodos = 4` |
+|:---:|:---:|
+| ![Pozo con tres energías y sus funciones de onda, con 3 nodos](img/turning_points.svg) | ![La misma figura con 4 nodos: las tres ondas se densifican](img/turning_points_nodos.svg) |
+
+Se pidió un nodo más **en la onda de abajo**, y las tres se densificaron. Eso no es un
+efecto secundario: es la misma partícula, y la condición de cuantización no admite otra
+cosa.
+
 Dibujando a mano, cada una de esas ondas es una decisión estética independiente. Aquí es
 una consecuencia, y por eso no pueden desmentirse entre sí.
 
-**Y de hecho, medidas, se desmienten.** Esta figura *no* es un port fiel de la publicada,
-y la razón es esa: al medir las tres ondas del original se ve que no pueden corresponder a
-la misma partícula. La fase por lóbulo varía hasta tres veces dentro de una sola onda —cada
-región se dibujó repitiendo un ciclo a la escala que se veía bien— y ninguna constante
-reproduce las tres densidades a la vez: con la onda ligada a 4 antinodos, la física pide
-unos 24 y 13 lóbulos para las otras dos, contra los 13 y 8 dibujados. Reproducirla
-fielmente y *calcularla* eran objetivos incompatibles; se eligió calcularla, y por eso el
-ejemplo perdió el número de figura y tomó nombre de la física (`turning_points`).
+**Por eso este ejemplo no es un port fiel de la figura publicada.** Aquella se dibujó a
+mano, como correspondía a las herramientas de su momento y al propósito de la figura, que
+es ilustrar un concepto: la longitud de onda se eligió por regiones, buscando que cada
+tramo se leyera con claridad. Escribirla en forma derivada renuncia a esa libertad —una
+sola constante gobierna las tres ondas—, y por eso las dos versiones no coinciden: donde la
+onda ligada tiene 4 antinodos, la cuantización pide del orden de 24 y 13 lóbulos para las
+otras dos, más de los que el dibujo lleva. Reproducir el trazo y calcularlo eran objetivos
+distintos; aquí se eligió calcularlo, y por eso el ejemplo tomó nombre de la física
+(`turning_points`) en vez de número de figura.
 
 ---
 
@@ -113,28 +123,25 @@ ejemplo perdió el número de figura y tomó nombre de la física (`turning_poin
 `examples/fig4-4.mg` reproduce tres potenciales: el oscilador armónico, el coulombiano y
 el efectivo con barrera centrífuga.
 
+![Tres potenciales con sus puntos de retorno clásicos](img/fig4-4.svg)
+
 En la versión original esas tres curvas estaban **digitalizadas**: 69 puntos cada una,
 medidos sobre un dibujo. Al portarlas resultó que los puntos ajustan a formas analíticas
 exactas —`V = x²`, `V = 1/r`, `V = 1/(2r²) − 1/r`— con un error del orden de `1e-6`. O
 sea: las curvas *siempre fueron* esas fórmulas; lo que se había conservado era una copia
 degradada, con 69 números en lugar de una línea.
 
-Al reconstruirlas apareció algo más. El archivo original colocaba una marca con
-`DOT 5 011 .3`: un punto decimal perdido que manda esa marca a `x = 454`, muy fuera del
-lienzo. **Esa marca falta en la figura publicada**, y nadie lo había notado en veinticinco
-años, porque una marca ausente no se ve — solo se ve si algo la calcula y espera
-encontrarla.
+Al reconstruirlas apareció además un detalle que la reproducción fiel no habría mostrado.
+El archivo original colocaba una de las marcas con `DOT 5 011 .3` —un punto decimal
+traspapelado que la manda a `x = 454`, fuera del lienzo—, así que esa marca nunca llegó a
+dibujarse. Es una minucia: la figura se lee igual de bien sin ella, y precisamente por eso
+podía quedarse así indefinidamente. Una marca ausente no deja rastro.
 
-Es el argumento más concreto a favor de esta forma de trabajar: una figura derivada
-**sabe qué debería haber**, así que su ausencia es detectable. Una figura dibujada no lo
-sabe.
-
-> 📝 **Nota de tono, para discutir.** Este apartado y el final del §2 dicen que hay
-> defectos en figuras publicadas. Están redactados en neutro y sin dramatizar: son
-> figuras de finales de los noventa, dibujadas con las herramientas de entonces, y el
-> punto no es el error sino que **calcular lo hace visible**. Se puede subir o bajar el
-> tono, o quitarse; es la parte más delicada del documento y conviene decidirla a
-> propósito.
+Lo que interesa no es el desliz, sino lo que hace falta para verlo. Al derivar las
+posiciones de la física, el archivo **sabe qué marcas debería haber**, y una que no aparece
+se vuelve detectable. Es una comprobación que solo existe cuando la figura se calcula, y es
+la clase de red que MG pone hoy bajo el autor: los ejemplos del corpus se recompilan y se
+comparan en cada cambio, así que un desliz de ese tipo tiene dónde saltar.
 
 ---
 
@@ -178,9 +185,9 @@ producir salida.
 - **Los errores se vuelven detectables.** Sea un decimal perdido o una relación de Morse
   ignorada: lo que está derivado se puede contradecir, y contradecirse es lo que hace que
   un error salte.
-- **Es texto.** Se versiona, se compara con `diff`, se revisa en un pull request y se
-  regenera dentro de veinte años sin depender de que exista el programa con el que se
-  dibujó.
+- **Es texto.** Se guarda en un control de versiones como el manuscrito del artículo, se
+  ve exactamente qué cambió entre dos versiones y quién lo cambió, y se regenera dentro de
+  veinte años sin depender de que siga existiendo el programa con el que se dibujó.
 
 Nada de esto exige que todas las figuras se hagan así. El corpus de MG tiene ports fieles,
 figuras esquemáticas y diagramas donde no hay ningún modelo que calcular, y están bien
