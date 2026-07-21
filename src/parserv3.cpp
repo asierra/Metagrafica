@@ -3900,7 +3900,15 @@ static std::vector<StmtPtr> parseProgram(Lexer &lx) {
 // local: las sentencias copian sus lexemas, así que puede destruirse al salir.
 static std::vector<StmtPtr> parseFile(const std::string &path) {
   std::ifstream in(path);
-  if (!in) { std::fprintf(stderr, "include: no se pudo abrir %s\n", path.c_str()); return {}; }
+  // FATAL, no aviso: un include que no resuelve deja el documento INCOMPLETO por
+  // definición. Antes devolvía {} y seguía, así que si el archivo perdido solo
+  // aportaba cosas opcionales —colores, structs no usadas en todas las ramas— la
+  // figura se generaba a medias con código de salida 0. Es el mismo criterio por el
+  // que `evalError` es fatal: un documento inconsistente no debe producir salida.
+  if (!in) {
+    std::fprintf(stderr, "Error: include no pudo abrir %s\n", path.c_str());
+    std::exit(1);
+  }
   std::stringstream ss;
   ss << in.rdbuf();
   Lexer lx;

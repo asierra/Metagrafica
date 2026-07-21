@@ -1047,6 +1047,27 @@ De paso, `dash` entra a los atributos de estilo por-eje de `AxisStmt` (estaba en
 en el corpus pasaba `dash=` ni `grid=` a un eje** —donde se ignoraban en silencio—, así que el
 cambio es aditivo puro: `ok=57` sin re-bendecir.
 
+### Cerrado en la sesión del 2026-07-21 (`include` fatal; categorías en variables)
+
+**Un `include` que no resuelve ahora ABORTA** (`parseFile`, `parserv3.cpp`). Antes devolvía
+`{}` y seguía, así que si el archivo perdido solo aportaba cosas opcionales —colores, structs
+no usadas en todas las ramas— la figura se generaba **a medias con código de salida 0**.
+Salió al copiar un `.mg` a otro directorio: el `include` es relativo al archivo, falló, y el
+documento siguió hasta reventar más tarde por otra causa. Mismo criterio que hace fatal a
+`evalError`: un documento incompleto no debe producir salida.
+
+**`figure_02`: las categorías pasan a variables** (`cat_ash`/`cat_prob`/`cat_both`) y las
+etiquetas se arman con concatenación (§5.2). Cambiar el vocabulario de la figura es ahora
+**una edición**, y comparar las dos versiones cuesta comentar dos renglones — que es lo que
+convierte una propuesta de terminología en *evidencia* para discutirla con el autor
+principal, el argumento de `calcular_en_vez_de_medir.md` aplicado a la práctica.
+
+📐 **Y midiendo salió quién manda en el tamaño del lienzo.** Con las etiquetas cortas el panel
+a queda cómodo a 28 cm, pero **el que fija el mínimo es el panel e**: su etiqueta es la más
+larga (`Band 13 < 273.15 Probable ash`) y su histograma el más ancho, así que a 28 no libra ni
+arriba-izquierda ni abajo-izquierda. Se queda en 33. **La restricción es de CONTENIDO, no de
+acomodo:** el tamaño de la figura lo decide la etiqueta más larga, porque el texto es físico.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
