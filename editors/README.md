@@ -95,13 +95,23 @@ enteros, `for` como palabra clave y los argumentos de estado como números. Los
 bloques de código MG en los `.md` del proyecto van etiquetados `octave` por lo mismo,
 para que documento y archivo enlazado se vean igual.
 
-> ⚠️ **Comprobación pendiente en GitHub.** Todo lo anterior está medido con Pygments,
-> que tiene lexers **separados** para MATLAB y Octave. GitHub usa gramáticas propias y
-> es posible que trate `Octave` como alias de MATLAB, en cuyo caso volvería el defecto
-> de la sintaxis de comando. Se verifica en cinco segundos: abrir cualquier `.mg` en
-> GitHub y mirar el `display_size 12 8` de la cabecera — si el `12` y el `8` salen del
-> color de las cadenas y no del de los números, GitHub está usando MATLAB y conviene
-> reconsiderar (Erlang, con decimales rotos, sería el siguiente candidato).
+> ⚠️ **Comprobado en GitHub (2026-07-21): trata `Octave` como MATLAB.** Lo anterior está
+> medido con Pygments, que tiene lexers **separados** para MATLAB y Octave; GitHub no. El
+> `display_size 12 8` de la cabecera de cualquier `.mg` sale con los números en gris —el
+> color de las cadenas—, o sea que la sintaxis de comando **sí** se aplica y los argumentos
+> de las sentencias de estado no se colorean como números.
+>
+> **Se deja Octave de todas formas, y no por resignación:** el defecto que queda afecta a
+> ~172 argumentos del corpus, mientras que la alternativa —Erlang— rompe ~1300 decimales.
+> Entre los dos males, este es mucho menor y además se concentra en una construcción
+> (`nombre valor valor`), no repartido por todo el archivo.
+>
+> **En los `.md` casi no se nota**, y por una razón: los fragmentos que cita
+> `calcular_en_vez_de_medir.md` son expresiones (`E = we1*(v+0.5)…`, `for i = 0 to n-1`), no
+> sentencias de estado, así que la regla de comando no los alcanza. Donde sí se ve es en el
+> bloque de `quickstart.mg` de los README, que empieza con tres sentencias de configuración.
+>
+> Si algún día GitHub gana una gramática Octave propia, esto se arregla solo.
 
 ## Mantenimiento
 
