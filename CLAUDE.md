@@ -1023,6 +1023,30 @@ cuerpo de letra. **Para una figura más chica, lo que se baja es `font_size`, no
 Único acomodo que diverge del original: la leyenda del panel b pasa a abajo-derecha, donde
 cruza solo la cola delgada del histograma en vez de las barras altas.
 
+### Cerrado en la sesión del 2026-07-21 (retícula por eje + `frame` de plot)
+
+**`xaxis(grid=…)` / `yaxis(grid=…)`** (+ `grid_dash=`), con el `grid=` de `plot` como atajo
+para los dos ejes y el eje **ganando** sobre él (`grid=false` en un eje apaga la del plot).
+Cierra la última divergencia de `figure_02` con su original: retícula **solo horizontal y
+punteada**, que es lo que usa cualquier gráfica de barras.
+
+⚠️ **NO se hizo `grid="y"`, que era la forma obvia, y la razón vale para el resto del
+lenguaje:** `grid=` ya está sobrecargado con color, así que la `"y"` se habría leído como
+**nombre de color** — aviso «color desconocido» y malla **negra en los dos ejes**.
+Silenciosamente casi-plausible. Además, pedirla por eje es donde conceptualmente vive: la
+retícula **es la marca del eje barrida por el campo**, y el código literalmente reusa
+`axis(ticks="grid")` con el `step` y el `start` de ese eje. *Antes de sobrecargar un
+argumento, revisar con qué ya compite.*
+
+**`plot(frame=true)`** (o un color): el rectángulo del `box=`. Existe para **no repetir el
+`box=`** — antes había que poner un `rectangle` por panel con los mismos cuatro números, que
+se desincroniza en cuanto un panel se mueve. Va después del contenido y antes de los ejes.
+
+De paso, `dash` entra a los atributos de estilo por-eje de `AxisStmt` (estaba en la lista
+`{"color","line_width"}`), que es lo que permite la retícula punteada. Verificado que **nadie
+en el corpus pasaba `dash=` ni `grid=` a un eje** —donde se ignoraban en silencio—, así que el
+cambio es aditivo puro: `ok=57` sin re-bendecir.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).

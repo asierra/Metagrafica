@@ -146,11 +146,15 @@ orden de la lista es la ejecución.
       nunca mira `T_AMP` → error de sintaxis. Divergencia spec/implementación: decidir si
       se construye o se retira de la spec. (Independiente de `sample`.)
 - [ ] **`place` por longitud de arco** — extender `gap=` a instancias cada *n* de arco.
-- [ ] **Retícula por eje §13.6** y **`alpha` §4.11** (EPS sin nativo → decisión de arquitectura).
-      Los dos los pide `figure_02` y los dos se esquivaron ahí: la retícula se omitió, y el
-      `alpha=0.5` sobre steelblue se sustituyó por el **color ya mezclado contra blanco**
-      (`#A3C1DA`) — exacto, porque las barras no se solapan. Ese truco tapa el caso "relleno
-      translúcido sobre fondo liso", que es la mayoría; lo que no cubre es el solapamiento.
+- [x] ~~**Retícula por eje §13.6**~~ — CERRADO 2026-07-21: `xaxis(grid=…)`/`yaxis(grid=…)`
+      (+ `grid_dash=`), con el `grid=` de `plot` como atajo para ambos y el eje ganando sobre
+      él. **No** se hizo `grid="y"`: `grid=` ya está sobrecargado con color, así que la "y" se
+      habría leído como color desconocido → malla negra en los dos ejes. En la misma tanda,
+      `plot(frame=true)`, que reusa el `box=` en vez de obligar a un `rectangle` por panel.
+- [ ] **`alpha` §4.11** (EPS sin nativo → decisión de arquitectura). Lo pide `figure_02` y ahí
+      se esquivó: el `alpha=0.5` sobre steelblue se sustituyó por el **color ya mezclado contra
+      blanco** (`#A3C1DA`) — exacto, porque las barras no se solapan. Ese truco tapa el caso
+      "relleno translúcido sobre fondo liso", que es la mayoría; no cubre el solapamiento.
 - [ ] **Borrado de colisiones malla↔notable (§13.8)** — el premio del corte que la spec
       promete y que `rule` todavía no cobra: suprimir el rótulo de marca vecino a un `rule`
       con `label_at="axis"`. Necesita que el eje conozca los `rule` antes de emitir rótulos.

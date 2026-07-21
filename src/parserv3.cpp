@@ -2209,7 +2209,7 @@ struct AxisStmt : Stmt {
     // ejes se dibujan FUERA del envoltorio de contenido (plan_plot.md Fase 4). Sin
     // estos args, estado ambiente como antes → cero churn en ejes sueltos.
     GraphicsItemList styleAttrs;
-    for (const char *k : {"color", "line_width"}) {
+    for (const char *k : {"color", "line_width", "dash"}) {
       auto it = named.find(k);
       if (it != named.end()) emitStyleAttr(k, it->second->eval(s), styleAttrs);
     }
@@ -2859,13 +2859,37 @@ struct PlotStmt : Stmt {
     // grid=: retícula opcional. `true` (número 1) → gris default; un color (cadena
     // "azul"/hex, o RGB de gray()/entero) → ese color; `false`/0/ausente → sin
     // retícula. (grid=gray(0)=0 cae en "sin retícula": una malla negra no se usa.)
+    //
+    // Aquí es el DEFAULT DE AMBOS EJES; cada uno puede pedir el suyo con
+    // xaxis(grid=…)/yaxis(grid=…), que gana sobre este (§13.6). El caso corriente
+    // —malla solo horizontal, como en cualquier gráfica de barras— es
+    // `yaxis(grid=true)` sin tocar el plot.
+    //
+    // ⚠️ Y por eso NO se hizo `grid="y"`: `grid=` ya está sobrecargado con color,
+    // así que la "y" se leería como nombre de color, avisaría y daría una malla
+    // NEGRA en los dos ejes. Además la retícula ES la marca del eje barrida por el
+    // campo (este código reusa axis(ticks="grid") con su step y su start), así que
+    // pedirla por eje es donde conceptualmente vive.
+    auto readGrid = [&](const std::map<std::string, ExprPtr> &m, bool &on, int &color) {
+      auto it = m.find("grid");
+      if (it == m.end()) return;                       // no dice nada: hereda
+      Value gv = it->second->eval(s);
+      if (gv.type == Value::STRING) { on = true; color = colorFromValue(gv); }
+      else if (gv.num != 0.0) { on = true; if (gv.num != 1.0) color = (int)gv.num; }
+      else on = false;                                 // grid=false apaga explícitamente
+    };
     bool hasGrid = false;
     int gridColor = 0x808080;
-    if (named.count("grid")) {
-      Value gv = named.at("grid")->eval(s);
-      if (gv.type == Value::STRING) { hasGrid = true; gridColor = colorFromValue(gv); }
-      else if (gv.num != 0.0) { hasGrid = true; if (gv.num != 1.0) gridColor = (int)gv.num; }
-    }
+    readGrid(named, hasGrid, gridColor);
+    bool gridX = hasGrid, gridY = hasGrid;
+    int  gcolX = gridColor, gcolY = gridColor;
+    if (xaxis) readGrid(xaxis->named, gridX, gcolX);
+    if (yaxis) readGrid(yaxis->named, gridY, gcolY);
+    // grid_dash: el original de casi cualquier gráfica de barras es punteado.
+    std::string gridDash = namedStr(s, named, "grid_dash");
+    std::string gdX = gridDash, gdY = gridDash;
+    if (xaxis && xaxis->named.count("grid_dash")) gdX = namedStr(s, xaxis->named, "grid_dash");
+    if (yaxis && yaxis->named.count("grid_dash")) gdY = namedStr(s, yaxis->named, "grid_dash");
 
     // Rango de datos ≤ 0 en un eje log → error (el axis lo revalida, pero aquí el
     // mensaje es específico del plot).
@@ -2895,8 +2919,8 @@ struct PlotStmt : Stmt {
     // cuando llegue). Estilo propio (gris 0.1 pt), desacoplado de ejes/contenido.
     // La pasada de grid dibuja también su línea de eje (gris, sobre el borde de la
     // caja), pero el eje real —negro, pintado después— la cubre → sin artefacto.
-    if (hasGrid) {
-      auto emitGrid = [&](AxisStmt *src, bool isX) {
+    if (gridX || gridY) {
+      auto emitGrid = [&](AxisStmt *src, bool isX, int gcol, const std::string &gdash) {
         if (!src) return;                       // sin eje en esa dirección, sin retícula
         double from = isX ? x0 : y0, to = isX ? x1 : y1;
         const std::string &scale = isX ? xscale : yscale;
@@ -2923,11 +2947,12 @@ struct PlotStmt : Stmt {
         g.named["tick_labels"] = ExprPtr(new NumExpr(0));          // sin rótulos de marca
         g.named["field"]      = ExprPtr(new NumExpr(field));
         g.named["line_width"] = ExprPtr(new NumExpr(0.1));
-        g.named["color"]      = ExprPtr(new NumExpr((double)gridColor));
+        g.named["color"]      = ExprPtr(new NumExpr((double)gcol));
+        if (!gdash.empty()) g.named["dash"] = ExprPtr(new StrExpr(gdash));
         g.exec(s, mg, out);
       };
-      emitGrid(xaxis.get(), true);
-      emitGrid(yaxis.get(), false);
+      if (gridX) emitGrid(xaxis.get(), true,  gcolX, gdX);
+      if (gridY) emitGrid(yaxis.get(), false, gcolY, gdY);
     }
 
     if (!xlog && !ylog) {
@@ -2995,6 +3020,33 @@ struct PlotStmt : Stmt {
       }
       popTransforms(countTransforms(content), out);   // §11.1 del cuerpo (raro en log)
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    }
+
+    // --- frame=: caja completa alrededor del plot (§13.7) --------------------
+    // Reusa el `box=` que el plot ya tiene, en vez de obligar a repetir sus cuatro
+    // números en un `rectangle` por panel — que es lo que había que hacer antes y
+    // se desincroniza en cuanto un panel se mueve. `true` = negro, un color = ese,
+    // ausente/`false` = sin marco. Va DESPUÉS del contenido y ANTES de los ejes:
+    // las líneas de eje caen sobre el borde de la caja y deben quedar encima.
+    {
+      auto it = named.find("frame");
+      if (it != named.end()) {
+        Value fv = it->second->eval(s);
+        bool on = true; int fcol = 0x000000;
+        if (fv.type == Value::STRING) fcol = colorFromValue(fv);
+        else if (fv.num == 0.0) on = false;
+        else if (fv.num != 1.0) fcol = (int)fv.num;
+        if (on) {
+          out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+          { auto a = std::make_unique<Attribute>(); a->set(AT_LCOLOR, fcol); out.push_back(std::move(a)); }
+          auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
+          pp.push_back(point(bx0, by0)); pp.push_back(point(bx1, by0));
+          pp.push_back(point(bx1, by1)); pp.push_back(point(bx0, by1));
+          pl->setPath(pp); pl->setClosed(true);        // cierra sin repetir el vértice
+          out.push_back(std::move(pl));
+          out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+        }
+      }
     }
 
     // --- Ejes: coords exteriores, NO mapeados -------------------------------

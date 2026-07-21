@@ -1518,11 +1518,19 @@ grid(xstep=2, ystep=2, dash="dotted")      { 0 0  10 8 } % retícula punteada
 
 **Argumentos:** `xstep` / `ystep` (intervalos en unidades de usuario), más los atributos de estilo comunes (`color`, `line_width`, `dash`). Útil como fondo de una gráfica antes de trazar datos y ejes.
 
-> **Pendiente — retícula por eje.** El `grid=` de `plot` (§13.7) barre **los dos** ejes; no hay
-> forma de pedir solo las horizontales. Es lo más común en gráficas de barras: `figure_02` usa
-> `ax.grid(axis='y', linestyle='--', alpha=0.7)` en sus cinco paneles — retícula **solo en y**,
-> punteada. Falta el selector (`grid="y"`, o `grid=` por-eje en `xaxis`/`yaxis`). Aquí, en el
-> `grid()` suelto, se obtiene omitiendo un `step`.
+> ✅ **Retícula por eje — HECHO 2026-07-21.** El `grid=` de `plot` (§13.7) sigue siendo el
+> atajo para los dos ejes, pero ahora **cada eje puede pedir el suyo**:
+> `yaxis(grid=true, grid_dash="dashed")` da la retícula **solo horizontal** que usa
+> cualquier gráfica de barras (`figure_02` lo hace en sus cinco paneles). El valor del eje
+> **gana** sobre el del plot, y `grid=false` en un eje apaga la que el plot encendió.
+>
+> ⚠️ **Por qué NO se hizo `grid="y"`**, que era la forma obvia: `grid=` ya está sobrecargado
+> con color, así que la `"y"` se leería como **nombre de color** — avisaría «color
+> desconocido» y daría una malla **negra en los dos ejes**. Silenciosamente casi-plausible,
+> que es la peor clase de error. Y pedirla por eje es además donde conceptualmente vive: la
+> retícula **es la marca del eje barrida por el campo**, y la implementación literalmente
+> reusa `axis(ticks="grid")` con el `step` y el `start` de ese eje. Aquí, en el `grid()`
+> suelto, se obtiene omitiendo un `step`.
 
 ### 13.7 Graficar datos: el marco de datos
 
@@ -1663,6 +1671,17 @@ no afín); `grid()`/`ticks()`/`axis()` **pelados** en el contenido también (usa
 rebasarla, como la recta de ajuste de fig6-4). El `text()` de título horizontal-arriba (estilo
 libro, como `λ⁻¹(s)` de fig6-4) va manual, porque `yaxis(title=)` rota el título a lo largo del eje;
 lo mismo el título **al extremo** del eje (`V(x)`, `x` de fig4-5), porque `title=` lo centra.
+
+#### `frame=` — la caja completa alrededor del plot
+
+`plot(frame=true)` dibuja el rectángulo del `box=`; un color en vez de `true` lo tiñe, y
+`false` o la ausencia lo quitan. Es lo que hace matplotlib por default (sus cuatro
+*spines*) y lo que tienen los paneles de `figure_02`.
+
+Existe para **no repetir el `box=`**: antes había que poner un `rectangle` por panel con
+los mismos cuatro números, que se desincroniza en cuanto un panel se mueve. Se dibuja
+después del contenido y **antes de los ejes**, para que la línea del eje quede encima del
+borde con el que coincide.
 
 ### 13.8 Marcas: malla regular y valores notables (`rule`)
 
