@@ -587,6 +587,19 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
     case '>':
         add_symbol(0x3E, FN_TEX_CMMI);
         break;
+    case '\'':
+      // En modo math `'` es una PRIMA (v′, y'' ), como en TeX — no un apostrofo.
+      // Hay que decirlo explicitamente por una COLISION DE BYTES: el apostrofo es
+      // el byte 39 y en map_tex_cmmi el byte 39 es `varphi`. Mientras la cara por
+      // defecto del math fue Times-Italic no se notaba; al volver a FN_TEX_CMMI
+      // (P2, 2026-07-20) el apostrofo empezo a salir por esa tabla y `v'=0` se
+      // renderizaba como `vφ=0`. Fuera de math sigue siendo un apostrofo normal.
+      // El textflush() previo NO sobra: add_symbol acumula sobre el MISMO buffer y
+      // lo vuelca con la cara del SIMBOLO, asi que sin vaciar antes, la `v` de
+      // `v'` salia por LMMathSym —donde su byte no esta codificado— y desaparecia.
+      if (math_mode) { textflush(); add_symbol(map_symbol["prime"], FN_SYMBOL); }
+      else           accum.push_back(c);
+      break;
     case '$':
       // Abrir/cerrar según la bandera math_mode que el propio `$` mantiene, NO
       // según font_face: un cambio de fuente dentro de $…$ (p.ej. `$\alpha /r x$`)
@@ -604,6 +617,13 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         // mixto ya es homogéneo: todo cae en LM Math y no hay nada que partir.
         // Es lo que hace que una fórmula deje de mezclar dos tipografías.
         text_state.font_face = FN_TEX_CMMI;
+        // La bandera pide que el backend EMBEBA LM Math. Antes solo la levantaba
+        // get_symbol_code al ver un `\comando`, lo que bastaba porque el math sin
+        // comandos iba a Times-Italic. Desde P2 el math por defecto YA es LM Math,
+        // asi que una formula de solo letras y digitos —`$x'$`, `$y = x^2$`— la
+        // necesita igual: sin ella el EPS no define /LMMath y Ghostscript sustituye
+        // por una fuente cualquiera (el byte 162 salia como ¢).
+        using_fontcmmi = true;
         math_mode = true;
       } else {
         textflush();

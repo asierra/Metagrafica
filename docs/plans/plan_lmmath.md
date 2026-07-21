@@ -150,3 +150,24 @@ Un `for c in astral: t.cmap[alias]=t.cmap[c]` solo toca las tablas que YA tienen
 el codepoint astral —las de formato 12—, y libharu lee la (3,1) de formato 4.
 El primer intento emitia los codigos correctos (`E004`, `E031` en los `Tj`) y aun
 asi no pintaba nada, justo por eso.
+
+### Dos secuelas de P2, encontradas por Alejandro (2026-07-20)
+
+🐞 **`v'` salia como `vφ`.** COLISION DE BYTES: el apostrofo es el byte 39 y en
+`map_tex_cmmi` el byte 39 es `varphi`. Mientras la cara por defecto del math fue
+Times-Italic no se notaba; al volver a FN_TEX_CMMI, el apostrofo empezo a salir
+por esa tabla. Arreglado como manda TeX: en math `'` es una PRIMA (U+2032, via
+`map_symbol`), fuera de math sigue siendo apostrofo.
+- ⚠️ `add_symbol` acumula sobre el MISMO buffer y lo vuelca con la cara del
+  SIMBOLO: hay que `textflush()` antes, o el texto pendiente sale con la cara
+  equivocada (la `v` de `v'` desaparecia, porque su byte no esta en LMMathSym).
+
+🐞 **El EPS no embebia LM Math en formulas SIN `\comando`.** `using_fontcmmi`
+pide al backend que embeba la fuente, y solo la levantaba `get_symbol_code`. Eso
+bastaba mientras el math sin comandos iba a Times-Italic; desde P2 el math YA es
+LM Math por defecto, asi que `$y = x^2$` la necesita igual. Sin ella el EPS no
+define `/LMMath` y Ghostscript SUSTITUYE por una fuente cualquiera — donde el
+byte 162 sale como ¢. Afectaba a quickstart, fig1 y fig4-4, que son los del
+corpus con math y sin comandos.
+- 💡 Esto explica ademas buena parte de la divergencia EPS/PDF que el barrido
+  atribuia a "metrica de texto": fig1 cae de 3.08% a **0.05%** al arreglarlo.
