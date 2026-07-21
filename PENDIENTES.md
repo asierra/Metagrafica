@@ -96,6 +96,15 @@ siempre lo último.
 - [x] ~~**Figura que ejercite `smooth` §9.2**~~ — CERRADO 2026-07-20: `examples/turning_points.mg`
       lo usa dos veces, y `smooth` ganó forma de primitiva.
       (`spline` y las cónicas se **retiraron** el mismo día, ver §9.1.)
+- [ ] 🐞 **`docs/img/*.svg` no tiene compuerta** (hallado 2026-07-21). Son renders
+      **commiteados** (GitHub los muestra en la portada del README) que se regeneran a mano
+      con `bin/mg` desde `examples/`, y **nada verifica que sigan al día**. Llevaban desde
+      `e9198c0` (2026-07-17) mostrando la tipografía matemática ANTERIOR a la migración
+      LM Math del 2026-07-20: la portada anunciaba una mejora que ella misma no exhibía.
+      Regenerados el 2026-07-21. **Cuesta ~5 líneas cerrarlo**: `test/run.sh` ya compila
+      esos dos ejemplos a SVG, así que basta comparar contra `docs/img/` y avisar. Se deja
+      como decisión aparte porque toca la red de compuertas, que está razonada en
+      `plan_plot.md` y no conviene ampliar de pasada.
 - [ ] **`marker_start/mid/end` en polygon/bezier** — en pausa, falta ejemplo
       (`plan_marcadores.md`). En polyline/arc ya está.
 - [ ] **`sample(&p, n)` §9** — devolver n puntos SOBRE la curva, no los que la definen:

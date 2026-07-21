@@ -185,13 +185,28 @@ need an edit tomorrow (the old names fail loudly, never silently). And **parts a
 unbuilt**: the specification describes features that do not exist yet. What is here is
 exercised by the regression corpus on every change.
 
-At least three things stand between here and release ([§22.7](especificacion_mg.md)):
+At least four things stand between here and release ([§22.7](especificacion_mg.md)),
+**in this order**:
 
-1. **Freezing the grammar** — a figure that compiles keeps compiling.
-2. **Finishing `plot`** — `rule` and `table` are reserved but unbuilt; each is waiting
-   for figures that ask for it.
-3. **Reference** — although this README and a man page exist, a single document that
+1. **Finishing `plot`** — `table` is still reserved and unbuilt, waiting for figures that
+   ask for it. (`rule` and `legend` are done: see [§13.8](especificacion_mg.md) and the
+   example above.)
+2. **Real use by other people** — a period of figures written by someone other than the
+   author, with whatever improvements that motivates. **If you use MG at this stage, your
+   opinion on the names and the ergonomics is exactly what is missing**, and it can still
+   be acted on at no cost to anyone.
+3. **Freezing the grammar** — a figure that compiles keeps compiling. It comes last on
+   purpose: it is the promise that makes every later correction expensive.
+4. **Reference** — although this README and a man page exist, a single document that
    serves as a complete reference for end users is still missing.
+
+> **Why the order matters, and is not bureaucracy.** What the word "beta" buys you is
+> *permission to break things*: today a rename costs a `sed`, and after 1.0 it costs a
+> migration and a major version number. So freezing has to come last. The case that proves
+> it happened in this project: `axis(title=)` meant the *axis name* and `axis(labels=)` the
+> *tick numbers* — the two names anyone reaches for first meant something other than they
+> do everywhere else. It was fixed in an afternoon because there were no users; with twenty
+> other people's figures in the wild, it would not have been.
 
 *(Text encoding used to be on this list. Source files are UTF-8 and running text now
 covers the full repertoire of the standard PostScript fonts — accented Latin plus
