@@ -239,6 +239,14 @@ orden de la lista es la ejecución.
 > lenguaje, no de una construcción; y MG ya eligió por escrito el camino opuesto. Queda
 > anotado como **decisión y no como omisión**, porque va a volver a aparecer.
 
+- [ ] 🐞 **`&path` solo se reconoce como PRIMER argumento de una primitiva** (hallado
+      2026-07-21 con `parabolic`). `dot(&p, size=2)` y `marker(&p, shape="x")` funcionan;
+      `dot(2, &p)` (radio primero) y `dot(...) { &p }` (path en el bloque de coordenadas)
+      NO. Dos asperezas: (a) `startsPathExpr` solo mira el primer arg, así que el path debe ir
+      antes del radio —lo que uno escribe primero es `dot(2, &p)` y falla—; (b) el bloque
+      `{ }` no acepta `&path`, la misma divergencia que `place(Struct) { &path }` de §10.1. El
+      mensaje («se esperaba una expresión, se encontró `&`») **no orienta** a poner el path
+      primero. Dato de ergonomía de superficie: resolver o mejorar el mensaje antes de congelar.
 - [ ] 🐞 **`smooth(&p)` está en la spec §9.2 pero NO funciona** (hallado 2026-07-21 al
       verificar los ejemplos de la referencia contra el compilador). Como expresión de path,
       `smooth` solo acepta un bloque literal `smooth { pts }`; `smooth(&otropath)` da «se
