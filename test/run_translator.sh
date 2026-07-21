@@ -25,7 +25,7 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MG="$ROOT/bin/mg"
-TRANSLATOR="$ROOT/mg1to2.py"
+TRANSLATOR="$ROOT/tools/mg1to2.py"
 V1DIR="$ROOT/examples/v1"
 GOLD="$ROOT/test/golden_translator"
 

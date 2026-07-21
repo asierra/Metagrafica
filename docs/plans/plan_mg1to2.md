@@ -56,7 +56,7 @@ esos dos, tienes el núcleo bien.
 Para cada ejemplo:
 
 ```bash
-python3 mg1to2.py examples/v1/X.mg > /tmp/X_v3.mg      # traducir
+python3 tools/mg1to2.py examples/v1/X.mg > /tmp/X_v3.mg      # traducir
 ./bin/mg /tmp/X_v3.mg /tmp/X.svg                        # render con el compilador V3
 # comparar contra el oráculo V1, ignorando encabezado/dimensiones:
 diff <(grep -vE '^<\?xml|width=|height=|viewBox' /tmp/X.svg) \
@@ -333,7 +333,7 @@ debería cubrir.
 
 `mg1to2.py` en la raíz del repo. CLI mínimo:
 ```
-python3 mg1to2.py entrada.mg [salida.mg]     # stdout si no se da salida
+python3 tools/mg1to2.py entrada.mg [salida.mg]     # stdout si no se da salida
 ```
 Sin dependencias externas (solo stdlib). Un test `test/run_translator.sh` que
 corra el loop §2 sobre los 16 ejemplos y reporte diff por archivo sería el
