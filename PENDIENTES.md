@@ -153,21 +153,43 @@ orden de la lista es la ejecución.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] 💡 **La familia de operaciones sobre paths §9** — el hallazgo de comparar con CeTZ y
-      MetaPost (`local/karl.mg`, trabajo interno). MetaPost tiene un juego **coherente**:
-      `point t of p`, `direction t of p`, `p intersectionpoint q`, `subpath`,
-      `cutbefore`/`cutafter`. MG tiene tres funciones ad-hoc con nombre **provisional**
-      (`path_width`, `path_x_min_at_y`, `path_x_max_at_y`) más `sample(&p,n)` reservado.
-      - ⚠️ **Y explica por qué dos de ellas están SIN USO en el corpus** (se commitearon
-        aparte para poder revertirlas): `path_x_*_at_y` es **un caso particular** de
-        `intersectionpoint` (path ∩ recta horizontal). Se construyó el caso especial donde
-        MetaPost tiene la operación general, y por eso no encontró usuarios.
-      - **Absorbe el problema de las "anclas con nombre"** de CeTZ/TikZ («texto a la mitad
-        de esa línea»): `point 0.5 of p` lo resuelve **sin sistema de nombres ni
-        referencias entre objetos** — es una operación sobre un valor, que es como MG ya
-        trata los paths en §9. Es la forma correcta del nivel, y es más barata.
+- [ ] 💡 **La familia de operaciones sobre paths §9 — con `sample`/`point t of p` como
+      pieza-palanca.** El hallazgo de comparar con CeTZ y MetaPost (`local/karl.mg`). La
+      lección de MetaPost NO es copiar una operación: es que **el path es un tipo algebraico
+      coherente** y su vocabulario se compone. MG lo empezó (concat/reverse/flip/transpose
+      componen) y se detuvo en tres funciones ad-hoc de nombre provisional (`path_width`,
+      `path_x_min_at_y`, `path_x_max_at_y`).
+      - 🎯 **Una sola pieza de motor desbloquea cuatro cosas: evaluar el path en un
+        parámetro `t`** (`sample`/`point t of p`). De ella cuelgan:
+        - `point t of p` — leer un punto REAL y EXACTO de la curva;
+        - las reducciones `path_x_*_at_y` dejan de ser aproximadas (hoy miden el POLÍGONO
+          DE CONTROL, `splines.h:81`, no la curva);
+        - la "ancla" de CeTZ/TikZ («texto a la mitad de esa línea») = `point 0.5 of p`,
+          **sin sistema de nombres ni referencias entre objetos**;
+        - `intersectionpoint` (path ∩ recta), del que `path_x_*_at_y` es el caso especial
+          —lo que explica por qué esas dos están SIN USO en el corpus—.
+      - 🔧 **Qué falta en `splines.cpp` para `sample` (revisado 2026-07-21):**
+        - La **evaluación de una cúbica en `t` YA EXISTE**, enterrada en `splines()`
+          (`point p = c0 + u*(c1+u*(c2+c3*u))`, Horner) — pero en base **Catmull-Rom**, no
+          la **Bernstein** que necesita un bezier de §9. Falta `bezier_point(p0,c1,c2,p1,t)`,
+          ~6 líneas (De Casteljau).
+        - `path_point(path, t)` con `t` GLOBAL sobre el path multisegmento: necesita
+          **longitud de arco** para que `t=0.5` sea la mitad GEOMÉTRICA y no la mitad de los
+          segmentos (que es lo que espera `point 0.5 of p` y lo que hace MetaPost). Teselar,
+          acumular longitudes, interpolar: ~40 líneas.
+        - ⚠️ **La decisión, no el código:** un `polyline` guarda VÉRTICES (rectas) y un
+          `bezier` guarda CONTROLES (de tres en tres), y el path como valor de §9 **no lleva
+          esa etiqueta** —es la misma `Path`—. `sample` tiene que saber cuál mira. Es el
+          mismo hueco latente que "mezclar recto y curvo". **Resolver antes de fijar la
+          firma pública.**
       - Decidir la forma de la familia **antes de congelar** (condición 1); los nombres
-        provisionales no deberían congelarse tal cual.
+        provisionales no deberían congelarse tal cual. `path_x_*_at_y` probablemente se
+        redefinen en términos de `sample`, o se retiran.
+      - ⚖️ **Tensión filosófica a zanjar por escrito** (no que se cuele con el código):
+        `point t of p` *interroga una curva*, y `docs/calcular_en_vez_de_medir.md` predica
+        *derivar de la fórmula, no medir del dibujo*. No se contradicen —leer un punto
+        EXACTO de una curva DERIVADA sigue siendo cálculo, no ojo— pero es decisión a tomar
+        a conciencia, como se hizo con el solucionador de ecuaciones.
 - [ ] **Tangente declarada en un nodo (`{dir 30}`, `tension`) §9** — el término medio que
       MG no tiene: `bezier` te hace poner los tiradores y `smooth` los deriva todos.
       MetaPost deja decir «pasa por este nodo **saliendo a 30°**», que es justo lo que se
