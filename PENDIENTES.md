@@ -15,14 +15,15 @@
 
 ---
 
-## 🎯 Las cuatro condiciones para el 1.0 (§22.7 — lista canónica, decidida con Alejandro)
+## 🎯 Las cinco condiciones para el 1.0 (§22.7 — lista canónica, decidida con Alejandro)
 
 Es lo único que bloquea salir de beta. **No hay más.** ⚠️ **Es una SECUENCIA, no una lista
-de pendientes:** el orden real de ejecución es **2 → 4 → 1**, y (3) ya está. Congelar es
-siempre lo último.
+de pendientes:** el orden real de ejecución es **2 → 5 (borrador) → 4 → 1 → 5 (final)**, y
+(3) ya está. Los números son estables (se citan desde otros documentos); lo que no sigue el
+orden de la lista es la ejecución.
 
 1. **Congelar la gramática.** Declarar estable lo que hay; no añadir sintaxis nueva.
-   Implica cerrar (2) y (4) primero. Es una decisión, no código.
+   Implica cerrar (2), (4) y el borrador de (5) primero. Es una decisión, no código.
 2. **Cerrar lo aparcado de `plot`:**
    - [x] ~~**`rule` (§13.8)**~~ — CERRADO 2026-07-21 con `figure_02` (5 paneles, local por
      confidencialidad de los datos). Parser puro, cero motor y cero backends; log gratis
@@ -58,6 +59,25 @@ siempre lo último.
      figuras no triviales desde cero y las figuras nuevas **dejen de mover la gramática**.
      Es la regla del proyecto («no se construye sin una figura que lo pida») aplicada a los
      nombres. Opcional al final: marcar `3.0.0-rc.1` antes del `3.0.0`.
+   - ⚠️ **Depende del borrador de (5):** sin referencia, lo que devuelven los usuarios es
+     sobre *descubribilidad* («no encontré cómo hacer X»), no sobre *ergonomía* («lo
+     encontré y es incómodo»), que es la que sirve para decidir nombres.
+5. **Una referencia de usuario** (añadida 2026-07-21; estaba solo en el README y sube a la
+   lista canónica). Hoy hay tres documentos y **ninguno es el que un usuario necesita**: el
+   README es una portada, `man mg` documenta el **binario** y no el lenguaje, y esta spec es
+   **prospectiva** (describe lo que aún no existe y razona diseño). Falta el documento que
+   describe, completo y sin historia, **lo que hay**.
+   - **Es la única que CRUZA el congelamiento**, y por eso aparece dos veces en el orden:
+     **borrador antes de (1)**, **final después**. La final va después por lo obvio: una
+     referencia escrita contra una gramática que aún se mueve se reescribe con cada
+     renombre. El borrador va antes por dos razones, y ninguna es de cortesía:
+     1. **(4) la necesita.** No se le puede pedir a nadie de fuera que escriba figuras si
+        no tiene qué leer; sin referencia lo que devuelven es sobre descubribilidad, no
+        sobre ergonomía.
+     2. 💡 **Escribirla ES una revisión de diseño.** Documentar cada constructo de forma
+        sistemática obliga a ponerlos uno al lado del otro — exactamente el ejercicio que
+        destapó el renombre de §13. Es previsible que levante inconsistencias, y conviene
+        que lo haga **mientras todavía son baratas**.
 
 ---
 

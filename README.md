@@ -185,20 +185,25 @@ need an edit tomorrow (the old names fail loudly, never silently). And **parts a
 unbuilt**: the specification describes features that do not exist yet. What is here is
 exercised by the regression corpus on every change.
 
-At least four things stand between here and release ([§22.7](especificacion_mg.md)),
-**in this order**:
+Four things stand between here and release ([§22.7](especificacion_mg.md) carries the full
+list), and they come **in this order**:
 
 1. **Finishing `plot`** — `table` is still reserved and unbuilt, waiting for figures that
    ask for it. (`rule` and `legend` are done: see [§13.8](especificacion_mg.md) and the
    example above.)
-2. **Real use by other people** — a period of figures written by someone other than the
+2. **A user reference** — there are three documents today and none of them is the one
+   that is needed: this README is a front page, `man mg` documents the *binary* rather
+   than the language, and the specification is *forward-looking* (it describes things that
+   do not exist yet). What is missing is the document that describes, completely and
+   without history, **what is there**.
+3. **Real use by other people** — a period of figures written by someone other than the
    author, with whatever improvements that motivates. **If you use MG at this stage, your
    opinion on the names and the ergonomics is exactly what is missing**, and it can still
-   be acted on at no cost to anyone.
-3. **Freezing the grammar** — a figure that compiles keeps compiling. It comes last on
+   be acted on at no cost to anyone. It comes after the reference because without
+   something to read, what you get back is "I couldn't find how to do X" rather than "I
+   found it and it is awkward", and only the second one helps decide names.
+4. **Freezing the grammar** — a figure that compiles keeps compiling. It comes last on
    purpose: it is the promise that makes every later correction expensive.
-4. **Reference** — although this README and a man page exist, a single document that
-   serves as a complete reference for end users is still missing.
 
 > **Why the order matters, and is not bureaucracy.** What the word "beta" buys you is
 > *permission to break things*: today a rename costs a `sed`, and after 1.0 it costs a

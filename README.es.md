@@ -148,12 +148,12 @@ bin/mg examples/fig6-4.mg sal.svg
 **Esta versión es aún beta**, y de ahí se siguen dos cosas. El **lenguaje todavía puede cambiar**: los nombres y los argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste mañana (los nombres viejos fallan de forma ruidosa, nunca en silencio). Y **faltan piezas**: la especificación describe cosas que aún no existen. Lo que sí está se ejercita
 con el corpus de regresión en cada cambio.
 
-Faltan por lo menos cuatro cosas para el release ([§22.7](especificacion_mg.md)), **en este orden**:
+Faltan cuatro cosas para el release ([§22.7](especificacion_mg.md) lleva la lista completa), y van **en este orden**:
 
 1. **Terminar `plot`** — `table` sigue reservado y sin construir, esperando figuras que lo pidan. (`rule` y `legend` ya están: ver [§13.8](especificacion_mg.md) y el ejemplo de arriba.)
-2. **Uso real por otras personas** — un periodo de figuras escritas por gente que no es el autor, con las mejoras que eso motive. **Si usas MG en esta etapa, tu opinión sobre los nombres y la ergonomía es justo lo que falta**, y todavía se puede actuar sobre ella sin costo para nadie.
-3. **Congelar la gramática** — que una figura que compila siga compilando. Va al final a propósito: es la promesa que hace cara cualquier corrección posterior.
-4. **Referencia** — aunque se cuenta con este README y un manual, falta un documento único que sirva de referencia completa para usuarios finales.
+2. **Una referencia de usuario** — hoy hay tres documentos y ninguno es el que hace falta: este README es una portada, `man mg` documenta el *binario* y no el lenguaje, y la especificación es *prospectiva* (describe cosas que aún no existen). Falta el documento que describa, completo y sin historia, **lo que hay**.
+3. **Uso real por otras personas** — un periodo de figuras escritas por gente que no es el autor, con las mejoras que eso motive. **Si usas MG en esta etapa, tu opinión sobre los nombres y la ergonomía es justo lo que falta**, y todavía se puede actuar sobre ella sin costo para nadie. Va después de la referencia porque sin algo que leer, lo que se recoge es «no encontré cómo hacer X» y no «lo encontré y es incómodo», que es lo que sirve para decidir nombres.
+4. **Congelar la gramática** — que una figura que compila siga compilando. Va al final a propósito: es la promesa que hace cara cualquier corrección posterior.
 
 > **Por qué el orden importa, y no es burocracia.** Lo que compra la palabra «beta» es *el permiso para romper*: hoy renombrar algo cuesta un `sed`, y después del 1.0 cuesta una migración y un número de versión mayor. Así que congelar tiene que ser lo último. El caso real que lo demuestra ocurrió en este proyecto: `axis(title=)` significaba el *nombre del eje* y `axis(labels=)` los *números de las marcas* — los dos nombres que cualquiera alcanza primero significaban otra cosa que en el resto del mundo. Se arregló en una tarde porque no había usuarios; con veinte figuras ajenas encima, no.
 

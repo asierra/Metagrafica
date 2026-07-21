@@ -2403,9 +2403,10 @@ ejemplo, el `rectangle` transformable (§4.4).
 puede cambiar** (nombres y argumentos no están congelados) y **faltan piezas** de esta
 spec. Lo que sí está se ejercita con el corpus en cada cambio y ha compuesto libros.
 
-**Las cuatro condiciones** (1–3 decididas 2026-07-16; la 4ª añadida 2026-07-21). No hay más.
-**Y van en ESE ORDEN**: no son una lista de pendientes sino una secuencia, por lo que se
-explica en la condición 4.
+**Las cinco condiciones** (1–3 decididas 2026-07-16; la 4ª y la 5ª añadidas 2026-07-21).
+No hay más. **Los números son estables** (otros documentos citan «la condición 2»), pero
+**el orden de EJECUCIÓN no es el de la lista**: es **2 → 5 (borrador) → 4 → 1 → 5 (final)**,
+con la (3) ya hecha. El porqué está en las condiciones 4 y 5.
 
 1. **Congelar la gramática.** Es lo que hace que la beta sea beta. Solo en la última
    sesión se movieron `axis(title=)`→`label=`, `labels=`→`tick_labels=` y
@@ -2450,6 +2451,31 @@ explica en la condición 4.
 > **Paso opcional al final:** cuando (2) esté cerrado y las pruebas no muevan nada, marcar
 > `3.0.0-rc.1` antes del `3.0.0` — el «última llamada» convencional, en el que solo entran
 > bloqueadores. `include/version.h` se edita a mano, así que cuesta una línea.
+
+5. **Una referencia de usuario** (añadida 2026-07-21; estaba solo en el README y sube a la
+   lista canónica). Hoy hay tres documentos y **ninguno es el que un usuario necesita**: el
+   README es una portada, el manual (`man mg`) documenta el *binario* y no el lenguaje, y
+   **esta especificación no sirve** para el caso — es prospectiva, describe cosas que aún no
+   existen y razona decisiones de diseño. Falta el documento que describe, de forma completa
+   y sin historia, **lo que hay**.
+
+> **Es la única condición que CRUZA el congelamiento, y por eso aparece dos veces en el
+> orden de ejecución.**
+>
+> **El borrador va ANTES (junto con la 4), y no es opcional:** no se le puede pedir a nadie
+> de fuera que escriba figuras si no tiene qué leer. Sin referencia, lo que devuelven es
+> retroalimentación sobre *descubribilidad* («no encontré cómo hacer X»), que es real pero
+> no es la que hace falta para decidir **nombres**; con referencia, lo que devuelven es
+> sobre *ergonomía* («encontré X y es incómodo»), que sí. La condición 4 depende de esta.
+>
+> 💡 **Y escribirla es, en sí misma, una revisión de diseño.** Documentar cada constructo de
+> forma sistemática obliga a ponerlos uno al lado del otro, que es exactamente el ejercicio
+> que destapó el renombre de §13 — comparar la nomenclatura en conjunto, no constructo por
+> constructo. Es previsible que el borrador levante inconsistencias; **conviene que las
+> levante mientras todavía son baratas**, o sea antes de (1).
+>
+> **La versión final va DESPUÉS de (1)**, por lo obvio: una referencia escrita contra una
+> gramática que aún se mueve se reescribe con cada renombre.
 
 **Lo que NO bloquea beta**, aunque importe:
 
