@@ -212,6 +212,13 @@ orden de la lista es la ejecución.
 > lenguaje, no de una construcción; y MG ya eligió por escrito el camino opuesto. Queda
 > anotado como **decisión y no como omisión**, porque va a volver a aparecer.
 
+- [ ] 🐞 **`smooth(&p)` está en la spec §9.2 pero NO funciona** (hallado 2026-07-21 al
+      verificar los ejemplos de la referencia contra el compilador). Como expresión de path,
+      `smooth` solo acepta un bloque literal `smooth { pts }`; `smooth(&otropath)` da «se
+      esperaba '{' de los puntos de smooth». La spec lo lista como forma válida y `smoothPath`
+      existiría para ello. Divergencia spec↔implementación: o se construye (suavizar un path
+      ya nombrado es útil y barato) o se retira de §9.2. `flip_x`/`reverse`/`concat` sí toman
+      `&p`, así que la asimetría es visible.
 - [ ] 🐞 **Un literal de lista no se puede indexar**: `[10,20,30][1]` es error de sintaxis
       («se esperaba un comando… pero se encontró `[`»), y también dentro de un bloque de
       coordenadas. Hay que pasar por una variable (`xs = [10,20,30]` y luego `xs[i]`), que
