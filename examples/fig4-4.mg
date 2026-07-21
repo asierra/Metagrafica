@@ -1,6 +1,10 @@
 % ───────────────────────────────────────────────────────────────────────────────
-% Fig. 3.1 de IMQ, 3a. ed. (sept. 1998, dic. 2002)
+% Fig. 4.4 de «Quantum Mechanics» (Cambridge University Press, 2025), p. 78.
+% Antes: Fig. 3.1 de IMQ, 3a. ed. (sept. 1998, dic. 2002).
 % Potenciales y estructura del espectro: tres pozos con sus puntos de retorno.
+%
+% El nombre del archivo sigue a la edición de Cambridge porque es la referencia
+% de más peso y la más fácil de verificar: el libro se descarga gratis.
 %
 % Port V3 de examples/fig4-5v1.mg. Dos cambios de fondo frente a una traducción
 % literal (que solo cambiaría la sintaxis):
