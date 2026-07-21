@@ -112,6 +112,23 @@ Es lo único que bloquea salir de beta. **No hay más.**
 - [ ] **Fase de los guiones EPS vs PDF** — en `primitives` las formas discontinuas
       arrancan la secuencia de `dash` en fase ligeramente distinta entre los dos backends
       (396 px de diferencia, solo en los trazos punteados). Cosmético; nadie lo ha pedido.
+- [ ] **Fase de la TRAMA: SVG no coincide con EPS/PDF** (hallado 2026-07-20 en el barrido
+      a tres bandas). EPS y PDF barren las líneas desde el CENTRO de la caja del bbox;
+      SVG tesela un `<pattern>` desde el ORIGEN del espacio de usuario. En el polígono de
+      `primitives` las líneas de uno y otro se **intercalan** —media separación de
+      desfase—; en el rectángulo coinciden de casualidad. La verificación de 2026-07-09
+      («EPS/SVG/PDF idénticos») comprobó el ÁNGULO, no el origen. Cosmético mientras nadie
+      compare dos formatos de la misma figura lado a lado.
+
+> **Barrido a tres bandas (2026-07-20).** Los 19 ejemplos, EPS/PDF/SVG desde el golden.
+> Sin bugs estructurales nuevos. Todo lo que queda es (a) posición de glifos —métricas de
+> avance distintas por backend, ≤5%, se ve como franja roja/azul a los lados del MISMO
+> glifo—, (b) la fase de trama de arriba y (c) la de guiones. Dos trampas de método, por
+> si se repite: **misma rejilla de píxeles** (el `%%BoundingBox` de EPS es ENTERO y la
+> página PDF no → recortar y reescalar mete ~1 px de error acumulado y todo parece
+> divergir), y **contar cualquier tinta no blanca**: `gs` endurece las hairlines a 1 px
+> sólido mientras inkscape las antialiasea a gris claro, así que con un umbral duro el
+> SVG «pierde» todas las líneas finas (31% de divergencia inventada en `fig2-1`).
 
 ---
 
