@@ -333,9 +333,20 @@ void EPSDisplay::text(string s) {
   if (rot) fprintf(file, "gsave currentpoint translate %f rotate 0 0 moveto\n", ang);
 
   // Emite un segmento (con la fuente ya fijada) usando el operador de alineación
-  // vigente. Escapa paréntesis primero.
+  // vigente. Escapa lo que un literal de cadena PostScript no admite crudo.
+  //
+  // El BACKSLASH va PRIMERO y no es opcional: en PostScript es el carácter de
+  // escape, así que si se dobla después de insertar los de los paréntesis, se
+  // doblarían también ésos. Faltaba (añadido 2026-07-20) y producía un EPS
+  // inválido —`(\) show`, cadena sin cerrar → /syntaxerror en Ghostscript— en el
+  // único símbolo cuyo byte es 92: `\therefore`. No lo cazaba nadie porque el
+  // golden por bytes bendice un EPS sintácticamente roto (es byte-estable) y la
+  // compuerta `gs`, que sí lo cazaría, solo mira los ejemplos del corpus, y
+  // ninguno usaba ese símbolo. Lo destapó `symbols.mg`.
   auto emitSeg = [&](string seg) {
     size_t pos = 0;
+    while ((pos = seg.find('\\', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
+    pos = 0;
     while ((pos = seg.find('(', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
     pos = 0;
     while ((pos = seg.find(')', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
