@@ -85,6 +85,36 @@ orden de la lista es la ejecución.
         sistemática obliga a ponerlos uno al lado del otro — exactamente el ejercicio que
         destapó el renombre de §13. Es previsible que levante inconsistencias, y conviene
         que lo haga **mientras todavía son baratas**.
+   - 🤖 **Requisito de diseño: que pegarla en el contexto vuelva competente a un agente.**
+     Lo que hace competente a un agente frío y lo que hace competente a un recién llegado
+     son **casi el mismo requisito** —completa, autocontenida, guiada por ejemplos y
+     explícita en las trampas—, así que no es un objetivo aparte: es un argumento más para
+     el mismo documento, y una vara concreta para saber si está terminado.
+     - **Por qué importa, y no es moda.** Un agente que entrega un SVG te deja aceptarlo o
+       abrir Illustrator; uno que entrega un `.mg` te deja **cambiar un número**. El
+       diferenciador no es «MG es amigable para la IA» sino que **el resultado sigue siendo
+       editable después de que el agente termina**. Es la afirmación que el proyecto ya
+       hace —una figura es código fuente— extendida a un colaborador nuevo.
+     - **Evidencia de campo (sesiones del 2026-07-21):** el agente escribió `figure_02.mg`
+       y `local/karl.mg` y el autor los editó directamente encima (tamaño de los `dot`,
+       color de las ondas, categorías, etiquetas de las cercas). Y el caso que ningún
+       formato de salida iguala: cambiar `xe1` de `0.028` a `0.045` reacomodó pozo,
+       niveles, retornos y ondas de forma coherente.
+     - 💡 **Los tropiezos del agente son datos de ergonomía.** Escribiendo esas figuras se
+       tropezó en cuatro sitios, tres de superficie del lenguaje: indexar un literal de
+       lista, `outlinefill` como supuesto atributo por-primitiva, los paréntesis de la
+       Lección 7 en bloques de coordenadas, y `polybar(&p, width=…)` —que resultó ser una
+       restricción real y se quitó—. **Donde tropieza un agente tropieza una persona**, y
+       sale mucho más rápido: es una forma barata de aflorar la fricción de (4) antes de
+       congelar, aunque NO la sustituye.
+     - ⚠️ **Cautela sobre esa evidencia:** el agente tenía la spec entera, el `CLAUDE.md` y
+       el corpus en contexto. Uno frío con solo el README lo haría bastante peor — lo que
+       **no debilita el argumento, lo es**: prueba que MG es tratable *con buena
+       documentación*, que es justo lo que falta.
+     - 🚫 **Y una decisión de redacción: «amigable para IA» NO va al README.** Envejece
+       mal, no es verificable y en dos años sonará fechado. Lo que dura y se comprueba:
+       *la figura sigue siendo texto editable, la escriba quien la escriba*. Quien quiera
+       leer ahí la ventaja con agentes, la leerá.
 
 ---
 
