@@ -63,6 +63,16 @@ Es poderoso en las gráficas, pero MetaGráfica también luce en **ilustraciones
 
 Menos de 60 líneas de MetaGráfica: el detector es una `struct` (asociación de varios elementos gráficos) colocado a 37°, las flechas del haz y del giro del detector son marcadores que **se orientan solos** a su línea o arco —sin ángulos ni posiciones calculados a mano— y la `φ` va en Latin Modern Math.
 
+## Texto y matemáticas
+
+Los archivos fuente son **UTF-8**.
+
+**Las matemáticas son Unicode de punta a punta.** Griegas, operadores, relaciones, flechas, variables en itálica y dígitos rectos viajan como codepoints y se componen con **Latin Modern Math**, que `mg` embebe en la salida: la misma tipografía que produce TeX, idéntica en los tres backends. La figura no necesita fuentes instaladas para verse en otra máquina.
+
+**El texto corrido cubre el repertorio entero de las fuentes PostScript estándar**: latín acentuado, `¿¡ «» ° × ± µ`, y la puntuación tipográfica que esas fuentes siempre trajeron pero que Latin-1 no sabía nombrar — comillas “de imprenta” y ‘simples’, rayas de diálogo y guiones medios, puntos suspensivos, viñetas, dagas, ‰, ™, €, œ. Cada backend las resuelve en su idioma nativo: SVG emite UTF-8, PDF su propia codificación, EPS un vector de codificación propio.
+
+**El techo es el repertorio de la fuente, no la codificación.** Otros sistemas de escritura —griego *en prosa*, cirílico, CJK, o los tonos del vietnamita— se descartan con un aviso que nombra el carácter, porque el glifo sencillamente no está en la fuente. Soportarlos implica embeber una fuente de texto Unicode, igual que se embebe Latin Modern Math para las matemáticas. El griego *matemático* funciona hoy: se escribe `$\alpha$`, no una α literal.
+
 ## Compilación
 
 ```bash
@@ -138,12 +148,13 @@ bin/mg examples/fig6-4.mg sal.svg
 **Esta versión es aún beta**, y de ahí se siguen dos cosas. El **lenguaje todavía puede cambiar**: los nombres y los argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste mañana (los nombres viejos fallan de forma ruidosa, nunca en silencio). Y **faltan piezas**: la especificación describe cosas que aún no existen. Lo que sí está se ejercita
 con el corpus de regresión en cada cambio.
 
-Faltan por lo menos cuatro cosas para el release ([§22.7](especificacion_mg.md)):
+Faltan por lo menos tres cosas para el release ([§22.7](especificacion_mg.md)):
 
 1. **Congelar la gramática** — que una figura que compila siga compilando.
 2. **Terminar `plot`** — `rule` y `table` están reservados y sin construir; cada uno espera figuras que lo pidan.
-3. **Texto en UTF-8** — hoy el texto se convierte a Latin-1, una restricción de PostScript que se impone a los tres backends. Las ecuaciones no están afectadas (van por Latin Modern Math).
-4. **Referencia** — aunque se cuenta con este README y un manual, falta un documento único que sirva de referencia completa para usuarios finales.
+3. **Referencia** — aunque se cuenta con este README y un manual, falta un documento único que sirva de referencia completa para usuarios finales.
+
+*(La codificación del texto estaba en esta lista. Los archivos fuente son UTF-8 y el texto corrido cubre ya el repertorio completo de las fuentes PostScript estándar —latín acentuado más la puntuación tipográfica: comillas “de imprenta”, rayas, puntos suspensivos, viñetas, ‰, ™, €—. Las matemáticas son Unicode de punta a punta. Ver [Texto y matemáticas](#texto-y-matemáticas).)*
 
 `mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática antigua de dos letras (`PL`, `CR`, `GNNUM`…) —la **versión 2** de la tabla de arriba— quedó congelada en la rama `v1-legacy`, y su corpus vive en [`examples/v1/`](examples/v1/) como oráculo de migración. *(La rama y el directorio se nombraron antes de alinear la numeración con la historia editorial, y conservan el nombre viejo para no romper enlaces existentes.)* **Esos archivos no compilan con este binario.**
 
@@ -161,7 +172,7 @@ MetaGráfica se ha reescrito cuatro veces, y cada versión evoluciona. Como otro
 | **3** | 2026 | C++14 | EPS, SVG, PDF |
 
 La versión 0 controlaba directamente una impresora láser y se escribió cuando ninguna aplicación gráfica daba la calidad que un documento científico necesitaba para publicarse. La versión 2 arrancó en 1999 con la decisión de generar Encapsulated PostScript —entonces *el* lenguaje gráfico por excelencia
-para publicaciones. Su texto iba en Latin-1, con la fuente `symbol` para griegas y matemáticas; PostScript se estancó y no alcanzó la revolución de Unicode, pero sigue soportado por casi todo y se convierte a PDF sin dificultad.
+para publicaciones. Su texto iba en Latin-1, con la fuente `symbol` para griegas y matemáticas; PostScript se estancó y no alcanzó la revolución de Unicode, pero sigue soportado por casi todo y se convierte a PDF sin dificultad — y resultó que sus fuentes nunca fueron la limitación que la codificación aparentaba (ver abajo).
 
 Esta versión conserva el núcleo descriptivo y agrega los backends SVG y PDF, un modelo de coordenadas isométrico, Latin Modern Math para los símbolos, y la familia `plot` para figuras de datos. La gramática de dos letras desapareció y el lenguaje dejó de parecer lenguaje ensamblador y ahora es mucho más poderoso. Ver *Estado del proyecto*.
 

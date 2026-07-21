@@ -201,8 +201,27 @@ text("$\Delta E = h\nu$") { 2 3 }
 text("mass $m_e$ at $t_0$", align="center") { 5 1 }
 ```
 
-Mathematics is set in Latin Modern Math, which **mg** embeds in the output; the
-figure needs no fonts installed to render elsewhere.
+Mathematics is set in **Latin Modern Math**, which **mg** embeds in the output, so
+the figure needs no fonts installed to render elsewhere. Greek, operators,
+relations, arrows, italic variables and upright digits all travel as Unicode
+codepoints and come out identical in EPS, SVG and PDF. Note that a math `-` is set
+as a minus sign, not a hyphen.
+
+## Encoding
+
+Source files are **UTF-8**.
+
+Running text covers the whole repertoire of the standard PostScript fonts:
+accented Latin, `¿¡ «» ° × ± µ`, and the typographic punctuation those fonts carry
+but that Latin-1 cannot name — curly quotes, en and em dashes, ellipses, bullets,
+daggers, per-mille, trademark, euro, œ. Each backend resolves these natively: SVG
+emits UTF-8, PDF its own encoding, EPS a custom encoding vector.
+
+The limit is the **font's repertoire**, not the encoding. A character with no glyph
+in the text fonts — Greek in running prose, Cyrillic, CJK, Vietnamese tone marks —
+is dropped, and **mg** warns on standard error naming the codepoint and the string
+it appeared in. Greek in *mathematics* is unaffected: write `$\alpha$` rather than
+a literal α.
 
 # PLOTS AND AXES
 

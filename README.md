@@ -77,6 +77,27 @@ elements) placed at 37°, the beam and detector-swing arrows are markers that **
 themselves** to their line or arc — no angles or positions worked out by hand — and `φ`
 is set in Latin Modern Math.
 
+## Text and mathematics
+
+Source files are **UTF-8**.
+
+**Mathematics is Unicode from end to end.** Greek, operators, relations, arrows, italic
+variables and upright digits all travel as codepoints and are set in **Latin Modern
+Math**, which `mg` embeds in the output — the same typeface TeX produces, and identical
+across the three backends. A figure needs no fonts installed to render elsewhere.
+
+**Running text covers the whole repertoire of the standard PostScript fonts**: accented
+Latin, `¿¡ «» ° × ± µ`, and the typographic punctuation those fonts have always carried
+but that Latin-1 could not name — “curly quotes”, ‘single’ ones, en and em dashes,
+ellipses, bullets, daggers, ‰, ™, €, œ. Each backend resolves them natively: SVG emits
+UTF-8, PDF its own encoding, EPS a custom encoding vector.
+
+**The ceiling is the font's repertoire, not the encoding.** Other writing systems —
+Greek *prose*, Cyrillic, CJK, or Vietnamese tone marks — are dropped with a warning that
+names the character, because the glyph simply is not in the font. Supporting them means
+embedding a Unicode text font, the way Latin Modern Math is embedded for mathematics.
+Greek in *mathematics* works today: write `$\alpha$`, not a literal α.
+
 ## Building
 
 ```bash
@@ -164,15 +185,18 @@ need an edit tomorrow (the old names fail loudly, never silently). And **parts a
 unbuilt**: the specification describes features that do not exist yet. What is here is
 exercised by the regression corpus on every change.
 
-At least four things stand between here and release ([§22.7](especificacion_mg.md)):
+At least three things stand between here and release ([§22.7](especificacion_mg.md)):
 
 1. **Freezing the grammar** — a figure that compiles keeps compiling.
 2. **Finishing `plot`** — `rule` and `table` are reserved but unbuilt; each is waiting
    for figures that ask for it.
-3. **UTF-8 text** — today text is converted to Latin-1, a PostScript restriction imposed
-   on all three backends. Equations are not affected (they go through Latin Modern Math).
-4. **Reference** — although this README and a man page exist, a single document that
+3. **Reference** — although this README and a man page exist, a single document that
    serves as a complete reference for end users is still missing.
+
+*(Text encoding used to be on this list. Source files are UTF-8 and running text now
+covers the full repertoire of the standard PostScript fonts — accented Latin plus
+typographic punctuation: “curly quotes”, en and em dashes, ellipses, bullets, ‰, ™, €.
+Mathematics is Unicode end to end. See [Text and mathematics](#text-and-mathematics).)*
 
 `mg` is the **version 3** compiler (`MG_VERSION 3.0.0-beta`). The earlier two-letter grammar
 (`PL`, `CR`, `GNNUM`…) — **version 2** in the table above — is frozen on the `v1-legacy`
@@ -203,7 +227,8 @@ produced output of the quality a scientific paper needed. Version 2 began in 199
 the decision to emit Encapsulated PostScript — then *the* graphics language for
 publishing. Its text was Latin-1, with the standard `symbol` font for Greek and
 mathematics. PostScript stagnated and never caught the Unicode revolution, but it is
-still widely supported and converts trivially to PDF.
+still widely supported and converts trivially to PDF — and, as it turns out, its fonts
+were never the limitation the encoding made them look (see below).
 
 This version keeps the descriptive core and adds the SVG and PDF backends, an isometric
 coordinate model, Latin Modern Math for symbols, and the `plot` family for data figures.
