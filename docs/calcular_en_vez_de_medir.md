@@ -153,7 +153,7 @@ degradada, con 69 números en lugar de una línea.
 
 La curva del oscilador, entera, es esto:
 
-```text
+```matlab
 for i = 0 to n-1 {
     p = -0.92 + i*(1.84/n)
     q = -0.92 + (i+1)*(1.84/n)
