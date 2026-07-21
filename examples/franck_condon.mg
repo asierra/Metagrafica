@@ -61,7 +61,7 @@ elab = 0.30
 struct Nivel(&onda, w = path_width(&onda)) {
     world_window 0 w -2 2
     line_width 0.1   color "lightgray"   polyline { 0 0  w 0 }
-    fill "lightgray"   outlinefill   color "black"   line_width 0.4
+    fill "orange"   outlinefill   color "black"   line_width 0.4
     bezier(&onda)
 }
 

@@ -48,7 +48,7 @@ plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
     polyline { a1 Ea  a1 -0.1 }            % retornos, hasta el eje x
     polyline { a2 Ea  a2 -0.1 }
     dash "solid"
-    dot(2.5) { a1 Ea  a2 Ea }
+    dot(2) { a1 Ea  a2 Ea }
 
     text("/iE") { 0.81 (Ea-0.05) }         % resta en coord → paréntesis (§4)
     text("$x_1$", align="center") { a1 -0.18 }
@@ -79,7 +79,7 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     dash "dashed"
     polyline { b1 Eb  b1 0 }               % retorno, hasta el eje x
     dash "solid"
-    dot(2.5) { b1 Eb }
+    dot(2) { b1 Eb }
 
     text("/iE") { 37.3 Eb }
     text("$x_1$", align="center") { b1 -0.075 }
@@ -118,7 +118,7 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     polyline { c1 Ec2  c1 0 }
     polyline { c2 Ec2  c2 0 }
     dash "solid"
-    dot(2.5) { c0 Ec1  c1 Ec2  c2 Ec2 }
+    dot(2) { c0 Ec1  c1 Ec2  c2 Ec2 }
 
     text("/iE") { 3.46 (Ec1+0.03) }
     text(">0")  { 3.85 (Ec1+0.03) }
@@ -148,7 +148,7 @@ text("/iV(x)") { 1 35 }
 text("/iV(x)") { 34.5 35 }
 text("/iV(x)") { 74.5 35 }
 
-dot(2.5) { 5 40.5 }
+dot(2) { 5 40.5 }
 text("classical turning point") { 7 40 }
 text("a)") { 13 3 }
 text("b)") { 51 3 }
