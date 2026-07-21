@@ -211,6 +211,14 @@ Path concat_paths(const Path &a, const Path &b) {
   if (a.empty()) return b;
   if (b.empty()) return a;
   Path p1 = a;
+  // Un operando de UN SOLO punto se AÑADE tal cual. Soldar (§9) traslada la pieza
+  // para que continúe desde el final de a y salta su primer punto por ser la unión
+  // duplicada; pero un punto suelto no tiene segmento que continuar ni unión que
+  // duplicar, así que el bucle de abajo (que arranca en i=1) lo descartaba entero
+  // —`path p += { x y }` en un lazo no acumulaba nada—. Un path de un punto es
+  // degenerado pero legal. Las piezas soldadas del corpus son SIEMPRE multipunto
+  // (empiezan en {0 0} y se trasladan), así que esto no las toca.
+  if (b.size() == 1) { p1.push_back(b.front()); return p1; }
   double dx = p1.back().x - b.front().x, dy = p1.back().y - b.front().y;
   for (size_t i = 1; i < b.size(); i++)                            // salta el punto duplicado
     p1.push_back(point(b[i].x + dx, b[i].y + dy));
