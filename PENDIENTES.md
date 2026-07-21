@@ -10,7 +10,7 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=51 … c3fail=0** (3 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=54 … c3fail=0** (3 compuertas).
 
 ---
 
@@ -40,7 +40,7 @@ Es lo único que bloquea salir de beta. **No hay más.**
 - [ ] **Math P2** (`plan_lmmath.md`): latino en modo math → itálica LM Math (hoy Times-Italic).
 - [ ] **Plot Fase 3** (`plan_plot.md`): localizador automático `step`/`decimals`
       (1/2/5·10ᵏ), `format=` con validación, `at=v`, **`title_at=`** (título al extremo
-      del eje — hoy obliga a `text()` manuales en fig4-5/fig6-4).
+      del eje — hoy obliga a `text()` manuales en fig4-4/fig6-4).
 - [ ] **Pseudo-3D** (`plan_pseudo3d.md`): refinamientos acotados (`hatch` como parámetro
       de `plano`, refactor de `fig10-2v3`). MG **no** se vuelve 3D — simula volumen con
       shear por composición 2D.
@@ -61,10 +61,21 @@ Es lo único que bloquea salir de beta. **No hay más.**
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] **`spline`/`smooth` §9** — motor `splines.cpp` **listo**, barato; falta figura.
+- [x] ~~**Figura que ejercite `smooth` §9.2**~~ — CERRADO 2026-07-20: `examples/turning_points.mg`
+      lo usa dos veces, y `smooth` ganó forma de primitiva.
+      (`spline` y las cónicas se **retiraron** el mismo día, ver §9.1.)
 - [ ] **`marker_start/mid/end` en polygon/bezier** — en pausa, falta ejemplo
       (`plan_marcadores.md`). En polyline/arc ya está.
-- [ ] **`spline(mode="conic")`** — cónicas (V1 `$S 1`); nativo (QuadTo SVG) vs conversión.
+- [ ] **`sample(&p, n)` §9** — devolver n puntos SOBRE la curva, no los que la definen:
+      lo único que valía del `nodes=` de la `spline` retirada (muestrear es producir
+      *datos*, no tinta). Volvería exactas a `path_width` (§8.2) y `path_x_bounds_at_y`,
+      que hoy leen el polígono de CONTROL —en una bézier los puntos interiores son
+      tiradores y no están sobre la curva— y por eso llevan advertencia. Falta figura.
+- [ ] 🐞 **`place(Struct) { &path }` NO está implementado** (hallado 2026-07-20). §10.1 lo
+      documenta («**3+ puntos** o una referencia **`&path`**») con ejemplo
+      `place(Tick, scale=0.2) { &sinpi }`, pero `parsePlace` solo parsea coordenadas y
+      nunca mira `T_AMP` → error de sintaxis. Divergencia spec/implementación: decidir si
+      se construye o se retira de la spec. (Independiente de `sample`.)
 - [ ] **`place` por longitud de arco** — extender `gap=` a instancias cada *n* de arco.
 - [ ] **Retícula por eje §13.6** y **`alpha` §4.11** (EPS sin nativo → decisión de arquitectura).
 - [ ] **`both_sides` geométrico exacto** (perpendicular vs. especular) — documentar.

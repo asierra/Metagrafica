@@ -16,14 +16,14 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=51 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=54 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (17 `.mg` × EPS/SVG/**PDF** = 51 goldens) y compara contra la red golden
+de `examples/` (18 `.mg` × EPS/SVG/**PDF** = 54 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=51 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=54 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -56,11 +56,11 @@ Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regener
 
 Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
 
-**Política V1 (2026-07-15):** todo el trabajo actual es desarrollo de **V3**; **no se trackea material V1 nuevo**. Los `.mg` crudos de V1 y sus traducciones literales se quedan en el árbol **sin commitear** (p. ej. `examples/fig4-5v1.mg`, `fig4-5v3.mg`, y los de fig6-4). Lo ya trackeado en `examples/v1/` (31 archivos: corpus congelado + oráculo) **se queda como está** — la política aplica de aquí en adelante, no se borra nada.
+**Política V1 (2026-07-15, endurecida 2026-07-20):** todo el trabajo actual es desarrollo de **V3**; **no se trackea material V1 nuevo**. Los `.mg` crudos de V1 y sus traducciones literales se quedaban en el árbol sin commitear; desde el 2026-07-20 **se borran** en cuanto el port V3 está cerrado (así se fueron `fig4-8.mg`, `exp.mg`, `fp3i2dat.mg` y el `fig4-8.eps` de 1998). No estaban en git en **ninguna** rama —`origin/v1-legacy` incluida—, así que el borrado es definitivo: antes de borrar, lo que debe sobrevivir son las **medidas**, transcritas al `.mg` o a un `plan_*.md`, no el archivo (ver el encabezado de `turning_points.mg`, que conserva cómo re-medir el PDF vectorial de Cambridge y los nodos del V(x) manual). Lo ya trackeado en `examples/v1/` (31 archivos: corpus congelado + oráculo) **se queda como está**.
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (17 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-5, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo (por eso conviven ahí archivos crudos sin commitear, p.ej. `fig4-5v1.mg` en sintaxis V1, que no compila con V3). Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (18 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -271,13 +271,13 @@ invisibles en PDF/SVG** (EPS lo toleraba). **Ni el golden por bytes** (bendecía
 backends, ya HECHA — ver "Build and test"; su detector de "línea rellena" caza justo esto).
 Fix: acotar el contenido log con push/pop, como la lineal. `make` limpio, `gs` OK, golden `ok=51`.
 
-### Cerrado en la sesión del 2026-07-15 (`base=` de ejes + `fig4-5` a 3 paneles)
+### Cerrado en la sesión del 2026-07-15 (`base=` de ejes + `fig4-4` a 3 paneles)
 
 - **`base=` en `xaxis`/`yaxis` dentro de `plot`** (§13.7): el eje cruza en el valor dado, en
   unidades de datos del eje **perpendicular**, en vez de quedar clavado al borde de `box`
   (`by0`/`bx0` literales). Reusa el `mapAxis` de `PlotStmt` → log gratis; `grid=` NO se mueve
   (barre la caja completa). ~20 líneas, cero churn en el corpus.
-- **`examples/fig4-5.mg`** (Fig. 3.1 de IMQ — potenciales y estructura del espectro), en el
+- **`examples/fig4-4.mg`** (Fig. 4.4 de Cambridge 2025 p. 78; entonces llamada fig4-5 — potenciales y estructura del espectro), en el
   corpus golden (17→18 ejemplos, `ok=54`). Primer ejemplo con **varios `plot` en un documento**
   (rejilla de 3 paneles) y con **ejes interiores** (eje `V` centrado en a); eje `x` sobre `V=0`
   en c) — sin `base=` no era portable). Las 3 curvas del V1 estaban **digitalizadas** a 69
@@ -334,7 +334,7 @@ predicho) y pasadas 1/3 idénticas; trama a 8.25 px (EPS/PDF) / 8.33 (SVG) vs **
 original** → `hatch_gap=1.4` fiel; bandas en los mismos valores en los 3 backends (la pasada
 blanca borra igual). Método, medidas del escaneo y datos completos en `plan_polybar.md`.
 Lo esencial que dejó:
-- **Aquí SÍ se vale digitalizar** (a diferencia de fig4-5): es de **1988**, V0 imprimía directo
+- **Aquí SÍ se vale digitalizar** (a diferencia de fig4-4): es de **1988**, V0 imprimía directo
   a láser (no había EPS) y el PDF es un **escaneo** (JPEG 300 dpi + capa OCR, cero vectores).
   No hay fórmula que recuperar: es un modelo de banda de Smith (1969), no un `1−exp(−τ)`.
   **Verificador de la leyenda**: `Σ(a_522−a_261)·0.5 == 0.374 µm`; lo reconstruido da **0.3695
@@ -381,7 +381,7 @@ los *tick labels* — los dos nombres que cualquiera alcanza primero significaba
 - **`label_at=`** (`1f19fe9`): `"center"` (matplotlib, fig2-3) / `"start"`/`"end"` (libro). El
   default de `label_gap` depende de `label_at` y no es magia: **lo que estorba depende de dónde
   lo pongas** (centrado libra la fila de rótulos; al extremo va más allá de ella). Absorbió los
-  3 rótulos `x` de fig4-5.
+  3 rótulos `x` de fig4-4.
 - 🐞 **Bug del motor destapado por ese port:** `/i` y `/b` se tragaban **en silencio** sobre cara
   heredada. Las caras componen por OR de bits pero el centinela es `FN_NOFACE = -1`, que ya tiene
   **todos** los bits → `-1 | FN_ITALIC = -1`. Solo llegan con FN_NOFACE los rótulos de
@@ -391,11 +391,11 @@ los *tick labels* — los dos nombres que cualquiera alcanza primero significaba
   nombre del eje **encima de los datos** (el label cuelga de la LÍNEA, y la línea se fue al centro).
   Ligado a la pregunta abierta de §13.5: matplotlib ancla el label a la **caja** (`set_ylabel` es
   método del Axes, no del spine). Coinciden salvo con `base=`. **No se cambió porque el anclaje a
-  la caja no rescata su propio caso** (los `V(x)` de fig4-5 quieren altura común, que ningún
+  la caja no rescata su propio caso** (los `V(x)` de fig4-4 quieren altura común, que ningún
   anclaje da). Lo decide la primera figura donde estorbe.
 
 **`plot` EN PAUSA (2026-07-16), con ejemplos completos y funcionales:** fig2-3 (lineal), fig6-4
-(log), fig4-5 (3 paneles + `base=` + `label_at`), fig_polybar (`polybar` + 3 pasadas). Aparcado en
+(log), fig4-4 (3 paneles + `base=` + `label_at`), fig_polybar (`polybar` + 3 pasadas). Aparcado en
 la spec, **sin implementar**: `rule` (§13.8, valores notables — hijo del `plot`, decidido), `table`
 (§13.10); y los huecos que destapó `figure_02.pdf`: **texto multilínea** (§14.1), **retícula por
 eje** (§13.6) y **`alpha`** (§4.11 — EPS no lo tiene nativo; es decisión de arquitectura, no un
@@ -692,6 +692,122 @@ historia; su cobertura **no se perdió** (verificado por grep sobre el corpus): 
 structs parametrizadas por path (`&`, `path_width`) → `franck_condon`.
 
 `ok=51`. `especificacion_mg.md` §9 documenta `path +=`.
+
+### Cerrado en la sesión del 2026-07-20 (`spline` retirada, `smooth` maduro, Fig. 4.5)
+
+**`spline` y las splines cónicas RETIRADAS (§9.1).** `spline` era la misma curva que
+`smooth` con otro nombre —Catmull-Rom *pasa por* sus puntos de control, así que la
+distinción que la spec afirmaba no existía en la geometría— pero descartando los extremos
+en vez de recuperarlos por reflexión. Las cónicas no se pierden nada: la cuadrática es
+subconjunto **exacto** de la cúbica por elevación de grado, los tres backends hablan cúbica
+nativa y los círculos exactos ya los da `arc`/`ellipse`. Dato de archivo: **`$S 1` nunca se
+implementó** (el `switch` de `Parser.cpp` solo atiende `n==0` y `n>1`), o sea que las cónicas
+murieron con el paso a EPS de 1991. El parser V3 **nunca** aceptó `spline`, así que la
+retirada fue puramente documental. Del modo `nodes=n` sobrevive la idea de un `sample(&p,n)`
+del álgebra §9 (PENDIENTES): muestrear produce **datos**, no tinta.
+
+**Tres defectos del motor en `splines.cpp`**, dormidos porque nada del corpus usaba `smooth`:
+- **Parametrización:** `alpha=0.5` se aplicaba a la distancia **al cuadrado** → exponente 1
+  sobre la distancia = **cordal**, no centrípeta como decían el comentario y la spec. El
+  exponente pasa a `alpha*0.5`. Afecta a `get_bezier_tangents`, la única función viva.
+- **`conversion_factor` 10 → 6.** No era ajustable: es el límite uniforme de la fórmula no
+  uniforme que vive doce líneas más abajo *en el mismo archivo*. Con 10 la curva salía
+  aplanada y no coincidía con la que `splines()` daba sobre los mismos puntos.
+- **Guardas de puntos repetidos** en `get_bezier_tangents` (las que `get_spline_coefficients`
+  siempre tuvo). Sin ellas un nodo duplicado daba `-nan` en el EPS **con código de salida 0**.
+  El caso llega solo: los paths V1 de `SP`/`GNBZPATH` **duplican los extremos a propósito**
+  (era su convención), así que la primera traducción literal los trae.
+
+**`smooth` gana la forma de PRIMITIVA (§9.2), como `sine`.** Antes solo era expresión de path,
+así que dibujar exigía `bezier(smooth { … })` — que filtraba al documento el detalle de que
+`smooth` produce puntos de control. `smooth { nodos }`, `smooth(attrs) { … }` y `smooth(&p)`;
+la forma de expresión se queda (la necesitan `concat`/`fit`). Trabajo de parser, **cero motor
+y cero backends**; salida byte-idéntica al envoltorio. 💡 La diferencia entre las hermanas es
+**de quién calcula las tangentes**: en `bezier` el bloque son puntos de CONTROL y el autor las
+pone (puede hacer picos, tiradores asimétricos — es estrictamente más expresiva); en `smooth`
+son NODOS y el compilador las deriva, garantizando paso por todos y empalme liso.
+
+**`bezier` valida el conteo 3k+1** (`checkBezierControlCount`, parse-time, por subtrayecto).
+Un conteo que no cerrara se **descartaba en silencio** (5 o 6 puntos dibujaban lo mismo que 4)
+— el mismo hueco que motivó `checkCoordPairs`. 🐞 **Cazó un bug en trabajo ya bendecido:**
+`fig1.mg` tenía 32 puntos de control y su último punto (`12.0 0`) nunca se dibujaba. Se quitó;
+el golden no se movió un byte, lo que **prueba** que era dato muerto.
+
+**`examples/turning_points.mg`** — contraparte paramétrica de la Fig. 4.5 de *Quantum
+Mechanics* (Cambridge, 2025) p. 80. Corpus 17→18, **`ok=54`**. Único que ejercita `smooth`
+(cierra el hueco de cobertura de PENDIENTES), 2º con `exp` tras `franck_condon` y 2º
+enteramente paramétrico. Se dan asíntotas, mínimo, los tres retornos, las tres energías y el
+nº de nodos del estado ligado; salen V(x), longitudes de onda, amplitudes y colas.
+- **V(x) en forma cerrada** `V∞−(V∞−Vm)·exp(−|(x−xm)/w|^s)`, con anchos y exponentes
+  **despejados de los retornos**, no ajustados: el lado izquierdo tiene dos condiciones
+  (V(x₀)=E_b, V(x₁)=E_c) que fijan sus dos parámetros → la curva pasa por los retornos
+  rotulados *por construcción*. Reproduce los 14 nodos que se dibujaban a mano con **0.9 pt**.
+- **La constante de fase sale de Bohr-Sommerfeld** de ψ_c (cuadratura con un `for`), así que
+  las otras dos ondas **no tienen libertad**: misma partícula ⇒ misma constante. Verificado
+  que acopla: `nodos` 3→4 lleva ψ_c 3→4 lóbulos y arrastra ψ_a 23→30, ψ_b 13→16.
+- 🔎 **Por eso NO es un port fiel:** medido sobre la figura publicada, sus tres ondas **no
+  pueden ser la misma partícula**. La fase por lóbulo varía hasta 3× dentro de una onda (cada
+  región se dibujó repitiendo un ciclo a escala elegida a ojo) y ninguna constante reproduce
+  las tres densidades a la vez: con ψ_c de 4 antinodos la física exige ψ_a≈24 y ψ_b≈13
+  lóbulos, contra 13 y 8 dibujados.
+- **Colas por la escala de Airy** `d ∝ |V'(retorno)|^(−⅓)` (V' por diferencia centrada). ⚠️ NO
+  es 1/√(V−E), que **diverge** justo en el retorno donde WKB se rompe — misma lección que
+  `franck_condon`. Solo `path +=` puede graficar una función cuyo nº de puntos es variable:
+  un bloque de coordenadas no lleva `for`; las piezas se acumulan RELATIVAS y concat encadena.
+- El port fiel intermedio (`fig4-5.mg`) se **borró**: al derivar todo de la física dejó de
+  reproducir la figura, y su información (cómo re-medir el PDF vectorial de Cambridge con
+  `mutool draw -F trace`, el sistema de coordenadas, los 14 nodos) está transcrita en el
+  encabezado del paramétrico.
+- 🔎 **El PDF de Cambridge es oráculo VECTORIAL** (`mutool draw -F trace`), mejor que el EPS
+  de 1998: público, permanente, verificable por cualquier lector. Y resultó **el mismo
+  dibujo**, no uno redibujado: mismos conteos de segmentos (ψ_a=13, ψ_b=9, ψ_c=5) y mismos
+  extremos dentro de **0.002 unidades**. Su sistema de coordenadas se deduce de las rectas
+  (x=0→245.89 pt, x=1→308.25; y=5.2→77.99, y=4.9→85.67) → anisotropía **2.4359**, que es
+  exactamente el aspecto de la ventana (9.5/3.9).
+- **Encuadre:** la figura publicada estira los ejes por separado y V3 es isométrico, así que
+  letterboxearía. Se reproduce con `scale` anisótropo sobre una ventana ya ensanchada en x.
+  **Es seguro para los rótulos:** bajo un transform V3 mueve el **ancla** del texto, no los
+  glifos (verificado: el `scalefont` sale idéntico) — dato para la pregunta abierta de §19.
+- ⚠️ **Trampa al construir ondas con `path +=`:** la semilla **no puede llevar variables**.
+  `path w = <expr>` es **diferido** (guarda el árbol, se evalúa al dibujar), así que un
+  `sine(phase=ph, amplitude=amp)` como semilla lee los valores que el lazo ya pisó. Un literal
+  (`path w = { 0 0 }`) es seguro, y `+=` sí evalúa YA. `franck_condon.mg` lo esquiva sin
+  decirlo porque siembra con constantes.
+- **Semántica V1 recuperada midiendo** (antes de borrar el material): `PWST x0 y0 x1 y1` es
+  `fit` a un rectángulo (`StructureRectangle`), y con las coordenadas **invertidas espeja** la
+  struct; `MKST` solo selecciona. `SEN1`/`COS1`/`SEN45UP` se reconstruyeron de la geometría del
+  render (`seno.mg` nunca estuvo en el árbol): SEN1 = medio arco en 1 segmento bezier,
+  COS1 = ciclo completo en 2 → 5·1 + 4·2 = **13**, los que mide el oráculo.
+
+**Diagnósticos del parser — tres arreglos, dos de ellos silencios.** Los mensajes decían qué
+se ESPERABA y nunca qué se ENCONTRÓ (el lexer sí lo hacía: «carácter inesperado '@'»).
+- `describeTok()` + `parseError` → «se esperaba 'to' en el for, **pero se encontró 'too'**».
+- 🐞 Eso no bastaba para el caso que duele —`polylnie { … }`—, porque la palabra ya se
+  consumió y el error señalaba al `{`. Raíz: un identificador desconocido cae al *catch-all*
+  de sentencia de estado y solo revienta al parsear su supuesto argumento. Como **ninguna
+  sentencia de estado toma un bloque**, un `{` ahí prueba que el identificador no era un
+  comando → «'polylnie' no es un comando conocido (¿primitiva mal escrita?)», señalando a la
+  posición del NOMBRE. Va en la rama de aridad, no antes: `outlinefill { … }` (0 args +
+  bloque) sí es legítimo.
+- 🐞 **`colour 0.5` compilaba, no hacía nada y no avisaba.** `emitStyleAttr` YA devolvía
+  `bool` diciendo si reconoció el nombre y `StateStmt::exec` **descartaba el retorno**. Ahora
+  es `evalError`. Verificadas una por una las diez sentencias reales (color, fill, line_width,
+  font_size, font, align, valign, dash, hatch, outlinefill).
+- Queda flojo `circl(2) { … }`: se parsea como invocación de struct válida y falla en el
+  bloque. No se tocó porque invocación+bloque es legítimo en otros contextos.
+
+💡 **Patrón de la sesión (tres hallazgos, una misma lente):** *el compilador descarta algo en
+silencio y produce una figura plausible*. Los tres se cazaron preguntando «¿qué se está
+tirando sin avisar?» — coordenadas sobrantes de `bezier`, el punto muerto de `fig1`, el
+retorno de `emitStyleAttr`. Vale repetir la búsqueda: **valores de retorno ignorados y ramas
+que hacen `return` sin mensaje** son el filón.
+
+⚠️ **El golden en disco se queda RANCIO entre sesiones** (no está en git): traía
+`fig6-4v3-clean`, nombre retirado el 2026-07-15, y le faltaba `franck_condon`. `check` daba
+`fail=6` **antes** de tocar nada. Un `check` con fallos puede ser vejez, no regresión — se
+distingue con `git stash` + recompilar. Y para verificar un cambio sin depender de él:
+comparar las 54 salidas contra las del binario anterior, ignorando la línea `%%Title` (lleva
+la ruta de salida).
 
 ## Code style
 
