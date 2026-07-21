@@ -23,3 +23,10 @@ man/mg.1
 # renderiza desde el repo. Se regeneran con bin/mg desde su .mg en examples/.
 !docs/img/
 !docs/img/*.svg
+
+# Trabajo local sobre datos que NO son públicos (figuras de artículos sin
+# publicar). Es una excepción DELIBERADA, no material pendiente de trackear
+# como los .mg crudos de V1: lo que vive aquí se queda aquí por
+# confidencialidad. El generador que produce estos .mg sí se versiona
+# (tools/hist2mg.py); los datos y la figura, no.
+local/

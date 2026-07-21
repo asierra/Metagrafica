@@ -21,10 +21,14 @@ Es lo único que bloquea salir de beta. **No hay más.**
 1. **Congelar la gramática.** Declarar estable lo que hay; no añadir sintaxis nueva.
    Implica cerrar (2) primero. Es una decisión, no código.
 2. **Cerrar lo aparcado de `plot`:**
-   - [ ] **`rule` (§13.8)** — valores notables (líneas de referencia). Hijo del `plot`,
-     ya decidido en diseño. **Desbloquea la forma AUTOMÁTICA de `legend`** (hoy solo la
-     explícita, cerrada en `df652d9`). Figura esperando: `figure_02.pdf`. → mayor palanca.
-   - [ ] **`table` (§13.10)** — reservado, **sin diseñar** todavía.
+   - [x] ~~**`rule` (§13.8)**~~ — CERRADO 2026-07-21 con `figure_02` (5 paneles, local por
+     confidencialidad de los datos). Parser puro, cero motor y cero backends; log gratis
+     por reuso del mapper de `plot`. **Desbloqueó la forma AUTOMÁTICA de `legend`**, que
+     entró en la misma tanda junto con los anclajes `center-left`/`center-right`.
+     Diferidos a propósito (nadie los pide): `marker=`, el **borrado de colisiones** entre
+     malla y notable, y los **dos rótulos a la vez** (número al eje + prosa a la leyenda).
+   - [ ] **`table` (§13.10)** — reservado, **sin diseñar** todavía. Sigue siendo lo único
+     que bloquea el punto 2. `figure_02` genera sus Mean/SD/Min/Max pero no los dibuja.
 3. **Texto fuera de Latin-1** (§14.4) — ✅ **HECHO 2026-07-20**. Resultó que el techo
    no era la codificación sino el **repertorio de la fuente**: las base-14 SÍ tienen
    comillas tipográficas, rayas, puntos suspensivos, ‰, ™, €… y se descartaban solo
@@ -86,6 +90,14 @@ Es lo único que bloquea salir de beta. **No hay más.**
       se construye o se retira de la spec. (Independiente de `sample`.)
 - [ ] **`place` por longitud de arco** — extender `gap=` a instancias cada *n* de arco.
 - [ ] **Retícula por eje §13.6** y **`alpha` §4.11** (EPS sin nativo → decisión de arquitectura).
+      Los dos los pide `figure_02` y los dos se esquivaron ahí: la retícula se omitió, y el
+      `alpha=0.5` sobre steelblue se sustituyó por el **color ya mezclado contra blanco**
+      (`#A3C1DA`) — exacto, porque las barras no se solapan. Ese truco tapa el caso "relleno
+      translúcido sobre fondo liso", que es la mayoría; lo que no cubre es el solapamiento.
+- [ ] **Borrado de colisiones malla↔notable (§13.8)** — el premio del corte que la spec
+      promete y que `rule` todavía no cobra: suprimir el rótulo de marca vecino a un `rule`
+      con `label_at="axis"`. Necesita que el eje conozca los `rule` antes de emitir rótulos.
+      Falta la figura que lo pida (`figure_02` manda sus nombres a la leyenda).
 - [ ] **`both_sides` geométrico exacto** (perpendicular vs. especular) — documentar.
 - [ ] **Texto bajo `transform`** — rotación de glifos YA implementada (§19, 2026-07-11);
       falta *definir en spec* si transforma solo el ancla o los glifos.

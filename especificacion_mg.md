@@ -1259,10 +1259,10 @@ parte todavía no exista. Es normativa: el resto de §13 y §13.7 la usan.
 | nombre del eje (+ unidades) | `xlabel` / `ylabel` | `Label` | **`axis(label=)`** |
 | los números/cadenas de las marcas | tick labels | `ticks` | **`axis(tick_labels=)`** |
 | las marcas (malla regular) | ticks | `ticks` | `axis(ticks=)`, `tick_size=` |
-| **valor notable** (umbral, retorno, nivel) | `axvline`/`axhline` | — | **`plot { rule(…) }`** ⚠️ reservado (§13.8) |
+| **valor notable** (umbral, retorno, nivel) | `axvline`/`axhline` | — | **`plot { rule(…) }`** (§13.8) |
 | la línea del eje | spine | axis | `axis`, `extend=` |
 | retícula | grid | `grid` | `grid=`, `grid()` |
-| leyenda | `legend` | `legend` | **`legend`** (§13.9; forma explícita implementada, `rule` pendiente) |
+| leyenda | `legend` | `legend` | **`legend`** (§13.9; ambas fuentes implementadas) |
 | tabla inserta | `table` | — | **`table`** ⚠️ reservado (§13.10) |
 
 **Marcas y valores notables son cosas distintas** (§13.8): la malla se lee, el valor notable
@@ -1664,7 +1664,7 @@ rebasarla, como la recta de ajuste de fig6-4). El `text()` de título horizontal
 libro, como `λ⁻¹(s)` de fig6-4) va manual, porque `yaxis(title=)` rota el título a lo largo del eje;
 lo mismo el título **al extremo** del eje (`V(x)`, `x` de fig4-5), porque `title=` lo centra.
 
-### 13.8 Marcas: malla regular y valores notables (`rule`) — reservado
+### 13.8 Marcas: malla regular y valores notables (`rule`)
 
 **Las marcas de un eje son DOS conceptos distintos, y `from`/`to`/`step` solo expresa uno.**
 
@@ -1698,6 +1698,18 @@ concepto que el lenguaje no tiene.**
 > que sí los distingue puede resolver la colisión solo —suprimir el rótulo de malla vecino a un
 > `rule`— porque sabe cuál cede. **El corte no solo evita el antipatrón: absorbe el código que
 > el antipatrón obliga a escribir.**
+
+> ✅ **IMPLEMENTADO (2026-07-21)**, con la figura que lo pedía —`figure_02`, cinco paneles de
+> histogramas con umbrales de detección de ceniza—. Es trabajo de **parser puro**
+> (`RuleStmt` en `parserv3.cpp`, entre `LegendStmt` y `PlotStmt`): cero elementos gráficos
+> nuevos y cero cambios en los tres backends, igual que `legend`. La geometría llega ya
+> mapeada desde `PlotStmt`, que es quien tiene el mapper datos→caja, así que **la escala log
+> sale gratis** — el mismo reuso que le salió a `base=`.
+>
+> **Diferido a propósito** (nadie lo pide todavía, criterio del proyecto): `marker=` (el `dot`
+> de cortesía), el **borrado de colisiones** entre malla y notable (el premio descrito abajo:
+> necesita que el eje sepa de los `rule` ANTES de emitir sus rótulos; `figure_02` no lo
+> ejercita porque manda sus nombres a la leyenda) y los **dos rótulos a la vez**.
 
 **`rule` — el valor notable, hijo del `plot`** (decidido 2026-07-16):
 
@@ -1739,10 +1751,27 @@ para la prosa?). fig4-5 no lo pide (su `x₁` es un solo rótulo). Decidir con m
 
 Hay **dos fuentes** de entradas, y son distintas:
 
-**1. Los `rule` (§13.8) — automática y limpia, sin implementar todavía.** En `figure_02` hay
+**1. Los `rule` (§13.8) — automática y limpia. IMPLEMENTADA (2026-07-21).** En `figure_02` hay
 correspondencia **1:1 exacta** entre entradas de leyenda y `axvline`: la leyenda no describe
 series, **describe valores notables**. Un `rule` con `label_at="legend"` se autocolecciona sin
-ambigüedad — lleva su nombre y su estilo, y la muestra ES su línea. Espera a que `rule` exista.
+ambigüedad — lleva su nombre y su estilo, y la muestra ES su línea.
+
+`PlotStmt` recoge esos `rule` y se los pasa a la leyenda, que dibuja como muestra **la línea
+del propio rule con su propio estilo** (no una copia declarada aparte), y las pone ANTES de las
+`entry()` explícitas. Las dos fuentes comparten renglonado; lo único que cambia es de dónde
+sale la muestra.
+
+**Un `legend(...)` SIN bloque es válido y significa "aquí va la leyenda, sus entradas las ponen
+los `rule`".** Es la forma que quiere una figura de varios paneles, donde lo único que cambia
+de panel a panel es la esquina que queda libre. Si hay `rule` con `label_at="legend"` y el plot
+**no** tiene `legend(...)`, se avisa (no fatal): el rótulo no tendría dónde dibujarse.
+
+> 💡 **Por qué aquí sí y con las series no.** La autocolección es limpia cuando hay una relación
+> 1:1 entre objeto y entrada, y la muestra se deduce del objeto. Un `rule` cumple las dos: es
+> una línea con estilo y nombre. Una *serie* no cumple ninguna — las dos de `fig_polybar` son
+> **tres** `polybar` (§4.12), y la muestra de "522 cm" no es ninguno de los tres por separado.
+> De paso, la muestra automática **no puede divergir** de lo que señala, que es exactamente el
+> precio que la forma explícita acepta a cambio de control.
 
 **2. Las series — explícita, IMPLEMENTADA (2026-07-17, con `fig1.mg`).** Aquí no hay
 correspondencia que autocoleccionar: las dos series de `fig_polybar` son **tres** `polybar`
@@ -1779,8 +1808,12 @@ struct (`stretch=false`) al rectángulo `sample_width`×`sample_height` de esa f
 forma, así que un `marker(shape="circle")` sale círculo, no elipse, aunque la fila no sea
 cuadrada.
 
-**`at=`** (`"top-right"`/`"top-left"`/`"bottom-right"`/`"bottom-left"`) ancla una esquina de la
-caja del plot, con `margin=` (pt) de inset. El lado (`"left"`/`"right"`) fija el borde de la
+**`at=`** combina posición vertical (`"top"`/`"bottom"`/`"center"`) con lado
+(`"-left"`/`"-right"`): `"top-right"`, `"center-right"`, `"bottom-left"`… Ancla una esquina de
+la caja del plot, con `margin=` (pt) de inset; `"center-…"` reparte el bloque de entradas sobre
+el medio de la caja y no toca ningún borde horizontal, así que ignora el `margin` vertical (es
+el `loc='center right'` de matplotlib, que usan tres de los cinco paneles de `figure_02`). El
+lado (`"left"`/`"right"`) fija el borde de la
 **columna de muestras**, no el del texto: el compilador **no puede medir el ancho de una
 cadena en parse-time** — los tres backends lo calculan en DRAW-TIME con su propio mecanismo
 (EPS `stringwidth`, PDF `HPDF_Page_TextWidth`, SVG `text-anchor`), y ninguno lo expone antes.

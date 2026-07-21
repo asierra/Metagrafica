@@ -2406,6 +2406,88 @@ struct CompoundStmt : Stmt {
   }
 };
 
+// rule (§13.8, el VALOR NOTABLE): hijo del `plot`, coords EXTERIORES como
+// xaxis/yaxis/legend. Es la otra mitad de "las marcas de un eje son DOS conceptos":
+// la malla regular se LEE (sale del rango, uniforme, rotulada con su número), el
+// valor notable SEÑALA UN HECHO (sale de la física, arbitrario, con nombre propio).
+//
+// Es hijo del PLOT y no del AXIS porque el eje no sabe dónde está la curva —así que
+// no podría dar la extensión `to=`— y porque la leyenda es del plot. El costo
+// aceptado de esa elección: el rótulo no hereda gratis el acomodo del eje, así que
+// PlotStmt le pasa dónde pondría el eje ese rótulo (labelAnchor/labelGap). Es la
+// misma cuenta que el eje ya hace para sus marcas: acoplamiento, no maquinaria nueva.
+//
+// Toda la geometría llega YA MAPEADA desde PlotStmt (que es quien tiene el mapper
+// datos→caja): con eso, la escala log sale gratis, igual que le salió a `base=`.
+struct RuleStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+
+  // Resuelto por PlotStmt antes de exec(), como la caja de legend (§13.9).
+  bool   vertical = true;      // x=v → línea vertical (barre y); y=v → horizontal
+  double at = 0;               // posición ya mapeada, sobre el eje propio
+  double lo = 0, hi = 1;       // extensión ya mapeada, sobre el eje perpendicular
+  double labelAnchor = 0;      // coord perpendicular de la LÍNEA DEL EJE (respeta base=)
+  double labelGap = 4.0;       // tick_label_gap del eje al que pertenece (pt)
+
+  bool toLegend(Scope &s) const {
+    std::string la = namedStr(s, named, "label_at");
+    return la == "legend";
+  }
+  std::string labelOf(Scope &s) const { return namedStr(s, named, "label"); }
+
+  // Estilo propio (§13.8: "rojo punteado"). Mismo mecanismo que el estilo por-eje de
+  // AxisStmt, más `dash` — que es justo lo que distingue visualmente a un notable de
+  // la malla. Lo comparte la muestra de la leyenda, para que muestra y línea no
+  // puedan divergir (el defecto que la leyenda explícita sí tiene).
+  void emitStyle(Scope &s, GraphicsItemList &attrs) const {
+    for (const char *k : {"color", "line_width", "dash"}) {
+      auto it = named.find(k);
+      if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
+    }
+  }
+
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    GraphicsItemList attrs;
+    emitStyle(s, attrs);
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    for (auto &a : attrs) out.push_back(std::move(a));
+
+    { auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
+      pp.push_back(vertical ? point(at, lo) : point(lo, at));
+      pp.push_back(vertical ? point(at, hi) : point(hi, at));
+      pl->setPath(pp); out.push_back(std::move(pl)); }
+
+    // label_at="axis" (default): el nombre va DONDE IRÍA EL RÓTULO DE MARCA de ese
+    // valor — misma perpendicular, mismo tick_label_gap y misma auto-alineación por
+    // lado que AxisStmt (center/top en el horizontal, right/middle en el vertical).
+    // Con label_at="legend" no se emite aquí: lo recoge la leyenda (§13.9).
+    std::string label = labelOf(s);
+    if (!label.empty() && !toLegend(s)) {
+      double dcx, dcy; mg.getDimension(dcx, dcy);
+      double wx, wy, wdx, wdy; mg.getWindow(wx, wy, wdx, wdy);
+      double scx = dcx / wdx, scy = dcy / wdy;
+      if (!mg.getStretch()) { double m = scx < scy ? scx : scy; scx = scy = m; }
+      const double PT_PER_CM = 72.0 / 2.54;
+      double gapW = (labelGap / PT_PER_CM) / (vertical ? scy : scx);
+      int alignCode  = vertical ? 1 : 2;    // 1=center, 2=right
+      int valignCode = vertical ? 1 : 2;    // 1=top,    2=middle
+      g_flags.using_textalign = true;       // prólogo /cshow de EPS (misma trampa que el eje)
+      point tp = vertical ? point(at, labelAnchor - gapW)
+                          : point(labelAnchor - gapW, at);
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, alignCode);   out.push_back(std::move(a)); }
+      { auto a = std::make_unique<Attribute>(); a->set(AT_TVALIGN, valignCode); out.push_back(std::move(a)); }
+      double sz = namedNum(s, named, "label_size", 0);
+      if (sz > 0) { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)sz); out.push_back(std::move(a)); }
+      { auto gs = std::make_unique<GraphicsState>(); gs->setPosition(tp); out.push_back(std::move(gs)); }
+      out.push_back(parse_text(label, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    }
+
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
 // legend (§13.9, forma EXPLÍCITA de series): hijo de `plot`, coords EXTERIORES
 // (física, la caja) — nunca mapeada por datos, así que su tamaño no se deforma
 // con plot log ni con el stretch (mismo trato que xaxis/yaxis). Cada `entry()`
@@ -2425,17 +2507,25 @@ struct LegendEntry { ExprPtr label; std::vector<StmtPtr> sample; };
 struct LegendStmt : Stmt {
   std::map<std::string, ExprPtr> named;
   std::vector<LegendEntry> entries;
+  // Entradas AUTOMÁTICAS (§13.9 fuente 1): los `rule` con label_at="legend" del plot
+  // que contiene esta leyenda. PlotStmt los recoge y los apunta aquí antes de exec()
+  // (no los posee). Aquí la autocolección SÍ es limpia —correspondencia 1:1 entre
+  // valor notable y entrada, y la muestra ES su propia línea—, a diferencia de las
+  // series, donde una entrada puede ser varias primitivas (las 3 pasadas de un
+  // polybar) y por eso hay que declararla a mano.
+  std::vector<RuleStmt *> autoRules;
   double boxX0 = 0, boxY0 = 0, boxX1 = 1, boxY1 = 1;   // caja del plot; PlotStmt la fija antes de exec()
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
-    if (entries.empty()) return;
+    if (entries.empty() && autoRules.empty()) return;
     std::string at = namedStr(s, named, "at"); if (at.empty()) at = "top-right";
     bool top    = at.compare(0, 3, "top") == 0;
     bool bottom = at.compare(0, 6, "bottom") == 0;
+    bool center = at.compare(0, 6, "center") == 0;   // centrado en vertical (el loc='center right')
     bool right  = at.size() >= 5 && at.compare(at.size() - 5, 5, "right") == 0;
     bool left   = at.size() >= 4 && at.compare(at.size() - 4, 4, "left") == 0;
-    if ((!top && !bottom) || (!left && !right)) {
-      evalError("legend: at= debe ser \"top-left\"/\"top-right\"/\"bottom-left\"/\"bottom-right\": ", at);
+    if ((!top && !bottom && !center) || (!left && !right)) {
+      evalError("legend: at= debe ser \"top\"/\"bottom\"/\"center\" + \"-left\"/\"-right\": ", at);
       return;
     }
 
@@ -2457,8 +2547,13 @@ struct LegendStmt : Stmt {
 
     double rowH = ptY(std::max(sampleHeight, fontSize * 1.2) + rowGap);
     double marginX = ptX(margin), marginY = ptY(margin);
-    double n = (double)entries.size();
-    double topEdgeY = top ? (boxY1 - marginY) : (boxY0 + marginY + n * rowH);
+    size_t nAuto = autoRules.size();
+    double n = (double)(nAuto + entries.size());
+    // El margen solo aplica al borde con el que se ancla; centrado no toca ningún
+    // borde horizontal, así que el bloque se reparte sobre el medio de la caja.
+    double topEdgeY = top    ? (boxY1 - marginY)
+                    : center ? ((boxY0 + boxY1) / 2 + n * rowH / 2)
+                             : (boxY0 + marginY + n * rowH);
 
     double sw = ptX(sampleWidth), sh = ptY(sampleHeight), gp = ptX(gap);
     double sampleLeft, sampleRight;
@@ -2474,24 +2569,45 @@ struct LegendStmt : Stmt {
     if (alignCode != 0) g_flags.using_textalign = true;   // prólogo /cshow de EPS (align=right)
 
     Box unit{0, 0, 1, 1};
-    for (size_t i = 0; i < entries.size(); i++) {
+    // Las automáticas van primero, luego las explícitas; dentro de cada grupo, en
+    // orden de escritura. Ambas comparten renglonado y emisión de texto: la única
+    // diferencia es de dónde sale la muestra.
+    for (size_t i = 0; i < nAuto + entries.size(); i++) {
       double cy = topEdgeY - (i + 0.5) * rowH;
+      std::string str;
 
-      // Muestra: fit MEET-centrado (preserva forma) de la caja unitaria al rectángulo
-      // de esta fila. Inline con OPMPUSH/OPMPOP, como fit de struct.
-      Matrix M = FitStmt::fitMatrix(unit, sampleLeft, cy - sh / 2, sampleRight, cy + sh / 2, /*stretch=*/false);
-      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
-      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
-      for (auto &st : entries[i].sample) st->exec(s, mg, out);
-      popTransforms(countTransforms(entries[i].sample), out);
-      { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
-      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+      if (i < nAuto) {
+        // Muestra AUTOMÁTICA: la línea del propio `rule`, con su propio estilo. No
+        // se declara ni se repite — por eso esta fuente no puede divergir de lo que
+        // señala, que es el defecto que la explícita acepta a cambio de control.
+        RuleStmt *r = autoRules[i];
+        GraphicsItemList attrs;
+        r->emitStyle(s, attrs);
+        out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+        for (auto &a : attrs) out.push_back(std::move(a));
+        { auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
+          pp.push_back(point(sampleLeft, cy)); pp.push_back(point(sampleRight, cy));
+          pl->setPath(pp); out.push_back(std::move(pl)); }
+        out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+        str = r->labelOf(s);
+      } else {
+        // Muestra: fit MEET-centrado (preserva forma) de la caja unitaria al rectángulo
+        // de esta fila. Inline con OPMPUSH/OPMPOP, como fit de struct.
+        LegendEntry &e = entries[i - nAuto];
+        Matrix M = FitStmt::fitMatrix(unit, sampleLeft, cy - sh / 2, sampleRight, cy + sh / 2, /*stretch=*/false);
+        out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+        { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
+        for (auto &st : e.sample) st->exec(s, mg, out);
+        popTransforms(countTransforms(e.sample), out);
+        { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
+        out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+
+        Value lv = e.label->eval(s);
+        if (lv.type == Value::STRING) str = lv.str;
+        else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", lv.num); str = buf; }
+      }
 
       // Texto de la entrada (hereda align/valign/font_size del push de arriba).
-      Value lv = entries[i].label->eval(s);
-      std::string str;
-      if (lv.type == Value::STRING) str = lv.str;
-      else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", lv.num); str = buf; }
       auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(textX, cy));
       out.push_back(std::move(gs));
       out.push_back(parse_text(str, FN_NOFACE, g_flags.using_reencode, g_flags.using_fontcmmi));
@@ -2516,6 +2632,7 @@ struct PlotStmt : Stmt {
   std::vector<StmtPtr> content;            // sentencias de datos (mapeadas)
   std::unique_ptr<AxisStmt> xaxis, yaxis;  // ejes interceptados (coords exteriores)
   std::unique_ptr<LegendStmt> legend;      // leyenda interceptada (coords exteriores, §13.9)
+  std::vector<std::unique_ptr<RuleStmt>> rules;   // valores notables (§13.8), coords exteriores
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
     // Rangos de datos (x=(from,to), y=(from,to)). Deben ser TUPLAS, igual que box=:
@@ -2721,13 +2838,65 @@ struct PlotStmt : Stmt {
       }
       return mapAxis(v, from, to, b0, b1, log);
     };
-    if (xaxis) {
-      double yb = baseOf(*xaxis, y0, y1, by0, by1, ylog, by0, "xaxis");
-      setup(*xaxis, bx0, yb, bx1, yb, x0, x1, xscale); xaxis->exec(s, mg, out);
+    // La posición de cada línea de eje se calcula ANTES de dibujarlas porque los
+    // `rule` también la necesitan (su `to=` mide desde la línea del eje, y su rótulo
+    // cuelga de donde el eje pondría el de esa marca). Sin eje en esa dirección, el
+    // borde de la caja: es donde el eje habría caído sin `base=`.
+    double yb = xaxis ? baseOf(*xaxis, y0, y1, by0, by1, ylog, by0, "xaxis") : by0;
+    double xb = yaxis ? baseOf(*yaxis, x0, x1, bx0, bx1, xlog, bx0, "yaxis") : bx0;
+    if (xaxis) { setup(*xaxis, bx0, yb, bx1, yb, x0, x1, xscale); xaxis->exec(s, mg, out); }
+    if (yaxis) { setup(*yaxis, xb, by0, xb, by1, y0, y1, yscale); yaxis->exec(s, mg, out); }
+
+    // --- rule (§13.8): valores notables ---------------------------------------
+    // Coords EXTERIORES como los ejes: se resuelven con el mapper del plot (log
+    // incluido) y se dibujan ENCIMA del contenido, debajo de la leyenda.
+    for (auto &r : rules) {
+      bool hasX = r->named.count("x") != 0, hasY = r->named.count("y") != 0;
+      if (hasX == hasY) {
+        evalError("rule: requiere exactamente uno de x= o y= (el valor, y de qué eje es hijo)");
+        continue;
+      }
+      std::string la = namedStr(s, r->named, "label_at");
+      if (!la.empty() && la != "axis" && la != "legend") {
+        evalError("rule: label_at debe ser \"axis\" o \"legend\": ", la);
+        continue;
+      }
+      double v = namedNum(s, r->named, hasX ? "x" : "y", 0);
+      bool selfLog = hasX ? xlog : ylog, perpLog = hasX ? ylog : xlog;
+      if (selfLog && v <= 0) {
+        evalError("rule: en un eje log el valor debe ser positivo");
+        continue;
+      }
+      r->vertical = hasX;
+      r->at = hasX ? mapAxis(v, x0, x1, bx0, bx1, xlog) : mapAxis(v, y0, y1, by0, by1, ylog);
+      // Extensión: sin `to=`, la caja entera (el axvline de matplotlib). Con `to=`,
+      // desde la LÍNEA DEL EJE hasta ese valor — la línea corta de cortesía que va
+      // del dato al eje, que es lo que pide una figura de libro.
+      double axisLine = hasX ? yb : xb;
+      if (r->named.count("to")) {
+        double tv = namedNum(s, r->named, "to", 0);
+        if (perpLog && tv <= 0) {
+          evalError("rule: en un eje log el `to=` debe ser positivo");
+          continue;
+        }
+        r->lo = axisLine;
+        r->hi = hasX ? mapAxis(tv, y0, y1, by0, by1, ylog) : mapAxis(tv, x0, x1, bx0, bx1, xlog);
+      } else {
+        r->lo = hasX ? by0 : bx0;
+        r->hi = hasX ? by1 : bx1;
+      }
+      r->labelAnchor = axisLine;
+      AxisStmt *owner = hasX ? xaxis.get() : yaxis.get();
+      r->labelGap = owner ? namedNum(s, owner->named, "tick_label_gap", 4.0) : 4.0;
+      r->exec(s, mg, out);
+      if (la == "legend" && legend) legend->autoRules.push_back(r.get());
     }
-    if (yaxis) {
-      double xb = baseOf(*yaxis, x0, x1, bx0, bx1, xlog, bx0, "yaxis");
-      setup(*yaxis, xb, by0, xb, by1, y0, y1, yscale); yaxis->exec(s, mg, out);
+    if (!legend) {
+      for (auto &r : rules)
+        if (namedStr(s, r->named, "label_at") == "legend") {
+          warn("rule: label_at=\"legend\" pero el plot no tiene legend(...); el rótulo no se dibuja");
+          break;
+        }
     }
     // Leyenda: ENCIMA de contenido+ejes (última en pintarse), en coords exteriores
     // (la caja física, no mapeada por datos).
@@ -2998,6 +3167,17 @@ static StmtPtr parseStatement(Lexer &lx) {
     return st;
   }
 
+  // `rule` (§13.8) es hijo del plot y solo parsePlot lo intercepta; suelto caería en
+  // parseInvoke y fallaría como "struct no definida", que no dice nada del problema.
+  // Mensaje directo (no parseError) por lo mismo que la rama de `polylnie` de abajo:
+  // la plantilla "se esperaba X, pero se encontró Y" no aplica a una frase completa,
+  // y hay que señalar al NOMBRE, no al '(' que le sigue.
+  if (name == "rule") {
+    std::fprintf(stderr, "Error de sintaxis en %d:%d: 'rule' solo es válido dentro de "
+                 "un plot { } (es hijo del plot, §13.8)\n", nameLine, nameCol);
+    std::exit(1);
+  }
+
   if (lx.peek().type == T_LPAREN) return parseInvoke(lx, name);   // invocación: Nombre( … )
 
   // Resto: sentencia de estado (color, line_width, …). ARIDAD ACOTADA por nombre
@@ -3061,6 +3241,11 @@ static StmtPtr parseBlock(Lexer &lx) {
 static std::unique_ptr<LegendStmt> parseLegendBody(Lexer &lx) {
   auto st = std::make_unique<LegendStmt>();
   if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+  // Sin bloque: leyenda 100% AUTOMÁTICA (§13.9 fuente 1) — `legend(at="top-left")`
+  // solo declara DÓNDE va, y sus entradas las ponen los `rule` con label_at="legend".
+  // Es la forma que quiere una figura de varios paneles, donde lo único que cambia
+  // de panel a panel es la esquina que queda libre.
+  if (lx.peek().type != T_LBRACE) return st;
   if (!lx.accept(T_LBRACE)) parseError(lx, "'{' tras legend(...)");
   while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
     if (lx.accept(T_NEWLINE)) continue;
@@ -3104,6 +3289,15 @@ static StmtPtr parsePlot(Lexer &lx) {
     if (tk.type == T_IDENTIFIER && tk.str == "legend") {
       lx.next();
       st->legend = parseLegendBody(lx);
+      continue;
+    }
+    // rule (§13.8): como xaxis/yaxis, sin bloque — sus args lo dicen todo.
+    if (tk.type == T_IDENTIFIER && tk.str == "rule") {
+      lx.next();
+      auto r = std::make_unique<RuleStmt>();
+      if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, r->named); }
+      if (lx.peek().type == T_LBRACE) parseError(lx, "rule no lleva bloque { } (el valor va en x=/y=)");
+      st->rules.push_back(std::move(r));
       continue;
     }
     st->content.push_back(parseStatement(lx));

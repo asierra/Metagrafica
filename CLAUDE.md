@@ -809,6 +809,65 @@ distingue con `git stash` + recompilar. Y para verificar un cambio sin depender 
 comparar las 54 salidas contra las del binario anterior, ignorando la línea `%%Title` (lleva
 la ruta de salida).
 
+### Cerrado en la sesión del 2026-07-21 (`rule` §13.8 + leyenda automática + puente pandas→MG)
+
+**`rule` (§13.8) IMPLEMENTADO**, con la figura que llevaba un año esperándolo: `figure_02` del
+artículo de detección de ceniza (GOES-16/ABI), cinco paneles de histogramas con umbrales. Era
+el **punto 2 de las tres condiciones para el 1.0**; queda solo `table` (§13.10, sin diseñar).
+Trabajo de **parser puro** (`RuleStmt`, entre `LegendStmt` y `PlotStmt`): cero elementos
+gráficos nuevos, cero cambios en los tres backends. La geometría llega ya mapeada desde
+`PlotStmt` → **log gratis**, el mismo reuso que le salió a `base=`.
+- **Leyenda AUTOMÁTICA desbloqueada** (§13.9 fuente 1): los `rule` con `label_at="legend"` se
+  autocoleccionan y su muestra **es su propia línea**, así que no puede divergir de lo que
+  señala. `legend(at=…)` **sin bloque** ahora es válido = "aquí va, las entradas las ponen los
+  rule". Anclajes `center-left`/`center-right` añadidos (3 de los 5 paneles los usan).
+- Diferidos a propósito: `marker=`, el **borrado de colisiones** malla↔notable (el premio que
+  §13.8 promete; `figure_02` no lo ejercita porque manda sus nombres a la leyenda) y los dos
+  rótulos a la vez.
+- ⚠️ **La figura es LOCAL** (`local/`, con entrada propia en `.gitignore`): datos de artículo
+  sin publicar. **No** entra al corpus golden. Es excepción por confidencialidad, distinta de
+  la política de "lo no trackeado se borra", que es sobre residuo de V1.
+
+**🐞 Bug del motor destapado, de la familia `FN_NOFACE`, y ROMPÍA LA PARIDAD DE BACKENDS.**
+"Heredar la cara ambiente" estaba implementado en `Text::draw` como **no tocar el
+dispositivo**, lo cual solo equivale a "la ambiente" mientras nadie la haya cambiado — y dentro
+de una línea sí la cambian. Dos síntomas, **una raíz**:
+- la prosa tras un `$…$` salía **en la fuente del math**;
+- la prosa tras un **sub/superíndice** salía al **tamaño del índice** — porque
+  `setRelFontSize` *invalida* la cara para forzar el refresco, así que saltarse `setFontFace`
+  **también se salta el refresco de TAMAÑO**. Perseguirlos por separado habría sido perder el
+  tiempo dos veces.
+- **Fix:** `TextLine::draw` guarda la ambiente antes de dibujar (`Display::setInheritedFace`) y
+  `Text::draw` resuelve contra ella; sin cara fijada en el documento, cae a la default — el
+  criterio que ya usaban los guards de `EPSDisplay::text`/`PDFDisplay::text`.
+- ⚠️ **Lo instructivo:** solo el **PDF** heredaba mal (EPS re-emite `setfont` desde `dspstate`).
+  `franck_condon.pdf` traía sus rótulos `"distancia internuclear  $r$"` y `"energía  $E$"` en
+  **Times-Italic**, y en EPS/SVG en Times-Roman — divergencia vieja que el golden por bytes
+  había **bendecido** y que la **Capa 3 no ve**: sus invariantes cuentan operaciones de texto,
+  no fuentes. Único golden re-bendecido, verificado a ojo y contra el EPS/SVG. **Se encontró
+  portando una figura nueva, no auditando** — el argumento a favor de seguir portando material
+  real.
+
+**El puente pandas→MG (`tools/hist2mg.py`), commiteable y genérico.** MG grafica lo que le
+escriben (`polybar` recibe bins, no observaciones) y ese corte es deliberado, pero entre un CSV
+de 54 205 filas y un `.mg` hay una reducción que alguien tiene que hacer. El script la hace y
+solo la hace: pandas → `np.histogram(bins=N)` (idéntico a `sns.histplot`) + estadísticas → un
+`.mg` **incluible** (§15). De 54 mil filas salen 30 barras; los datos crudos no entran a MG.
+- **Verificador que salió gratis:** las estadísticas de los 5 paneles cuadran **al último
+  decimal** con las tablas impresas en el PDF publicado (`-0.876 / 1.759 / -12.080 / 7.111`…).
+  Se validó el camino de datos **antes** de dibujar una sola barra.
+- Dos restricciones arbitrarias del parser cayeron de paso, ambas genuinas: `polyline(&p)`
+  **no admitía atributos** tras la expresión de path (obligaba a envolver en bloque solo para
+  dar estilo), y el álgebra §9 **solo se podía dibujar** con polyline/polygon/bezier — cuando
+  un path es una secuencia de puntos y `polybar`/`circle`/`rectangle` también consumen puntos.
+- 💡 **Reflejo que valió la pena:** al ver que `color="orange"` salía rojo, comparar la tabla
+  ENTERA contra CSS en vez de arreglar la entrada. Resultó que `orange` y `green` **divergen a
+  propósito** (valores históricos de V1) y el comentario del parser ya lo decía. No era bug; el
+  chequeo costó un minuto y evitó "arreglar" algo deliberado.
+
+⚠️ **Lección 7 otra vez** (bloques de coordenadas): `{ 12 ytop0-11 }` son **tres** términos, no
+dos. Lo cazó `checkCoordPairs` con línea y columna — justo para lo que se construyó.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
