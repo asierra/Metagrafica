@@ -102,10 +102,16 @@ Es lo único que bloquea salir de beta. **No hay más.**
 - [ ] **#5** — el detector "línea rellena" de la Capa 3 depende del orden de atributos del
       SVG (`d="…" fill="…"`); si SVGDisplay reordena, el gate deja de cazar en silencio.
 - [ ] **#6** — `parsePlot` sobrescribe un 2º `xaxis`/`yaxis` sin avisar.
-- [ ] **Barrer los demás `compound` con arcos** comparando los tres backends a 300 dpi
-      (gs / pdftoppm / inkscape). El bug de `fig2-1` —el arco abría subpath en PDF y el
-      cierre del recorte tapaba el orificio— era de esa familia, y ninguna compuerta lo
-      veía. Sospecha: cualquier figura que mezcle trazo y arco en un mismo path.
+- [x] ~~**Barrer los `compound` con arcos**~~ — HECHO 2026-07-20. Barrido de los 19
+      ejemplos comparando EPS y PDF **en la misma rejilla de píxeles** (clave: el
+      `%%BoundingBox` del EPS es ENTERO y la página PDF no, así que recortar y reescalar
+      mete ~1 px de error acumulado y todo parece divergir). Encontró un 2º bug de la
+      misma familia (cuerda de cierre trazada por `outlinefill` en PDF, ver `franck_condon`).
+      Tras arreglarlo, `fig2-1` y `fig4-1` quedan en 0.00% y el resto por debajo del 5%,
+      con diferencias SIMÉTRICAS = métrica de texto, no estructura.
+- [ ] **Fase de los guiones EPS vs PDF** — en `primitives` las formas discontinuas
+      arrancan la secuencia de `dash` en fase ligeramente distinta entre los dos backends
+      (396 px de diferencia, solo en los trazos punteados). Cosmético; nadie lo ha pedido.
 
 ---
 

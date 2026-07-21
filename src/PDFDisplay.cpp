@@ -338,7 +338,17 @@ void PDFDisplay::stroke() {
       if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
       return;
     }
-    HPDF_Page_ClosePath(page);
+    // NO se cierra a mano. El operador B de PDF (FillStroke) equivale a pintar
+    // dos veces el mismo path: con f, que cierra los subtrayectos ABIERTOS de
+    // forma implicita para rellenar, y con S, que traza el path TAL CUAL. Es
+    // exactamente lo que hace EPS con `gsave closepath fill grestore stroke`
+    // (grestore devuelve el path de ANTES del closepath, asi que el trazo sale
+    // abierto).
+    //
+    // Con el ClosePath explicito, `outlinefill` contorneaba tambien la CUERDA DE
+    // CIERRE: en franck_condon eso pintaba una raya negra a lo largo de cada
+    // linea de nivel, que en EPS y SVG no esta. Un GI_POLYGON no se ve afectado
+    // porque se cierra por su cuenta en Polyline::draw.
     if (dspstate.outlinefill)
       HPDF_Page_FillStroke(page);
     else
