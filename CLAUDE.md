@@ -16,18 +16,19 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=57 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad + docs/img: ok=57 … imgfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
+bash test/run.sh images   # regenera docs/img/*.svg (salida PUBLICADA; capture NO la toca)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
 de `examples/` (19 `.mg` × EPS/SVG/**PDF** = 57 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=57 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=57 fail=0 error=0 psfail=0 c3fail=0 imgfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
-**Tres compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+**Cuatro compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
 - **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
@@ -47,8 +48,19 @@ files (`test/golden/`) **no están en git** (se regeneran con `capture`).
   ningún path SVG de un solo segmento (`M..L..`) puede ir `fill=color stroke=none` = línea
   de área nula invisible (caza ejes sin trazo por fuga de fill, Lección 6). Corre también en
   `capture`. Es la única capa que caza un bug preexistente; las otras dos lo bendecen.
+- **`docs/img` al día** (`imgfail`, nueva 2026-07-21) — caza que la salida **publicada** se
+  quede RANCIA. Esos `.svg` **sí están en git** (GitHub los muestra en la portada del README)
+  y se regeneran a mano; nada los vigilaba, y entre el 2026-07-17 y el 2026-07-21 la portada
+  mostró la tipografía matemática *anterior* a la migración a LM Math — anunciaba una mejora
+  que ella misma no exhibía. Un ejemplo entra a la compuerta por el hecho de tener un `.svg`
+  con su nombre en `docs/img/`: la presencia del archivo ES la declaración, no hay lista que
+  mantener. ⚠️ **`capture` NO los regenera, a propósito** — `test/golden` es borrador local
+  sin trackear (bendecir es barato), pero `docs/img` es salida publicada y bendecirla tiene
+  que ser un commit consciente. Para eso está `bash test/run.sh images`, modo aparte.
 
-Las tres compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar.
+Las cuatro compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
+(la de `docs/img`, con el archivo rancio **real** de `e9198c0`: lo caza, y el golden sigue
+dando `ok=57` — que es justo la prueba de que el golden no puede verlo).
 
 Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexmg.cpp` from `src/mgpp.l`), `pandoc` (man page). Do not edit `src/lexmg.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu is vendored in `third_party/` for PDF.
 

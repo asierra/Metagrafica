@@ -5,6 +5,7 @@
 # Modes:
 #   ./run.sh capture   - (re)generate the golden files from the current build
 #   ./run.sh check     - (default) compare current output against the golden files
+#   ./run.sh images    - regenerate docs/img/*.svg (salida PUBLICADA y versionada)
 #
 # Tres compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
 #   - Golden por bytes (eps/svg/pdf): caza REGRESIONES de salida. No caza un bug
@@ -25,6 +26,17 @@
 #       (b) LÍNEAS RELLENAS: un path SVG de un solo segmento (M..L..) con fill=color
 #           y stroke=none es una línea de área nula = invisible → caza "ejes sin
 #           trazo en PDF/SVG" (fuga de fill del contenido, Lección 6).
+#   - docs/img al día (imgfail): caza que la salida PUBLICADA se quede RANCIA. Los
+#     .svg de docs/img están EN GIT (GitHub los muestra en la portada del README) y
+#     se regeneran a mano; nada los vigilaba, y entre 2026-07-17 y 2026-07-21 la
+#     portada estuvo mostrando la tipografía matemática ANTERIOR a la migración a
+#     LM Math — o sea, anunciando una mejora que ella misma no exhibía.
+#
+#     ⚠️ `capture` NO los regenera, a propósito. test/golden es borrador local sin
+#     trackear (bendecir es barato y no sale del disco); docs/img es salida
+#     PUBLICADA: bendecirla cambia la cara del proyecto y tiene que ser un commit
+#     consciente, no un efecto colateral de "acepta lo que el compilador haga
+#     ahora". Por eso regenerar es un modo aparte y explícito (`images`).
 #
 set -u
 
@@ -32,6 +44,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MG="$ROOT/bin/mg"
 EXDIR="$ROOT/examples"
 GOLD="$ROOT/test/golden"
+# Renders publicados (EN GIT, a diferencia de $GOLD). Un ejemplo entra a esta
+# compuerta por el mero hecho de tener aquí un .svg con su nombre: la presencia del
+# archivo ES la declaración, así que añadir una imagen al README no obliga a tocar
+# ninguna lista. `images` solo REFRESCA las que ya existen — nunca crea una nueva,
+# que es siempre una decisión deliberada.
+IMGDIR="$ROOT/docs/img"
 
 # PDF entra a la red golden (antes solo eps/svg, "PDF se verifica por vista"):
 # la salida de libharu es byte-determinista y no depende del path ni de la fecha
@@ -60,14 +78,33 @@ export LC_ALL=C
 
 MODE="${1:-check}"
 
-if [ "$MODE" != "capture" ] && [ "$MODE" != "check" ]; then
-    echo "Usage: $0 [capture|check]" >&2
+if [ "$MODE" != "capture" ] && [ "$MODE" != "check" ] && [ "$MODE" != "images" ]; then
+    echo "Usage: $0 [capture|check|images]" >&2
     exit 2
 fi
 
 if [ ! -x "$MG" ]; then
     echo "error: binary not found or not executable: $MG (run 'make' first)" >&2
     exit 2
+fi
+
+# Modo `images`: regenera la salida publicada y termina. No toca el golden ni
+# ejecuta compuertas — es la acción que se toma DESPUÉS de haber verificado con
+# `check` que el cambio de salida es el que se quería.
+if [ "$MODE" = "images" ]; then
+    img_n=0
+    for example in $EXAMPLES; do
+        [ -f "$IMGDIR/$example.svg" ] || continue
+        ( cd "$EXDIR" && "$MG" "$example.mg" "$IMGDIR/$example.svg" ) >/dev/null 2>&1 || {
+            echo "ERROR $example.svg (mg falló al regenerar)" >&2
+            exit 1
+        }
+        echo "regenerado docs/img/$example.svg"
+        img_n=$((img_n + 1))
+    done
+    echo "---"
+    echo "images done: $img_n regenerado(s). Revisa el diff ANTES de commitear: es la cara pública."
+    exit 0
 fi
 
 # Compuerta de validez PostScript. Un golden por bytes NO puede cazar los bugs de
@@ -121,6 +158,7 @@ fail_count=0
 error_count=0
 psfail_count=0
 c3fail_count=0
+imgfail_count=0
 
 for example in $EXAMPLES; do
     # Capa 3 (paridad entre backends): acumuladores por ejemplo. Se llenan al vuelo
@@ -147,6 +185,18 @@ for example in $EXAMPLES; do
             if ! "$GS_BIN" -q -dNOPAUSE -dBATCH -sDEVICE=nullpage "$outfile" >/dev/null 2>&1; then
                 echo "PSFAIL $base (Ghostscript rechaza el EPS: prólogo/undefined)"
                 psfail_count=$((psfail_count + 1))
+            fi
+        fi
+
+        # docs/img al día: el render publicado tiene que coincidir con lo que el
+        # compilador produce HOY. Independiente del golden y de $MODE (como gs y la
+        # Capa 3): en `capture` avisa de que falta regenerar, pero NO lo hace — ver
+        # el bloque del encabezado. La comparación es directa porque la salida SVG
+        # ya es determinista y no embebe la ruta (normalize svg = identidad).
+        if [ "$fmt" = "svg" ] && [ -f "$IMGDIR/$example.svg" ]; then
+            if ! diff -q "$IMGDIR/$example.svg" "$outfile" >/dev/null 2>&1; then
+                echo "IMGFAIL docs/img/$example.svg (rancio: no es lo que compila hoy; './run.sh images' lo regenera)"
+                imgfail_count=$((imgfail_count + 1))
             fi
         fi
 
@@ -199,14 +249,14 @@ done
 
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0

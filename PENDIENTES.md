@@ -10,7 +10,7 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=57 … c3fail=0** (3 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=57 … imgfail=0** (4 compuertas).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -52,7 +52,7 @@ orden de la lista es la ejecución.
    - **Va después de (2)** porque con huecos la retroalimentación es «le falta X», no «X
      es incómodo», que es la única que sirve para decidir nombres.
    - 🔎 **La prueba de que hace falta ya está en el repo:** el renombre de §13 no lo cazó
-     el corpus ni ninguna de las tres compuertas — lo cazó comparar con matplotlib. Salió
+     el corpus ni ninguna de las compuertas — lo cazó comparar con matplotlib. Salió
      gratis *solo* porque no había usuarios. El autor no puede hacerse esa prueba solo:
      ya sabe cómo se llaman las cosas.
    - **Salida propuesta (por evidencia, no por calendario):** que alguien de fuera escriba
@@ -116,15 +116,13 @@ orden de la lista es la ejecución.
 - [x] ~~**Figura que ejercite `smooth` §9.2**~~ — CERRADO 2026-07-20: `examples/turning_points.mg`
       lo usa dos veces, y `smooth` ganó forma de primitiva.
       (`spline` y las cónicas se **retiraron** el mismo día, ver §9.1.)
-- [ ] 🐞 **`docs/img/*.svg` no tiene compuerta** (hallado 2026-07-21). Son renders
-      **commiteados** (GitHub los muestra en la portada del README) que se regeneran a mano
-      con `bin/mg` desde `examples/`, y **nada verifica que sigan al día**. Llevaban desde
-      `e9198c0` (2026-07-17) mostrando la tipografía matemática ANTERIOR a la migración
-      LM Math del 2026-07-20: la portada anunciaba una mejora que ella misma no exhibía.
-      Regenerados el 2026-07-21. **Cuesta ~5 líneas cerrarlo**: `test/run.sh` ya compila
-      esos dos ejemplos a SVG, así que basta comparar contra `docs/img/` y avisar. Se deja
-      como decisión aparte porque toca la red de compuertas, que está razonada en
-      `plan_plot.md` y no conviene ampliar de pasada.
+- [x] ~~🐞 **`docs/img/*.svg` no tiene compuerta**~~ — CERRADO 2026-07-21, mismo día que se
+      halló. Es la **4ª compuerta** (`imgfail`): `check` compara cada `docs/img/X.svg` contra
+      lo que el compilador produce hoy. Un ejemplo entra por tener ahí un `.svg` con su
+      nombre —la presencia del archivo ES la declaración, no hay lista que mantener—, y
+      `capture` **NO** los regenera (`test/golden` es borrador local; `docs/img` es salida
+      publicada, y bendecirla debe ser un commit consciente): para eso está el modo
+      `images`. Verificada reintroduciendo el archivo rancio **real** de `e9198c0`.
 - [ ] **`marker_start/mid/end` en polygon/bezier** — en pausa, falta ejemplo
       (`plan_marcadores.md`). En polyline/arc ya está.
 - [ ] **`sample(&p, n)` §9** — devolver n puntos SOBRE la curva, no los que la definen:
