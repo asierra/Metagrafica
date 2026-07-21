@@ -542,9 +542,17 @@ void TextBlock::draw(Display &g) {
 
   for (std::size_t i = 0; i < n; i++) {
     if (!lines[i]) continue;                            // renglón vacío: solo consume interlineado
+    // Cada renglón arranca del MISMO estado, acotado con push/pop. Sin esto, un
+    // renglón que cambia la cara —el caso corriente: `"$\Delta T_1$/n(BT 10.3…)"`,
+    // donde el primero es math— la deja puesta en el dispositivo, y el siguiente,
+    // que hereda la ambiente (FN_NOFACE), sale con la fuente del anterior. Es la
+    // misma familia de errores que FN_NOFACE, ahora ENTRE renglones: "heredar la
+    // ambiente" tiene que significar la del bloque, no la del vecino de arriba.
+    g.pushDrawState();
     g.moveto_nopath(anchor.x, anchor.y);
     g.rmoveto(0, y0 - lead * (double)i);
     lines[i]->draw(g);
+    g.popDrawState();
   }
 }
 

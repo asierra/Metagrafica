@@ -992,10 +992,36 @@ Detalles que costaron mirar el código antes de escribirlo:
   renglón el desplazamiento es cero → comportamiento anterior intacto.
 - Un renglón vacío (`"a/n/nb"`) consume interlínea y no dibuja.
 
+🐞 **Y el arreglo destapó su propia recaída, en la primera figura real.** `TextBlock` volvía a
+filtrar la cara ENTRE renglones: cada `TextLine` toma como ambiente lo que dejó el anterior, así
+que en `"$\Delta T_1$/n(BT 10.3…)"` —el caso corriente: fórmula arriba, unidades abajo— la
+segunda línea salía en la fuente del math. Se acota con `pushDrawState`/`popDrawState` por
+renglón. **"Heredar la ambiente" tiene que significar la del bloque, no la del vecino de
+arriba.** Verificado que NO rompe la conducta contraria: `/b` sí sigue vigente tras el salto,
+porque el parser hornea la cara en cada trozo y solo lo heredado (`FN_NOFACE`) se resuelve
+contra el bloque. Churn: `texto.eps`/`.pdf` ganan 4 pares `gsave/grestore` y el ráster sale
+**idéntico píxel a píxel** (SVG ni se movió).
+
 **Cobertura:** `texto.mg` gana dos rótulos multilínea (único sitio del corpus que ejercita
 `TextBlock`; sin ellos el interlineado y el valign de bloque quedan sin red). Único golden
 re-bendecido. Verificado antes de tocar nada que **ningún `.mg` usaba `/n` literal**, que era
 el riesgo del cambio de significado.
+
+### Cerrado en la sesión del 2026-07-21 (`figure_02` retomada: rótulos a dos renglones)
+
+Con `/n` disponible, los rótulos de eje pasan a **dos renglones** como el original
+(`"$\Delta T_1$/n(BT 10.3 - 12.3 $\mu/rm$)"`), y se resuelve el encimado que quedaba.
+
+💡 **La causa del encimado era de ESCALA, no de acomodo**, y conviene recordarla porque se
+repetirá: el texto es **físico** (pt) y los paneles son **cantidad de mundo**, así que a 24 cm
+cada panel medía 5.3 cm —la mitad de los ~11 cm del original de 18 pulgadas— mientras la
+leyenda seguía midiendo lo mismo, y crecía hasta meterse bajo la tabla (que es opaca y la
+cortaba). La solución es agrandar el lienzo (33 cm; el original mide 45), no apretar el
+cuerpo de letra. **Para una figura más chica, lo que se baja es `font_size`, no
+`display_size`.**
+
+Único acomodo que diverge del original: la leyenda del panel b pasa a abajo-derecha, donde
+cruza solo la cola delgada del histograma en vez de las barras altas.
 
 ## Code style
 
