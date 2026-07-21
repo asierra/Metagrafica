@@ -873,12 +873,49 @@ solo la hace: pandas → `np.histogram(bins=N)` (idéntico a `sns.histplot`) + e
   dar estilo), y el álgebra §9 **solo se podía dibujar** con polyline/polygon/bezier — cuando
   un path es una secuencia de puntos y `polybar`/`circle`/`rectangle` también consumen puntos.
 - 💡 **Reflejo que valió la pena:** al ver que `color="orange"` salía rojo, comparar la tabla
-  ENTERA contra CSS en vez de arreglar la entrada. Resultó que `orange` y `green` **divergen a
-  propósito** (valores históricos de V1) y el comentario del parser ya lo decía. No era bug; el
-  chequeo costó un minuto y evitó "arreglar" algo deliberado.
+  ENTERA contra CSS en vez de arreglar la entrada. Salieron **dos** divergencias, no una
+  (`orange` y `green`), documentadas en el parser como valores históricos de V1 — así que ese
+  día se respetaron y la figura usó hex explícito. **Revertido el 2026-07-21** (ver la sesión
+  siguiente): que estuviera documentado explicaba el origen, no lo justificaba.
 
 ⚠️ **Lección 7 otra vez** (bloques de coordenadas): `{ 12 ytop0-11 }` son **tres** términos, no
 dos. Lo cazó `checkCoordPairs` con línea y columna — justo para lo que se construyó.
+
+### Cerrado en la sesión del 2026-07-21 (colores CSS sin excepciones)
+
+**`orange` y `green` pasan a sus valores CSS** (`0xffa500` y `0x008000`). Eran los dos
+últimos nombres que conservaban el valor histórico de V1 y **mentían**: `orange` era un
+rojo ladrillo y `green` era el verde puro, que en CSS se llama `lime`. Estaba documentado
+en el parser — pero *documentar una trampa no la desactiva*: el día anterior el propio
+`figure_02` tuvo que rodearla con hex explícito, que es la señal de que el default está mal.
+- **El argumento es la 4ª condición para el 1.0** (§22.7): que un usuario nuevo encuentre lo
+  que espera. Misma clase que el renombre de §13 —un nombre que significa otra cosa que en
+  el resto del mundo— y **mientras la beta dure cuesta un `sed`**.
+- **No se pierde nada:** el verde puro sigue disponible como `lime`, su nombre CSS correcto.
+  La tabla es ahora CSS **sin excepciones** (verificado con las 148 entradas), que es una
+  regla menos que recordar: antes había que saberse cuáles dos no lo eran.
+- Churn: 7 ejemplos (goldens re-bendecidos tras revisar los renders). En `fill_styles` —que
+  es el **catálogo de colores**— `orange` y `red` eran dos rojos casi idénticos lado a lado,
+  en el documento cuyo trabajo es mostrar qué significa cada nombre.
+
+🐞 **Y destapó un bug de FIDELIDAD del traductor.** `mg1to2.py` pasaba los nombres de color
+tal cual, así que un `LCOLOR green` de V1 (verde puro) habría salido verde oscuro en V3: un
+cambio de color **en silencio**, justo lo que un traductor no puede hacer. Fix:
+`V1_COLOR_RENAME` (`green`→`lime`, `orange`→`#cc3232`, el ladrillo que no tiene nombre CSS).
+- **Verificado sin re-bendecir:** los 14 goldens del traductor se capturaron con la tabla
+  VIEJA y siguen pasando byte a byte — que es la prueba de que el remapeo restituye la
+  apariencia V1 exactamente.
+- 💡 **El reflejo otra vez:** comparar las **dos tablas enteras** (V1 tiene 11 colores) en vez
+  de parchear los dos que ya conocía. Confirmó que son los únicos que cambian de significado
+  y que ninguno de V1 desapareció. `src/Parser.cpp` (front-end V1, fuera del build) conserva
+  sus valores a propósito: documenta lo que V1 significaba.
+
+**Aparte, dos ajustes de Alejandro:** `dot(2.5)`→`dot(2)` en `fig4-4` (se veían gordos) y las
+ondas de `franck_condon` en color. ⚠️ Al revisarlo salió que **`dot(n)` es el RADIO en pt**
+(la spec §4.6 lo dice, el código lo hace, ningún commit lo cambió — `9ba0d63` fue solo el
+renombre `dot(marker=)`→`marker(shape=)`). O sea `dot(2.5)` son **5 pt de diámetro**. No hay
+desfase sistemático en el corpus; estaban puestos generosos. Mismo aviso para
+`marker(size=8)` de `markers-demo`: 16 pt de ancho.
 
 ## Code style
 

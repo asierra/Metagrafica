@@ -757,12 +757,28 @@ def handle_LPATRN(sc, state, out):
     state.out_line(out, f'dash "{name}"')
 
 
+# Nombres cuyo TONO cambio entre V1 y V3, con su equivalente exacto en V3.
+#
+# El 2026-07-21 la tabla de V3 paso a ser CSS sin excepciones: `orange` dejo de ser
+# 0xcc3232 (un rojo ladrillo) y `green` dejo de ser 0x00ff00 (el verde puro, que en
+# CSS se llama `lime`). El contrato del traductor es que el V3 que emite se VEA como
+# el V1 de entrada, asi que pasar el nombre tal cual cambiaria el color en silencio.
+#
+# Verificado comparando las dos tablas enteras (V1 tiene 11 colores): estos dos son
+# los unicos que cambian de significado, y ninguno de V1 desaparecio en V3.
+V1_COLOR_RENAME = {
+    'green':  'lime',        # 0x00ff00 exacto
+    'orange': '#cc3232',     # el ladrillo de V1 no tiene nombre CSS
+}
+
+
 def parse_color_name(sc):
     raw = sc.capture_line().strip()
     name = raw.split()[0] if raw.split() else raw
     outline = name.startswith('-')
     if outline:
         name = name[1:]
+    name = V1_COLOR_RENAME.get(name, name)
     return name, outline
 
 

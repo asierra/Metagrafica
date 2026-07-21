@@ -348,11 +348,18 @@ static ExprPtr parseExpression(Lexer &lx) {   // And ("or" And)*
 // separadas por espacio (config, coordenadas) = Term; args nombrados (…) = Expression.
 // ============================================================================
 // --- Colores V3: nombre o hex "#RRGGBB" -> int RGB (tabla del motor V1) ------
-// Nombres CSS/X11 estándar. NOTA: dos nombres conservan el valor histórico de
-// MetaGráfica y difieren de CSS: `green` = 0x00ff00 (verde puro; CSS es 0x008000
-// — usa "lime" si quieres el mismo tono) y `orange` = 0xcc3232 (naranja-ladrillo;
-// CSS es 0xffa500 — usa "darkorange"/"gold" para el naranja brillante). No se
-// cambian para no alterar el corpus existente.
+// Nombres CSS/X11 estándar, los 148, SIN EXCEPCIONES (2026-07-21).
+//
+// Hasta esa fecha dos conservaban el valor histórico de V1 y mentían: `orange` era
+// 0xcc3232 (un rojo ladrillo, no un naranja) y `green` era 0x00ff00 (el verde puro,
+// que en CSS se llama `lime`). Se corrigieron con el argumento de la 4ª condición
+// para el 1.0 (§22.7): que un usuario nuevo encuentre lo que espera. Es la misma
+// clase de defecto que el renombre de §13 —un nombre que significa otra cosa que en
+// el resto del mundo— y mientras la beta dure cuesta un `sed`.
+//
+// No se pierde nada: el verde puro sigue disponible bajo su nombre CSS correcto,
+// `lime`. Y que la tabla sea CSS sin excepciones es una regla menos que recordar:
+// antes había que saberse cuáles dos no lo eran.
 static const std::map<std::string, int> map_color = {
   {"aliceblue", 0xf0f8ff}, {"antiquewhite", 0xfaebd7}, {"aqua", 0x00ffff},
   {"aquamarine", 0x7fffd4}, {"azure", 0xf0ffff}, {"beige", 0xf5f5dc},
@@ -372,7 +379,7 @@ static const std::map<std::string, int> map_color = {
   {"firebrick", 0xb22222}, {"floralwhite", 0xfffaf0}, {"forestgreen", 0x228b22},
   {"fuchsia", 0xff00ff}, {"gainsboro", 0xdcdcdc}, {"ghostwhite", 0xf8f8ff},
   {"gold", 0xffd700}, {"goldenrod", 0xdaa520}, {"gray", 0x808080},
-  {"green", 0x00ff00}, {"greenyellow", 0xadff2f}, {"grey", 0x808080},
+  {"green", 0x008000}, {"greenyellow", 0xadff2f}, {"grey", 0x808080},
   {"honeydew", 0xf0fff0}, {"hotpink", 0xff69b4}, {"indianred", 0xcd5c5c},
   {"indigo", 0x4b0082}, {"ivory", 0xfffff0}, {"khaki", 0xf0e68c},
   {"lavender", 0xe6e6fa}, {"lavenderblush", 0xfff0f5}, {"lawngreen", 0x7cfc00},
@@ -389,7 +396,7 @@ static const std::map<std::string, int> map_color = {
   {"midnightblue", 0x191970}, {"mintcream", 0xf5fffa}, {"mistyrose", 0xffe4e1},
   {"moccasin", 0xffe4b5}, {"navajowhite", 0xffdead}, {"navy", 0x000080},
   {"oldlace", 0xfdf5e6}, {"olive", 0x808000}, {"olivedrab", 0x6b8e23},
-  {"orange", 0xcc3232}, {"orangered", 0xff4500}, {"orchid", 0xda70d6},
+  {"orange", 0xffa500}, {"orangered", 0xff4500}, {"orchid", 0xda70d6},
   {"palegoldenrod", 0xeee8aa}, {"palegreen", 0x98fb98}, {"paleturquoise", 0xafeeee},
   {"palevioletred", 0xdb7093}, {"papayawhip", 0xffefd5}, {"peachpuff", 0xffdab9},
   {"peru", 0xcd853f}, {"pink", 0xffc0cb}, {"plum", 0xdda0dd},
