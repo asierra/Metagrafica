@@ -1826,13 +1826,80 @@ Estilo: `margin`/`sample_width`/`sample_height`/`gap`/`row_gap`/`font_size`, tod
 usa); `border=`/`fill=` se añaden cuando una figura los pida (mismo criterio que el resto del
 lenguaje: la abstracción espera a la figura que la necesita).
 
-### 13.10 table — reservado (sin diseñar)
+### 13.10 table
 
 El recuadro Mean/SD/Min/Max de `figure_02` **se parece a una leyenda y no lo es**: es
-`ax.table()`, otro constructo. Nombre reservado para no dejar que se lo trague `legend`. Su
-contenido es **dato derivado** (`data.mean()`, `data.std()`), lo que abre una pregunta de
-alcance sin responder: ¿MG calcula estadísticas, o el `.mg` recibe los números ya hechos? El
-resto del lenguaje dice lo segundo (`polybar` recibe bins, no datos crudos).
+`ax.table()`, otro constructo. Una tabla es una **rejilla de celdas de texto con anchos
+declarados**; una leyenda es una lista de muestras gráficas con su nombre.
+
+```text
+table(at="top-right", margin=8, font_size=7.5, decimals=3,
+      col_widths=(26, 34), label_col=true, label_font="bold") {
+    row("Mean", a_mean)
+    row("SD",   a_sd)
+    row("Min",  a_min)
+    row("Max",  a_max)
+}
+```
+
+**No calcula nada, y eso ya estaba decidido.** El contenido es dato derivado
+(`data.mean()`, `data.std()`), lo que abría la pregunta de si MG computa estadísticas. La
+respuesta es la misma frontera de §4.12 y de `tools/hist2mg.py`: **MG recibe los números
+hechos**. `a_mean` llega por la misma vía que los intervalos de `polybar`.
+
+**`row(...)` y no listas paralelas.** La forma compacta sería `labels=[…], values=[…]`,
+pero dos listas que hay que mantener en el mismo índice se desincronizan en cuanto la tabla
+crece — es la razón por la que la invocación de structs usa un solo `Arg` en vez de dos
+listas (§8.x). Con `row` cada fila es una unidad y la aridad se extiende sola a N columnas.
+
+**Números:** una celda acepta cadena o número. Los números se formatean con `decimals=`, el
+mismo argumento que ya usa `axis` (§13.5); para control por celda está `str(x, n)` (§5.2).
+No hay un `format=` propio.
+
+#### Hija de `plot`, pero no solo
+
+`at=` está **sobrecargado**, como `hatch` (§4.11) o `grid=` (§13.7):
+
+| forma | significado |
+|---|---|
+| `at="top-right"` | ancla una esquina de la caja que la contiene, con `margin=` (pt) — igual que `legend` (§13.9). Los cuatro valores de esquina, más `center-*` |
+| `at=(x, y)` | esquina superior izquierda en ese punto, **en coordenadas de mundo** |
+
+> 💡 **Por qué `table` no es hija exclusiva de `plot` y `rule` sí.** `rule` (§13.8) no puede
+> existir fuera: su significado *es* un valor en unidades de datos, y sin el mapeo del plot
+> no hay dónde ponerlo. `xaxis`/`yaxis` igual. Una tabla, en cambio, no depende del mapeo,
+> ni del rango, ni de los ejes — solo necesita **un rectángulo**. Restringirla sería copiar
+> la forma de `legend` sin copiar su justificación, y dejaría fuera un caso legítimo: una
+> tabla de parámetros junto a una ilustración, que no es un `plot`. En la implementación son
+> dos ramas que resuelven el mismo rectángulo.
+
+#### Marco y fondo: lo que la leyenda no pudo tener
+
+`legend` se quedó **sin marco** (§13.9) porque el compilador no puede medir el ancho de una
+cadena en parse-time, y la muestra de una entrada es un bloque arbitrario. Una tabla no
+tiene ese problema **porque declara sus columnas**: con `col_widths=(26, 34)` la caja mide
+`60 pt × (filas × row_height)`, y bordes, fondos y centrado salen de aritmética conocida.
+
+Es la inversión que hace viable el constructo: *lo que parecía una restricción —tener que
+dar los anchos— es justo lo que compra el marco.* Y no es un precio artificial: cinco tablas
+que deben verse iguales entre paneles quieren anchos fijos de todos modos (matplotlib
+también los lleva a mano, `colWidths=`).
+
+| argumento | |
+|---|---|
+| `col_widths=(…)` | anchos de columna en **pt**; su tamaño fija el nº de columnas. Obligatorio |
+| `row_height=` | alto de fila en pt (default: `font_size · 1.8`) |
+| `border=` | color de la rejilla; `false` sin rejilla (default: negro, `line_width` vigente) |
+| `fill=` | fondo de toda la tabla (default: blanco opaco, para que no se transparente el contenido) |
+| `label_col=` | fondo de la **primera** columna: `true` = gris claro / un color / `false` (como `grid=`) |
+| `label_font=` | cara de la primera columna (p. ej. `"bold"`), hermana de `axis(label_font=)` |
+| `align=` | alineación del texto en la celda (default `"center"`, como el `cellLoc` del original) |
+
+Las cantidades de estilo van en **pt** —físicas, como `margin`/`sample_width`/`tick_size`
+(§13.5)— y no se deforman con `stretch` ni con la ventana.
+
+**Diferido, sin figura que lo pida:** `header(...)` como fila de encabezado, alineación por
+columna y celdas con contenido gráfico. Los tres son aditivos.
 
 ---
 

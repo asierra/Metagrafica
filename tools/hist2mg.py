@@ -122,7 +122,14 @@ def main():
     ap = argparse.ArgumentParser(description="CSV/XLSX → histogramas y estadísticas en .mg")
     ap.add_argument("config", help="JSON con source/bins/panels")
     ap.add_argument("-o", "--output", required=True, help="archivo .mg a escribir")
-    ap.add_argument("--decimals", type=int, default=4, help="decimales de los valores (default 4)")
+    # 6 y no 4: el .mg es un archivo INTERMEDIO, así que no puede redondear a la
+    # precisión con la que la figura va a presentar el número. Con 4 decimales, una
+    # media de 0.00951836 se guardaba como 0.0095 y la tabla (que formatea a 3) la
+    # imprimía como 0.009, cuando redondear UNA sola vez desde el dato da 0.010. El
+    # doble redondeo es invisible hasta que alguien compara con la fuente.
+    ap.add_argument("--decimals", type=int, default=6,
+                    help="decimales de los valores en el .mg (default 6). Es precisión de "
+                         "TRANSPORTE: la de presentación la fija la figura con decimals=")
     args = ap.parse_args()
 
     with open(args.config) as fh:

@@ -917,6 +917,51 @@ renombre `dot(marker=)`→`marker(shape=)`). O sea `dot(2.5)` son **5 pt de diá
 desfase sistemático en el corpus; estaban puestos generosos. Mismo aviso para
 `marker(size=8)` de `markers-demo`: 16 pt de ancho.
 
+### Cerrado en la sesión del 2026-07-21 (`table` §13.10 — el punto 2 completo)
+
+**`table` implementado**, con los cinco recuadros Mean/SD/Min/Max de `figure_02`. Era lo
+último que bloqueaba la **condición 2** de las cinco para el 1.0, que queda **completa**
+(`rule`, `legend` automática y `table`, los tres trabajo de **parser puro** — cero motor,
+cero backends).
+
+Dos decisiones de diseño que valen más que el código:
+- **NO es hija exclusiva de `plot`, a diferencia de `rule`.** `rule` no puede existir fuera
+  porque su significado *es* un valor en unidades de datos; una tabla no depende del mapeo,
+  ni del rango, ni de los ejes — solo necesita **un rectángulo**. Restringirla habría sido
+  copiar la forma de `legend` sin su justificación. `at=` queda sobrecargado (como `hatch` o
+  `grid=`): esquina nombrada = ancla a la caja del plot; `(x,y)` = coords de mundo. Son dos
+  ramas que resuelven el mismo rectángulo; el resto del código es común.
+- **Sí lleva marco, que `legend` no pudo tener.** La leyenda se quedó sin él porque el ancho
+  de una entrada es incognoscible en parse-time (su muestra es un bloque arbitrario). Una
+  tabla **declara** `col_widths=` en pt, así que su caja mide `sum(anchos) × filas·alto` y
+  bordes/fondos/centrado son aritmética conocida. 💡 **Lo que parecía la restricción —tener
+  que dar los anchos— es justo lo que compra el marco.**
+- `row(...)` y no `labels=[…], values=[…]`: dos listas paralelas se desincronizan en cuanto
+  la tabla crece (es la razón de que la invocación de structs use un solo `Arg`, §8.x).
+- Números: se reusa `decimals=` de `axis`; `str(x,n)` sigue disponible por celda. Sin
+  `format=` propio. Y **la tabla no calcula nada** — la pregunta de alcance que §13.10 dejaba
+  abierta ya estaba contestada por la frontera de `tools/hist2mg.py`: MG recibe los números.
+
+🐞 **Fuga de cara, tercera variante de la familia `FN_NOFACE`.** `label_font="bold"` se
+fugaba a las celdas de valor de la misma fila: `parse_text` hornea la cara en el `Text` y
+`Text::draw` la deja puesta en el dispositivo, así que la celda siguiente —con `FN_NOFACE` =
+heredar la ambiente— heredaba la negrita. Se acota con `GS_PUSHSTATE`/`GS_POPSTATE` alrededor
+de la celda de rótulo (`popDrawState` restaura el `dspstate` entero, cara incluida).
+
+🐞 **Doble redondeo en el puente de datos, cazado comparando con la fuente.** El panel d
+mostraba `0.010` en la figura publicada y `0.009` en la nuestra. La media real es
+`0.00951836`; `hist2mg.py` la guardaba con **4** decimales (`0.0095`) y la tabla la redondeaba
+otra vez a 3 → `0.009`, cuando redondear UNA sola vez da `0.010`. **Un archivo intermedio no
+puede redondear a la precisión de presentación**: su default sube a 6 decimales, que es
+precisión de TRANSPORTE. Verificados después los **20 números** de los cinco paneles contra
+los impresos en el PDF publicado: coinciden todos.
+
+⚠️ **Trampa de edición por lote (me pasó a mí):** insertar las 5 tablas buscando cada vez la
+*primera* `legend` las apila todas en el primer panel — y el render solo delata la última. Al
+insertar N bloques hay que anclar cada uno a **su** sección (aquí, el `polybar` del panel).
+Y un `re.sub` cuyo patrón empieza en `\n` no encuentra bloques ADYACENTES: el primero se
+come el salto que el segundo necesita.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).

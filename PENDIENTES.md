@@ -23,16 +23,23 @@ de pendientes:** el orden real de ejecución es **2 → 5 (borrador) → 4 → 1
 orden de la lista es la ejecución.
 
 1. **Congelar la gramática.** Declarar estable lo que hay; no añadir sintaxis nueva.
-   Implica cerrar (2), (4) y el borrador de (5) primero. Es una decisión, no código.
-2. **Cerrar lo aparcado de `plot`:**
+   Implica cerrar (4) y el borrador de (5) primero. Es una decisión, no código.
+2. ✅ **Cerrar lo aparcado de `plot` — HECHO 2026-07-21** (`rule`, `legend` automática y
+   `table`; los tres, trabajo de parser sin tocar motor ni backends):
    - [x] ~~**`rule` (§13.8)**~~ — CERRADO 2026-07-21 con `figure_02` (5 paneles, local por
      confidencialidad de los datos). Parser puro, cero motor y cero backends; log gratis
      por reuso del mapper de `plot`. **Desbloqueó la forma AUTOMÁTICA de `legend`**, que
      entró en la misma tanda junto con los anclajes `center-left`/`center-right`.
      Diferidos a propósito (nadie los pide): `marker=`, el **borrado de colisiones** entre
      malla y notable, y los **dos rótulos a la vez** (número al eje + prosa a la leyenda).
-   - [ ] **`table` (§13.10)** — reservado, **sin diseñar** todavía. Sigue siendo lo único
-     que bloquea el punto 2. `figure_02` genera sus Mean/SD/Min/Max pero no los dibuja.
+   - [x] ~~**`table` (§13.10)**~~ — CERRADO 2026-07-21, con los cinco recuadros
+     Mean/SD/Min/Max de `figure_02`. Parser puro, cero motor y cero backends. **No es
+     hija exclusiva de `plot`** (a diferencia de `rule`): una tabla no depende del mapeo
+     de datos, solo de un rectángulo, así que `at=` está sobrecargado —esquina nombrada
+     dentro de un plot, punto `(x,y)` fuera—. Y **sí lleva marco**, que la leyenda no
+     pudo tener: declarar `col_widths=` en pt es justo lo que hace calculable la caja
+     sin medir texto.
+   - ✅ **Con eso el punto 2 queda COMPLETO.**
 3. **Texto fuera de Latin-1** (§14.4) — ✅ **HECHO 2026-07-20**. Resultó que el techo
    no era la codificación sino el **repertorio de la fuente**: las base-14 SÍ tienen
    comillas tipográficas, rayas, puntos suspensivos, ‰, ™, €… y se descartaban solo

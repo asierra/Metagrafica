@@ -2627,6 +2627,187 @@ struct LegendStmt : Stmt {
 // datos, EN UNIDADES DE DATOS) + rangos como args (x=/y=) + caja física box=
 // (world coords; default = ventana vigente). El contenido se mapea datos→caja;
 // los ejes se piden con xaxis(...)/yaxis(...) DENTRO del bloque (interceptados por
+// table (§13.10): rejilla de celdas de texto con anchos DECLARADOS.
+//
+// No es una leyenda: una leyenda lista muestras gráficas con su nombre, y su ancho
+// es incognoscible en parse-time (la muestra es un bloque arbitrario) — por eso
+// `legend` se quedó sin marco. Una tabla declara `col_widths=`, así que su caja mide
+// sum(anchos) × (filas·alto) y bordes, fondos y centrado son aritmética conocida.
+// Esa es la inversión que hace viable el constructo: tener que dar los anchos es
+// justo lo que compra el marco.
+//
+// NO es hija exclusiva de plot, a diferencia de rule (§13.8): `rule` no puede existir
+// fuera porque su significado ES un valor en unidades de datos, mientras que una tabla
+// no depende del mapeo ni del rango ni de los ejes — solo necesita un rectángulo. Las
+// dos formas de `at=` resuelven ese rectángulo y el resto del código es común.
+struct TableRow { std::vector<ExprPtr> cells; };
+struct TableStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  std::vector<TableRow> rows;
+  // Caja de la que colgar cuando va dentro de un plot; PlotStmt la fija antes de exec().
+  double boxX0 = 0, boxY0 = 0, boxX1 = 1, boxY1 = 1;
+  bool inPlot = false;
+
+  void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (rows.empty()) return;
+
+    // Anchos de columna (pt). Su tamaño fija el nº de columnas.
+    std::vector<double> cw;
+    { auto it = named.find("col_widths");
+      if (it == named.end()) { evalError("table: requiere col_widths=(…) en puntos"); return; }
+      Value v = it->second->eval(s);
+      if (v.type == Value::LIST) for (auto &e : v.items) cw.push_back(e.num);
+      else cw.push_back(v.num);
+    }
+    if (cw.empty()) { evalError("table: col_widths= vacío"); return; }
+    for (auto &r : rows)
+      if (r.cells.size() > cw.size()) {
+        evalError("table: una fila tiene más celdas que columnas declaradas en col_widths");
+        return;
+      }
+
+    double fontSize  = namedNum(s, named, "font_size", 8.0);
+    double rowH      = namedNum(s, named, "row_height", fontSize * 1.8);
+    double margin    = namedNum(s, named, "margin", 6.0);
+    int    decimals  = (int)namedNum(s, named, "decimals", 3);
+
+    // Escala física pt→mundo por eje, idéntica a la de legend/axis (§13.5).
+    double dcx, dcy; mg.getDimension(dcx, dcy);
+    double wx, wy, wdx, wdy; mg.getWindow(wx, wy, wdx, wdy);
+    double scx = dcx / wdx, scy = dcy / wdy;
+    if (!mg.getStretch()) { double m = scx < scy ? scx : scy; scx = scy = m; }
+    const double PT_PER_CM = 72.0 / 2.54;
+    auto ptX = [&](double pt) { return (pt / PT_PER_CM) / scx; };
+    auto ptY = [&](double pt) { return (pt / PT_PER_CM) / scy; };
+
+    double totW = 0; for (double w : cw) totW += w;
+    double W = ptX(totW), H = ptY(rowH * (double)rows.size());
+
+    // --- Esquina superior izquierda -----------------------------------------
+    // at= sobrecargado (§13.10): cadena = ancla a la caja que contiene; tupla =
+    // punto en coordenadas de mundo. La primera solo tiene sentido dentro de un plot.
+    double x0, y1;
+    auto itAt = named.find("at");
+    Value atv = itAt != named.end() ? itAt->second->eval(s) : Value();
+    if (itAt != named.end() && atv.type == Value::LIST && atv.items.size() >= 2) {
+      x0 = atv.items[0].num; y1 = atv.items[1].num;
+    } else {
+      std::string at = (itAt != named.end() && atv.type == Value::STRING) ? atv.str : "top-right";
+      if (!inPlot) {
+        evalError("table: fuera de un plot, at= debe ser un punto (x,y); "
+                  "las esquinas nombradas anclan a la caja del plot: ", at);
+        return;
+      }
+      bool top    = at.compare(0, 3, "top") == 0;
+      bool bottom = at.compare(0, 6, "bottom") == 0;
+      bool center = at.compare(0, 6, "center") == 0;
+      bool right  = at.size() >= 5 && at.compare(at.size() - 5, 5, "right") == 0;
+      bool left   = at.size() >= 4 && at.compare(at.size() - 4, 4, "left") == 0;
+      if ((!top && !bottom && !center) || (!left && !right)) {
+        evalError("table: at= debe ser \"top\"/\"bottom\"/\"center\" + \"-left\"/\"-right\", "
+                  "o un punto (x,y): ", at);
+        return;
+      }
+      double mx = ptX(margin), my = ptY(margin);
+      x0 = right ? (boxX1 - mx - W) : (boxX0 + mx);
+      y1 = top   ? (boxY1 - my) : center ? ((boxY0 + boxY1) / 2 + H / 2) : (boxY0 + my + H);
+    }
+    double x1 = x0 + W, y0 = y1 - H;
+
+    // --- Estilo --------------------------------------------------------------
+    int  bgColor = 0xffffff; bool hasBg = true;          // fondo opaco por default
+    { auto it = named.find("fill");
+      if (it != named.end()) { Value v = it->second->eval(s);
+        if (v.type == Value::STRING && v.str == "none") hasBg = false;
+        else bgColor = colorFromValue(v); } }
+    int  gridColor = 0x000000; bool hasGrid = true;
+    { auto it = named.find("border");
+      if (it != named.end()) { Value v = it->second->eval(s);
+        if (v.type == Value::STRING) gridColor = colorFromValue(v);
+        else if (v.num == 0.0) hasGrid = false; } }
+    int  labColor = 0xf0f0f0; bool hasLab = false;       // 1ª columna, como el original
+    { auto it = named.find("label_col");
+      if (it != named.end()) { Value v = it->second->eval(s);
+        if (v.type == Value::STRING) { hasLab = true; labColor = colorFromValue(v); }
+        else if (v.num != 0.0) { hasLab = true; if (v.num != 1.0) labColor = (int)v.num; } } }
+
+    auto rect = [&](double a, double b, double c, double d, int color) {
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto at2 = std::make_unique<Attribute>(); at2->set(AT_FCOLOR, color); out.push_back(std::move(at2)); }
+      out.push_back(std::make_unique<GraphicsState>(GS_FILL));
+      { auto p = std::make_unique<Rectangle>(); Path pp;
+        pp.push_back(point(a, b)); pp.push_back(point(c, d));
+        p->setPath(pp); out.push_back(std::move(p)); }
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    };
+
+    // Fondos primero (el texto y la rejilla van encima).
+    if (hasBg)  rect(x0, y0, x1, y1, bgColor);
+    if (hasLab) rect(x0, y0, x0 + ptX(cw[0]), y1, labColor);
+
+    // --- Rejilla -------------------------------------------------------------
+    if (hasGrid) {
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      { auto a = std::make_unique<Attribute>(); a->set(AT_LCOLOR, gridColor); out.push_back(std::move(a)); }
+      auto line = [&](double ax, double ay, double bx, double by) {
+        auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
+        pp.push_back(point(ax, ay)); pp.push_back(point(bx, by));
+        pl->setPath(pp); out.push_back(std::move(pl));
+      };
+      for (size_t r = 0; r <= rows.size(); r++) { double y = y1 - ptY(rowH * (double)r); line(x0, y, x1, y); }
+      double xacc = x0;
+      for (size_t c = 0; c <= cw.size(); c++) {
+        line(xacc, y0, xacc, y1);
+        if (c < cw.size()) xacc += ptX(cw[c]);
+      }
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+    }
+
+    // --- Texto ---------------------------------------------------------------
+    std::string alignS = namedStr(s, named, "align");
+    int alignCode = alignS.empty() ? 1 : alignCodeFromStr(alignS);   // 1 = center (cellLoc del original)
+    if (alignCode < 0) alignCode = 1;
+    if (alignCode != 0) g_flags.using_textalign = true;
+    std::string labFont = namedStr(s, named, "label_font");
+    FontFace labFace = labFont.empty() ? FN_NOFACE
+                       : get_font_face_from_string(labFont, g_flags.using_fontcmmi);
+
+    out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+    { auto a = std::make_unique<Attribute>(); a->set(AT_TALIGN, alignCode);  out.push_back(std::move(a)); }
+    { auto a = std::make_unique<Attribute>(); a->set(AT_TVALIGN, 2);         out.push_back(std::move(a)); }  // middle
+    { auto a = std::make_unique<Attribute>(); a->set(AT_THEIGHT, (int)fontSize); out.push_back(std::move(a)); }
+    char fmt[8]; std::snprintf(fmt, sizeof fmt, "%%.%df", decimals < 0 ? 0 : decimals);
+    for (size_t r = 0; r < rows.size(); r++) {
+      double cy = y1 - ptY(rowH * ((double)r + 0.5));
+      double xacc = x0;
+      for (size_t c = 0; c < rows[r].cells.size(); c++) {
+        double w = ptX(cw[c]);
+        // Ancla según la alineación: centro de celda, o su borde con un respiro.
+        double pad = ptX(3.0);
+        double tx = (alignCode == 1) ? (xacc + w / 2)
+                  : (alignCode == 2) ? (xacc + w - pad) : (xacc + pad);
+        Value v = rows[r].cells[c]->eval(s);
+        std::string str;
+        if (v.type == Value::STRING) str = v.str;
+        else { char buf[64]; std::snprintf(buf, sizeof buf, fmt, v.num); str = buf; }
+        // La cara de la 1ª columna se ACOTA con push/pop: `parse_text` la hornea en el
+        // Text y `Text::draw` la deja puesta en el dispositivo, así que sin esto un
+        // label_font="bold" se fugaría a las celdas de valor de la misma fila (que van
+        // con FN_NOFACE = heredar la ambiente, y la ambiente ya sería la negrita).
+        bool isLabel = (c == 0 && labFace != FN_NOFACE);
+        if (isLabel) out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+        auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(tx, cy));
+        out.push_back(std::move(gs));
+        out.push_back(parse_text(str, (c == 0 ? labFace : FN_NOFACE),
+                                 g_flags.using_reencode, g_flags.using_fontcmmi));
+        if (isLabel) out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+        xacc += w;
+      }
+    }
+    out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
+  }
+};
+
 // el parser) y se dibujan en coords exteriores, heredando from/to/scale de plot.
 //
 // Mecanismo (plan_plot.md Fase 4): plot TRANSFORMA las coordenadas de su
@@ -2639,6 +2820,7 @@ struct PlotStmt : Stmt {
   std::vector<StmtPtr> content;            // sentencias de datos (mapeadas)
   std::unique_ptr<AxisStmt> xaxis, yaxis;  // ejes interceptados (coords exteriores)
   std::unique_ptr<LegendStmt> legend;      // leyenda interceptada (coords exteriores, §13.9)
+  std::vector<std::unique_ptr<TableStmt>> tables;   // tablas §13.10, coords exteriores
   std::vector<std::unique_ptr<RuleStmt>> rules;   // valores notables (§13.8), coords exteriores
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
@@ -2911,6 +3093,12 @@ struct PlotStmt : Stmt {
       legend->boxX0 = bx0; legend->boxY0 = by0; legend->boxX1 = bx1; legend->boxY1 = by1;
       legend->exec(s, mg, out);
     }
+    // Tablas (§13.10): como la leyenda, coords exteriores y encima del contenido.
+    for (auto &t : tables) {
+      t->boxX0 = bx0; t->boxY0 = by0; t->boxX1 = bx1; t->boxY1 = by1;
+      t->inPlot = true;
+      t->exec(s, mg, out);
+    }
   }
 };
 
@@ -2938,6 +3126,7 @@ static StmtPtr parseFit(Lexer &);
 static StmtPtr parsePlace(Lexer &);
 static StmtPtr parseSine(Lexer &);
 static StmtPtr parsePlot(Lexer &);
+static std::unique_ptr<TableStmt> parseTableBody(Lexer &);   // §13.10 (también suelta)
 static StmtPtr parseInclude(Lexer &);
 static StmtPtr parseInvoke(Lexer &, const std::string &);
 static PathExprPtr parsePathExpr(Lexer &);   // álgebra de paths (§9)
@@ -3141,6 +3330,9 @@ static StmtPtr parseStatement(Lexer &lx) {
     return st;
   }
   if (name == "plot") return parsePlot(lx);    // plot(x=, y=, box=, …) { contenido + xaxis/yaxis } (§13.7)
+  // table (§13.10) NO es hija exclusiva de plot: fuera de él se posiciona con at=(x,y).
+  // (Dentro, parsePlot la intercepta antes de llegar aquí, para anclarla a su caja.)
+  if (name == "table") return parseTableBody(lx);
   if (name == "grid") {                        // grid(xstep=, ystep=, …) { rect } (§13.6)
     auto st = std::make_unique<GridStmt>();
     if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
@@ -3182,6 +3374,13 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (name == "rule") {
     std::fprintf(stderr, "Error de sintaxis en %d:%d: 'rule' solo es válido dentro de "
                  "un plot { } (es hijo del plot, §13.8)\n", nameLine, nameCol);
+    std::exit(1);
+  }
+  // `row` (§13.10) solo existe dentro de table { }; suelto caeria en parseInvoke y
+  // fallaria como "struct no definida", que no dice nada del problema real.
+  if (name == "row") {
+    std::fprintf(stderr, "Error de sintaxis en %d:%d: 'row' solo es válido dentro de "
+                 "un table { } (§13.10)\n", nameLine, nameCol);
     std::exit(1);
   }
 
@@ -3245,6 +3444,28 @@ static StmtPtr parseBlock(Lexer &lx) {
 // solo son válidos aquí) → AxisStmt sin bloque de coords (plot fija p1 p2 y from/to).
 // legend( ... ) { entry("texto") { <bloque de la muestra, coords 0..1> } ... }
 // Solo válido dentro de plot (como xaxis/yaxis); `entry` solo dentro de legend.
+// table( … ) { row(a, b, …)  row(…) … }   (§13.10)
+// Válida dentro de plot (ancla a su caja) y suelta (at=(x,y)); `row` solo aquí.
+static std::unique_ptr<TableStmt> parseTableBody(Lexer &lx) {
+  auto st = std::make_unique<TableStmt>();
+  if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+  if (!lx.accept(T_LBRACE)) parseError(lx, "'{' tras table(...)");
+  while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
+    if (lx.accept(T_NEWLINE)) continue;
+    if (lx.peek().type != T_IDENTIFIER || lx.peek().str != "row")
+      parseError(lx, "'row(...)' dentro de table");
+    lx.next();
+    if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras row");
+    TableRow r;
+    if (lx.peek().type != T_RPAREN)
+      do { r.cells.push_back(parseExpression(lx)); } while (lx.accept(T_COMMA));
+    if (!lx.accept(T_RPAREN)) parseError(lx, "')' de row");
+    st->rows.push_back(std::move(r));
+  }
+  if (!lx.accept(T_RBRACE)) parseError(lx, "'}' de table");
+  return st;
+}
+
 static std::unique_ptr<LegendStmt> parseLegendBody(Lexer &lx) {
   auto st = std::make_unique<LegendStmt>();
   if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
@@ -3296,6 +3517,11 @@ static StmtPtr parsePlot(Lexer &lx) {
     if (tk.type == T_IDENTIFIER && tk.str == "legend") {
       lx.next();
       st->legend = parseLegendBody(lx);
+      continue;
+    }
+    if (tk.type == T_IDENTIFIER && tk.str == "table") {
+      lx.next();
+      st->tables.push_back(parseTableBody(lx));
       continue;
     }
     // rule (§13.8): como xaxis/yaxis, sin bloque — sus args lo dicen todo.
