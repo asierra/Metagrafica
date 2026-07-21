@@ -1,1 +1,2 @@
-*.mg linguist-language=TeX
+*.mg linguist-language=Erlang
+
