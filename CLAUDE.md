@@ -16,14 +16,14 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=54 fail=0 error=0 psfail=0 c3fail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad: ok=57 fail=0 error=0 psfail=0 c3fail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (18 `.mg` × EPS/SVG/**PDF** = 54 goldens) y compara contra la red golden
+de `examples/` (19 `.mg` × EPS/SVG/**PDF** = 57 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=54 fail=0 error=0 psfail=0 c3fail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=57 fail=0 error=0 psfail=0 c3fail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -813,7 +813,7 @@ la ruta de salida).
 
 **`rule` (§13.8) IMPLEMENTADO**, con la figura que llevaba un año esperándolo: `figure_02` del
 artículo de detección de ceniza (GOES-16/ABI), cinco paneles de histogramas con umbrales. Era
-el **punto 2 de las tres condiciones para el 1.0**; queda solo `table` (§13.10, sin diseñar).
+el **punto 2 de las condiciones para el 1.0**; queda solo `table` (§13.10, sin diseñar).
 Trabajo de **parser puro** (`RuleStmt`, entre `LegendStmt` y `PlotStmt`): cero elementos
 gráficos nuevos, cero cambios en los tres backends. La geometría llega ya mapeada desde
 `PlotStmt` → **log gratis**, el mismo reuso que le salió a `base=`.

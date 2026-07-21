@@ -6,20 +6,23 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-19**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-21**.
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=54 … c3fail=0** (3 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=57 … c3fail=0** (3 compuertas).
+> Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
 
-## 🎯 Las tres condiciones para el 1.0 (§22.7 — lista canónica, decidida con Alejandro)
+## 🎯 Las cuatro condiciones para el 1.0 (§22.7 — lista canónica, decidida con Alejandro)
 
-Es lo único que bloquea salir de beta. **No hay más.**
+Es lo único que bloquea salir de beta. **No hay más.** ⚠️ **Es una SECUENCIA, no una lista
+de pendientes:** el orden real de ejecución es **2 → 4 → 1**, y (3) ya está. Congelar es
+siempre lo último.
 
 1. **Congelar la gramática.** Declarar estable lo que hay; no añadir sintaxis nueva.
-   Implica cerrar (2) primero. Es una decisión, no código.
+   Implica cerrar (2) y (4) primero. Es una decisión, no código.
 2. **Cerrar lo aparcado de `plot`:**
    - [x] ~~**`rule` (§13.8)**~~ — CERRADO 2026-07-21 con `figure_02` (5 paneles, local por
      confidencialidad de los datos). Parser puro, cero motor y cero backends; log gratis
@@ -38,6 +41,23 @@ Es lo único que bloquea salir de beta. **No hay más.**
    - [ ] **Queda, y es decisión aparte:** lo que la fuente NO tiene (griego en texto
      corrido, cirílico, CJK) exige **embeber una fuente de texto Unicode** en EPS. El
      subset math son 27 KB; una LM Roman completa, cientos. Nadie lo pide todavía.
+4. **Uso real por gente que no es el autor** (añadida 2026-07-21). Las tres primeras
+   preguntan *¿está construido?*; esta pregunta *¿está bien?*. Un periodo de figuras
+   escritas por otras personas, con las mejoras que motiven, **antes** de congelar.
+   - **Va antes que (1) porque lo que compra la palabra «beta» es el permiso para
+     romper.** Hoy un renombre cuesta un `sed`; después de 1.0 cuesta una migración y un
+     número mayor. El criterio no es que pase tiempo (tiempo sin usuarios no prueba nada)
+     sino tener evidencia de que el permiso ya no hace falta.
+   - **Va después de (2)** porque con huecos la retroalimentación es «le falta X», no «X
+     es incómodo», que es la única que sirve para decidir nombres.
+   - 🔎 **La prueba de que hace falta ya está en el repo:** el renombre de §13 no lo cazó
+     el corpus ni ninguna de las tres compuertas — lo cazó comparar con matplotlib. Salió
+     gratis *solo* porque no había usuarios. El autor no puede hacerse esa prueba solo:
+     ya sabe cómo se llaman las cosas.
+   - **Salida propuesta (por evidencia, no por calendario):** que alguien de fuera escriba
+     figuras no triviales desde cero y las figuras nuevas **dejen de mover la gramática**.
+     Es la regla del proyecto («no se construye sin una figura que lo pida») aplicada a los
+     nombres. Opcional al final: marcar `3.0.0-rc.1` antes del `3.0.0`.
 
 ---
 

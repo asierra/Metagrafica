@@ -2403,7 +2403,9 @@ ejemplo, el `rectangle` transformable (§4.4).
 puede cambiar** (nombres y argumentos no están congelados) y **faltan piezas** de esta
 spec. Lo que sí está se ejercita con el corpus en cada cambio y ha compuesto libros.
 
-**Las tres condiciones** (decididas 2026-07-16). No hay más:
+**Las cuatro condiciones** (1–3 decididas 2026-07-16; la 4ª añadida 2026-07-21). No hay más.
+**Y van en ESE ORDEN**: no son una lista de pendientes sino una secuencia, por lo que se
+explica en la condición 4.
 
 1. **Congelar la gramática.** Es lo que hace que la beta sea beta. Solo en la última
    sesión se movieron `axis(title=)`→`label=`, `labels=`→`tick_labels=` y
@@ -2416,6 +2418,38 @@ spec. Lo que sí está se ejercita con el corpus en cada cambio y ha compuesto l
    del proyecto: no especular sin ejemplo.
 3. **Texto en UTF-8** (§14.4): quitar la conversión a Latin-1, que es una restricción de
    EPS impuesta a los tres backends antes de que exista un Display.
+4. **Uso real por gente que no es el autor** (añadida 2026-07-21). Las tres primeras son
+   condiciones de **completitud** —¿está construido?—; esta es de **validación** —¿está
+   bien?—. Son ejes distintos, y confundirlos es lo que hace que un proyecto publique un
+   1.0 del que se arrepiente. Un periodo de figuras escritas por otras personas, con las
+   mejoras que eso motive, **antes** de congelar.
+
+> **Por qué la 4 va antes que la 1, y no al revés.** Lo que compra la palabra «beta» es
+> **el permiso para romper**. Mientras la lleva, un renombre cuesta un `sed`; el día que se
+> quita, cuesta una migración y un número mayor. Así que el criterio para salir no es que
+> pase tiempo —tiempo sin usuarios no prueba nada— sino tener **evidencia de que el permiso
+> ya no hace falta**. Y las pruebas no pueden empezar hasta que (2) esté cerrado lo bastante
+> como para que nadie tropiece con un hueco: si no, lo que se recoge es «le falta X», no «X
+> es incómodo», que es la retroalimentación que sirve.
+>
+> 🔎 **La evidencia de que esto hace falta ya está en este proyecto.** El renombre de §13
+> (`title`→`label`, `labels`→`tick_labels`) no lo destapó el corpus ni ninguna de las tres
+> compuertas: lo destapó **comparar con matplotlib/asymptote** y ver que los dos nombres que
+> cualquiera alcanza primero significaban otra cosa. Salió gratis solo porque no había
+> usuarios (~20 usos en 4 archivos). Un usuario real es esa misma prueba, pero con las manos
+> — y no hay forma de adelantarla en solitario, porque el autor ya sabe cómo se llaman las
+> cosas.
+>
+> **Criterio de salida propuesto, deliberadamente por evidencia y no por calendario:** que
+> alguien que no sea el autor escriba figuras no triviales **desde cero** y la gramática
+> sobreviva — es decir, que las figuras nuevas dejen de moverla. Es la regla que el proyecto
+> ya aplica a las funciones («no se construye sin una figura que lo pida»), aplicada a los
+> **nombres**. Mientras cada usuario nuevo siga motivando un renombre, la beta sigue viva y
+> está haciendo su trabajo.
+>
+> **Paso opcional al final:** cuando (2) esté cerrado y las pruebas no muevan nada, marcar
+> `3.0.0-rc.1` antes del `3.0.0` — el «última llamada» convencional, en el que solo entran
+> bloqueadores. `include/version.h` se edita a mano, así que cuesta una línea.
 
 **Lo que NO bloquea beta**, aunque importe:
 
