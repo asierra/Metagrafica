@@ -25,7 +25,7 @@ nearly four decades.
 
 Nothing beats an example for a first impression of the language.
 
-```matlab
+```octave
 display_size 9 5.5
 font_size 9
 world_window -2 11 -1.5 5.5
@@ -129,7 +129,7 @@ bin/mg figure.mg out.pdf      # → PDF
 A **point** is a pair of coordinates; a **path** is a list of points. Every primitive
 takes a path in `{ }` and its style in `( )`:
 
-```matlab
+```octave
 polyline { 0 0  1 2  3 1 }              % open polyline
 polyline(closed=true) { 0 0  1 0  1 1 } % closed outline
 polygon { 0 0  1 0  1 1 }               % filled
@@ -142,7 +142,7 @@ text("mass $m_e$", align="center") { 5 1 }
 together with their attributes and place, scale, rotate and repeat them as a unit, in
 homogeneous coordinates, using just their name.
 
-```matlab
+```octave
 struct Square() {
 	circle(0.5) { 0 0 }
     polyline(closed=true) { -1 -1  1 -1  1 1  -1 1 }

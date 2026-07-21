@@ -18,7 +18,7 @@ cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* de Lu
 
 Nada mejor que un ejemplo para una primera impresión del lenguaje.
 
-```matlab
+```octave
 display_size 9 5.5
 font_size 9
 world_window -2 11 -1.5 5.5
@@ -101,7 +101,7 @@ bin/mg figura.mg sal.pdf      # → PDF
 
 Un **punto** es una pareja de coordenadas; un **path** es una lista de puntos. Cada primitiva lleva su path entre `{ }` y su estilo entre `( )`:
 
-```matlab
+```octave
 polyline { 0 0  1 2  3 1 }              % polilínea abierta
 polyline(closed=true) { 0 0  1 0  1 1 } % contorno cerrado
 polygon { 0 0  1 0  1 1 }               % relleno
@@ -112,7 +112,7 @@ text("masa $m_e$", align="center") { 5 1 }
 
 Los **structs** son el corazón del lenguaje: puedes agrupar distintos elementos gráficos con sus atributos y colocarlos, escalarlos, girarlos y repetirlos juntos, en coordenadas homogéneas, usando solamente el nombre.
 
-```matlab
+```octave
 struct Cuadro() {
 	circle(0.5) { 0 0 }
     polyline(closed=true) { -1 -1  1 -1  1 1  -1 1 }

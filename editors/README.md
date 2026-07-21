@@ -68,7 +68,7 @@ así que este resaltador llega más lejos que el de Geany:
 ## GitHub — `.gitattributes`
 
 ```
-*.mg linguist-language=MATLAB
+*.mg linguist-language=Octave
 ```
 
 GitHub no colorea `.mg` por su cuenta, y **no admite listas de palabras clave
@@ -79,15 +79,29 @@ también es distinta —no es un descuido que no coincidan—:
 - En **Geany**, Erlang es un *anfitrión*: el lexer aporta los comentarios `%` y las
   dos listas, y **el vocabulario de MG lo ponemos nosotros**. El beneficio es grande.
 - En **GitHub** no hay dónde poner ese vocabulario, así que del lenguaje prestado solo
-  quedan sus reglas de comentario y de número. Y ahí Erlang **rompe los decimales**:
-  `0.028` se lexa como `0` y `028`, porque en Erlang el punto termina una sentencia.
-  No es un detalle: el corpus tiene ~1300 decimales.
+  quedan sus reglas de comentario, de número y de cadena.
 
-MATLAB da los mismos comentarios `%` con los decimales intactos y `for` como palabra
-clave (medido con Pygments sobre el corpus: 20/20 decimales enteros y cero errores de
-lexado, frente a 0/20 de Erlang y de TeX). Los bloques de código MG en los `.md` del
-proyecto van etiquetados `matlab` por lo mismo, para que documento y archivo enlazado
-se vean igual.
+Erlang y TeX **rompen los decimales**: `0.028` se lexa como `0` y `028`, porque en
+Erlang el punto termina una sentencia. No es un detalle —el corpus tiene ~1300
+decimales—. MATLAB los respeta, pero tiene un defecto propio y peor para MG: su
+**sintaxis de comando** (`hold on`, `format long`) hace que un identificador al
+principio de línea convierta en CADENAS las palabras que le siguen, y las sentencias
+de estado de MG tienen justo esa forma — `display_size 12 8`, `line_width 0.5`,
+`world_window -2 11 -1.5 5.5`. Medido sobre el corpus: 172 argumentos numéricos
+coloreados como cadena.
+
+**Octave** no aplica esa regla y es el que se usa: comentarios `%`, decimales
+enteros, `for` como palabra clave y los argumentos de estado como números. Los
+bloques de código MG en los `.md` del proyecto van etiquetados `octave` por lo mismo,
+para que documento y archivo enlazado se vean igual.
+
+> ⚠️ **Comprobación pendiente en GitHub.** Todo lo anterior está medido con Pygments,
+> que tiene lexers **separados** para MATLAB y Octave. GitHub usa gramáticas propias y
+> es posible que trate `Octave` como alias de MATLAB, en cuyo caso volvería el defecto
+> de la sintaxis de comando. Se verifica en cinco segundos: abrir cualquier `.mg` en
+> GitHub y mirar el `display_size 12 8` de la cabecera — si el `12` y el `8` salen del
+> color de las cadenas y no del de los números, GitHub está usando MATLAB y conviene
+> reconsiderar (Erlang, con decimales rotos, sería el siguiente candidato).
 
 ## Mantenimiento
 

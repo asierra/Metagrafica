@@ -32,7 +32,7 @@ autor o en un script que se pierde.
 con sus niveles vibracionales y sus funciones de onda. **Nada en él está medido.** Se dan
 cinco números por estado electrónico y el resto es forma cerrada:
 
-```matlab
+```octave
 a1  = 1.8            % alcance del potencial
 re1 = 1.15           % distancia de equilibrio
 we1 = 0.56           % frecuencia vibracional
@@ -53,7 +53,7 @@ De ahí salen, sin que nadie las coloque:
 
 Así se dibuja un nivel vibracional:
 
-```matlab
+```octave
 E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
 s = sqrt(E/D1)
 polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
@@ -111,7 +111,7 @@ ligada pasa de 3 a 4 lóbulos, y las otras dos de 23 a 30 y de 13 a 16— sin to
 Toda esa dependencia cabe en un renglón — el que fija la constante de fase a partir de la
 acción acumulada `Sq`:
 
-```matlab
+```octave
 C = (nodos+0.5)*pi/Sq
 ```
 
@@ -153,7 +153,7 @@ degradada, con 69 números en lugar de una línea.
 
 La curva del oscilador, entera, es esto:
 
-```matlab
+```octave
 for i = 0 to n-1 {
     p = -0.92 + i*(1.84/n)
     q = -0.92 + (i+1)*(1.84/n)

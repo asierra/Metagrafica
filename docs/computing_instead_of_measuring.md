@@ -32,7 +32,7 @@ script that gets lost.
 their vibrational levels and their wave functions. **Nothing in it is measured.** You give
 five numbers per electronic state and the rest is closed form:
 
-```matlab
+```octave
 a1  = 1.8            % range of the potential
 re1 = 1.15           % equilibrium distance
 we1 = 0.56           % vibrational frequency
@@ -53,7 +53,7 @@ From those, without anyone placing them:
 
 This is how a vibrational level is drawn:
 
-```matlab
+```octave
 E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
 s = sqrt(E/D1)
 polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
@@ -111,7 +111,7 @@ the bound state's node count from 3 to 4 drags all three along —the bound one 
 All of that dependence fits on one line — the one that fixes the phase constant from the
 accumulated action `Sq`:
 
-```matlab
+```octave
 C = (nodos+0.5)*pi/Sq
 ```
 
@@ -152,7 +152,7 @@ formulas; what had been preserved was a degraded copy, 69 numbers in place of on
 
 The oscillator curve, in full, is this:
 
-```text
+```octave
 for i = 0 to n-1 {
     p = -0.92 + i*(1.84/n)
     q = -0.92 + (i+1)*(1.84/n)
