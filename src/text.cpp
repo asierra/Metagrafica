@@ -433,9 +433,22 @@ double text_width(TextState ts, string s) {
 }
 
 void Text::draw(Display &g) {
+  // FN_NOFACE = "hereda la cara ambiente" (§7.3). Se resuelve contra la ambiente que
+  // TextLine::draw guardó ANTES de la línea; solo si nadie la fijó nunca se cae al
+  // comportamiento viejo (no llamar a setFontFace y dejar que los guards de
+  // EPSDisplay/PDFDisplay pongan Times-Roman).
+  //
+  // ⚠️ El orden importa y es la mitad del bug que esto arregla: setRelFontSize
+  // INVALIDA dspstate.fontFace (lo pone en FN_NOFACE) justo para forzar que la
+  // siguiente llamada a setFontFace re-emita la fuente al tamaño nuevo. Si el trozo
+  // se salta setFontFace, esa re-emisión NUNCA ocurre y el dispositivo se queda con
+  // la fuente del trozo anterior: la cara Y el tamaño. Por eso la prosa que sigue a
+  // un sub/superíndice salía chica, y la que sigue a un `$…$` salía en LM Math.
+  FontFace face = textstate.font_face;
+  if (face == FN_NOFACE) face = g.getInheritedFace();
   g.setRelFontSize(textstate.font_size);
-  if (textstate.font_face != FN_NOFACE)   // FN_NOFACE = hereda la cara ambiente (§7.3)
-    g.setFontFace(textstate.font_face);
+  if (face != FN_NOFACE)
+    g.setFontFace(face);
   // valign para texto SIMPLE (parse_text devuelve un Text pelón, sin TextLine):
   // desplaza la pluma una vez antes de emitir. En texto compuesto este Text se
   // dibuja desde TextLine::draw, que ya puso valign a 0 (aplica el desplazamiento
@@ -460,6 +473,26 @@ void TextLine::draw(Display &g) {
     g.setTextAlign(0);
     g.setTextValign(0);   // se puso a 0 para que los Text hijos no re-apliquen valign
   }
+  // Cara AMBIENTE de la línea, capturada antes de dibujar ningún trozo: para cuando
+  // un trozo se dibuja, la cara vigente ya puede ser la que puso un trozo ANTERIOR
+  // (un run de `$…$` deja el dispositivo en LM Math), que no es la ambiente. Un
+  // trozo con FN_NOFACE ("hereda la ambiente") la resuelve contra esto (Text::draw).
+  //
+  // Sin ella, FN_NOFACE estaba implementado como NO TOCAR el dispositivo, que solo
+  // equivale a "la ambiente" mientras nadie la haya tocado. Dentro de una línea sí
+  // la tocan, y se veía en cualquier rótulo de eje o entrada de leyenda que mezcle
+  // fórmula y prosa: la prosa tras `$…$` salía en la fuente del math, y la prosa
+  // tras un sub/superíndice salía al tamaño reducido del índice (ver Text::draw:
+  // saltarse setFontFace también se salta el refresco de TAMAÑO). Un `text()` normal
+  // nunca lo sufrió porque hornea FN_DEFAULT en todos sus trozos.
+  // Si nadie fijó cara en el documento (lo normal en una figura que nunca escribe
+  // `font`), la ambiente ES la cara por default — el mismo criterio que ya aplican
+  // los guards de EPSDisplay::text/PDFDisplay::text al primer texto del documento, y
+  // el que usa change_font_face para los modificadores de bit sobre FN_NOFACE.
+  // Resolverla aquí es lo que hace que el arreglo sirva en una figura sin `font`,
+  // que es justo donde vive el bug (los rótulos de axis/legend nacen con FN_NOFACE).
+  { FontFace amb = g.getFontFace();
+    g.setInheritedFace(amb != FN_NOFACE ? amb : FN_TIMES_ROMAN); }
   for (const auto &text : textline) {
     TextState ts = text->getState();
     //printf("text <%s> state %s\n", text->getText().c_str(), ts.str().c_str());
@@ -472,6 +505,7 @@ void TextLine::draw(Display &g) {
       g.rmoveto(0, -vdesp);
     }
   }
+  g.setInheritedFace(FN_NOFACE);    // fuera de la línea no hay ambiente que heredar
   if (text_align > 0)
     g.setTextAlign(text_align);
   if (text_valign > 0)

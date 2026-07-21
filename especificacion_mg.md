@@ -1824,6 +1824,32 @@ El contenido del string soporta el siguiente markup, procesado en parse time:
 > `FN_NOFACE` resuelve contra la cara por default — exactamente lo que ya hacía un `text()` normal,
 > que hornea `FN_DEFAULT`. Así `axis(label="/ix")` sale itálico igual que `text("/ix")`.
 
+> 🐞 **Segunda trampa de la misma familia, resuelta 2026-07-21 — "heredar la ambiente" estaba
+> implementado como "no tocar el dispositivo".** `Text::draw` se saltaba `setFontFace` para los
+> trozos `FN_NOFACE`, y eso solo equivale a "la cara ambiente" **mientras nadie la haya
+> cambiado**. Dentro de una misma línea sí la cambian, así que en cualquier rótulo que mezcle
+> fórmula y prosa —`axis(label="$\Delta T_1$ (BT 10.3 - 12.3 $\mu m$)")`, una entrada de leyenda
+> de un `rule`— la prosa que seguía a un `$…$` salía **en la fuente del math**.
+>
+> **Y arrastraba un segundo síntoma que parecía otro bug:** la prosa que seguía a un
+> **sub/superíndice** salía al **tamaño reducido del índice**. Misma raíz: `setRelFontSize`
+> *invalida* la cara (`dspstate.fontFace = FN_NOFACE`) precisamente para forzar que el siguiente
+> `setFontFace` re-emita la fuente al tamaño nuevo — así que saltarse `setFontFace` **también se
+> salta el refresco de tamaño**. Un solo arreglo cierra los dos.
+>
+> **Fix:** `TextLine::draw` guarda la cara ambiente ANTES de dibujar ningún trozo
+> (`Display::setInheritedFace`) y `Text::draw` resuelve contra ella; si nadie fijó cara en el
+> documento —lo normal en una figura que nunca escribe `font`— se cae a la cara por default,
+> el mismo criterio que ya usaban los guards de `EPSDisplay::text`/`PDFDisplay::text`.
+>
+> ⚠️ **Lo que lo hace instructivo: rompía la PARIDAD de los tres backends y el golden lo había
+> bendecido.** EPS y SVG salían romanos (EPS re-emite `setfont` desde `dspstate`); **solo PDF**
+> heredaba la itálica, porque su `text()` conserva `current_font`. Lo tenía `franck_condon.pdf`
+> desde siempre: sus rótulos `"distancia internuclear  $r$"` y `"energía  $E$"` iban en
+> Times-Italic en el PDF y en Times-Roman en los otros dos. Ni el golden por bytes (bendice lo
+> preexistente) ni la Capa 3 (sus invariantes cuentan operaciones de texto, **no fuentes**) lo
+> cazaban. Se encontró portando una figura nueva, no auditando.
+
 #### Multilínea — especificado, sin implementar
 
 Un `text()` es hoy **un solo renglón**: `text_parser.cpp` no rompe línea ni tiene interlínea.

@@ -231,6 +231,15 @@ public:
   virtual void text(std::string)=0;
 
   virtual void setFontFace(FontFace face) { dspstate.fontFace = face; }
+  FontFace getFontFace() const { return dspstate.fontFace; }
+  // Cara AMBIENTE de la línea de texto en curso: la que tenía el dispositivo antes
+  // de dibujar ningún trozo. TextLine::draw la fija al empezar y la limpia al
+  // acabar; Text::draw la usa para resolver sus trozos FN_NOFACE ("hereda la cara
+  // ambiente"). Hace falta guardarla porque para cuando un trozo se dibuja, la cara
+  // vigente ya puede ser la de un trozo anterior (un run de `$…$`), que no es la
+  // ambiente. Ver el comentario largo en TextLine::draw.
+  void setInheritedFace(FontFace f) { inheritedFace = f; }
+  FontFace getInheritedFace() const { return inheritedFace; }
   virtual void setFontSize(double p) { dspstate.fontSize = p; }
   double getFontSize() const { return dspstate.fontSize; }
   void setRelFontSize(double rfz) {
@@ -376,6 +385,9 @@ protected:
 
   /// Tamaño relativo de fuente (sub/superíndices del texto)
   double relfontsize = 1.0f;
+
+  /// Cara ambiente de la línea de texto en curso (ver setInheritedFace)
+  FontFace inheritedFace = FN_NOFACE;
 
   /// Matriz acumulada (semilla dvx/dvy de start() + matrices MTST horneadas)
   Matrix mt;
