@@ -43,8 +43,9 @@ Es lo único que bloquea salir de beta. **No hay más.**
       Va `/n`, no `\n` (razón medida en `ec8e695`). El motor emite un `Text`/`TextLine`
       por renglón con interlínea derivada de `font_size`.
 - [x] ~~**Math P1 y P2**~~ — CERRADOS 2026-07-20: símbolos y latino de math a LM Math;
-      el font Symbol y el markup `/g` desaparecen. Queda que **dígitos y operadores**
-      de `$…$` sigan en el serif del sistema (en TeX van rectos, del font math).
+      el font Symbol y el markup `/g` desaparecen. Dígitos, operadores y puntuación
+      de `$…$` entraron el mismo día (rectos, como en TeX; el `-` es el signo menos
+      U+2212). Una fórmula ya no mezcla tipografías.
 - [ ] **Plot Fase 3** (`plan_plot.md`): localizador automático `step`/`decimals`
       (1/2/5·10ᵏ), `format=` con validación, `at=v`, **`title_at=`** (título al extremo
       del eje — hoy obliga a `text()` manuales en fig4-4/fig6-4).

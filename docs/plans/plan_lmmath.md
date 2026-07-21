@@ -108,6 +108,21 @@ sin MATH/GSUB/GPOS. **El font Symbol desaparecio** de los tres backends.
   primer rotulo salia como "@fo…". Lo cazo solo la inspeccion visual — ni el
   golden, ni `gs`, ni la Capa 3, ni la validacion UTF-8 lo veian.
 
-Queda P3 implicito: los digitos y operadores de `$…$` siguen en el serif del
-sistema. En TeX van rectos y del font matematico; hoy son la unica tipografia
-ajena que queda dentro de una formula.
+### P3 (mismo dia): digitos, operadores y puntuacion del modo math
+
+Cerrado tambien el 2026-07-20. Los digitos y el `=` seguian en el serif del
+sistema, o sea la misma mezcla que P2 vino a quitar, corrida a los otros
+caracteres. Entran a `cmmiUnicode()` digitos (RECTOS, como en TeX), operadores,
+agrupadores, puntuacion y el espacio; el subset sube a 186 codepoints.
+
+- ⚠️ **El `-` de una formula NO es el guion U+002D**: es el SIGNO MENOS U+2212,
+  mas largo y a la altura de la barra del `+`. Es la diferencia entre que `x-1`
+  parezca partido y `x−1` se lea como una resta. Solo aplica en modo math.
+- 🐞 De paso se arreglo el **espacio de ancho CERO** en `cmmi_metrics_map[32]`:
+  el avance de `cur_x` lo toma la tabla de la CARA, no la del font que dibuja,
+  asi que un espacio dentro de `$…$` no avanzaba. EPS no lo notaba (usa
+  `stringwidth` del propio font); SVG y PDF colocaban mal lo que viniera detras.
+- ⚠️ **Literal de cadena > 65536**: el Type42 ya no cabe en un literal, que es el
+  maximo que el estandar OBLIGA a soportar. Los literales ADYACENTES no valen —
+  C++ los concatena en uno solo y el limite aplica al total—; hay que guardar
+  trozos y unirlos en tiempo de ejecucion.

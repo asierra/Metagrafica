@@ -195,6 +195,25 @@ static void addMathItalicLatin(std::map<unsigned char, unsigned int> &m) {
         m[(unsigned char)('a' + i)] = 0x1D44E + i;
     }
     m[(unsigned char)'h'] = 0x210E;
+
+    // Digitos, operadores, agrupadores y puntuacion del modo math (2026-07-20).
+    // En TeX los digitos de una formula van RECTOS y del font matematico, no en
+    // italica ni de la fuente de texto: sin esto, `E = mc^2` quedaba con las
+    // letras en Computer Modern y el '=' y el '2' en Times, que es la misma
+    // mezcla que P2 vino a quitar, solo que corrida a los otros caracteres.
+    for (int i = 0; i <= 9; i++) m[(unsigned char)('0' + i)] = 0x0030 + i;
+    const struct { unsigned char b; unsigned int cp; } ops[] = {
+        { '+', 0x002B }, { '=', 0x003D }, { '<', 0x003C }, { '>', 0x003E },
+        { '/', 0x002F }, { '(', 0x0028 }, { ')', 0x0029 }, { '[', 0x005B },
+        { ']', 0x005D }, { ',', 0x002C }, { '.', 0x002E }, { ';', 0x003B },
+        { ':', 0x003A }, { '!', 0x0021 }, { ' ', 0x0020 },
+        // El '-' de una formula NO es el guion U+002D: es el SIGNO MENOS U+2212,
+        // mas largo y a la altura de la barra del '+'. Es la diferencia que hace
+        // que `x-1` parezca partido en dos y `x−1` se lea como una resta. Solo
+        // aplica en modo math, que es donde vive esta tabla.
+        { '-', 0x2212 },
+    };
+    for (const auto &o : ops) m[o.b] = o.cp;
 }
 
 const std::map<unsigned char, unsigned int> &cmmiUnicode() {
