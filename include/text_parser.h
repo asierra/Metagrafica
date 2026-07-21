@@ -34,4 +34,19 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool
 
 FontFace get_font_face_from_string(std::string s, bool& using_fontcmmi);
 
+
+// Caracteres de texto fuera de Latin-1 que las base-14 SI tienen (§14.4). Ver la
+// tabla en text_parser.cpp: por que existen las ranuras y como las traduce cada
+// backend.
+struct ExtraGlyph {
+    unsigned char slot;        // 1..27, posicion interna (control C0, nunca en texto)
+    unsigned int  codepoint;   // Unicode
+    const char   *psname;      // nombre de glifo PostScript (para el /Encoding de EPS)
+    unsigned char winansi;     // byte en CP1252, o 0 si no esta
+};
+extern const ExtraGlyph kExtraTextGlyphs[];
+extern const int kNumExtraTextGlyphs;
+unsigned char extraSlotFor(unsigned int cp);
+const ExtraGlyph *extraGlyphForSlot(unsigned char slot);
+
 #endif

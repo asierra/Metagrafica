@@ -611,7 +611,19 @@ void PDFDisplay::text(string s) {
       i = j;
     }
   } else {
-    segs.push_back({ current_font, s });
+    // Texto corrido: las RANURAS 1..27 de kExtraTextGlyphs se traducen a su byte
+    // en WinAnsiEncoding, que es la codificacion con la que se piden las base-14
+    // aqui. CP1252 tiene casi todos esos glifos (comillas, rayas, puntos
+    // suspensivos...); los tres que no —fraction, dotlessi, Lslash/lslash— se
+    // dejan caer, es el limite de esta codificacion, no del pipeline (§14.4).
+    string t = s;
+    for (size_t k = 0; k < t.size(); k++) {
+      unsigned char c = (unsigned char)t[k];
+      if (c == 0 || c >= 32) continue;
+      const ExtraGlyph *e = extraGlyphForSlot(c);
+      t[k] = e && e->winansi ? (char)e->winansi : ' ';
+    }
+    segs.push_back({ current_font, t });
   }
 
   // El texto debe usar el color de trazo (linecolor), no el fill color de shapes.

@@ -1,4 +1,5 @@
 #include "text.h"
+#include "text_parser.h"   // sus propias declaraciones: sin esto podian divergir
 #include <algorithm>
 #include <memory>
 #include <stack>
@@ -94,6 +95,73 @@ static const std::map<std::string, unsigned int> kNameToUnicode = {
     {"therefore",0x2234},{"neq",0x2260},{"textdegree",0xB0},{"cong",0x2245},
     {"surd",0x221A},{"hbar",0x210F}};
 
+
+// ---------------------------------------------------------------------------
+// Caracteres de texto FUERA de Latin-1 que las fuentes base-14 SI tienen (§14.4).
+//
+// El techo del texto corrido nunca fue Latin-1: es el repertorio de la fuente.
+// Una base-14 de PostScript trae ~315 glifos (Times-Roman.afm), entre ellos las
+// comillas tipograficas, las rayas, los puntos suspensivos y el resto de abajo.
+// Lo unico que faltaba era DARLES POSICION: ISOLatin1Encoding no las tiene, asi
+// que se descartaban aunque el glifo estuviera ahi.
+//
+// Se les asignan las ranuras 1..27, que en texto corrido no aparecen nunca (son
+// controles C0). La ranura 0 queda libre a proposito: es el terminador de las
+// cadenas C y el motor usa .c_str() en varios sitios.
+//
+// Cada backend traduce la ranura a lo suyo, que es lo que pide §14.4 ("el texto
+// debe viajar y que cada uno resuelva"):
+//   EPS -> nombre de glifo, en un /Encoding propio derivado de ISOLatin1
+//   PDF -> su byte en WinAnsiEncoding (CP1252 tiene casi todos)
+//   SVG -> el codepoint, en UTF-8
+//
+// Lo que sigue sin caber es lo que la fuente NO tiene (griego en texto corrido,
+// cirilico, CJK): eso exige EMBEBER una fuente de texto Unicode en EPS, como ya
+// se hace con LM Math para el math, y es una decision aparte.
+const ExtraGlyph kExtraTextGlyphs[] = {
+    { 1, 0x2018, "quoteleft",      0x91 },
+    { 2, 0x2019, "quoteright",     0x92 },
+    { 3, 0x201C, "quotedblleft",   0x93 },
+    { 4, 0x201D, "quotedblright",  0x94 },
+    { 5, 0x2013, "endash",         0x96 },
+    { 6, 0x2014, "emdash",         0x97 },
+    { 7, 0x2026, "ellipsis",       0x85 },
+    { 8, 0x2022, "bullet",         0x95 },
+    { 9, 0x2020, "dagger",         0x86 },
+    {10, 0x2021, "daggerdbl",      0x87 },
+    {11, 0x2030, "perthousand",    0x89 },
+    {12, 0x2039, "guilsinglleft",  0x8B },
+    {13, 0x203A, "guilsinglright", 0x9B },
+    {14, 0x2044, "fraction",       0    },   // 0 = no esta en CP1252
+    {15, 0x2122, "trademark",      0x99 },
+    {16, 0x20AC, "Euro",           0x80 },
+    {17, 0x0192, "florin",         0x83 },
+    {18, 0x0152, "OE",             0x8C },
+    {19, 0x0153, "oe",             0x9C },
+    {20, 0x0160, "Scaron",         0x8A },
+    {21, 0x0161, "scaron",         0x9A },
+    {22, 0x0178, "Ydieresis",      0x9F },
+    {23, 0x017D, "Zcaron",         0x8E },
+    {24, 0x017E, "zcaron",         0x9E },
+    {25, 0x0131, "dotlessi",       0    },
+    {26, 0x0141, "Lslash",         0    },
+    {27, 0x0142, "lslash",         0    },
+};
+const int kNumExtraTextGlyphs = (int)(sizeof(kExtraTextGlyphs)/sizeof(kExtraTextGlyphs[0]));
+
+// codepoint -> ranura, o 0 si el caracter no esta en la tabla.
+unsigned char extraSlotFor(unsigned int cp) {
+    for (int i = 0; i < kNumExtraTextGlyphs; i++)
+        if (kExtraTextGlyphs[i].codepoint == cp) return kExtraTextGlyphs[i].slot;
+    return 0;
+}
+// ranura -> entrada, o nullptr si la ranura no es de esta tabla.
+const ExtraGlyph *extraGlyphForSlot(unsigned char slot) {
+    for (int i = 0; i < kNumExtraTextGlyphs; i++)
+        if (kExtraTextGlyphs[i].slot == slot) return &kExtraTextGlyphs[i];
+    return nullptr;
+}
+
 // Construye byte->Unicode para una fuente a partir de su tabla nombre->byte.
 static std::map<unsigned char, unsigned int>
 makeUnicodeMap(const std::map<std::string, unsigned char> &name2byte) {
@@ -182,25 +250,24 @@ string UTF8toISO8859_1(const char * in)
             }
             else
             {
-              // Limitación del pipeline: el texto se maneja en ISO-8859-1
-              // (Latin-1), 1 byte/carácter, para la tabla ISOLatin1Encoding de
-              // PostScript. Un codepoint Unicode > 255 no cabe → se descarta con
-              // aviso. Los símbolos griegos/matemáticos NO pasan por aquí: se
-              // escriben como \comando y se resuelven vía map_symbol/map_tex_cmmi.
+              // Fuera de Latin-1. Si la fuente base-14 SI tiene el glifo
+              // (comillas tipograficas, rayas, puntos suspensivos...), se le da
+              // una RANURA de la tabla kExtraTextGlyphs y sigue viaje; cada
+              // backend la traduce a lo suyo (§14.4). Solo se descarta lo que la
+              // fuente no tiene — griego en texto corrido, cirilico, CJK—, que
+              // exigiria embeber una fuente de texto Unicode en EPS.
               //
-              // Migrar el texto a UTF-8 es CONDICIÓN PARA SALIR DE BETA (§14.4):
-              // Latin-1 es una restricción de las fuentes estándar de PostScript
-              // que se impone aquí —antes del backend— a los tres, aunque SVG es
-              // UTF-8 nativo y PDF ya tiene su ruta Unicode.
-              //
-              // El aviso dice el CODEPOINT y la cadena: antes imprimía `ch`, que a
-              // esta altura es el último byte de continuación del carácter (un
-              // 0x9C suelto, ilegible), y no decía dónde. Con el texto delante, el
-              // autor ve cuál es y lo sustituye (p.ej. “…” → «…», que sí es
-              // Latin-1 y además es la comilla correcta en español).
-              fprintf(stderr,
-                      "Aviso: carácter U+%04X fuera de Latin-1, se descarta — texto: \"%s\"\n",
+              // El aviso dice el CODEPOINT y la cadena: antes imprimia `ch`, que a
+              // esta altura es el ultimo byte de continuacion del caracter (un
+              // 0x9C suelto, ilegible), y no decia donde.
+              unsigned char slot = extraSlotFor(codepoint);
+              if (slot) {
+                out.append(1, static_cast<char>(slot));
+              } else {
+                fprintf(stderr,
+                      "Aviso: carácter U+%04X sin glifo en las fuentes de texto, se descarta — texto: \"%s\"\n",
                       codepoint, start);
+              }
             }
         }
     }
@@ -419,8 +486,11 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   accum.clear();
   while (!tstack.empty()) tstack.pop();
   string input = UTF8toISO8859_1(input_utf8.c_str());
-  for (char & c : input) 
-    if (c < 0) {
+  // La codificacion propia hace falta tanto por los acentos (byte >= 0x80, que
+  // ISOLatin1Encoding resuelve) como por las RANURAS 1..31 de kExtraTextGlyphs,
+  // que solo existen en el /Encoding que emite EPS (§14.4).
+  for (char & c : input)
+    if (c < 0 || (c > 0 && c < 32)) {
       using_reencode = true;
       break;
     }

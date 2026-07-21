@@ -25,12 +25,15 @@ Es lo único que bloquea salir de beta. **No hay más.**
      ya decidido en diseño. **Desbloquea la forma AUTOMÁTICA de `legend`** (hoy solo la
      explícita, cerrada en `df652d9`). Figura esperando: `figure_02.pdf`. → mayor palanca.
    - [ ] **`table` (§13.10)** — reservado, **sin diseñar** todavía.
-3. **Migrar el texto a UTF-8** (§14.4) — deuda de Latin-1, condición para salir de beta.
-   **P1 y P2 de `plan_lmmath.md` ya están HECHOS** (2026-07-20), que era el orden
-   recomendado: el pipeline ya lleva codepoints Unicode hasta los tres backends para
-   griego, símbolos y latino de math. Falta el **texto corrido**, que es donde vive
-   Latin-1 — según §14.4 "es casi una consecuencia" ahora.
-   La técnica ya está en el árbol (`font_lmmath_eps.h` embebe LM Math Type42 en EPS).
+3. **Texto fuera de Latin-1** (§14.4) — ✅ **HECHO 2026-07-20**. Resultó que el techo
+   no era la codificación sino el **repertorio de la fuente**: las base-14 SÍ tienen
+   comillas tipográficas, rayas, puntos suspensivos, ‰, ™, €… y se descartaban solo
+   porque `ISOLatin1Encoding` no los nombraba. Ahora viajan en ranuras y cada backend
+   traduce (EPS `/MGTextEncoding`, PDF CP1252, SVG UTF-8). Junto con P1 y P2 de
+   `plan_lmmath.md`, cierra la 3ª condición.
+   - [ ] **Queda, y es decisión aparte:** lo que la fuente NO tiene (griego en texto
+     corrido, cirílico, CJK) exige **embeber una fuente de texto Unicode** en EPS. El
+     subset math son 27 KB; una LM Roman completa, cientos. Nadie lo pide todavía.
 
 ---
 

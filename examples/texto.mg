@@ -1,6 +1,6 @@
-display_size 10 6
+display_size 10 7.2
 font_size 8
-world_window -5 5 -3 3
+world_window -5 5 -3.6 3
 
 line_width 1
 polyline { 0 -2.5 0 2.75 }
@@ -48,3 +48,14 @@ valign "bottom"
 text("abajo") { 1.7 2.7 }
 
 
+
+% --- Tipografia fuera de Latin-1 (§14.4) -------------------------------------
+% Comillas «españolas» y “de imprenta”, raya de diálogo, puntos suspensivos, vinetas
+% y el resto de kExtraTextGlyphs: caracteres que las fuentes base-14 SI tienen y
+% que hasta 2026-07-20 se DESCARTABAN, porque ISOLatin1Encoding no sabia
+% nombrarlos. Es la unica cobertura que tienen; sin esta linea, volverian a
+% perderse en silencio.
+valign "bottom"
+align "left"
+text("Comillas “inglesas” y ‘simples’, raya — y puntos…") { -4.5 -3.05 }
+text("Viñeta • daga † por mil ‰ marca ™ euro € œuvre") { -4.5 -3.45 }

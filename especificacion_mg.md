@@ -1961,33 +1961,39 @@ La alineación vertical se controla con `valign`: `"baseline"` (default), `"top"
 
 ---
 
-### 14.4 Texto en Latin-1 — pendiente, y condición para salir de beta
+### 14.4 Texto: repertorio de la fuente, no Latin-1
 
-El texto corrido se convierte a **ISO-8859-1 (Latin-1)** en `parse_text()`
-(`UTF8toISO8859_1`, `text_parser.cpp`), un byte por carácter. Lo que no cabe en esos 256
-codepoints **se descarta con un aviso**: `“ ”`, `—`, `…`, `′`. Lo que sí cabe cubre el
-español y la física ordinaria: acentos, `ñ`, `¿¡`, `«»`, `°`, `×`, `±`, `µ`.
+**El techo del texto corrido es el repertorio de glifos de la fuente, no una
+codificación.** Una base-14 de PostScript trae ~315 glifos (Times-Roman): además
+de Latin-1, tiene las comillas tipográficas, las rayas, los puntos suspensivos,
+viñetas, dagas, ‰, ™, €, œ… Hasta el 2026-07-20 todo eso se **descartaba con
+aviso**, no porque faltara el glifo sino porque `ISOLatin1Encoding` no sabía
+nombrarlo.
 
-**Los símbolos matemáticos no pasan por ahí** y no están limitados: se escriben `\comando`
-y se resuelven por `map_symbol`/`map_tex_cmmi` → Unicode → LM Math (§14, `plan_lmmath.md`).
-La restricción es solo del texto corrido.
+**Resuelto** dándoles posición propia. Los 27 caracteres de esa lista viajan en
+**ranuras 1..27** (controles C0, que en texto corrido no aparecen nunca; la 0 se
+deja libre porque es el terminador de las cadenas C), y **cada backend traduce la
+ranura a lo suyo**, que es justo lo que este apartado pedía:
 
-**Es una restricción de EPS, impuesta a los tres backends.** La conversión ocurre en
-`parse_text()`, *antes* de que exista un Display, y viene de la tabla `ISOLatin1Encoding`
-de las fuentes estándar de PostScript. Pero **SVG es UTF-8 nativo** y **PDF ya tiene su
-ruta Unicode abierta** (`HPDF_UseUTFEncodings`): los dos pagan una limitación que no es
-suya. Y ni siquiera es insalvable en EPS — `font_lmmath_eps.h` ya embebe LM Math como
-**Type42** con su propio `/Encoding`, o sea que la técnica para salirse de Latin-1 en EPS
-ya está en el árbol, funcionando, solo que aplicada al math.
+| backend | traducción |
+|---|---|
+| EPS | nombre de glifo, en un `/MGTextEncoding` derivado de `ISOLatin1Encoding` |
+| PDF | su byte en `WinAnsiEncoding` (CP1252 tiene 24 de los 27) |
+| SVG | el codepoint Unicode, en UTF-8 nativo |
 
-**Migrar el texto a UTF-8 es CONDICIÓN PARA SALIR DE BETA** (decidido 2026-07-16). El
-texto debe viajar en Unicode hasta el backend y que cada uno resuelva: SVG lo emite tal
-cual, PDF por su encoder UTF, EPS por Type42 o por un vector de codificación propio.
+La tabla vive en **un solo sitio** (`kExtraTextGlyphs`, `text_parser.cpp`) con el
+codepoint, el nombre PostScript y el byte CP1252; EPS genera su `/Encoding` desde
+ella. Los anchos de avance salen de los **AFM** de las base-14, así que la
+alineación y el avance son exactos, no estimados. Cobertura: `examples/texto.mg`.
 
-**Orden recomendado:** hacer primero **P1 de `plan_lmmath.md`** (migrar `map_symbol` de
-Symbol → LM Math). Cuando esté, el pipeline ya llevará codepoints Unicode hasta los tres
-backends para los símbolos, y quitar Latin-1 del texto corrido será casi una consecuencia
-en vez de un cambio de arquitectura suelto.
+**Lo que sigue sin caber es lo que la fuente NO tiene:** griego en texto corrido
+(en modo math sí, §14), cirílico, CJK. Eso no es cuestión de codificación —
+exigiría **embeber una fuente de texto Unicode** en EPS, como ya se hace con
+Latin Modern Math para el math (§14.2). Es una decisión aparte, y de otro tamaño:
+el subset math son 27 KB; una LM Roman completa, cientos.
+
+*(Los símbolos matemáticos nunca pasaron por aquí: se escriben `\comando` y se
+resuelven vía `map_symbol`/`map_tex_cmmi` → LM Math.)*
 
 ## 15. Importar archivos
 

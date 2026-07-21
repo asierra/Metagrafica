@@ -137,11 +137,18 @@ static const char *ps_reencode = R"(
 	definefont pop
 } bind def
 
-/ISOTimes-Roman ISOLatin1Encoding /Times-Roman REENCODEFONT
-/ISOTimes-Italic ISOLatin1Encoding /Times-Italic REENCODEFONT
-/ISOHelvetica ISOLatin1Encoding /Helvetica REENCODEFONT
-/ISOTimes-Bold ISOLatin1Encoding /Times-Bold REENCODEFONT
-/ISOHelvetica-Bold ISOLatin1Encoding /Helvetica-Bold REENCODEFONT
+% MGTextEncoding = ISOLatin1 mas los glifos de texto que la fuente SI tiene pero
+% Latin-1 no sabe nombrar (comillas tipograficas, rayas, puntos suspensivos...).
+% Van en las ranuras 1..27, controles C0 que en texto nunca aparecen. La tabla
+% que las asigna vive en text_parser.cpp (kExtraTextGlyphs) y la emite
+% EPSDisplay::start; aqui solo se reserva el nombre.
+/MGTextEncoding ISOLatin1Encoding 256 array copy def
+MGEXTRAS
+/ISOTimes-Roman MGTextEncoding /Times-Roman REENCODEFONT
+/ISOTimes-Italic MGTextEncoding /Times-Italic REENCODEFONT
+/ISOHelvetica MGTextEncoding /Helvetica REENCODEFONT
+/ISOTimes-Bold MGTextEncoding /Times-Bold REENCODEFONT
+/ISOHelvetica-Bold MGTextEncoding /Helvetica-Bold REENCODEFONT
 )";
 
 EPSDisplay::EPSDisplay(string f) {
@@ -170,8 +177,22 @@ void EPSDisplay::start() {
   }
   if (flags.using_textalign)
     fprintf(file, "%s", ps_simpletextalign);
-  if (flags.using_reencode)
-    fprintf(file, "%s", ps_reencode);
+  if (flags.using_reencode) {
+    // El prologo lleva un marcador MGEXTRAS que se sustituye por los `put` de las
+    // ranuras: asi la tabla vive en UN solo sitio (text_parser.cpp) en vez de
+    // duplicada como texto PostScript.
+    std::string pro = ps_reencode;
+    std::string extras;
+    for (int i = 0; i < kNumExtraTextGlyphs; i++) {
+      char buf[80];
+      snprintf(buf, sizeof buf, "MGTextEncoding %d /%s put\n",
+               kExtraTextGlyphs[i].slot, kExtraTextGlyphs[i].psname);
+      extras += buf;
+    }
+    size_t at = pro.find("MGEXTRAS\n");
+    if (at != std::string::npos) pro.replace(at, 9, extras);
+    fprintf(file, "%s", pro.c_str());
+  }
   if (flags.using_fontcmmi) {
     // Type42 de Latin Modern Math (subset). Define DOS fuentes lógicas: /LMMath
     // (bytes de map_tex_cmmi, griego) y /LMMathSym (bytes de map_symbol) → griego
@@ -347,6 +368,17 @@ void EPSDisplay::text(string s) {
   auto emitSeg = [&](string seg) {
     size_t pos = 0;
     while ((pos = seg.find('\\', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
+    // Las ranuras 1..31 (kExtraTextGlyphs) son controles C0: en un literal de
+    // cadena PostScript son legales, pero un 10 o un 13 crudos romperian la
+    // estructura por lineas de la salida. Se emiten en octal.
+    for (pos = 0; pos < seg.size(); pos++) {
+      unsigned char c = (unsigned char)seg[pos];
+      if (c >= 32) continue;
+      char oct[8];
+      snprintf(oct, sizeof oct, "\\%03o", c);
+      seg.replace(pos, 1, oct);
+      pos += 3;
+    }
     pos = 0;
     while ((pos = seg.find('(', pos)) != std::string::npos) { seg.insert(pos, "\\"); pos += 2; }
     pos = 0;

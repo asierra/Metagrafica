@@ -627,6 +627,13 @@ std::string SVGDisplay::renderText(const std::string &s) {
     std::string out;
     for (unsigned char c : s) {
         unsigned int cp = c;  // por defecto: byte como punto de código Latin-1
+        // Ranuras 1..27 (kExtraTextGlyphs, §14.4): son controles C0 que llevan un
+        // carácter de texto fuera de Latin-1. SVG es UTF-8 nativo, así que se
+        // emite su codepoint tal cual — sin codificación intermedia ni pérdida.
+        if (c > 0 && c < 32) {
+            const ExtraGlyph *e = extraGlyphForSlot(c);
+            if (e) cp = e->codepoint;
+        }
         if (symbolic && umap) {
             auto it = umap->find(c);
             if (it != umap->end()) cp = it->second;  // griego/símbolo -> Unicode
