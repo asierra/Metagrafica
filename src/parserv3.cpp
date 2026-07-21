@@ -1546,8 +1546,7 @@ struct PrimStmt : Stmt {
 
     // polyline/polygon/bezier(<PathExpr>): un path del álgebra §9 (§9) como único
     // subtrayecto. El resultado del álgebra es una secuencia plana de puntos.
-    if (pathArg) {
-      if (!isPoly) { evalError("un path solo puede dibujarse con polyline/polygon/bezier"); return; }
+    if (pathArg && isPoly) {
       bool closed = named.count("closed") && named.at("closed")->eval(s).num != 0.0;
       Path path = pathArg->evalPath(s);
       if (doSmooth) path = smoothPath(path);     // smooth(&p): suaviza los nodos de un path del álgebra §9
@@ -1578,7 +1577,14 @@ struct PrimStmt : Stmt {
       for (size_t b : breaks) flush(b);
       flush(coords.size());
     } else {
-      Path path = evalPath(s, 0, coords.size());
+      // Resto de primitivas: el path es la FUENTE DE PUNTOS, venga de un bloque de
+      // coordenadas o de una expresión del álgebra §9 (que es justo eso, una
+      // secuencia de puntos). Cada una los interpreta a su manera —centros para
+      // circle/dot, esquinas para rectangle, topes de barra para polybar— y esa
+      // lectura no depende de cómo se escribieron. Antes esta rama era un error
+      // ("un path solo puede dibujarse con polyline/polygon/bezier"), lo que dejaba
+      // fuera el caso natural de datos generados: `polybar(&hist, width=w)`.
+      Path path = pathArg ? pathArg->evalPath(s) : evalPath(s, 0, coords.size());
       std::unique_ptr<GraphicsItem> item;
       if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
       else if (name == "dot" || name == "marker") {
@@ -2877,7 +2883,13 @@ static StmtPtr parseStatement(Lexer &lx) {
     if (lx.accept(T_LPAREN)) {
       if (startsPathExpr(lx)) {                 // polyline(<PathExpr>): álgebra §9
         st->pathArg = parsePathExpr(lx);
-        if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+        // De dónde sale el path y CÓMO SE DIBUJA son cosas ortogonales, así que tras
+        // la expresión se admiten los mismos args nombrados que en la forma con
+        // bloque: `polybar(&hist, width=w, fill=…)`, `polyline(&p, color="red")`.
+        // Antes se exigía ')' aquí mismo, lo que obligaba a envolver el path en un
+        // bloque solo para poder darle estilo (o a rodearlo con sentencias de estado).
+        if (lx.accept(T_COMMA)) parseArgList(lx, st->pos, st->named);
+        else if (!lx.accept(T_RPAREN)) parseError(lx, "')' o ',' tras la expresión de path");
       } else {
         parseArgList(lx, st->pos, st->named);   // args (Expression)
       }
