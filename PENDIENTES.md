@@ -26,8 +26,10 @@ Es lo único que bloquea salir de beta. **No hay más.**
      explícita, cerrada en `df652d9`). Figura esperando: `figure_02.pdf`. → mayor palanca.
    - [ ] **`table` (§13.10)** — reservado, **sin diseñar** todavía.
 3. **Migrar el texto a UTF-8** (§14.4) — deuda de Latin-1, condición para salir de beta.
-   Orden recomendado (del commit `ec8e695`): **P1 de `plan_lmmath.md`** (símbolos
-   `map_symbol`→LM Math) primero; quitar Latin-1 después "es casi una consecuencia".
+   **P1 y P2 de `plan_lmmath.md` ya están HECHOS** (2026-07-20), que era el orden
+   recomendado: el pipeline ya lleva codepoints Unicode hasta los tres backends para
+   griego, símbolos y latino de math. Falta el **texto corrido**, que es donde vive
+   Latin-1 — según §14.4 "es casi una consecuencia" ahora.
    La técnica ya está en el árbol (`font_lmmath_eps.h` embebe LM Math Type42 en EPS).
 
 ---
@@ -37,7 +39,9 @@ Es lo único que bloquea salir de beta. **No hay más.**
 - [ ] **Texto multilínea §14.1** (`/n` rompe renglón) — especificado, sin implementar.
       Va `/n`, no `\n` (razón medida en `ec8e695`). El motor emite un `Text`/`TextLine`
       por renglón con interlínea derivada de `font_size`.
-- [ ] **Math P2** (`plan_lmmath.md`): latino en modo math → itálica LM Math (hoy Times-Italic).
+- [x] ~~**Math P1 y P2**~~ — CERRADOS 2026-07-20: símbolos y latino de math a LM Math;
+      el font Symbol y el markup `/g` desaparecen. Queda que **dígitos y operadores**
+      de `$…$` sigan en el serif del sistema (en TeX van rectos, del font math).
 - [ ] **Plot Fase 3** (`plan_plot.md`): localizador automático `step`/`decimals`
       (1/2/5·10ᵏ), `format=` con validación, `at=v`, **`title_at=`** (título al extremo
       del eje — hoy obliga a `text()` manuales en fig4-4/fig6-4).

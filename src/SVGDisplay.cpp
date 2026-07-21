@@ -529,8 +529,17 @@ static void appendUTF8(std::string &out, unsigned int cp) {
     } else if (cp < 0x800) {
         out += (char)(0xC0 | (cp >> 6));
         out += (char)(0x80 | (cp & 0x3F));
-    } else {
+    } else if (cp < 0x10000) {
         out += (char)(0xE0 | (cp >> 12));
+        out += (char)(0x80 | ((cp >> 6) & 0x3F));
+        out += (char)(0x80 | (cp & 0x3F));
+    } else {
+        // 4 bytes: el plano de itálica matemática (U+1D434/U+1D44E, P2) está FUERA
+        // del BMP. Sin esta rama, `0xE0 | (cp >> 12)` desbordaba —para U+1D438 daba
+        // 0xFD— y el SVG dejaba de ser UTF-8 válido (lo cazó inkscape: "Input is
+        // not proper UTF-8"). Mismo defecto que tenía el encoder de PDFDisplay.
+        out += (char)(0xF0 | (cp >> 18));
+        out += (char)(0x80 | ((cp >> 12) & 0x3F));
         out += (char)(0x80 | ((cp >> 6) & 0x3F));
         out += (char)(0x80 | (cp & 0x3F));
     }
@@ -593,13 +602,6 @@ static void appendBase64(std::string &out, const unsigned char *data, unsigned i
 // ¿El run FN_TEX_CMMI es griego? (todos sus bytes están en cmmiUnicode, es decir,
 // son glifos del subset LM Math). Los runs griegos son de un carácter; se
 // generaliza por robustez. Cadena vacía = no.
-static bool isCmmiGreekRun(const std::string &s) {
-    if (s.empty()) return false;
-    const std::map<unsigned char, unsigned int> &m = cmmiUnicode();
-    for (unsigned char c : s)
-        if (m.find(c) == m.end()) return false;
-    return true;
-}
 
 // Emite el @font-face con LM Math embebida (base64 data-URI), una sola vez, para
 // que el griego salga en Computer Modern sin recursos externos.
@@ -649,27 +651,32 @@ void SVGDisplay::text(string s) {
     // Para que las letras no salgan reflejadas bajo el scale(1,-1) global,
     // el <text> lleva su propio scale(1,-1) local; por eso "y" se da en
     // negativo, de forma que ese segundo flip lo deje en cur_y.
-    std::string body = renderText(s);
-
     const char *family, *style, *weight;
     svgFontAttrs(dspstate.fontFace, family, style, weight);
 
-    // Griego matemático: si el run FN_TEX_CMMI son glifos del subset (están en
-    // cmmiUnicode), se dibuja con la LM Math embebida en forma RECTA (los glifos
-    // griegos de CM ya son la forma matemática; no aplicar italic evita
-    // faux-italic). El latino de math (bytes ASCII, no en el mapa) sigue en el
-    // serif del sistema itálico. P1 (2026-07-20): FN_SYMBOL toma la misma ruta —
-    // renderText ya traducía sus bytes a Unicode por symbolUnicode(), solo faltaba
-    // pedir la fuente embebida en vez de dejarlos a la del sistema.
-    if (dspstate.fontFace == FN_SYMBOL) {
-        ensureMathFont();
-        family = "'MGMath'";
-        style = "normal";
-    }
-    if (dspstate.fontFace == FN_TEX_CMMI && isCmmiGreekRun(s)) {
-        ensureMathFont();
-        family = "'MGMath'";
-        style = "normal";
+    // Runs math: se parten en SEGMENTOS homogéneos, con el mismo criterio que EPS
+    // y PDF. Un byte que está en la tabla Unicode de su cara (cmmiUnicode para
+    // FN_TEX_CMMI, symbolUnicode para FN_SYMBOL) tiene glifo en el subset de LM
+    // Math y va con la fuente embebida, en forma RECTA (los glifos de CM ya son la
+    // forma matemática; aplicar italic daría faux-italic). Los que no —espacios,
+    // '=', dígitos, paréntesis— caen al serif del sistema.
+    //
+    // Antes bastaba una decisión por RUN (`isCmmiGreekRun`, todo o nada) porque los
+    // runs eran homogéneos por construcción: el latino de math iba a Times-Italic y
+    // nunca compartía run con el griego. Con P2 el latino entró a LM Math y el
+    // default de `$…$` volvió a FN_TEX_CMMI, así que un run ya mezcla ("E = mc":
+    // las letras sí, el " = " no) y hay que partirlo.
+    const std::map<unsigned char, unsigned int> *umap = nullptr;
+    if (dspstate.fontFace == FN_SYMBOL)        umap = &symbolUnicode();
+    else if (dspstate.fontFace == FN_TEX_CMMI) umap = &cmmiUnicode();
+
+    // ⚠️ ensureMathFont() ESCRIBE al archivo (el <defs> con el @font-face), así que
+    // tiene que llamarse ANTES de abrir el <text>: hacerlo dentro del lazo de
+    // tspans metía el bloque <style> en mitad del elemento, y el primer rótulo
+    // salía en pantalla como "@fo…". Se decide aquí, de una pasada.
+    if (umap) {
+      for (unsigned char c : s)
+        if (umap->count(c)) { ensureMathFont(); break; }
     }
 
     char colorBuf[10];
@@ -692,9 +699,23 @@ void SVGDisplay::text(string s) {
     if (rot) fprintf(file, "<g transform=\"rotate(%f, %f, %f)\">\n", ang, cur_x, cur_y);
     fprintf(file,
             "<text x=\"%f\" y=\"%f\" transform=\"scale(1, -1)\" text-anchor=\"%s\" "
-            "fill=\"%s\" font-size=\"%f\" font-family=\"%s\" font-style=\"%s\" "
-            "font-weight=\"%s\">%s</text>\n",
-            cur_x, -cur_y, anchor, colorBuf, size, family, style, weight, body.c_str());
+            "fill=\"%s\" font-size=\"%f\">",
+            cur_x, -cur_y, anchor, colorBuf, size);
+    // Un <tspan> por segmento homogéneo. SIEMPRE al menos uno, aunque no haya nada
+    // que partir: así el nº de tspans es comparable 1:1 con los `show` de EPS y los
+    // `Tj` de PDF, que es el invariante de texto de la Capa 3 del harness.
+    size_t bi = 0, bn = s.size();
+    do {
+      bool math = umap && umap->count((unsigned char)s[bi]) > 0;
+      size_t bj = bi;
+      while (bj < bn && (umap && umap->count((unsigned char)s[bj]) > 0) == math) bj++;
+      const char *fam = family, *sty = style;
+      if (math) { fam = "'MGMath'"; sty = "normal"; }   // el @font-face ya se emitió arriba
+      fprintf(file, "<tspan font-family=\"%s\" font-style=\"%s\" font-weight=\"%s\">%s</tspan>",
+              fam, sty, weight, renderText(s.substr(bi, bj - bi)).c_str());
+      bi = bj;
+    } while (bi < bn);
+    fprintf(file, "</text>\n");
     if (rot) fprintf(file, "</g>\n");
 
     // Avanzar cur_x igual que el "current point" de PostScript tras show, para

@@ -49,9 +49,9 @@ TTF con cmap Unicode → CID TrueType Identity-H).
   descuadres (Omega byte 172 faltaba → ancho 0; mayúsculas apretadas). Verificado: el
   espaciado del griego en SVG coincide con PDF. Latino cmmi sin cambio (ver P2).
 
-## PENDIENTE explícito (ya sabemos cómo hacerlo)
+## CERRADO 2026-07-20 (P1 y P2)
 
-### P1. Migrar los símbolos (`map_symbol`) de Symbol → LM Math
+### P1. Migrar los símbolos (`map_symbol`) de Symbol → LM Math — ✅ HECHO 2026-07-20
 
 Hoy el griego va por `FN_TEX_CMMI` (→ LM Math tras etapa 2) pero los **operadores,
 relaciones, flechas y demás símbolos** de `map_symbol` (`int` ∫, `sum` ∑, `prod` ∏, `leq`
@@ -71,10 +71,43 @@ método:
 
 Al cerrarlo, **Symbol desaparece** de los tres backends y la uniformidad es total.
 
-### P2. Latino en modo matemático → itálica de LM Math
+### P2. Latino en modo matemático → itálica de LM Math — ✅ HECHO 2026-07-20
 
 En `$…$` las letras latinas (`x`, `y`) hoy caen a **Times-Italic** (aprox. de math italic),
 no a cmmi/LM Math. LM Math tiene la itálica matemática en el plano alfanumérico
 (U+1D44E `a` … U+1D467 `z`, U+1D434 `A` …). Para consistencia total: mapear ASCII latino en
 `FN_TEX_CMMI` → ese plano y rendir con LM Math. Requiere ampliar el subset con ~52 glifos y
 la tabla. Menor prioridad (Times-Italic es una aproximación aceptable).
+
+## Cierre de P1 y P2 (2026-07-20)
+
+Subset único de **162 codepoints** (41 griego + 52 latino italico + 69 simbolos),
+sin MATH/GSUB/GPOS. **El font Symbol desaparecio** de los tres backends.
+
+- **EPS necesita DOS fuentes logicas** sobre el mismo Type42: 30 bytes colisionan
+  entre `map_symbol` y `map_tex_cmmi`, o sea que el byte solo no identifica al
+  glifo — lo identifica el par (byte, cara). `/LMMath` (griego + latino) y
+  `/LMMathSym`, derivada con `dup length dict copy` para no duplicar sfnts.
+  Griego y latino NO colisionan, por eso comparten encoding.
+- **El default de `$…$` vuelve a FN_TEX_CMMI.** Habia pasado a FN_TIMES_ITALIC el
+  2026-07-11 porque el latino no estaba en LM Math y un run mixto mandaba el byte
+  griego a Times (= ¢). Con P2 esa razon desaparece.
+- ⚠️ **Hueco de Unicode:** la `h` italica NO esta en U+1D455 (sin asignar); vive en
+  **U+210E**, el signo de la constante de Planck. Unico caso de los 52.
+- ⚠️ **El plano matematico esta FUERA del BMP** → hizo falta UTF-8 de 4 bytes. Los
+  encoders de PDF y de SVG asumian 3 y desbordaban: `0xE0 | (cp>>12)` daba 0xFD
+  para U+1D438, y el SVG dejaba de ser UTF-8 valido. De paso, el de PDF emitia
+  secuencias OVERLONG para el griego (que cabe en 2 bytes).
+- **SVG pasa a `<tspan>` por segmento.** Antes decidia la fuente por RUN
+  (`isCmmiGreekRun`, todo o nada), lo que valia porque los runs eran homogeneos.
+  Con P2 un run mezcla ("E = mc": letras si, " = " no). Se usa tspan porque fluye
+  solo — un `<text>` por segmento obligaria a calcular anchos. El invariante de
+  texto de la Capa 3 pasa a contar **tspans**, y por OCURRENCIAS, no por lineas.
+- ⚠️ `ensureMathFont()` ESCRIBE al archivo, asi que va **antes** de abrir el
+  `<text>`: llamarlo dentro del lazo metia el `<style>` en mitad del elemento y el
+  primer rotulo salia como "@fo…". Lo cazo solo la inspeccion visual — ni el
+  golden, ni `gs`, ni la Capa 3, ni la validacion UTF-8 lo veian.
+
+Queda P3 implicito: los digitos y operadores de `$…$` siguen en el serif del
+sistema. En TeX van rectos y del font matematico; hoy son la unica tipografia
+ajena que queda dentro de una formula.

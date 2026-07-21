@@ -567,8 +567,16 @@ void PDFDisplay::text(string s) {
     } else if (cp < 0x800) {
       u += (char)(0xC0 | (cp >> 6));
       u += (char)(0x80 | (cp & 0x3F));
-    } else {
+    } else if (cp < 0x10000) {
       u += (char)(0xE0 | (cp >> 12));
+      u += (char)(0x80 | ((cp >> 6) & 0x3F));
+      u += (char)(0x80 | (cp & 0x3F));
+    } else {
+      // 4 bytes: el plano de italica matematica (U+1D434/U+1D44E, P2) esta
+      // FUERA del BMP, asi que sin esta rama las letras latinas de math se
+      // truncarian.
+      u += (char)(0xF0 | (cp >> 18));
+      u += (char)(0x80 | ((cp >> 12) & 0x3F));
       u += (char)(0x80 | ((cp >> 6) & 0x3F));
       u += (char)(0x80 | (cp & 0x3F));
     }
@@ -584,6 +592,8 @@ void PDFDisplay::text(string s) {
     segs.push_back({ HPDF_GetFont(pdf, lmmath_face, "UTF-8"), u });
   } else if (dspstate.fontFace == FN_TEX_CMMI) {
     const auto &cu = cmmiUnicode();
+    // cu incluye ahora las letras ASCII (P2), asi que este predicado significa
+    // "esta en LM Math", no solo "es griego".
     auto isGreek = [&](unsigned char c) { return lmmath_face && cu.count(c) > 0; };
     size_t i = 0, n = s.size();
     while (i < n) {

@@ -15,8 +15,13 @@
 #   - Paridad entre backends (c3fail, "Capa 3"): caza bugs PREEXISTENTES que el
 #     golden bendice porque un backend omite algo silenciosamente. Dos invariantes
 #     robustos (cero falsos positivos en el corpus, sin herramientas externas):
-#       (a) TEXTO: nº de operaciones de texto EPS(show) == SVG(<text>) == PDF(Tj) —
-#           caza "rótulos en blanco en PDF/EPS" (bug de FN_NOFACE/current_font);
+#       (a) TEXTO: nº de operaciones de texto EPS(show) == SVG(<tspan>) == PDF(Tj) —
+#           caza "rótulos en blanco en PDF/EPS" (bug de FN_NOFACE/current_font).
+#           La unidad de SVG son los <tspan>, no los <text>: desde P2 (2026-07-20)
+#           un run math se parte en segmentos homogéneos (letras a LM Math, ' = ' al
+#           serif) y SVG los emite como tspans dentro de UN <text> — contar <text>
+#           daría 1 donde EPS emite 3. Además se cuentan OCURRENCIAS, no líneas:
+#           los tspans de un <text> van todos en el mismo renglón.
 #       (b) LÍNEAS RELLENAS: un path SVG de un solo segmento (M..L..) con fill=color
 #           y stroke=none es una línea de área nula = invisible → caza "ejes sin
 #           trazo en PDF/SVG" (fuga de fill del contenido, Lección 6).
@@ -169,7 +174,7 @@ for example in $EXAMPLES; do
         # los operadores (Tj de texto) son grepables directo, igual que EPS/SVG.
         case "$fmt" in
             eps) c3_text_eps=$(grep -cE '\)[[:space:]]*(show|cshow|rshow|ashow)$' "$outfile") ;;
-            svg) c3_text_svg=$(grep -c '<text' "$outfile")
+            svg) c3_text_svg=$(grep -ao '<tspan' "$outfile" | wc -l)
                  c3_filled_lines=$(grep -oE '<path d="M [-0-9.e ]+ L [-0-9.e ]+ " fill="#[0-9a-fA-F]{6}"[^>]*>' "$outfile" | grep -c 'stroke="none"') ;;
             pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile") ;;
         esac

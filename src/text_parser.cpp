@@ -112,8 +112,29 @@ const std::map<unsigned char, unsigned int> &symbolUnicode() {
     static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_symbol);
     return m;
 }
+// P2 (2026-07-20): en modo math las LETRAS LATINAS tambien salen de LM Math, en
+// el plano de italica matematica (U+1D434 A..Z, U+1D44E a..z). Antes caian a
+// Times-Italic, asi que una misma formula mezclaba dos tipografias: la Delta en
+// Computer Modern y la V al lado en Times. Se anaden a cmmiUnicode() en vez de
+// crear otra tabla porque los tres backends ya consultan ESTA para decidir "este
+// byte va a LM Math": al entrar aqui, las letras toman la ruta sola.
+//
+// !! Hueco de Unicode: la h italica NO esta en U+1D455 (posicion sin asignar);
+// vive en U+210E, el signo de la constante de Planck. Es el unico caso.
+static void addMathItalicLatin(std::map<unsigned char, unsigned int> &m) {
+    for (int i = 0; i < 26; i++) {
+        m[(unsigned char)('A' + i)] = 0x1D434 + i;
+        m[(unsigned char)('a' + i)] = 0x1D44E + i;
+    }
+    m[(unsigned char)'h'] = 0x210E;
+}
+
 const std::map<unsigned char, unsigned int> &cmmiUnicode() {
-    static const std::map<unsigned char, unsigned int> m = makeUnicodeMap(map_tex_cmmi);
+    static const std::map<unsigned char, unsigned int> m = [] {
+        auto t = makeUnicodeMap(map_tex_cmmi);
+        addMathItalicLatin(t);
+        return t;
+    }();
     return m;
 }
 
@@ -484,14 +505,16 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       if (!math_mode) {
         textflush();
         tspush();
-        // Cara por DEFECTO del math = itálica (variables latinas: E, W, V…). El
-        // griego entra por \comando como FN_TEX_CMMI en un run AISLADO (add_symbol
-        // hace tspush/flush/tspop), así NO se fusiona con el latino vecino. Antes el
-        // default era FN_TEX_CMMI: "\Delta V" salía como UN run mixto → el byte
-        // griego caía en Times-Italic (=¢) en EPS/PDF, y en SVG el ancho cmmi
-        // descuadraba el subíndice siguiente. Con caras distintas, cada run es
-        // homogéneo (griego→LM Math, latino→Times-Italic) en los tres backends.
-        text_state.font_face = FN_TIMES_ITALIC;
+        // Cara por DEFECTO del math = FN_TEX_CMMI, o sea LM Math (P2, 2026-07-20).
+        //
+        // Historia: era FN_TEX_CMMI, pasó a FN_TIMES_ITALIC el 2026-07-11 y vuelve
+        // ahora. El motivo de aquel cambio era que el LATINO no estaba en LM Math:
+        // un run mixto "\Delta V" mandaba el byte griego a Times-Italic (= ¢) en
+        // EPS/PDF, y en SVG el ancho cmmi descuadraba el subíndice. Con P2 el
+        // latino SÍ está —cmmiUnicode() cubre griego y letras—, así que un run
+        // mixto ya es homogéneo: todo cae en LM Math y no hay nada que partir.
+        // Es lo que hace que una fórmula deje de mezclar dos tipografías.
+        text_state.font_face = FN_TEX_CMMI;
         math_mode = true;
       } else {
         textflush();
