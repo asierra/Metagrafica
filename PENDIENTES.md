@@ -247,13 +247,15 @@ orden de la lista es la ejecución.
       `{ }` no acepta `&path`, la misma divergencia que `place(Struct) { &path }` de §10.1. El
       mensaje («se esperaba una expresión, se encontró `&`») **no orienta** a poner el path
       primero. Dato de ergonomía de superficie: resolver o mejorar el mensaje antes de congelar.
-- [ ] 🐞 **`smooth(&p)` está en la spec §9.2 pero NO funciona** (hallado 2026-07-21 al
-      verificar los ejemplos de la referencia contra el compilador). Como expresión de path,
-      `smooth` solo acepta un bloque literal `smooth { pts }`; `smooth(&otropath)` da «se
-      esperaba '{' de los puntos de smooth». La spec lo lista como forma válida y `smoothPath`
-      existiría para ello. Divergencia spec↔implementación: o se construye (suavizar un path
-      ya nombrado es útil y barato) o se retira de §9.2. `flip_x`/`reverse`/`concat` sí toman
-      `&p`, así que la asimetría es visible.
+- [ ] 🐞 **`smooth(&p)` funciona como PRIMITIVA pero no como EXPRESIÓN de path** (matiz
+      afinado 2026-07-21 al suavizar `parabolic`). `smooth(&parabola)` que DIBUJA compila y
+      suaviza bien (6 curveto, pasa por los nodos); pero `polyline(smooth(&parabola))` y
+      `path s = smooth(&parabola)` fallan con «se esperaba '{' de los puntos de smooth». Es
+      decir: `parsePathExpr` acepta `smooth { pts }` literal pero no `smooth(&otro)`, mientras
+      que la forma-primitiva sí toma `&p`. Sus hermanas de álgebra `flip_x`/`reverse`/`concat`
+      toman `&p` en las DOS posiciones, así que la asimetría se nota. La spec §9.2 lista
+      `smooth(&p)` como expresión válida → divergencia. Barato (la maquinaria existe): unificar
+      para que `smooth` acepte `&p` en ambas posiciones, o retirar la forma-expresión de §9.2.
 - [ ] 🐞 **Un literal de lista no se puede indexar**: `[10,20,30][1]` es error de sintaxis
       («se esperaba un comando… pero se encontró `[`»), y también dentro de un bloque de
       coordenadas. Hay que pasar por una variable (`xs = [10,20,30]` y luego `xs[i]`), que
