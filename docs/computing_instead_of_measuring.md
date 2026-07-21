@@ -28,9 +28,9 @@ script that gets lost.
 
 ## 1. A figure with parameters: Franck-Condon
 
-`examples/franck_condon.mg` draws two Morse potentials with their vibrational levels and
-their wave functions. **Nothing in it is measured.** You give five numbers per electronic
-state and the rest is closed form:
+[`examples/franck_condon.mg`](../examples/franck_condon.mg) draws two Morse potentials with
+their vibrational levels and their wave functions. **Nothing in it is measured.** You give
+five numbers per electronic state and the rest is closed form:
 
 ```text
 a1  = 1.8            % range of the potential
@@ -50,6 +50,17 @@ From those, without anyone placing them:
 | how many bound levels there are | `vmax = 1/(2·xe) − ½` |
 | the amplitude of each lobe | semiclassical WKB envelope, `∝ (E−V)^(−¼)` |
 | how far the wave reaches into the forbidden region | Airy scale, `∝ |V′(turning point)|^(−⅓)` |
+
+This is how a vibrational level is drawn:
+
+```text
+E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
+s = sqrt(E/D1)
+polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+```
+
+The line is drawn **between its own turning points**, computed on the same line from the
+energy. Its endpoints are not coordinates: they are the closed form.
 
 **The proof is changing one number.** Move a single one —the anharmonicity `xe1`, from
 `0.028` to `0.045`— and the whole figure rearranges itself coherently: the well gets
@@ -78,24 +89,31 @@ figure, not being illustrated in it.
 
 ## 2. The physics ties your hands, and that is the advantage
 
-`examples/turning_points.mg` is a well with three energies: one bound state and two unbound.
-You give the asymptotes of the potential, its minimum, the three turning points, the three
-energies and the number of nodes of the bound state; out of those come `V(x)`, the
-wavelengths, the amplitudes and the tails.
+[`examples/turning_points.mg`](../examples/turning_points.mg) is a well with three energies:
+one bound state and two unbound. You give the asymptotes of the potential, its minimum, the
+three turning points, the three energies and the number of nodes of the bound state; out of
+those come `V(x)`, the wavelengths, the amplitudes and the tails.
 
 Two things that only happen when you compute:
 
 **The curve passes through the turning points by construction, not by fitting.** The form
 `V(x) = V∞ − (V∞−Vm)·exp(−|(x−xm)/w|^s)` has two free parameters on each side, and there are
-exactly two conditions to impose on them (that the curve equal `E_b` at one turning point and
-`E_c` at the other). They are solved for. Not fitted: solved. The labelled turning points
-land on the curve because they cannot land anywhere else.
+exactly two conditions to impose on them (that the curve equal `E_b` at one turning point
+and `E_c` at the other). They are solved for. Not fitted: solved. The labelled turning
+points land on the curve because they cannot land anywhere else.
 
 **The three waves are not independent.** The phase constant comes from the Bohr-Sommerfeld
 quantization condition applied to the bound state's wave. Once it is fixed, the other two
-have **no freedom at all**: it is the same particle, so it is the same constant. Changing the
-bound state's node count from 3 to 4 drags all three along —the bound one goes from 3 to 4
-lobes, and the other two from 23 to 30 and from 13 to 16— without touching anything else.
+have **no freedom at all**: it is the same particle, so it is the same constant. Changing
+the bound state's node count from 3 to 4 drags all three along —the bound one goes from 3 to
+4 lobes, and the other two from 23 to 30 and from 13 to 16— without touching anything else.
+
+All of that dependence fits on one line — the one that fixes the phase constant from the
+accumulated action `Sq`:
+
+```text
+C = (nodos+0.5)*pi/Sq
+```
 
 | `nodos = 3` | `nodos = 4` |
 |:---:|:---:|
@@ -111,38 +129,50 @@ consequence, and that is why they cannot contradict each other.
 **That is why this example is not a faithful port of the published figure.** That one was
 drawn by hand, as suited the tools of its time and the purpose of the figure, which is to
 illustrate a concept: the wavelength was chosen region by region, so that each stretch would
-read clearly. Writing it in derived form gives up that freedom —a single constant governs all
-three waves— and so the two versions do not agree: where the bound wave has 4 antinodes,
-quantization calls for something like 24 and 13 lobes for the other two, more than the drawing
-carries. Reproducing the strokes and computing them were different goals; here computing won,
-and that is why the example took a name from the physics (`turning_points`) instead of a
-figure number.
+read clearly. Writing it in derived form gives up that freedom —a single constant governs
+all three waves— and so the two versions do not agree: where the bound wave has 4 antinodes,
+quantization calls for something like 24 and 13 lobes for the other two, more than the
+drawing carries. Reproducing the strokes and computing them were different goals; here
+computing won, and that is why the example took a name from the physics (`turning_points`)
+instead of a figure number.
 
 ---
 
 ## 3. Computing finds things measuring does not
 
-`examples/fig4-4.mg` reproduces three potentials: the harmonic oscillator, the Coulomb one,
-and the effective one with a centrifugal barrier.
+[`examples/fig4-4.mg`](../examples/fig4-4.mg) reproduces three potentials: the harmonic
+oscillator, the Coulomb one, and the effective one with a centrifugal barrier.
 
 ![Three potentials with their classical turning points](img/fig4-4.svg)
 
-In the original version those three curves were **digitized**: 69 points each, measured off a
-drawing. On porting them it turned out the points fit exact analytic forms —`V = x²`,
-`V = 1/r`, `V = 1/(2r²) − 1/r`— to within about `1e-6`. That is: the curves *always were*
-those formulas; what had been preserved was a degraded copy, 69 numbers in place of one line.
+In the original version those three curves were **digitized**: 69 points each, measured off
+a drawing. On porting them it turned out the points fit exact analytic forms —`V = x²`, `V =
+1/r`, `V = 1/(2r²) − 1/r`— to within about `1e-6`. That is: the curves *always were* those
+formulas; what had been preserved was a degraded copy, 69 numbers in place of one line.
+
+The oscillator curve, in full, is this:
+
+```text
+for i = 0 to n-1 {
+    p = -0.92 + i*(1.84/n)
+    q = -0.92 + (i+1)*(1.84/n)
+    polyline { p  p*p   q  q*q }
+}
+```
+
+The `p*p` is `V = x²`. That replaced the 69 points.
 
 Rebuilding them also turned up a detail that faithful reproduction would never have shown.
-The original file placed one of the marks with `DOT 5 011 .3` —a misplaced decimal point that
-sends it to `x = 454`, off the canvas— so that mark was never drawn at all. It is a trifle:
-the figure reads just as well without it, and precisely for that reason it could have stayed
-that way indefinitely. A missing mark leaves no trace.
+The original file placed one of the marks with `DOT 5 011 .3` —a misplaced decimal point
+that sends it to `x = 454`, off the canvas— so that mark was never drawn at all. It is a
+trifle: the figure reads just as well without it, and precisely for that reason it could
+have stayed that way indefinitely. A missing mark leaves no trace.
 
 What matters is not the slip but what it takes to see it. By deriving the positions from the
 physics, the file **knows which marks ought to be there**, and one that fails to appear
-becomes detectable. It is a check that only exists when the figure is computed, and it is the
-kind of safety net MG puts under the author today: the corpus examples are recompiled and
-compared on every change, so a slip like that has somewhere to surface.
+becomes detectable. It is a check that only exists when the figure is computed, and it is
+the kind of safety net MG puts under the author today: the corpus examples are recompiled
+and compared on every change, so a slip like that has somewhere to surface.
 
 ---
 
@@ -151,10 +181,9 @@ compared on every change, so a slip like that has somewhere to surface.
 The case that says the most about all this is a mistake made while writing
 `franck_condon.mg`.
 
-The depth of a Morse well **is not an independent parameter**: the relation
-`D = we/(4·xe)` fixes it from the vibrational frequency and the anharmonicity, which are the
-two quantities a spectrum actually measures. At first `D` was given separately, as if it were
-free.
+The depth of a Morse well **is not an independent parameter**: the relation `D = we/(4·xe)`
+fixes it from the vibrational frequency and the anharmonicity, which are the two quantities
+a spectrum actually measures. At first `D` was given separately, as if it were free.
 
 The result was not an ugly figure. It was a **compile error**:
 
@@ -169,7 +198,8 @@ stopped.
 
 A drawing program would have produced a perfectly presentable figure with levels floating
 above dissociation. And that, incidentally, is the strongest reason why an evaluation error
-in MG is **fatal** rather than a warning: an inconsistent document should not produce output.
+in MG is **fatal** rather than a warning: an inconsistent document should not produce
+output.
 
 ---
 
