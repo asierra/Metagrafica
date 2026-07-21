@@ -35,13 +35,18 @@ double distance(point a, point b)
 }
 
 
+// alpha es el exponente sobre la DISTANCIA (convención de Yuksel et al.):
+// 0 = uniforme, 0.5 = centrípeta, 1 = cordal. Como aquí se parte de la
+// distancia al cuadrado, el exponente aplicado es alpha/2 — sin ese medio,
+// un alpha=0.5 daría cordal (era el defecto: el código no hacía lo que
+// decían su comentario y la spec §9.1).
 void get_spline_coefficients(point p0, point p1, point p2, point p3,
   double alpha,
-  point &c0, point &c1, point &c2, point &c3) 
+  point &c0, point &c1, point &c2, point &c3)
 {
-  double dt0 = powf(distancesq(p0, p1), alpha);
-  double dt1 = powf(distancesq(p1, p2), alpha);
-  double dt2 = powf(distancesq(p2, p3), alpha);
+  double dt0 = powf(distancesq(p0, p1), alpha*0.5);
+  double dt1 = powf(distancesq(p1, p2), alpha*0.5);
+  double dt2 = powf(distancesq(p2, p3), alpha*0.5);
 
   // safety check for repeated points
   if (dt1 < 1e-4f)    dt1 = 1.0f;
@@ -75,7 +80,6 @@ Path splines(Path cp, int intervals) {
 
   int n = cp.size();
   Path::iterator cpit = cp.begin();
-  printf("spline new points %d\n", n*intervals);
   for (int i = 0; i < n-3; i++) {
     Path::iterator it = cpit;
     point p0, p1, p2, p3;
@@ -84,8 +88,9 @@ Path splines(Path cp, int intervals) {
     p2 = *it++;
     p3 = *it++;
     get_spline_coefficients(p0, p1, p2, p3, alpha, c0, c1, c2, c3);
-    //printf("punto p1 %g %g p2 %g %g\n", p1.x, p1.y, p2.x, p2.y);
-    for (int j = 0; j <= intervals; j++) {
+    // El nodo j=0 de cada segmento coincide con el j=intervals del anterior:
+    // solo el primer segmento lo emite (antes se duplicaba en cada unión).
+    for (int j = (i == 0 ? 0 : 1); j <= intervals; j++) {
       double u = (double)j/intervals;
       point p = c0 + u*(c1 + u*(c2 + c3*u));
       outpath.push_back(p);
@@ -104,7 +109,13 @@ Path splines_to_bezier(Path cp) {
 
   int n = cp.size();
   point q0, q1, q2, q3;
-  double conversion_factor=10;
+  // Catmull-Rom UNIFORME → Bézier: los controles interiores caen a un SEXTO
+  // del vector entre los vecinos. No es una constante ajustable: es el límite
+  // d1=d2=d3 de la fórmula no uniforme de get_bezier_tangents, que da
+  // (d²p2 − d²p0 + 6d²p1) / 6d² = p1 + (p2 − p0)/6. Estuvo en 10 hasta
+  // 2026-07-20, lo que aplanaba la curva y la separaba de la que produce
+  // splines() sobre los mismos puntos de control.
+  const double conversion_factor = 6;
   Path::iterator cpit = cp.begin();
   for (int i = 0; i < n-3; i++) {
     Path::iterator it = cpit;
@@ -208,10 +219,26 @@ Path concat_paths(const Path &a, const Path &b) {
 
 void get_bezier_tangents(point p0, point p1, point p2, point p3, point &t1, point &t2)
 {
+  // Parametrización centrípeta (alpha=0.5 sobre la DISTANCIA; el exponente
+  // sobre la distancia al cuadrado es alpha/2 — ver get_spline_coefficients).
+  // Es la que garantiza no formar cúspides ni autointersecciones (Yuksel et
+  // al., citado en el encabezado); es la que documenta §9.2 para smooth.
   double d, alpha = 0.5;
-  double d1 = powf(distancesq(p0, p1), alpha);
-  double d2 = powf(distancesq(p1, p2), alpha);
-  double d3 = powf(distancesq(p2, p3), alpha);
+  double d1 = powf(distancesq(p0, p1), alpha*0.5);
+  double d2 = powf(distancesq(p1, p2), alpha*0.5);
+  double d3 = powf(distancesq(p2, p3), alpha*0.5);
+
+  // Guardas de puntos repetidos: sin ellas un nodo duplicado da distancia 0,
+  // el denominador 3*d1*(d1+d2) se anula y las tangentes salen NaN — que el
+  // backend escribe como "-nan" en el EPS y con código de salida 0. Son las
+  // mismas guardas que get_spline_coefficients siempre tuvo; get_bezier_tangents
+  // se quedó sin ellas (añadidas 2026-07-20). El caso llega solo: los paths V1
+  // de `SP`/`GNBZPATH` DUPLICAN los extremos a propósito (era su convención
+  // para que la curva alcanzara el primer y último punto), así que la primera
+  // traducción literal de una figura V1 los trae.
+  if (d2 < 1e-4)    d2 = 1.0;
+  if (d1 < 1e-4)    d1 = d2;
+  if (d3 < 1e-4)    d3 = d2;
 
   // compute tangents when parameterized in [t1,t2]
   point m = d1*d1*p2 - d2*d2*p0 + (2*d1*d1 + 3*d1*d2 + d2*d2)*p1;

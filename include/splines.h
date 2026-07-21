@@ -18,14 +18,21 @@ Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper.
 #include "primitives.h"
 #include <vector>
 
-/** 
-   From a list of control points, creates a path using Catmull-Rom splines.
+/**
+   SOLO V1 (fuera del build). El comando `spline` se RETIRÓ de V3 el 2026-07-20
+   (spec §9.1): era la misma curva que `smooth` —Catmull-Rom pasa por sus puntos
+   de control— pero descartando los extremos en vez de recuperarlos por reflexión.
+   Las dos funciones de abajo solo las llama `src/Parser.cpp` (front-end V1); en
+   V3 la interpolación suave entra por path_to_bezier().
+
+   splines(): muestrea la curva a `intervals` nodos por segmento. Muestrear
+   produce DATOS, no tinta; si V3 lo necesita algún día será como `sample(&p, n)`
+   del álgebra §9, no como un modo de dibujo.
  */
 Path splines(Path controlpoints, int intervals);
 
-/** 
-   From a list of Catmull-Rom spline control points, creates a set of Bezier control points, 
-   ready to be used in PostScript.
+/**
+   SOLO V1 (ver arriba). Catmull-Rom UNIFORME → controles Bézier.
  */
 Path splines_to_bezier(Path controlpoints);
 
