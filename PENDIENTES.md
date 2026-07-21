@@ -90,9 +90,12 @@ orden de la lista es la ejecución.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
-- [ ] **Texto multilínea §14.1** (`/n` rompe renglón) — especificado, sin implementar.
-      Va `/n`, no `\n` (razón medida en `ec8e695`). El motor emite un `Text`/`TextLine`
-      por renglón con interlínea derivada de `font_size`.
+- [x] ~~**Texto multilínea §14.1**~~ — CERRADO 2026-07-21. `/n` rompe renglón; el motor
+      gana `TextBlock` (`GI_TEXTBLOCK`), que apila renglones ya construidos con interlínea
+      derivada de `font_size`. **En el motor y no en el parser** porque el tamaño de fuente
+      solo existe en draw-time; resolverlo en parse-time habría sido el cuarto bug de la
+      familia `FN_NOFACE`. `valign` aplica al BLOQUE. Cero cambios en los tres backends,
+      cero churn (ok=57). `TextStruct` sigue reservado para composición 2-D o LaTeX.
 - [x] ~~**Math P1 y P2**~~ — CERRADOS 2026-07-20: símbolos y latino de math a LM Math;
       el font Symbol y el markup `/g` desaparecen. Dígitos, operadores y puntuación
       de `$…$` entraron el mismo día (rectos, como en TeX; el `-` es el signo menos

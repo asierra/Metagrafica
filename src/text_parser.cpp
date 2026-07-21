@@ -412,6 +412,9 @@ TextState text_state;
 stack<TextState> tstack;
 std::unique_ptr<Text> text;
 std::unique_ptr<TextLine> text_line;
+// §14.1: solo se crea si aparece un `/n`. Mientras sea null, parse_text devuelve
+// exactamente lo que devolvía antes (Text o TextLine) → cero churn.
+std::unique_ptr<TextBlock> text_block;
 
 
 void tspush() 
@@ -488,6 +491,26 @@ void add_word(string word, FontFace font_face)
   tspop();
 }
 
+// Cierra el renglón en curso y lo mete en el bloque (§14.1). El corte se hace
+// DENTRO del bucle principal, no partiendo la cadena de entrada antes, para que el
+// estado tipográfico —cara, tamaño, math abierto— siga vivo de un renglón al
+// siguiente: `/bTítulo/nsigue en negrita` se comporta como uno espera.
+static void flush_line()
+{
+  if (accum.length() > 0)
+    textflush();
+  if (!text_block)
+    text_block = std::make_unique<TextBlock>();
+  if (text_line) {
+    if (text) text_line->addText(std::move(text));
+    text_block->addLine(std::move(text_line));
+  } else {
+    text_block->addLine(std::move(text));   // un solo chunk, o null si el renglón va vacío
+  }
+  text = nullptr;
+  text_line = nullptr;
+}
+
 std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& using_reencode, bool& using_fontcmmi)
 {
   if (input_utf8.size()==0) {
@@ -497,6 +520,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   FontFace font_face = ff;
   text = nullptr;
   text_line = nullptr;
+  text_block = nullptr;
   text_state = TextState();
   text_state.font_face = font_face;
   // Estos acumuladores son globales de archivo (la máquina de estados no es
@@ -632,6 +656,15 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       }
       break;
     case '/': {
+      // `/n` rompe el renglón (§14.1). Va ANTES de la tabla de estilos porque 'n'
+      // no está en font_style_codes y caería al literal. Se eligió `/n` y no `\n`
+      // porque `\` consume todo lo alfabético que sigue (así se leen `\alpha` y
+      // `\nabla`), así que `\n` sería el símbolo `ndos` en "uno\ndos".
+      if (input[it+1] == 'n') {
+        it++;
+        flush_line();
+        break;
+      }
       std::size_t found = font_style_codes.find(input[it+1]);
       if (found!=std::string::npos) {
         font_face = change_font_face(input[++it], text_state.font_face, using_fontcmmi);
@@ -672,6 +705,12 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   }
   if (accum.length() > 0)
     textflush();
+
+  // Hubo al menos un `/n`: cierra el último renglón y devuelve el bloque.
+  if (text_block) {
+    flush_line();
+    return std::move(text_block);
+  }
 
   // Si nunca se descargó un chunk, text_line es nullptr (p.ej. contenido vacío
   // como `$` o `$$`, solo delimitadores): no hay texto que devolver. Sin esta

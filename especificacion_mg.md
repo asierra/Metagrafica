@@ -1950,15 +1950,36 @@ El contenido del string soporta el siguiente markup, procesado en parse time:
 > preexistente) ni la Capa 3 (sus invariantes cuentan operaciones de texto, **no fuentes**) lo
 > cazaban. Se encontró portando una figura nueva, no auditando.
 
-#### Multilínea — especificado, sin implementar
+#### Multilínea (`/n`)
 
 Un `text()` es hoy **un solo renglón**: `text_parser.cpp` no rompe línea ni tiene interlínea.
 
-**Diseño (decidido 2026-07-16, pendiente de implementar):** **`/n`** rompe el renglón. No es un
+**IMPLEMENTADO 2026-07-21.** **`/n`** rompe el renglón. No es un
 escape del lexer —las cadenas de MG **no** tienen escapes tipo C (§14.1)—: llega a `parse_text`
-como los dos caracteres que es, igual que `/i` o `\alpha`. El motor lo resuelve emitiendo **un
-`Text`/`TextLine` por renglón**, desplazados en vertical; la interlínea sale de `font_size`. Sin
-motor de layout: es apilar renglones, no componer párrafos.
+como los dos caracteres que es, igual que `/i` o `\alpha`. El motor lo resuelve con
+**`TextBlock`** (`GI_TEXTBLOCK`): una lista de renglones ya construidos —cada uno `Text` o
+`TextLine`, que ya saben su ancho y su alineación— más el interlineado, que sale de
+`font_size`. Sin motor de layout: es apilar renglones, no componer párrafos.
+
+**Vive en el motor y no en el parser, y la razón es exportable:** el desplazamiento entre
+renglones es `leading · font_size`, y el tamaño de fuente **solo existe en draw-time** — el
+parser no lleva sombra del estado gráfico, y `font_size` viaja como atributo en el flujo de
+items. Resolverlo en parse-time obligaría a *adivinar* el tamaño heredado, que es exactamente
+lo que produjo los tres bugs de `FN_NOFACE` (cara tras `$…$`, tamaño tras un índice, negrita
+entre celdas de tabla). Un interlineado mal calculado, además, se ve **plausible**: no salta
+como un rótulo en blanco.
+
+**El corte se hace dentro del bucle de `parse_text`**, no partiendo la cadena antes, para que
+el estado tipográfico siga vivo de un renglón al siguiente: `"/bTítulo/nsigue"` sale toda en
+negrita. Un renglón vacío (`"a/n/nb"`) consume interlínea y no dibuja.
+
+**`valign` aplica AL BLOQUE**, no a cada renglón: `middle` centra el conjunto sobre el ancla,
+que es lo que uno espera de un rótulo de dos líneas. Con un solo renglón el desplazamiento es
+cero, así que el comportamiento anterior queda intacto (verificado: los 57 goldens sin mover).
+
+> **`TextStruct` queda RESERVADO** y es otro problema: un bloque **apila** renglones, una
+> estructura los **compone** — fracciones, sumatorios, radicales—, o sirve para insertar
+> trozos de LaTeX. La clase sigue comentada en `text.h`.
 
 > ⚠️ **`\n` NO puede usarse, y conviene saber por qué** (medido 2026-07-16, antes de
 > implementar). `\` **consume todo lo alfabético que sigue** —así se leen `\alpha` y `\nabla`—,

@@ -59,3 +59,13 @@ valign "bottom"
 align "left"
 text("Comillas “inglesas” y ‘simples’, raya — y puntos…") { -4.5 -3.05 }
 text("Viñeta • daga † por mil ‰ marca ™ euro € œuvre") { -4.5 -3.45 }
+
+% Multilinea §14.1: `/n` rompe el renglon. Unica cobertura de TextBlock en el
+% corpus -- sin esta linea, el interlineado y el valign de BLOQUE quedan sin red.
+% Se prueban las tres cosas que solo pasan con varios renglones: el estado
+% tipografico sobrevive al corte (la negrita sigue), un renglon vacio consume
+% interlinea sin dibujar, y `valign` centra el CONJUNTO y no cada linea.
+align "center"
+valign "middle"
+text("/bdos renglones/nen negrita") { -3.2 -1.2 }
+text("con un renglon/n/nvacio en medio") { -3.2 -2.15 }

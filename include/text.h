@@ -144,8 +144,39 @@ private:
 };
 
 
+/**
+   A text block: several lines stacked vertically (§14.1, `/n`).
+
+   Es deliberadamente lo MÁS simple que resuelve el caso: una lista de renglones ya
+   construidos (cada uno Text o TextLine, que ya saben su ancho y su alineación) más
+   el interlineado. No compone nada — apila.
+
+   Vive en el motor y no en el parser por una razón concreta: el desplazamiento entre
+   renglones es `leading · font_size`, y el tamaño de fuente solo existe en DRAW-TIME
+   (el parser no lleva sombra del estado gráfico, y `font_size` viaja como atributo en
+   el flujo de items). Resolverlo en parse-time obligaría a adivinar el tamaño
+   heredado — exactamente la clase de error que produjo los bugs de FN_NOFACE.
+ */
+class TextBlock : public GraphicsItem {
+public:
+  TextBlock() : GraphicsItem(GI_TEXTBLOCK) { }
+
+  void draw(Display &) override;
+
+  /// Un renglón; nullptr = renglón vacío (solo avanza el interlineado).
+  void addLine(std::unique_ptr<GraphicsItem> l) { lines.push_back(std::move(l)); }
+  size_t length() const { return lines.size(); }
+  void setLeading(double f) { leading = f; }
+
+private:
+  std::vector<std::unique_ptr<GraphicsItem>> lines;
+  double leading = 1.2;     ///< múltiplo de font_size entre líneas base
+};
+
+
 /** 
    A text struct uses one or more text lines to show a fraction, sum, product, etc.
+   RESERVADO (ver el comentario de GI_TEXTSTRUCT en primitives.h).
  *
 class TextStruct : public GraphicsItem {public:
   TextStruct() : GraphicsItem(GI_TEXTSTRUCT) { }

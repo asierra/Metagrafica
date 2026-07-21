@@ -512,6 +512,42 @@ void TextLine::draw(Display &g) {
     g.setTextValign(text_valign);   // estado persistente: vale para los text() siguientes
 }
 
+void TextBlock::draw(Display &g) {
+  if (lines.empty()) return;
+
+  // El ancla del bloque: la pluma tal como la dejó el GS_PLUMEPOSITION previo. Se
+  // relee para CADA renglón porque TextLine::draw mueve la pluma (corrimiento de
+  // alineación + avance del texto), así que no se puede encadenar con movimientos
+  // relativos en x.
+  point anchor;
+  g.getPlumePosition(anchor);
+
+  // El interlineado sale del tamaño de fuente VIGENTE, que es la razón de que esto
+  // viva en el motor: en parse-time no se conoce. rmoveto no transforma (va en
+  // unidades de dispositivo), igual que el desplazamiento de sub/superíndices de
+  // TextLine::draw, así que `lead` se usa tal cual.
+  const double lead = leading * g.getFontSize();
+  const std::size_t n = lines.size();
+
+  // valign se aplica AL BLOQUE, no a cada renglón: `middle` centra el conjunto. La
+  // alineación fina dentro de cada renglón la sigue haciendo Text/TextLine con el
+  // valign vigente, que no se toca. Con un solo renglón y0 = 0 → comportamiento
+  // idéntico al de antes (cero churn en todo el corpus).
+  double y0 = 0;
+  switch (g.getTextValign()) {
+    case 2: y0 = lead * (double)(n - 1) / 2.0; break;   // middle
+    case 3: y0 = lead * (double)(n - 1);       break;   // bottom
+    default: break;                                     // baseline / top: 1ª línea en el ancla
+  }
+
+  for (std::size_t i = 0; i < n; i++) {
+    if (!lines[i]) continue;                            // renglón vacío: solo consume interlineado
+    g.moveto_nopath(anchor.x, anchor.y);
+    g.rmoveto(0, y0 - lead * (double)i);
+    lines[i]->draw(g);
+  }
+}
+
 double TextLine::width() {
   double w = 0;
   for (const auto &text : textline) {

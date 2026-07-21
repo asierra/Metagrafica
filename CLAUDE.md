@@ -962,6 +962,41 @@ insertar N bloques hay que anclar cada uno a **su** sección (aquí, el `polybar
 Y un `re.sub` cuyo patrón empieza en `\n` no encuentra bloques ADYACENTES: el primero se
 come el salto que el segundo necesita.
 
+### Cerrado en la sesión del 2026-07-21 (texto multilínea §14.1 — `TextBlock`)
+
+**`/n` rompe el renglón**, con `TextBlock` (`GI_TEXTBLOCK`) nuevo en el motor: una lista de
+renglones ya construidos —cada uno `Text` o `TextLine`, que ya saben su ancho y su
+alineación— más el interlineado. **Cero cambios en los tres backends.** `TextStruct` sigue
+**reservado** y comentado: un bloque *apila*, una estructura *compone* (fracciones,
+sumatorios, radicales, o insertar LaTeX) — otro problema.
+
+💡 **Por qué en el motor y no en el parser** (Alejandro propuso resolverlo en parse-time, y
+la observación de fondo era correcta: multilínea es una lista de `TextLine`, no un
+`TextStruct`). El obstáculo es concreto: el desplazamiento entre renglones es
+`leading · font_size`, y **el tamaño de fuente solo existe en draw-time** —
+`MetaGrafica::getFontSize()` está comentado (`structures.h:213`) y `font_size` viaja como
+`AT_THEIGHT` en el flujo de items, que el parser no sombrea. Resolverlo en parse-time
+obligaría a *adivinar* el tamaño heredado: **el cuarto bug de la familia `FN_NOFACE`**, y del
+peor tipo, porque un interlineado mal calculado se ve **plausible** y no salta como un rótulo
+en blanco.
+
+Detalles que costaron mirar el código antes de escribirlo:
+- **El corte va DENTRO del bucle de `parse_text`**, no partiendo la cadena antes, para que el
+  estado tipográfico siga vivo entre renglones: `"/bTítulo/nsigue"` sale toda en negrita.
+- **`TextLine::draw` mueve la pluma** (corrimiento de alineación + avance), así que no se
+  pueden encadenar renglones con movimientos relativos en x. Se relee el ancla con
+  `getPlumePosition()` en cada uno. ⚠️ Y hay una asimetría que hay que conocer:
+  `moveto_nopath` **transforma** (coords de mundo) y **`rmoveto` NO** (unidades de
+  dispositivo) — que es justo lo que se necesita para bajar `leading·font_size` en pt.
+- **`valign` aplica al BLOQUE**, no a cada renglón (`middle` centra el conjunto). Con un solo
+  renglón el desplazamiento es cero → comportamiento anterior intacto.
+- Un renglón vacío (`"a/n/nb"`) consume interlínea y no dibuja.
+
+**Cobertura:** `texto.mg` gana dos rótulos multilínea (único sitio del corpus que ejercita
+`TextBlock`; sin ellos el interlineado y el valign de bloque quedan sin red). Único golden
+re-bendecido. Verificado antes de tocar nada que **ningún `.mg` usaba `/n` literal**, que era
+el riesgo del cambio de significado.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
