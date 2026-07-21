@@ -90,9 +90,59 @@ struct Lexer {
   }
 };
 
+// Describe el token que el parser tiene DELANTE, para que el error diga no solo
+// qué se esperaba sino qué se encontró. El lexer ya nombraba al culpable
+// («carácter inesperado '@'»); el parser se había quedado atrás, y eso duele
+// justo en el caso más común: una primitiva mal escrita —`polylnie { … }`—
+// señalaba al '{' siguiente sin mencionar nunca la palabra, que es lo único que
+// el autor necesita ver para arreglarla.
+static std::string describeTok(const Tok &t) {
+  switch (t.type) {
+    case T_EOF:        return "el fin del archivo";
+    case T_NEWLINE:    return "un fin de línea";
+    case T_IDENTIFIER: return "'" + t.str + "'";
+    case T_STRING:     return "la cadena \"" + t.str + "\"";
+    case T_NUMBER:   { char b[64]; std::snprintf(b, sizeof b, "el número %g", t.num); return b; }
+    case T_LBRACE:     return "'{'";
+    case T_RBRACE:     return "'}'";
+    case T_LPAREN:     return "'('";
+    case T_RPAREN:     return "')'";
+    case T_LBRACKET:   return "'['";
+    case T_RBRACKET:   return "']'";
+    case T_COMMA:      return "','";
+    case T_SEMICOLON:  return "';'";
+    case T_AMP:        return "'&'";
+    case T_ASSIGN:     return "'='";
+    case T_PLUS:       return "'+'";
+    case T_MINUS:      return "'-'";
+    case T_STAR:       return "'*'";
+    case T_SLASH:      return "'/'";
+    case T_CARET:      return "'^'";
+    case T_EQ:         return "'=='";
+    case T_NE:         return "'!='";
+    case T_LT:         return "'<'";
+    case T_GT:         return "'>'";
+    case T_LE:         return "'<='";
+    case T_GE:         return "'>='";
+    case T_PLUSASSIGN: return "'+='";
+    case T_STRUCT:     return "'struct'";
+    case T_FOR:        return "'for'";
+    case T_TO:         return "'to'";
+    case T_STEP:       return "'step'";
+    case T_IF:         return "'if'";
+    case T_ELSE:       return "'else'";
+    case T_AND:        return "'and'";
+    case T_OR:         return "'or'";
+    case T_NOT:        return "'not'";
+    case T_INCLUDE:    return "'include'";
+    default:           return "otra cosa";
+  }
+}
+
 static void parseError(const Lexer &lx, const char *what) {
   const Tok &t = lx.peek();
-  std::fprintf(stderr, "Error de sintaxis en %d:%d: se esperaba %s\n", t.line, t.col, what);
+  std::fprintf(stderr, "Error de sintaxis en %d:%d: se esperaba %s, pero se encontró %s\n",
+               t.line, t.col, what, describeTok(t).c_str());
   std::exit(1);
 }
 
@@ -115,6 +165,32 @@ static void checkCoordPairs(const Lexer &lx, const std::string &what,
       std::fprintf(stderr, "Error de sintaxis en %d:%d: %s recibió un número impar de "
                    "coordenadas (%zu); van en pares x y\n",
                    t.line, t.col, what.c_str(), end - start);
+      std::exit(1);
+    }
+    start = end;
+  }
+}
+
+// `bezier { … }`: los puntos son de CONTROL y van en grupos de 3k+1 (ancla, dos
+// tiradores, ancla, dos tiradores, …), porque Polyline::draw los agrupa de 3 en 3
+// para emitir cada `curveto`. Un conteo que no cierre se DESCARTABA EN SILENCIO
+// (5 o 6 puntos dibujaban lo mismo que 4), que es el mismo hueco que motivó
+// checkCoordPairs: lo descartado esconde el error de verdad, y la salida sale
+// plausible. Se valida por subtrayecto, en parse-time, antes de evaluar nada.
+// NO aplica a `smooth` (sus puntos son nodos: cualquier cantidad ≥2 vale) ni a
+// la forma `bezier(&path)` (el álgebra §9 preserva la aritmética 3k+1).
+static void checkBezierControlCount(const Lexer &lx, const std::vector<ExprPtr> &coords,
+                                    const std::vector<size_t> &breaks) {
+  size_t start = 0;
+  for (size_t i = 0; i <= breaks.size(); i++) {
+    size_t end = (i < breaks.size()) ? breaks[i] : coords.size();
+    size_t n = (end - start) / 2;                 // nº de puntos del subtrayecto
+    if (n != 0 && (n < 4 || (n - 1) % 3 != 0)) {
+      const Tok &t = lx.peek();
+      std::fprintf(stderr, "Error de sintaxis en %d:%d: bezier recibió %zu puntos de "
+                   "control; van en grupos de 3k+1 (4, 7, 10, …): un ancla inicial más "
+                   "dos tiradores de tangente y un ancla por cada curva\n",
+                   t.line, t.col, n);
       std::exit(1);
     }
     start = end;
@@ -508,7 +584,16 @@ struct StateStmt : Stmt {
       return;
     }
     Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
-    emitStyleAttr(name, v, out);
+    // emitStyleAttr YA devolvía si reconoció el nombre; el retorno se descartaba,
+    // así que una sentencia de estado mal escrita (`colour 0.5`) compilaba, no
+    // hacía nada y NO avisaba: figura plausible pero equivocada, la misma clase
+    // de fallo que motivó checkCoordPairs y la validación 3k+1 de bezier. Es
+    // fatal por el mismo argumento que hizo fatal a evalError: un documento
+    // inválido no debe salir con código 0. Aquí solo llegan los nombres que no
+    // atendieron las ramas de arriba (outlinefill/hatch), así que `false` es
+    // inequívocamente "no lo conozco".
+    if (!emitStyleAttr(name, v, out))
+      evalError("sentencia de estado desconocida: ", name);
   }
 };
 
@@ -828,19 +913,26 @@ struct PathConcat : PathExpr {
 // también por los extremos con tangente natural, y no se degenera la
 // parametrización por distancias (un duplicado daría distancia cero → NaN).
 // (V1: GNBZPATH, que exigía el mismo truco a mano en los datos.)
+// Compartida por las DOS formas de smooth (§9.2): la expresión de path
+// (PathSmooth, para componer con concat/fit) y la primitiva de dibujo
+// (PrimStmt, `smooth { nodos }`), igual que sine tiene ambas.
+static Path smoothPath(const Path &p) {
+  if (p.size() < 2) { evalError("smooth requiere al menos 2 puntos"); return Path(); }
+  size_t n = p.size();
+  Path ext;
+  ext.push_back(point(2 * p[0].x - p[1].x, 2 * p[0].y - p[1].y));
+  for (auto &q : p) ext.push_back(q);
+  ext.push_back(point(2 * p[n-1].x - p[n-2].x, 2 * p[n-1].y - p[n-2].y));
+  return path_to_bezier(ext);
+}
+
 struct PathSmooth : PathExpr {
   std::vector<ExprPtr> coords;                 // pares x y
   Path evalPath(Scope &s) const override {
     Path p;
     for (size_t i = 0; i + 1 < coords.size(); i += 2)
       p.push_back(point(coords[i]->eval(s).num, coords[i + 1]->eval(s).num));
-    if (p.size() < 2) { evalError("smooth requiere al menos 2 puntos"); return Path(); }
-    size_t n = p.size();
-    Path ext;
-    ext.push_back(point(2 * p[0].x - p[1].x, 2 * p[0].y - p[1].y));
-    for (auto &q : p) ext.push_back(q);
-    ext.push_back(point(2 * p[n-1].x - p[n-2].x, 2 * p[n-1].y - p[n-2].y));
-    return path_to_bezier(ext);
+    return smoothPath(p);
   }
 };
 
@@ -1440,7 +1532,17 @@ struct PrimStmt : Stmt {
     if      (name == "polyline") poly = GI_POLYLINE;
     else if (name == "polygon")  poly = GI_POLYGON;
     else if (name == "bezier")   poly = GI_BEZIER;   // path = p0 c1 c2 p1 [c1 c2 p2…]; Polyline::draw agrupa de 3 en 3 → curveto
+    else if (name == "smooth")   poly = GI_BEZIER;   // §9.2: mismo item que bezier, pero el bloque son NODOS y las tangentes las deriva el compilador
     else isPoly = false;
+    // `smooth { nodos }` como primitiva de dibujo (§9.2), hermana de `bezier`.
+    // La diferencia es de quién calcula las tangentes: en `bezier` el bloque son
+    // puntos de CONTROL y el autor las pone (puede hacer picos, tiradores
+    // asimétricos — es estrictamente más expresivo); en `smooth` el bloque son
+    // NODOS y el compilador emite los controles, garantizando que la curva pase
+    // por todos y empalme sin picos. Antes solo existía la forma de expresión de
+    // path, así que dibujar exigía `bezier(smooth { … })`, que filtraba el
+    // detalle de que smooth produce puntos de control.
+    const bool doSmooth = (name == "smooth");
 
     // polyline/polygon/bezier(<PathExpr>): un path del álgebra §9 (§9) como único
     // subtrayecto. El resultado del álgebra es una secuencia plana de puntos.
@@ -1448,6 +1550,7 @@ struct PrimStmt : Stmt {
       if (!isPoly) { evalError("un path solo puede dibujarse con polyline/polygon/bezier"); return; }
       bool closed = named.count("closed") && named.at("closed")->eval(s).num != 0.0;
       Path path = pathArg->evalPath(s);
+      if (doSmooth) path = smoothPath(path);     // smooth(&p): suaviza los nodos de un path del álgebra §9
       if (!path.empty()) {
         if (wantMarkers) markerPaths.push_back(path);
         auto p = std::make_unique<Polyline>(poly);
@@ -1464,6 +1567,7 @@ struct PrimStmt : Stmt {
       auto flush = [&](size_t end) {
         Path path = evalPath(s, start, end);
         start = end;
+        if (doSmooth && !path.empty()) path = smoothPath(path);  // cada subtrayecto ';' se suaviza por separado
         if (path.empty()) return;
         if (wantMarkers) markerPaths.push_back(path);
         auto p = std::make_unique<Polyline>(poly);
@@ -2640,7 +2744,7 @@ static int transformOp(const std::string &n) {
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
          n == "dot" || n == "marker" || n == "arc" || n == "ellipse" || n == "bezier" ||
-         n == "polybar";
+         n == "polybar" || n == "smooth";   // smooth: primitiva §9.2 Y expresión de path (como sine)
 }
 
 static StmtPtr parseBlock(Lexer &);        // adelantadas (mutuamente recursivas)
@@ -2732,6 +2836,7 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (t.type == T_INCLUDE) return parseInclude(lx);   // include "archivo.mg" (§15)
   if (t.type != T_IDENTIFIER) parseError(lx, "un comando, asignación, struct o '{'");
   std::string name = t.str;
+  const int nameLine = t.line, nameCol = t.col;   // para señalar AL NOMBRE, no a lo que le sigue
 
   if (lx.peek(1).type == T_ASSIGN) {          // asignación: ID = Expr
     lx.next(); lx.next();
@@ -2784,6 +2889,7 @@ static StmtPtr parseStatement(Lexer &lx) {
         st->coords.push_back(parseTerm(lx));
       }
       checkCoordPairs(lx, name, st->coords, st->breaks);
+      if (name == "bezier") checkBezierControlCount(lx, st->coords, st->breaks);
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
     return st;
@@ -2904,6 +3010,18 @@ static StmtPtr parseStatement(Lexer &lx) {
       SArg a; parseArg(a); st->args.push_back(std::move(a));
     }
   } else {
+    // Un '{' NO puede ser el argumento de una sentencia de estado (todas toman
+    // número o cadena), así que el identificador no era un comando: el caso
+    // típico es una PRIMITIVA MAL ESCRITA, `polylnie { … }`. Sin esta rama el
+    // error señalaba al '{' pidiendo "una expresión" y no nombraba nunca la
+    // palabra, que es lo único que hay que corregir. Se apunta a la posición del
+    // NOMBRE, no a la del '{'. `outlinefill { … }` sí es legítimo (0 args +
+    // bloque), por eso la comprobación vive en esta rama y no antes.
+    if (lx.peek().type == T_LBRACE) {
+      std::fprintf(stderr, "Error de sintaxis en %d:%d: '%s' no es un comando conocido "
+                   "(¿primitiva mal escrita?)\n", nameLine, nameCol, name.c_str());
+      std::exit(1);
+    }
     SArg a; parseArg(a); st->args.push_back(std::move(a));           // 1er arg (obligatorio)
     if (name == "hatch" && (lx.peek().type == T_NUMBER || lx.peek().type == T_MINUS)) {
       SArg g; parseArg(g); st->args.push_back(std::move(g));         // hatch: paso opcional

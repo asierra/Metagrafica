@@ -82,7 +82,8 @@ V1 es **orientado a líneas / tokens**, no estructurado por bloques. Reglas:
 
 - **Comentarios**: líneas o restos que empiezan con `%`.
 - **Directivas**: `$D w h` (dimensiones cm), `$P n` (tamaño de fuente base),
-  `$S ...` (spline mode), `$O ...` (trigger de marcadores). Empiezan con `$`.
+  `$S ...` (modo de spline; **se descarta** — retirado de V3, §9.1),
+  `$O ...` (trigger de marcadores). Empiezan con `$`.
 - **Comandos**: token en MAYÚSCULAS (`PL`, `BR`, `CR`, `LWIDTH`, `TSTYLE`, …)
   seguido de sus argumentos. Cada comando tiene **aridad conocida** (fija) o un
   **bloque de coordenadas** terminado en `}`.
@@ -155,7 +156,7 @@ CONVERSIONES NUMÉRICAS (marcadas ⚠) son las que hay que respetar al pie.
 | `EL rx ry : … }` | `ellipse(rx, ry) { … }` |
 | `DOT s pts… }` / `DOT s &path` | `dot(r) { pts… }`  ⚠ **s = tamaño físico (1er arg)**; V1 `DOT 3` ≈ V3 `dot(0.75)` (fig6-10, factor ~0.25) — calibrar contra el oráculo. `DOT s &dots` (dispersar sobre un path generado) → un `for` con `dot()` por punto (ver §6.4) |
 | `BZ p0 c1 c2 p1 … }` | `bezier { … }` |
-| `SP … }` | `spline { … }` |
+| `SP … }` | `smooth { … }` — mapeo 1:1 (`smooth` es primitiva de dibujo desde el 2026-07-20, §9.2; antes habría hecho falta envolver en `bezier(…)`). `spline` se **retiró** de V3 (§9.1: misma curva que `smooth`, con peores extremos). ⚠️ **Hay que quitar el duplicado de los extremos**: `SP` consumía el primer y último punto como ayudas de tangente, así que los `.mg` V1 los **repiten a propósito** (`fig4-8.mg`: `-1.3 4.9` y `2.3 4.4` dos veces). `smooth` extiende por reflexión, de modo que el duplicado sobra y deja un segmento degenerado de longitud cero en cada punta. Regla general: **colapsar puntos consecutivos repetidos** al traducir `SP`. ⚠️ Si el V1 no traía `$S`, su `SP` renderizaba una **polilínea muestreada** (4 nodos/segmento, el default), no una bézier: la versión V3 sale *más suave* que el original, no idéntica |
 | `DT texto` | `text("texto")` (en la pluma) |
 | `XYDT x y texto` | `text("texto") { x y }` |
 

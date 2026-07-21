@@ -95,7 +95,6 @@ Locus       ::= PointList | "&" ID
 
 PathExpr    ::= "{" PointList "}"                % path literal
               | "bezier"  "{" PointList "}"
-              | "spline"  ["(" ArgList ")"] "{" PointList "}"
               | "smooth"  "{" PointList "}"
               | "trail"   "(" ArgList ")"
               | "tile"    "(" "&" ID "," "times" "=" NUMBER ")"
@@ -106,6 +105,7 @@ PathExpr    ::= "{" PointList "}"                % path literal
 
 PrimName    ::= "polyline" | "polygon" | "circle" | "rectangle"
               | "arc" | "ellipse" | "dot" | "marker" | "polybar" | "sine" | "bezier"
+              | "smooth"        % sine y smooth son también expresiones de path (§9)
 
 ParamList   ::= Param ("," Param)*
 Param       ::= ID ["=" Expression]              % parámetros con default, p. ej. size=0.2
@@ -201,7 +201,7 @@ Los atributos de estilo se pasan como argumentos nombrados. Los argumentos posic
 
 **Regla de coordenadas.** Las coordenadas de posición van **siempre en el bloque `{ }`**, nunca en los paréntesis. La regla no tiene excepciones, incluido el texto: `text("etiqueta") { x y }` coloca la cadena igual que `circle(r) { x y }` coloca un círculo (§4.8). El paréntesis lleva *contenido y atributos* (qué se dibuja y con qué estilo); el bloque lleva *dónde* (uno o varios puntos). De esa ortogonalidad sale gratis la siembra múltiple: `circle(0.2) { 0 0  5 5 }` traza dos círculos y `text("×") { 0 0  5 5 }` estampa la misma etiqueta en dos puntos.
 
-**Subtrayectos (`;`).** Dentro del bloque de una primitiva de trazo (`polyline`, `polygon`, `bezier`, `spline`), un `;` separa **subtrayectos disjuntos**: `polyline { a b ; c d }` dibuja dos trazos independientes con el mismo estilo, sin conectarlos —evita repetir la primitiva cuando varios trazos comparten estilo. En `polygon` cada subtrayecto se cierra y rellena por separado; para un relleno **combinado con huecos** (regla par-impar) se usa `compound` (§9.4), no `;`.
+**Subtrayectos (`;`).** Dentro del bloque de una primitiva de trazo (`polyline`, `polygon`, `bezier`, `smooth`), un `;` separa **subtrayectos disjuntos**: `polyline { a b ; c d }` dibuja dos trazos independientes con el mismo estilo, sin conectarlos —evita repetir la primitiva cuando varios trazos comparten estilo. En `polygon` cada subtrayecto se cierra y rellena por separado; para un relleno **combinado con huecos** (regla par-impar) se usa `compound` (§9.4), no `;`.
 
 **Coordenadas con expresiones.** Una coordenada del bloque puede ser una expresión, pero de nivel **`Term`** (§2): número, variable, `func(...)`, `a*b`, `a^b`, con `-` unario inicial. Como las coordenadas van **separadas por espacio**, un `-` **siempre inicia una coordenada nueva** (negada), no una resta binaria: `{ -0.2 -0.5 }` son dos puntos, no `-0.7`. Para **sumar o restar** dentro de una coordenada, se usan paréntesis: `{ (x+0.1) y }`.
 
@@ -912,7 +912,7 @@ path_height(&p)             % reservado
 path_x_bounds(&p, at_y=E)   % reservado
 ```
 
-Exacto cuando el path es monótono en x (los extremos son entonces los puntos inicial y final, que sí están sobre la curva); sobre una Bézier genuinamente curva en esa zona, opera sobre el polígono de **control**, no sobre la curva — misma advertencia que `getXBoundsAtY` (motor, `splines.cpp`), el otro miembro de la familia.
+Exacto cuando el path es monótono en x (los extremos son entonces los puntos inicial y final, que sí están sobre la curva); sobre una Bézier genuinamente curva en esa zona, opera sobre el polígono de **control**, no sobre la curva — misma advertencia que `path_x_bounds_at_y` (motor, `splines.cpp`), el otro miembro de la familia.
 
 ---
 
@@ -950,7 +950,7 @@ bezier(&sinpi)
 
 **Empalme en `concat` y `tile` (semántica de unión).** Al construir un path a partir de varios, cada operando subsiguiente se **traslada** para que su primer punto continúe desde el último punto del path acumulado. Este empalme automático es lo que permite armar una curva larga a partir de segmentos definidos en un dominio canónico (p. ej. los medios periodos seno/coseno de una biblioteca de curvas).
 
-- **`join=true` (default).** Traslada cada pieza para pegar su inicio al final de la anterior. Es continuidad **C0** (de posición): la **tangente no se ajusta**, así que para uniones suaves los segmentos deben estar diseñados para encontrarse (como las Bézier de seno/coseno) o se usa `smooth`/`spline` (§9.1–9.2) sobre los nodos combinados. `tile` siempre empalma así (repetir sin empalmar solo produciría copias superpuestas).
+- **`join=true` (default).** Traslada cada pieza para pegar su inicio al final de la anterior. Es continuidad **C0** (de posición): la **tangente no se ajusta**, así que para uniones suaves los segmentos deben estar diseñados para encontrarse (como las Bézier de seno/coseno) o se usa `smooth` (§9.2) sobre los nodos combinados. `tile` siempre empalma así (repetir sin empalmar solo produciría copias superpuestas).
 - **`join=false`.** Concatena las coordenadas **tal cual**, sin trasladar. Útil cuando los paths ya están posicionados en coordenadas absolutas y solo se quiere unir sus listas de puntos.
 - **Sin auto-reversión.** El empalme pega el *inicio* de cada operando al final del anterior. Si un segmento debe recorrerse al revés, se envuelve explícitamente en `reverse(&seg)` (evita heurísticas de dirección frágiles).
 - **Variádico.** `concat(&a, &b, &c, …)` une la secuencia en orden. Para tamaños distintos por segmento, se transforma cada operando antes (p. ej. con `fitrect`); `concat` solo une, no escala.
@@ -972,20 +972,37 @@ path w += &plana
 
 *(V1: `CTPT`/`RPPT` con la matriz `PT` y `SCPT` entre appends. La traslación de empalme la hacía el motor —`concat_paths`— pero asumía que el frente de cada segmento estaba en x=0 (precondición no documentada, corregida 2026-07-06 para alinear en ambos ejes). La continuidad C1 en las uniones queda como posible extensión futura, p. ej. `join="smooth"`.)*
 
-### 9.1 spline con control de nodos
+### 9.1 spline — RETIRADA (2026-07-20)
 
-`spline` interpola una curva suave a través de los puntos de control. Su comportamiento se ajusta con argumentos nombrados:
+`spline` estuvo reservada aquí con tres modos (`nodes=n`, `mode="bezier"`,
+`mode="conic"`). **No se construye**, y sus dos huecos históricos se cierran.
 
-```text
-path c = spline { 0 0  2 3  5 1  8 4 }              % Catmull-Rom centrípeto (default)
-path c = spline(nodes=8) { 0 0  2 3  5 1  8 4 }     % 8 nodos interpolados por segmento
-path c = spline(mode="bezier") { 0 0  2 3  5 1  8 4 } % convierte a curva Bézier equivalente
-```
+**`spline` es `smooth` con otro nombre.** Catmull-Rom *pasa por* sus puntos de
+control, así que la distinción que esta sección afirmaba —"en `spline` los puntos
+son de control, en `smooth` son nodos"— no existe en la geometría. Las dos rutas del
+motor (`splines_to_bezier` y `path_to_bezier`, ambas en `splines.cpp`) calculan la
+misma curva; `smooth` (§9.2) es la mejor de las dos, porque recupera los extremos por
+reflexión en vez de descartarlos. Un segundo nombre para la misma curva es justo el
+problema de nomenclatura que §13.0 corrigió en los ejes.
 
-- Default: spline cúbico Catmull-Rom centrípeto.
-- `nodes=n` (n>1): puntos interpolados por segmento; más nodos = curva más suave, más datos.
-- `mode="bezier"`: convierte los puntos de control a una curva Bézier (menos datos, recomendado para la salida). *(V1: `$S 0`.)*
-- `mode="conic"`: reservado, aún no soportado. *(V1: `$S 1`.)*
+**Las cónicas no se soportan, y no se pierde nada.** Una Bézier cuadrática es un
+subconjunto *exacto* de la cúbica por elevación de grado (`c1 = q0 + ⅔(q−q0)`,
+`c2 = q2 + ⅔(q−q2)`): cualquier cónica se emite sin pérdida por la ruta que ya existe.
+Sus dos ventajas de 1988 —evaluación barata en Pascal/ensamblador y cónicas
+*racionales* para círculos exactos— ya no aplican: la salida es EPS/PDF/SVG (los tres
+hablan cúbica nativa) y MG tiene arcos y elipses reales (§4.3).
+
+*(Historia: `$S 1` figura en el comentario de `Parser.cpp` pero **nunca se implementó**
+—el `switch` solo atiende `n==0` y `n>1`—, así que las cónicas no sobrevivieron al paso
+a EPS de 1991. Ni `SP` ni `$S` aparecen una sola vez en el corpus V1 congelado: en 25
+años y tres libros publicados el comando no se usó nunca. La sección se conserva
+numerada para no mover las referencias a §9.2 y siguientes.)*
+
+**Lo que sí quedó pendiente de aquí** es el muestreo (`nodes=n`), que no es una forma de
+*trazar* una curva sino de convertirla en *datos*: tiene clientes reales en `place` sobre
+path (§10.1), `path_width` (§8.2) y `path_x_bounds_at_y`, que hoy operan sobre el polígono
+de control y no sobre la curva. Su lugar sería una operación `sample(&p, n)` del álgebra
+§9, no un modo de `spline`. Espera a la figura que lo pida.
 
 ### 9.2 smooth — Bézier suave a través de puntos
 
@@ -993,7 +1010,19 @@ path c = spline(mode="bezier") { 0 0  2 3  5 1  8 4 } % convierte a curva Bézie
 path s = smooth { 0 0  2 3  5 1  8 4 }
 ```
 
-Ajusta segmentos Bézier que pasan **exactamente** por los puntos dados, calculando las tangentes automáticamente. A diferencia de `spline` (donde los puntos son de *control*), aquí los puntos son *nodos* por los que la curva pasa. *(V1: `GNBZPATH name path`.)*
+Ajusta segmentos Bézier que pasan **exactamente** por los puntos dados, calculando las tangentes automáticamente: los puntos son *nodos* por los que la curva pasa, no puntos de control que la atraigan. Es la **única** forma de interpolación suave del lenguaje —`spline` se retiró por ser la misma curva con otro nombre (§9.1). La parametrización es **centrípeta** (Yuksel et al.), la que garantiza no formar cúspides ni autointersecciones. *(V1: `GNBZPATH name path`.)*
+
+**Dos formas, como `sine` (§4.13).** `smooth` es a la vez expresión de path (arriba, para componer con `concat`/`fit`/`reverse`) y **primitiva de dibujo**:
+
+```text
+smooth { 0 0  2 3  5 1  8 4 }                      % dibuja
+smooth(color="red", line_width=0.8) { 0 0  2 3 … } % con atributos §7.5
+smooth(&nodos)                                     % suaviza un path del álgebra §9
+```
+
+**`smooth` y `bezier` son primitivas hermanas, y la diferencia es de quién calcula las tangentes.** En `bezier` el bloque son puntos de **control**: el autor las pone, y por eso puede hacer cosas que `smooth` no —un pico deliberado, tangentes discontinuas, tiradores asimétricos—; es estrictamente más expresiva. En `smooth` el bloque son **nodos** y el compilador emite los controles, garantizando a cambio que la curva pase por todos y empalme sin picos. Un `;` abre subtrayecto (§4) y cada uno se suaviza por separado.
+
+*(Antes de 2026-07-20 solo existía la forma de expresión, así que dibujar exigía `bezier(smooth { … })` — que filtraba al documento el detalle de que `smooth` produce puntos de control. La forma primitiva la pidió el port de la Fig. del prob. ilustr. 3.2 de IMQ, que la necesitaba cuatro veces.)*
 
 **Implementado (2026-07-18)** como expresión de path (§9). El motor (`path_to_bezier`) consume primer y último punto como ayudas de tangente; `smooth` extiende los extremos por **reflexión** (`p0′ = 2·p0 − p1`) para que la curva pase también por ellos con tangente natural — el dup manual que exigía `GNBZPATH` ya no hace falta (y duplicar daría distancia cero → NaN en la parametrización).
 
@@ -2025,7 +2054,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 
 ## 18. Controles del compilador y misceláneos
 
-- **Espacio y tamaño base** — `display_size`, `world_window` (§3) y `spline(mode=...)` (§9.1). *(V1: `$D`, `WW`, `$S`.)*
+- **Espacio y tamaño base** — `display_size`, `world_window` (§3). *(V1: `$D`, `WW`; el `$S` de modo de spline se retiró, §9.1.)*
 - **Terminar el parseo** — `exit` detiene el procesamiento del archivo en ese punto; el resto se ignora. Útil para depurar. Es un control de parse-time: **no** sirve como condición de paro de una recursión (para eso, `if`, §8.1). *(V1: `EXIT`.)*
 - **Salida implícita** — el nombre del archivo de salida se deriva del de entrada (`figura.mg` → `figura.eps`). El backend se selecciona por la extensión del archivo de salida (`.eps`, `.pdf`, `.svg`). *(V1: igual.)*
 - **Caracteres acentuados** — para usar caracteres no-ASCII (á, ñ, …) con las fuentes PostScript estándar, V3 activa automáticamente la recodificación del vector de codificación cuando el texto los contiene. *(V1: bandera interna `reencode`.)*
@@ -2057,7 +2086,8 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 | **Texto bajo `transform`** | ⚠️ Abierto | Deseado: que el texto rote/escale con los `transform` activos (EPS lo permite). Falta definir si se transforma solo el punto de anclaje o también los glifos |
 | **`rectangle` bajo rotación/shear** | ✓ Resuelto | `rectangle` es forma transformable como SVG (§4.4): se transforman las 4 esquinas. **Implementado** en los tres backends —`EPSDisplay::rect` y `PDFDisplay::rect` emiten el path de 4 esquinas (trazo/relleno + clip de tramado); SVG ya lo hacía. Verificado: rotado coincide con SVG, no-rotado idéntico; goldens EPS re-bendecidos (ok=18) |
 | **Espaciado uniforme en `place` sobre path** | ⚠️ Abierto | Extender `gap=` a paths: instancias cada *n* unidades de longitud de arco, no solo en los puntos del path (§10.1) |
-| **Splines cuadráticos (cónicas)** | ⚠️ Abierto | `spline(mode="conic")` reservado en §9.1; V1 lo contemplaba (`$S 1`). Decidir si se soporta nativo (QuadTo en SVG) o por conversión a cúbico |
+| **Splines cuadráticos (cónicas)** | ✓ Resuelto | **Retiradas** (2026-07-20, §9.1): la cuadrática es subconjunto exacto de la cúbica por elevación de grado, así que no hay nada que ganar en la salida; los tres backends hablan cúbica nativa y los círculos exactos ya los da `arc`/`ellipse` (§4.3). `$S 1` nunca se implementó en V1 y no se usó en 25 años |
+| **`spline` como comando** | ✓ Resuelto | **Retirado** (2026-07-20, §9.1): era la misma curva que `smooth` (§9.2) con otro nombre. Del modo `nodes=n` sobrevive la idea de un `sample(&p, n)` del álgebra §9 —muestrear es producir *datos*, no *tinta*—, pendiente de una figura que lo pida |
 | **Graficar datos: azúcar `plot { }`** | ✅ Hecho | `plot(x=, y=, box=, xscale=, yscale=, grid=) { contenido + xaxis/yaxis }` (§13.7, 2026-07-15): lineal (matriz envolvente) + log (mapeo puntual); ejes que heredan rango, con `base=` para el cruce; fig2-3, fig6-4 y fig4-5 (3 paneles) portadas. `axis` maduro (`scale="log"`, `minor`, `strip_zero`, `extend`, estilo por-eje). Pendiente Fase 3: `step`/`decimals` automáticos, `format`, `at=v`; `title_at=` (título al extremo del eje). `edge=` suelto diferido (necesita §16) |
 | **Modelo de iteración unificado (`for` vs `repeat` vs generadores)** | ◇ Prospectivo | Los tres constructos dedicados están justificados por un núcleo *irreducible* a un `for` + pluma: `repeat` con `transform` **acumulado** (§17), `place` por **longitud de arco** sobre path (§10), y el **formateo numérico** de `numbers`/`ticks` (`by`/`decimals`, §13). Su parte *reducible* (el `repeat` sin acumulación, el mero recorrido de `ticks`) podría especificarse como azúcar sobre `for`. **fig4-10 y rpstest ya traducidas confirmaron los tres constructos**; el "reset de pluma" (G3 de `rpstest`) se disolvió con `repeat` autocontenido (`at`/`advance` en la llamada, §17). La unificación como azúcar sobre `for` queda como refinamiento opcional, no bloqueante |
 | **Tamaño de texto relativo (tipo TeX)** | ◇ Prospectivo | `font_size` es absoluto (pt), un solo keyword en documento y bloque (§7.3). Un segundo eje `text_size` como **factor** relativo a la base (efectivo = `font_size × text_size`) se pospone hasta que existan calificadores nombrados que lo aprovechen; el corpus usa tamaños absolutos sin ratios redondos |
@@ -2122,7 +2152,7 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `EL` | `ellipse(rx,ry)` | ✓ | §4.9 |
 | `DOT` | `dot` | ✓ | §4.6 |
 | `BZ` | `bezier` | ✓ | §4.7 |
-| `SP` | `spline` | ✓ | §9.1 |
+| `SP` | `smooth` | ✓ | §9.2 (`spline` retirada, §9.1) |
 | `LWIDTH` | `line_width=` (pt; `w×0.2`, `0`→`0.1`) | ✓ | §4.10 |
 | `LPATRN` | `dash=` (alias; `1`→`"solid"` como `0`) | ✓ | §4.10 |
 | `LSTYLE` | — | ✗ | bug V1 (mapea a `line_width`), se descarta |
@@ -2184,7 +2214,7 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 |---|---|---|---|
 | `$D` | `display_size` | ✓ | §3 |
 | `$P` | tamaño base de texto | ✓ | §3 / §14 |
-| `$S` | `spline(mode=, nodes=)` | ✓ | §9.1 |
+| `$S` | — (retirado; `smooth` no tiene modos) | ✓ | §9.1 |
 | `WW` | `world_window` (global y anidado) | ✓ | §3 / §16 |
 | `INPUT` | `include` | ✓ | §15 |
 | `EXIT` | `exit` | ✓ | §18 |
