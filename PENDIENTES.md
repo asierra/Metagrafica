@@ -173,10 +173,15 @@ orden de la lista es la ejecución.
           (`point p = c0 + u*(c1+u*(c2+c3*u))`, Horner) — pero en base **Catmull-Rom**, no
           la **Bernstein** que necesita un bezier de §9. Falta `bezier_point(p0,c1,c2,p1,t)`,
           ~6 líneas (De Casteljau).
-        - `path_point(path, t)` con `t` GLOBAL sobre el path multisegmento: necesita
-          **longitud de arco** para que `t=0.5` sea la mitad GEOMÉTRICA y no la mitad de los
-          segmentos (que es lo que espera `point 0.5 of p` y lo que hace MetaPost). Teselar,
-          acumular longitudes, interpolar: ~40 líneas.
+        - `path_point(path, t)` con `t` GLOBAL sobre el path multisegmento: **la longitud
+          de arco NO es opcional**, decidido con un spike (2026-07-21). En una curva de
+          segmentos DESIGUALES —el caso de casa: `fig4-4` muestrea `1/r` denso en la rodilla,
+          las ψ de `franck_condon` tienen lóbulos desiguales— `t=0.5` naive (reparto por
+          segmento) cae a **2.9 unidades** del medio geométrico, y encima *sobre la curva*
+          (error plausible, el que no salta). En segmentos parejos las dos coinciden exacto.
+          O sea: el naive funcionaría en las demos y fallaría en el material real → descarta
+          «añadir arc-length después». Costo acotado: teselar+acumular, ~40 líneas, y **MG ya
+          tesela para dibujar** — se reutiliza la teselación para MEDIR, no se inventa nada.
         - ⚠️ **La decisión, no el código:** un `polyline` guarda VÉRTICES (rectas) y un
           `bezier` guarda CONTROLES (de tres en tres), y el path como valor de §9 **no lleva
           esa etiqueta** —es la misma `Path`—. `sample` tiene que saber cuál mira. Es el
