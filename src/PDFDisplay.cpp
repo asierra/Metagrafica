@@ -510,6 +510,9 @@ void PDFDisplay::setFontFace(FontFace face) {
   case FN_TIMES_ITALIC:      fname = "Times-Italic";         break;
   case FN_TIMES_ROMAN_BOLD:  fname = "Times-Bold";           break;
   case FN_TIMES_ITALIC_BOLD: fname = "Times-BoldItalic";     break;
+  // FN_SYMBOL: los glifos salen de LM Math por la ruta UTF-8 en text() (P1). Esto
+  // es solo el RESPALDO degradado: si el subset vendorizado no cargó (aviso en
+  // start()), al menos sale algo con el Symbol base-14 en vez de nada.
   case FN_SYMBOL:            fname = "Symbol";  encoding = nullptr; break;
   case FN_TEX_CMMI:
     // Base latina del math itálico; el griego se resuelve por Unicode en text().
@@ -547,10 +550,39 @@ void PDFDisplay::text(string s) {
   // itálico. Un run puede MEZCLAR ambos (p.ej. "\Delta V"): se parte en segmentos
   // homogéneos, cada uno con su fuente, para que el byte griego no caiga en
   // Times-Italic (= ¢) ni el ASCII en LM Math (= .notdef). Igual criterio que EPS/SVG.
-  // (Los símbolos de map_symbol siguen en Symbol; pendiente P1 del plan.)
+  // P1 (2026-07-20): FN_SYMBOL toma la MISMA ruta. Sus bytes salen todos de
+  // map_symbol, así que no hay mezcla que partir: se traducen enteros por
+  // symbolUnicode() y se dibujan con LM Math.
   struct Seg { HPDF_Font font; string txt; };
   std::vector<Seg> segs;
-  if (dspstate.fontFace == FN_TEX_CMMI) {
+  // UTF-8 correcto para cualquier codepoint del BMP. Antes se emitían SIEMPRE
+  // 3 bytes: para el griego (U+0391..U+03F5, que cabe en 2) eso produce
+  // secuencias OVERLONG —inválidas en UTF-8 estricto, aunque libharu las
+  // aceptaba—, y con los símbolos habría llegado hasta U+003A. Se corrige de
+  // paso; el griego cambia de bytes pero no de píxeles (verificado).
+  auto utf8 = [](unsigned int cp) {
+    string u;
+    if (cp < 0x80) {
+      u += (char)cp;
+    } else if (cp < 0x800) {
+      u += (char)(0xC0 | (cp >> 6));
+      u += (char)(0x80 | (cp & 0x3F));
+    } else {
+      u += (char)(0xE0 | (cp >> 12));
+      u += (char)(0x80 | ((cp >> 6) & 0x3F));
+      u += (char)(0x80 | (cp & 0x3F));
+    }
+    return u;
+  };
+  if (dspstate.fontFace == FN_SYMBOL && lmmath_face) {
+    const auto &su = symbolUnicode();
+    string u;
+    for (unsigned char c : s) {
+      auto it = su.find(c);
+      u += it != su.end() ? utf8(it->second) : string(1, (char)c);
+    }
+    segs.push_back({ HPDF_GetFont(pdf, lmmath_face, "UTF-8"), u });
+  } else if (dspstate.fontFace == FN_TEX_CMMI) {
     const auto &cu = cmmiUnicode();
     auto isGreek = [&](unsigned char c) { return lmmath_face && cu.count(c) > 0; };
     size_t i = 0, n = s.size();
@@ -559,13 +591,9 @@ void PDFDisplay::text(string s) {
       size_t j = i;
       while (j < n && isGreek((unsigned char)s[j]) == greek) j++;
       if (greek) {
-        string u;                          // UTF-8 de cada codepoint griego (U+0800..U+FFFF)
-        for (size_t k = i; k < j; k++) {
-          unsigned int cp = cu.at((unsigned char)s[k]);
-          u += (char)(0xE0 | (cp >> 12));
-          u += (char)(0x80 | ((cp >> 6) & 0x3F));
-          u += (char)(0x80 | (cp & 0x3F));
-        }
+        string u;                          // UTF-8 de cada codepoint griego
+        for (size_t k = i; k < j; k++)
+          u += utf8(cu.at((unsigned char)s[k]));
         segs.push_back({ HPDF_GetFont(pdf, lmmath_face, "UTF-8"), u });
       } else {
         segs.push_back({ HPDF_GetFont(pdf, "Times-Italic", "WinAnsiEncoding"), s.substr(i, j - i) });

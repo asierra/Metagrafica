@@ -1815,7 +1815,7 @@ El contenido del string soporta el siguiente markup, procesado en parse time:
 > de caras compone por OR de bits (`FN_ITALIC=1`, `FN_BOLD=2`), pero el centinela "hereda la cara
 > ambiente" es **`FN_NOFACE = -1`**, que ya tiene *todos* los bits prendidos: `-1 | FN_ITALIC` es
 > `-1`, así que **`/i` y `/b` se tragaban en silencio** sobre una cara heredada. Solo afecta a los
-> modificadores de BIT; `/r`, `/g`, `/s`, `/c`, `/$` **asignan** una cara y nunca lo tuvieron.
+> modificadores de BIT; `/r`, `/s`, `/c`, `/$` **asignan** una cara y nunca lo tuvieron.
 >
 > Con `FN_NOFACE` solo llegan los textos que heredan cara: los rótulos de `axis`/`numbers`/`grid`
 > (§13). Por eso se escondió tanto — `fig6-4` usa `/i` en su nombre de eje y funciona, porque va
@@ -1908,9 +1908,17 @@ El prefijo `/` seguido de un código cambia la fuente para el resto del string (
 | `/i` o `/e` | Times Italic |
 | `/b` | negrita (combina con la fuente actual) |
 | `/s` | Sans-serif (Helvetica) |
-| `/g` | Symbol (letras griegas en posición estándar) |
+| ~~`/g`~~ | **RETIRADO** (2026-07-20) — era Symbol con el griego en las posiciones de las letras |
 | `/c` o `/t` | Courier |
 | `/$` | CMMI (math italic) |
+
+**`/g` se retiró** al migrar los símbolos a Latin Modern Math (P1, 2026-07-20). Existía de
+cuando Symbol era la única fuente disponible: fijaba esa cara y mandaba **bytes crudos**,
+contando con su codificación completa —griego en las posiciones de las letras, y de paso sus
+dígitos y signos—. La vía canónica del griego es TeX, `\lambda`, que **nombra** el glifo en
+vez de codificarlo en una posición de byte, y funciona igual en los tres backends. Al quitarlo,
+`FN_SYMBOL` solo se alcanza por `\comando` y el font Symbol desaparece del lenguaje. Un `/g`
+en un documento viejo cae al aviso `font face style unknown`.
 
 ```text
 text("/bTítulo en negrita") { 2 5 }

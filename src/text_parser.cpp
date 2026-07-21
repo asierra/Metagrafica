@@ -217,9 +217,15 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool
     else
       font_face = FN_SERIF_ITALIC;
     break;
-  case 'g':
-    font_face = FN_SYMBOL;
-    break;
+  // `/g` (griego en las posiciones del font Symbol) RETIRADO en P1 (2026-07-20).
+  // Era de cuando Symbol era la única fuente disponible: mandaba bytes crudos y
+  // esperaba la codificación completa de Symbol (griego en las letras, y de paso
+  // sus dígitos y signos). Con LM Math la vía canónica del griego es TeX,
+  // `\lambda`, que además nombra el glifo en vez de codificarlo en una posición
+  // de byte. Al quitarlo, FN_SYMBOL solo se alcanza por `\comando` y basta con
+  // codificar los 69 símbolos: el font Symbol desaparece del lenguaje.
+  // Cae al `default`, que ya avisa "font face style unknown".
+
   case 'r': 
     font_face = FN_TIMES_ROMAN;
     break;
@@ -279,6 +285,10 @@ unsigned char get_symbol_code(string symbol_name, FontFace &font_face, bool& usi
   } else if (map_symbol.find(symbol_name) != map_symbol.end()) {  
     symbol_code = map_symbol[symbol_name];
     font_face = FN_SYMBOL;
+    // Desde P1 (2026-07-20) los símbolos también salen de LM Math, así que piden
+    // la misma fuente embebida que el griego. La bandera pasó a significar "este
+    // documento necesita LM Math", no "usa cmmi" (su nombre se quedó atrás).
+    using_fontcmmi = true;
   } else {
     //fprintf(stderr, "Warning: symbol name unknown %s\n", symbol_name.c_str());
     symbol_code = 0;

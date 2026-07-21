@@ -658,7 +658,14 @@ void SVGDisplay::text(string s) {
     // cmmiUnicode), se dibuja con la LM Math embebida en forma RECTA (los glifos
     // griegos de CM ya son la forma matemática; no aplicar italic evita
     // faux-italic). El latino de math (bytes ASCII, no en el mapa) sigue en el
-    // serif del sistema itálico; FN_SYMBOL sin cambios (pendiente P1).
+    // serif del sistema itálico. P1 (2026-07-20): FN_SYMBOL toma la misma ruta —
+    // renderText ya traducía sus bytes a Unicode por symbolUnicode(), solo faltaba
+    // pedir la fuente embebida en vez de dejarlos a la del sistema.
+    if (dspstate.fontFace == FN_SYMBOL) {
+        ensureMathFont();
+        family = "'MGMath'";
+        style = "normal";
+    }
     if (dspstate.fontFace == FN_TEX_CMMI && isCmmiGreekRun(s)) {
         ensureMathFont();
         family = "'MGMath'";

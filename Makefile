@@ -41,8 +41,15 @@ $(SRCDIR)/lexmg.cpp: $(SRCDIR)/mgpp.l
 $(SRCDIR)/lexv3.cpp: $(SRCDIR)/lexer.l
 	flex -o $@ $<
 
+# -MMD -MP: el compilador escribe obj/X.d con los headers de los que depende X.cpp,
+# y esos .d se incluyen abajo. Sin esto la regla no tenía NINGUNA dependencia de
+# header, así que tocar include/ no recompilaba nada: es lo que ya había pasado con
+# version.h (parcheado a mano solo en el enlace de bin/mg, ver abajo) y volvió a
+# morder el 2026-07-20 al regenerar las fuentes vendorizadas —los tres backends
+# siguieron con la fuente vieja y el golden pasaba midiendo un binario rancio—.
+# -MP añade targets falsos para que borrar un header no rompa el build.
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
-	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) -MMD -MP $< -o $@
 
 $(OBJDIR)/haru/%.o: $(HARUDIR)/src/%.c | $(OBJDIR)/haru
 	$(CC) -c $(HARU_CFLAGS) $< -o $@
@@ -90,23 +97,8 @@ uninstall:
 
 clean:
 	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp $(SRCDIR)/lexv3.cpp
-# DO NOT DELETE
-
-$(OBJDIR)/Display.o: $(INCDIR)/Display.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
-$(OBJDIR)/EPSDisplay.o: $(INCDIR)/EPSDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
-$(OBJDIR)/EPSDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/font_cmmi.h $(INCDIR)/structures.h
-$(OBJDIR)/PDFDisplay.o: $(INCDIR)/PDFDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
-$(OBJDIR)/PDFDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
-$(OBJDIR)/SVGDisplay.o: $(INCDIR)/SVGDisplay.h $(INCDIR)/Display.h $(INCDIR)/primitives.h
-$(OBJDIR)/SVGDisplay.o: $(INCDIR)/matrix.h $(INCDIR)/text.h $(INCDIR)/structures.h
-$(OBJDIR)/lexmg.o: $(INCDIR)/mgpp_tab.h
-# (obj/main.o no existe: main.cpp se compila en la regla de bin/mg, arriba.)
-$(OBJDIR)/matrix.o: $(INCDIR)/matrix.h
-$(OBJDIR)/Parser.o: $(INCDIR)/Parser.h $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h
-$(OBJDIR)/Parser.o: $(INCDIR)/matrix.h $(INCDIR)/mgpp_tab.h $(INCDIR)/text_parser.h $(INCDIR)/splines.h
-$(OBJDIR)/primitives.o: $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/Display.h $(INCDIR)/text.h
-$(OBJDIR)/splines.o: $(INCDIR)/splines.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
-$(OBJDIR)/structure.o: $(INCDIR)/structures.h $(INCDIR)/text.h $(INCDIR)/primitives.h
-$(OBJDIR)/structure.o: $(INCDIR)/matrix.h $(INCDIR)/Display.h
-$(OBJDIR)/text.o: $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h $(INCDIR)/Display.h
-$(OBJDIR)/text_parser.o: $(INCDIR)/text.h $(INCDIR)/primitives.h $(INCDIR)/matrix.h
+# Dependencias de headers: AUTOMÁTICAS (los obj/*.d que genera -MMD, ver arriba).
+# Sustituyen a la lista que mantenía `makedepend` aquí abajo, que se había podrido:
+# decía que EPSDisplay.o depende de font_cmmi.h y NO de font_lmmath_eps.h, que es
+# posterior. Una lista de dependencias a mano solo es correcta el día que se genera.
+-include $(OBJS:.o=.d)

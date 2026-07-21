@@ -173,8 +173,9 @@ void EPSDisplay::start() {
   if (flags.using_reencode)
     fprintf(file, "%s", ps_reencode);
   if (flags.using_fontcmmi) {
-    // Type42 de Latin Modern Math (subset), con /Encoding a las posiciones de
-    // byte de map_tex_cmmi → griego CM idéntico a PDF/SVG (§14, plan_lmmath.md).
+    // Type42 de Latin Modern Math (subset). Define DOS fuentes lógicas: /LMMath
+    // (bytes de map_tex_cmmi, griego) y /LMMathSym (bytes de map_symbol) → griego
+    // y símbolos CM idénticos a PDF/SVG (§14, plan_lmmath.md P1).
     fprintf(file, "%s", font_lmmath_eps.c_str());
   }
   // Semilla mundo→dispositivo (§3.1): isométrica por default, en la base.
@@ -427,7 +428,11 @@ void EPSDisplay::setFontFace(FontFace face) {
     font = prefix+"Times-Italic-Bold";
     break;
   case FN_SYMBOL:
-    font = "/Symbol";
+    // §14/P1: los símbolos salen de LM Math, no del Symbol base-14. Es la segunda
+    // fuente lógica del mismo Type42 (font_lmmath_eps.h): mismo programa de glifos,
+    // /Encoding en las posiciones de byte de map_symbol. Hacen falta las dos porque
+    // 30 bytes colisionan con las de map_tex_cmmi.
+    font = "/LMMathSym";
     break;
   case FN_TEX_CMMI:
     font = "/LMMath";

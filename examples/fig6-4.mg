@@ -58,4 +58,4 @@ plot(x=(0.30,0.50), y=(1e-20,1e5), yscale="log", box=(0,0, 6,5)) {
 % Nombre del eje y: mobiliario de página, NO una anotación de datos — va horizontal
 % y arriba (estilo del libro), y `label=` lo rotaría a lo largo del eje. Se queda en
 % coords de ventana, fuera del plot.
-text("${/gl^-1} (/rs)$") { -0.83 5.5 }
+text("$\lambda^{-1} (/rs)$") { -0.83 5.5 }
