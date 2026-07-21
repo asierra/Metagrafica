@@ -574,6 +574,13 @@ void PDFDisplay::text(string s) {
   // paso; el griego cambia de bytes pero no de píxeles (verificado).
   auto utf8 = [](unsigned int cp) {
     string u;
+    // libharu no puede con el plano suplementario: HPDF_UNICODE es de 16 bits y su
+    // decodificador convierte en ESPACIO todo lo que pase de U+FFFF. Las letras
+    // latinas de math (U+1D434..U+1D467) se piden por su ALIAS en la zona de uso
+    // privado, que el subset vendorizado mapea al mismo glifo (font_lmmath_ttf.h).
+    // Es lo que hacia que en PDF faltaran las letras de las formulas mientras el
+    // griego y los digitos salian bien: esos caben en el BMP.
+    if (cp >= 0x1D434 && cp <= 0x1D467) cp = 0xE000 + (cp - 0x1D434);
     if (cp < 0x80) {
       u += (char)cp;
     } else if (cp < 0x800) {

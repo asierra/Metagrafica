@@ -102,6 +102,10 @@ Es lo único que bloquea salir de beta. **No hay más.**
 - [ ] **#5** — el detector "línea rellena" de la Capa 3 depende del orden de atributos del
       SVG (`d="…" fill="…"`); si SVGDisplay reordena, el gate deja de cazar en silencio.
 - [ ] **#6** — `parsePlot` sobrescribe un 2º `xaxis`/`yaxis` sin avisar.
+- [ ] **Barrer los demás `compound` con arcos** comparando los tres backends a 300 dpi
+      (gs / pdftoppm / inkscape). El bug de `fig2-1` —el arco abría subpath en PDF y el
+      cierre del recorte tapaba el orificio— era de esa familia, y ninguna compuerta lo
+      veía. Sospecha: cualquier figura que mezcle trazo y arco en un mismo path.
 
 ---
 

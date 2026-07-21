@@ -126,3 +126,27 @@ agrupadores, puntuacion y el espacio; el subset sube a 186 codepoints.
   maximo que el estandar OBLIGA a soportar. Los literales ADYACENTES no valen —
   C++ los concatena en uno solo y el limite aplica al total—; hay que guardar
   trozos y unirlos en tiempo de ejecucion.
+
+### Alias PUA para PDF (2026-07-20, mismo dia)
+
+🐞 **En PDF faltaban las letras latinas de las formulas** —quickstart, fig6-4,
+turning_points— mientras griegas y digitos salian bien. EPS y SVG, correctos.
+
+Causa: **libharu no puede con el plano suplementario.** `HPDF_UNICODE` es
+`HPDF_UINT16` y su decodificador UTF-8 hace `if (val > 65535) val = 32;`
+("Convert everything outside UCS-2 to space", `hpdf_encoder_utf.c`); ademas su
+rama de 4 bytes olvida enmascarar el segundo con `0x3f`, asi que para U+1D434
+devuelve 0x9D434. Es limitacion de diseno, no descuido: el tipo es de 16 bits.
+El latino de math (U+1D434..U+1D467) es lo UNICO fuera del BMP — de ahi que el
+griego (2 bytes) y los digitos (1) no se enteraran.
+
+Solucion **por nuestro lado**, sin tocar codigo vendorizado: el subset lleva
+ALIAS en la zona de uso privado (U+E000+n) apuntando a los mismos glifos, y
+`PDFDisplay` traduce al pedirlos. SVG sigue emitiendo los codepoints reales y EPS
+va por nombre de glifo, asi que ninguno se entera.
+
+⚠️ **Los alias hay que ponerlos en la subtabla de FORMATO 4**, no solo en la 12.
+Un `for c in astral: t.cmap[alias]=t.cmap[c]` solo toca las tablas que YA tienen
+el codepoint astral —las de formato 12—, y libharu lee la (3,1) de formato 4.
+El primer intento emitia los codigos correctos (`E004`, `E031` en los `Tj`) y aun
+asi no pintaba nada, justo por eso.
