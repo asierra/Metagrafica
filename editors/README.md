@@ -65,6 +65,30 @@ así que este resaltador llega más lejos que el de Geany:
   (`\"[^\"]*\"`) en `src/lexer.l`: un `"` sin pareja tiñe hacia abajo, que es
   exactamente el error que se quiere ver.
 
+## GitHub — `.gitattributes`
+
+```
+*.mg linguist-language=MATLAB
+```
+
+GitHub no colorea `.mg` por su cuenta, y **no admite listas de palabras clave
+propias**: `linguist-language` solo permite pedir prestado el resaltador entero de
+otro lenguaje. Eso lo hace un problema DISTINTO al de Geany, y por eso la respuesta
+también es distinta —no es un descuido que no coincidan—:
+
+- En **Geany**, Erlang es un *anfitrión*: el lexer aporta los comentarios `%` y las
+  dos listas, y **el vocabulario de MG lo ponemos nosotros**. El beneficio es grande.
+- En **GitHub** no hay dónde poner ese vocabulario, así que del lenguaje prestado solo
+  quedan sus reglas de comentario y de número. Y ahí Erlang **rompe los decimales**:
+  `0.028` se lexa como `0` y `028`, porque en Erlang el punto termina una sentencia.
+  No es un detalle: el corpus tiene ~1300 decimales.
+
+MATLAB da los mismos comentarios `%` con los decimales intactos y `for` como palabra
+clave (medido con Pygments sobre el corpus: 20/20 decimales enteros y cero errores de
+lexado, frente a 0/20 de Erlang y de TeX). Los bloques de código MG en los `.md` del
+proyecto van etiquetados `matlab` por lo mismo, para que documento y archivo enlazado
+se vean igual.
+
 ## Mantenimiento
 
 Al añadir una primitiva, generador o función al parser, hay que tocar **las
