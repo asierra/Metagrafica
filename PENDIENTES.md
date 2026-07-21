@@ -123,6 +123,25 @@ orden de la lista es la ejecución.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
+- [ ] 💡 **Anclas con nombre** (`"a la mitad de esa línea"`) — el hallazgo del banco de
+      comparación con CeTZ (`local/karl.mg`, trabajo interno). Es **lo más rentable que
+      tienen ellos y nosotros no**: CeTZ y TikZ nombran una línea y luego colocan texto en
+      `50%` de ella, o piden la intersección de una vertical con una horizontal
+      (`((), "|-", (0,0))`). En MG hay que **recalcular los extremos a mano** — en la
+      figura de Karl eso fue precalcular `ca`/`sa`/`ta` y deducir cada punto.
+      **Es la disyuntiva de MetaPost** —derivar la fórmula frente a declarar la relación—
+      y MG eligió la primera a propósito (`docs/calcular_en_vez_de_medir.md`), así que
+      esto NO es una carencia obvia: es una decisión que conviene tomar **antes de
+      congelar** (condición 1), no después. Medido: en Karl las dos versiones empatan en
+      tamaño (40 vs 41 líneas de código), y CeTZ compensa su verbosidad por llamada
+      justamente con estos mecanismos.
+- [ ] 🐞 **Un literal de lista no se puede indexar**: `[10,20,30][1]` es error de sintaxis
+      («se esperaba un comando… pero se encontró `[`»), y también dentro de un bloque de
+      coordenadas. Hay que pasar por una variable (`xs = [10,20,30]` y luego `xs[i]`), que
+      sí funciona, igual que el índice fuera de rango, que da error claro. Puede haber una
+      razón real (ambigüedad con el bloque de coordenadas), pero **el mensaje no orienta**:
+      no nombra las listas. O se permite, o el error lo dice.
+
 - [x] ~~**Figura que ejercite `smooth` §9.2**~~ — CERRADO 2026-07-20: `examples/turning_points.mg`
       lo usa dos veces, y `smooth` ganó forma de primitiva.
       (`spline` y las cónicas se **retiraron** el mismo día, ver §9.1.)
