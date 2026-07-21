@@ -38,9 +38,19 @@ static void int2rgb(int c, double &r, double &g, double &b) {
   Funciona para cualquier dirección (barrido positivo = CCW, negativo = CW)
   y para elipses con rx != ry.
 */
+// continuePath: si YA hay un path abierto, el arco se une a el con un LineTo en
+// vez de abrir un subpath nuevo con MoveTo. Es la semantica del operador `arc` de
+// PostScript, que EPS hereda gratis y aqui hay que reproducir a mano porque PDF no
+// tiene arcos (se aproximan con beziers).
+//
+// No es cosmetico: en un `compound` (§9.4) el ClosePath del recorte cierra el
+// ULTIMO subpath. Con el arco separado, cerraba el arco por su propio hueco — en
+// fig2-1 eso tapaba con una recta la entrada del cuerpo negro, que es justo el
+// hueco que la figura ilustra. Con el arco unido, el cierre va del final del arco
+// al inicio de la polilinea, como en EPS.
 static void arc_bezier(HPDF_Page page,
                        double cx, double cy, double rx, double ry,
-                       double startDeg, double endDeg) {
+                       double startDeg, double endDeg, bool continuePath = false) {
   const double PI = (double)M_PI;
   double startRad = startDeg * PI / 180.0f;
   double endRad   = endDeg   * PI / 180.0f;
@@ -56,7 +66,8 @@ static void arc_bezier(HPDF_Page page,
   double curAngle = startRad;
   double x0 = cx + rx * cos(curAngle);
   double y0 = cy + ry * sin(curAngle);
-  HPDF_Page_MoveTo(page, x0, y0);
+  if (continuePath) HPDF_Page_LineTo(page, x0, y0);
+  else              HPDF_Page_MoveTo(page, x0, y0);
 
   for (int i = 0; i < numSegs; i++) {
     double nextAngle = curAngle + segSweep;
@@ -400,6 +411,7 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
 void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
   double sa = startAng, ea = endAng;
+  const bool continuePath = dspstate.openpath;   // antes de que prepareDraw lo cambie
   mt.transform(x, y);
   // Radios por norma de columna: círculo se conserva bajo isometría+rotación;
   // sin forzado w=h (compensación V1).
@@ -425,7 +437,7 @@ void PDFDisplay::arc(double x, double y, double w, double h,
     prepareDraw();
   } else
     adjust_limits(x - aw, y - ah, x + aw, y + ah);
-  arc_bezier(page, x, y, aw, ah, sa, ea);
+  arc_bezier(page, x, y, aw, ah, sa, ea, continuePath);
   stroke();
 }
 
