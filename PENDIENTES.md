@@ -123,18 +123,65 @@ orden de la lista es la ejecución.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] 💡 **Anclas con nombre** (`"a la mitad de esa línea"`) — el hallazgo del banco de
-      comparación con CeTZ (`local/karl.mg`, trabajo interno). Es **lo más rentable que
-      tienen ellos y nosotros no**: CeTZ y TikZ nombran una línea y luego colocan texto en
-      `50%` de ella, o piden la intersección de una vertical con una horizontal
-      (`((), "|-", (0,0))`). En MG hay que **recalcular los extremos a mano** — en la
-      figura de Karl eso fue precalcular `ca`/`sa`/`ta` y deducir cada punto.
-      **Es la disyuntiva de MetaPost** —derivar la fórmula frente a declarar la relación—
-      y MG eligió la primera a propósito (`docs/calcular_en_vez_de_medir.md`), así que
-      esto NO es una carencia obvia: es una decisión que conviene tomar **antes de
-      congelar** (condición 1), no después. Medido: en Karl las dos versiones empatan en
-      tamaño (40 vs 41 líneas de código), y CeTZ compensa su verbosidad por llamada
-      justamente con estos mecanismos.
+- [ ] 💡 **La familia de operaciones sobre paths §9** — el hallazgo de comparar con CeTZ y
+      MetaPost (`local/karl.mg`, trabajo interno). MetaPost tiene un juego **coherente**:
+      `point t of p`, `direction t of p`, `p intersectionpoint q`, `subpath`,
+      `cutbefore`/`cutafter`. MG tiene tres funciones ad-hoc con nombre **provisional**
+      (`path_width`, `path_x_min_at_y`, `path_x_max_at_y`) más `sample(&p,n)` reservado.
+      - ⚠️ **Y explica por qué dos de ellas están SIN USO en el corpus** (se commitearon
+        aparte para poder revertirlas): `path_x_*_at_y` es **un caso particular** de
+        `intersectionpoint` (path ∩ recta horizontal). Se construyó el caso especial donde
+        MetaPost tiene la operación general, y por eso no encontró usuarios.
+      - **Absorbe el problema de las "anclas con nombre"** de CeTZ/TikZ («texto a la mitad
+        de esa línea»): `point 0.5 of p` lo resuelve **sin sistema de nombres ni
+        referencias entre objetos** — es una operación sobre un valor, que es como MG ya
+        trata los paths en §9. Es la forma correcta del nivel, y es más barata.
+      - Decidir la forma de la familia **antes de congelar** (condición 1); los nombres
+        provisionales no deberían congelarse tal cual.
+- [ ] **Tangente declarada en un nodo (`{dir 30}`, `tension`) §9** — el término medio que
+      MG no tiene: `bezier` te hace poner los tiradores y `smooth` los deriva todos.
+      MetaPost deja decir «pasa por este nodo **saliendo a 30°**», que es justo lo que se
+      quiere cuando una curva debe empalmar con una recta en un ángulo dado —
+      `franck_condon` lo resuelve hoy eligiendo `phase=90/270` a mano. Falta figura que lo
+      exija, pero la candidata está cerca.
+- [ ] **Algoritmo de Hobby para `smooth` §9.2** — es el que usa el `..` de MetaPost y la
+      referencia de «curva agradable»; MG usa Catmull-Rom centrípeto (parametrización
+      corregida el 2026-07-20). No urge y no está roto: es la comparación honesta si
+      alguna vez se cuestiona la calidad de `smooth`.
+- [ ] **Simplificación de curvas: de muchos puntos a un spline sencillo.** Dado un conjunto
+      grande de puntos —los **69 digitalizados por curva** de `fig4-4` son el caso de
+      casa— reducirlo a pocos segmentos bézier. Candidato: **SimpliPoly** (Chuon, Guha,
+      Janecek & Song, *Int. J. Comput. Geom. Appl.* 21(4), 2011; PDF en el Dropbox del
+      autor). Aproxima trozos con bézier, estima la **curvatura** en los vértices a partir
+      de esas aproximaciones, y simplifica guiado por curvatura — mejor que Douglas-Peucker
+      «en aplicaciones donde hay que preservar rasgos locales», que es exactamente el caso
+      de una curva de física (la rodilla de `1/r`, el mínimo del potencial efectivo).
+      - **Decidir si es método del lenguaje o herramienta aparte** (`tools/`, junto a
+        `hist2mg.py`). Inclinación: herramienta — reducir puntos es *producir datos*, no
+        tinta, la misma frontera que separó `polybar` de `hist2mg.py` y la que argumenta
+        `docs/calcular_en_vez_de_medir.md`. **No urge.**
+- [ ] **Mezclar recto y curvo en UNA trayectoria §9** (`z1 -- z2 .. z3` de MetaPost). Hoy
+      son primitivas distintas (`polyline` / `smooth` / `bezier`) y se unen con `concat`,
+      que funciona pero con más ceremonia.
+      - ⚠️ **La limitación NO es de EPS**, que era la sospecha: PostScript, PDF y SVG
+        permiten `lineto` y `curveto` en el mismo path, y `Display` ya expone los dos. La
+        limitación es de **la representación de MG**: `Polyline::draw` consume el path de
+        **tres en tres** cuando el tipo es `GI_BEZIER`, así que todo segmento es curva.
+        Arreglarlo pide un tipo por segmento en el path — más hondo de lo que parece, pero
+        **sin tocar los backends**, que es la clase de cambio que este proyecto prefiere.
+      - El rodeo de V1 sigue siendo válido y **es exacto, no aproximado**:
+        `&straightline 0 0  .3333 0  .6666 0  1 0` (`examples/v1/bzsinepaths.mg`) — una
+        cúbica con los controles a 1/3 y 2/3 ES la recta.
+
+> 🚫 **Decidido NO construir: el solucionador de ecuaciones de MetaPost.** `z3 = z1 +
+> whatever*dir(60) = z2 + whatever*dir(-50)` declara relaciones y despeja el sistema. Es la
+> alternativa coherente más seria que existe a lo que hace MG, y es **la filosofía
+> contraria**: declarar la relación en vez de derivar la fórmula
+> (`docs/calcular_en_vez_de_medir.md`). Se descarta por tres razones: pide un subsistema de
+> álgebra lineal con incógnitas y unificación; cambia el modelo mental de **todo** el
+> lenguaje, no de una construcción; y MG ya eligió por escrito el camino opuesto. Queda
+> anotado como **decisión y no como omisión**, porque va a volver a aparecer.
+
 - [ ] 🐞 **Un literal de lista no se puede indexar**: `[10,20,30][1]` es error de sintaxis
       («se esperaba un comando… pero se encontró `[`»), y también dentro de un bloque de
       coordenadas. Hay que pasar por una variable (`xs = [10,20,30]` y luego `xs[i]`), que
