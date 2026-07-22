@@ -1119,6 +1119,75 @@ sin dibujar nada — un `at=` ignorado en silencio, de la peor clase.
 - `path_sample.mg` gana un `marker` suelto orientado con `rotate=angle_at(...)` **además** de
   la flecha-struct, para mostrar los dos caminos. Golden `ok=63`.
 
+### Cerrado en la sesión del 2026-07-22 (recursión + 5ª compuerta + barrido de silencios)
+
+**`max_depth` (§18) implementado** — la recursión de structs (§8.1) funcionaba pero sin
+tope agotaba la pila: `struct r(n) { … r(n+1) }` daba **SIGSEGV (139)**, el único modo de
+falla que no pasaba por `evalError`. Default 32. 💡 **La decisión fue DÓNDE poner la
+guarda:** hay **cinco** sitios que expanden un cuerpo de struct (`InvokeStmt`, `RepeatStmt`,
+`FitStmt`, `buildStructure`, volcado de plot-log) y con la guarda solo en `InvokeStmt` tres
+de las cuatro vías de invocación seguían muriendo → helper único `execStructBody`. Cuenta
+**anidamiento, no invocaciones** (verificado: 40 colocaciones planas no gastan profundidad).
+`max_depth n` es **control de documento** (`isConfig`), no sentencia de estado: no es estado
+gráfico. Dato de archivo: `MAXDEEP` sobrevivía en el léxico de V1 (`src/mgpp.l:43`) pero
+`parseDef` no tenía caso para ella — se ignoraba, igual que el `$S 1` de las cónicas.
+
+**`examples/fractal_tree.mg`** (corpus 21→22, `ok=63`→**`ok=66`**) — Fig. 4 del artículo de
+V0 (*Ciencias* 21, 1991; `docs/11195-10937-0-PB.pdf`), reconstruida del listado impreso en
+su Apéndice 1. **Único ejemplo con recursión** (barrido: cero en todo el árbol antes de él).
+🔎 **Lo que decidió construirlo:** ese listado **no tiene condición de paro** —V0 no tenía
+condicionales— así que el límite de profundidad era **infraestructura de carga**, no una red.
+El mapeo V0→V3 es casi 1:1 y revela que **V0 ya tenía structs parametrizadas en 1991**
+(`VAR THETA PHI`). ⚠️ Al encuadrar: si `world_window` deja de tener el aspecto de
+`display_size`, el meet **encoge el dibujo entero** (2.72 de ancho → 88.2%) — se lee como
+«salió chica», no como «se deformó», que es lo que lo hace difícil de diagnosticar.
+
+**5ª COMPUERTA: pruebas negativas (`errfail`, `test/errors/`).** Las otras cuatro miran
+salida EXITOSA, así que los **152 caminos de error** del compilador (51 `evalError`, 94
+`parseError`, 7 `exit`) no tenían **ninguna** prueba — y su regresión natural es volver al
+**silencio**, que no mueve un byte de ningún golden. Cada fixture declara lo que espera en
+su propio encabezado (`% EXPECT:` + `% EXPECT_AT:` opcional), va en git y no hay lista que
+tocar. Tres aserciones: **`exit == 1` exacto** (no «≠ 0»: un segfault también «falla» — es
+la que caza el modo de falla de `max_depth`), el fragmento aparece, y **no se creó archivo
+de salida** (la política de que un documento roto no produce salida). Se compara **fragmento
+y no mensaje completo a propósito**: los mensajes son prosa que se reescribe, y un golden
+por bytes castigaría las mejoras de redacción. Verificada como las otras: con el silencio de
+`emitStyleAttr` reintroducido, el golden da `ok=66 fail=0` y las cuatro viejas quedan
+**ciegas**.
+
+**Barrido de silencios — cinco cerrados**, todos con cero churn:
+- **Aridad de structs** (la destapó la compuerta al sembrarla): `S(1)` sobre `S(a,b)` dejaba
+  **`b = 0`** y dibujaba a (1,0) en vez de (1,3) — figura **plausible**, la peor variante.
+  Cuatro casos en `bindStructParams`: falta argumento, sobran posicionales, **nombrado
+  desconocido** (typo) y duplicado posición+nombre.
+- **`scale sx sy`** descartaba el 2º factor si era variable. No se parcheó, se **decidió**:
+  un identificador seguido de **fin de sentencia** no puede *ser* una sentencia (las de
+  estado piden argumento, una invocación pide `(`), luego es el 2º factor. Excepción con
+  nombre: `outlinefill`, la única sentencia de cero argumentos. ⚠️ `scale s (q)` **no** es la
+  salida: choca con el footgun de que `ident (` se parsea como llamada.
+- **Atributos de primitiva y de `text()`**: `marker(rotate=90)`, `polyline(colour="red")`,
+  `text("h", tamano=20)` compilaban mudos. Listas **separadas** (los ejes no se solapan).
+  💡 **El corpus cazó mi lista incompleta al primer intento** (`marker_start_orient=` de
+  `fig2-5`, que existe y está en la spec pero se pasa a un helper): **una lista blanca sacada
+  de los accesos DIRECTOS está incompleta por construcción.**
+- **`exit` (§18)** implementado, en `parseProgram` —que ES el nivel de archivo, y lo usan
+  tanto el documento como cada `include`—. Anidado es error (parse-time: dentro de un `if`
+  no sería condicional). Corta errores de **sintaxis** posteriores pero no **léxicos**: el
+  lexer tokeniza el archivo entero antes.
+
+⏳ **Queda abierto de la misma familia:** los **generadores** (`axis`/`numbers`/`grid`, y
+previsiblemente `plot`/`legend`/`table`/`rule`/`place`/`repeat`/`fit`) siguen tragando
+nombres desconocidos. Es el mismo bucle de una línea, pero **el riesgo es la LISTA, no el
+código** (ver la lección de arriba), así que conviene hacerlo **al escribir la referencia**
+(condición 5), que es el ejercicio de enumerar qué acepta cada constructo.
+
+**Retirados:** `ideas.txt` (borrador fundacional; 14 de 18 puntos superados, 2 resueltos por
+decisión) y el `TODO` de 2024 (4 de 5 cerrados). Lo que debía sobrevivir está transcrito en
+`PENDIENTES.md`. El **editor web** queda **condicionado a la condición 4**, ni descartado ni
+abierto sin fecha (`plan_interactivo.md`): su valor no se puede evaluar sin usuarios. 🔎 Y el
+dato para cuando reaparezca: **la barrera medida no es instalar** — ocho tropiezos
+documentados (cuatro del autor, cuatro del agente) y ninguno fue «no pude compilar».
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
