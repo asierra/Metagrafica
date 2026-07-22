@@ -34,9 +34,9 @@ dot(sample(&c, 13, curve=true), size=2.2, color="red")     % curve=true: CURVA
 %  1) colocando una STRUCT con at=/rotate= (la flecha azul, en t=0.5)
 flecha(at=point_at(&c, 0.5, curve=true), rotate=angle_at(&c, 0.5, curve=true), scale=1.4)
 %  2) point_at directo en el BLOQUE de una primitiva (marker morado, en t=0.25)
-%     — el bloque {} acepta un punto [x,y], así que el marker se orienta con su
-%     propio rotate= a la tangente que da angle_at.
-marker(size=7, shape="arrow", color="purple", rotate=angle_at(&c, 0.25, curve=true)) {
+%     — el bloque {} acepta un punto [x,y]. El marcador se orienta con su propio
+%     `marker_orient=` (ángulo en grados), aquí el que da angle_at a la tangente.
+marker(size=7, shape="arrow", color="purple", marker_orient=angle_at(&c, 0.25, curve=true)) {
     point_at(&c, 0.25, curve=true)
 }
 
