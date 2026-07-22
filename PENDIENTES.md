@@ -22,7 +22,7 @@
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
 > Build/test: `make` + `bash test/run.sh check` → **ok=66 … errfail=0** (5 compuertas,
-> la 5ª son 21 pruebas NEGATIVAS en `test/errors/`).
+> la 5ª son 29 pruebas NEGATIVAS en `test/errors/`).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -287,26 +287,45 @@ orden de la lista es la ejecución.
         `arg_nombrado_desconocido`, `arg_duplicado`, `aridad_en_fit`), y verificado
         reintroduciendo el `Value(0)`: la compuerta lo caza por las dos vías y el golden
         se queda en `ok=66 fail=0`, ciego.
-- [ ] 🐞 **`scale` DESCARTA su segundo argumento si es una variable** (hallado 2026-07-22
-      escribiendo `fractal_tree.mg`). `scale 0.6 0.6` y `scale s 0.6` funcionan; **`scale s s`
-      y `scale 0.6 s` no**: `parseStatement` decide si hay 2º argumento con
-      `if (t == T_NUMBER || t == T_MINUS)` (`parserv3.cpp`, rama `top == OPMSC`), así que un
-      identificador no cuenta → el escalado queda **uniforme con el primer argumento** y el
-      segundo se cae al flujo como si fuera una sentencia. Hoy eso revienta con un mensaje
-      que **no menciona `scale`** («se esperaba una expresión… fin de línea»), y en un
-      contexto donde el sobrante sí parsee sería un **escalado anisótropo silenciosamente
-      convertido en isótropo**. Es hermano de los silencios ya cazados (`emitStyleAttr`,
-      `checkCoordPairs`), y el único transform con este defecto: `translate`/`shear` usan
-      aridad FIJA 2 y aceptan variables sin problema.
-      - ⚠️ **No es descuido, es una ambigüedad real de la gramática, y por eso hay que
-        DECIDIRLA y no solo parchearla:** con aridad fija 2, `scale s  Arbol(...)` se comería
-        `Arbol` como escala en y; con la heurística actual, `scale s s` pierde la anisotropía.
-        Es la misma familia que el footgun documentado `dx (h+dy)` → `dx(h+dy)`. Opciones:
-        exigir `scale(sx, sy)` con paréntesis para el caso de dos ejes, aceptar identificador
-        solo si NO va seguido de `(`, o dejar la aridad fija y documentar. **Antes de
-        congelar** — es superficie del lenguaje, no motor.
-      - Rodeo mientras tanto: `scale s` (uniforme, que es lo que quería `fractal_tree`) o
-        poner el número al final (`scale s 0.6`).
+- [x] ~~🐞 **`scale` DESCARTA su segundo argumento si es una variable**~~ — **CERRADO
+      2026-07-22.** `scale s s` quedaba uniforme con el primer factor y el segundo se caía
+      al flujo como si fuera una sentencia. Era el único transform con el defecto
+      (`translate`/`shear` usan aridad fija 2); `scale` es el único de aridad VARIABLE, y
+      eso chocaba de frente con «varias sentencias por línea».
+      - **No se parcheó, se decidió, porque un identificador suelto NO se puede
+        desambiguar**: en `scale s  Flecha()` o `scale s  color "red"` lo que sigue es otra
+        sentencia. La regla nueva es una **deducción sintáctica**: un identificador seguido
+        de FIN DE SENTENCIA (newline/`;`/`}`/EOF) no puede *ser* una sentencia —las de
+        estado piden argumento y una invocación pide `(`— luego se escribió como segundo
+        factor, y se toma. Así `scale sx sy` funciona sin romper ninguno de los dos
+        patrones legítimos.
+      - **Una excepción, con nombre:** `outlinefill` es la única sentencia de estado de
+        cero argumentos (§4.11), o sea el único identificador que aparece solo y sí es una
+        sentencia. Está excluido explícitamente.
+      - ⚠️ **`scale s (q)` NO es la salida** —fue mi primer intento—: choca con el footgun
+        global de que un identificador seguido de `(` se parsea como llamada (`s(q)`).
+      - Cero churn (`ok=66`). Cubierto por un fixture **indirecto**
+        (`scale_segundo_factor`): el arreglo es un cambio POSITIVO, así que lo que se pinea
+        es *cuál* error sale — si el 2º factor se toma, falla por la variable; si se
+        descarta, revienta como sentencia con otro mensaje.
+- [x] ~~🐞 **Las primitivas TRAGAN argumentos nombrados desconocidos EN SILENCIO**~~ —
+      **CERRADO 2026-07-22.** `marker(rotate=90)`, `dot(tamano=5)`, `polyline(colour="red")`
+      compilaban sin hacer nada y sin avisar: `emitPrimStyle` devolvía si reconoció el
+      nombre y `PrimStmt` descartaba el retorno. Ahora `PrimStmt::exec` valida contra la
+      lista de los 24 atributos reconocidos (estilo + los propios de cada forma) y
+      `evalError` ante uno fuera.
+      - La lista es **común a todas las primitivas**, no por forma: `circle(closed=true)`
+        sigue pasando. Cierra el caso que duele —un nombre que no existe en NINGUNA— sin
+        arriesgar falsos positivos; afinar por primitiva es una vuelta posterior, cuando
+        exista la referencia que diga qué acepta cada una.
+      - 💡 **Y el corpus cazó mi lista incompleta al primer intento:** `fig2-5` usa
+        `marker_start_orient=`, que sí existe y está en la spec, pero se pasa a un helper
+        (`parseSpec`/`parseOrient`) en vez de por `named.count()`, así que no salía al
+        extraer los nombres por grep. **Una lista blanca sacada de los accesos DIRECTOS
+        está incompleta por construcción.**
+      - Resuelve de paso el `rotate=` de `marker`: en vez de ignorarse, ahora dice que no
+        existe y remite implícitamente a `marker_orient=`. Cero churn (`ok=66`), dos
+        fixtures (`prim_attr_desconocido`, `marker_rotate`).
 - [ ] **`rotate=` en `marker` (decidido 2026-07-21: se queda como está, revisar antes de
       congelar).** La orientación de un marcador se pide con `marker_orient=<ángulo>`, NO con
       el `rotate=` que giran structs y otras primitivas — `marker(rotate=…)` se ignora (caso

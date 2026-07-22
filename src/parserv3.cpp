@@ -465,6 +465,34 @@ static void emitHatch(const Value &v, double gap, GraphicsItemList &out) {
   out.push_back(std::make_unique<GraphicsState>(GS_FILL));
 }
 
+// Atributos nombrados que una primitiva reconoce (§7.5 + los propios de cada
+// forma). Lo que no esté aquí se DESCARTABA EN SILENCIO: `marker(rotate=90)`,
+// `dot(tamano=5)`, `polyline(colour="red")` compilaban sin hacer nada y sin avisar,
+// que es el peor destino de un typo — el atributo *parece* estar puesto.
+//
+// La lista es COMÚN a todas las primitivas, no por forma: `circle(closed=true)`
+// sigue pasando. Se cierra el caso que duele (un nombre que no existe en NINGUNA)
+// sin arriesgar falsos positivos en el corpus; afinar por primitiva es una vuelta
+// posterior, cuando exista la referencia que diga qué acepta cada una.
+static bool isKnownPrimAttr(const std::string &k) {
+  static const char *ok[] = {
+    // estilo (emitPrimStyle / emitStyleAttr)
+    "color", "fill", "line_width", "dash", "hatch", "hatch_gap",
+    // forma
+    "closed",                                   // polyline/polygon §4.1
+    "from", "to",                               // arc §4.5
+    "width", "dir",                             // polybar §4.12
+    "shape", "size",                            // marker/dot §4.6
+    // marcadores sobre la ruta (§B)
+    "marker", "marker_orient", "marker_size", "marker_color", "marker_fill",
+    "marker_start", "marker_mid", "marker_end",
+    "marker_start_shift", "marker_end_shift",
+    "marker_start_orient", "marker_end_orient",   // §4.5/§B: sobreescriben el global
+  };
+  for (const char *n : ok) if (k == n) return true;
+  return false;
+}
+
 // Estilo por-primitiva (§7.5) compartido por PrimStmt y compound (§9.4):
 // color/fill/line_width + tramado (hatch/hatch_gap, §4.11) + contorno (color con
 // relleno). Emite en `attrs` los GraphicsItem que el llamador acota con push/pop.
@@ -1677,6 +1705,12 @@ struct PrimStmt : Stmt {
   }
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    // Un atributo que la primitiva no conoce era un no-op MUDO (§7.5): el typo
+    // parecía puesto y no hacía nada. Se valida antes de dibujar nada.
+    for (const auto &kv : named)
+      if (!isKnownPrimAttr(kv.first))
+        evalError("atributo desconocido en la primitiva: ",
+                  name + " — `" + kv.first + "=` no existe (¿mal escrito?)");
     // polyline/polygon/bezier admiten subtrayectos disjuntos separados por ';'
     // (§4): un item por subtrayecto, mismo estilo (distinto de compound, §9.4,
     // que combina en un solo relleno par-impar). El resto de primitivas ignora
@@ -3579,9 +3613,33 @@ static StmtPtr parseStatement(Lexer &lx) {
     // por línea (`translate 5 5  rotate 30  Flecha(...)`), así que cada transform
     // consume solo sus argumentos. scale: 1, con 2º opcional si sigue un número.
     if (top == OPMSC) {
+      // `scale` es el único transform de aridad VARIABLE (1 = uniforme, 2 = por eje),
+      // y eso choca de frente con «varias sentencias por línea»: en `scale s  Flecha()`
+      // o `scale s  color "red"`, lo que sigue es OTRA sentencia, no el factor en y.
+      // Un identificador suelto NO se puede desambiguar ahí —cualquier nombre puede
+      // ser un comando o una struct—, así que la regla es sintáctica:
+      //   - número o '-': segundo factor (como siempre).
+      //   - '(' : segundo factor. Es INEQUÍVOCO porque ninguna sentencia empieza con
+      //     '(' → `scale sx (sy)` es la forma de dar dos factores con variables.
+      //   - identificador: NO se toma. Antes se descartaba en silencio y el escalado
+      //     quedaba uniforme con el primer factor (bug de 2026-07-22).
       st->args.push_back(parseTerm(lx));
       int t = lx.peek().type;
-      if (t == T_NUMBER || t == T_MINUS) st->args.push_back(parseTerm(lx));
+      bool second = (t == T_NUMBER || t == T_MINUS || t == T_LPAREN);
+      if (!second && t == T_IDENTIFIER) {
+        // Un identificador seguido de FIN DE SENTENCIA no puede SER una sentencia: las
+        // de estado piden argumento y una invocación pide '('. Luego se escribió como
+        // segundo factor, y se toma. La deducción es lo que permite `scale sx sy` sin
+        // romper `scale s  color "red"` ni `scale s  Flecha()`, donde lo que sigue NO
+        // termina ahí.
+        int after = lx.peek(1).type;
+        bool endsStmt = (after == T_NEWLINE || after == T_SEMICOLON ||
+                         after == T_RBRACE  || after == T_EOF);
+        // `outlinefill` es la ÚNICA sentencia de estado de cero argumentos (§4.11), o
+        // sea el único identificador que legítimamente aparece solo y termina ahí.
+        second = endsStmt && lx.peek().str != "outlinefill";
+      }
+      if (second) st->args.push_back(parseTerm(lx));
     } else {
       int arity = (top == OPMRT) ? 1 : 2;      // rotate=1; translate/shear=2
       for (int i = 0; i < arity; i++) st->args.push_back(parseTerm(lx));
