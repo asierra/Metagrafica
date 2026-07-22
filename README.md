@@ -77,6 +77,23 @@ elements) placed at 37°, the beam and detector-swing arrows are markers that **
 themselves** to their line or arc — no angles or positions worked out by hand — and `φ`
 is set in Latin Modern Math.
 
+## Recursion
+
+A structure can contain **itself**. Both trees below are the same four-line structure —a
+trunk with two smaller copies of itself at its tip— invoked twice with different branch
+angles; each is 511 segments:
+
+![Fractal trees](docs/img/fractal_tree.svg)
+
+> Figure 4 of A. Aguilar Sierra, *Metagrafic: hacia un lenguaje para la graficación por
+> computadora*, Ciencias **21**, 1991 — reconstructed as
+> [`examples/fractal_tree.mg`](examples/fractal_tree.mg) from the listing printed in its
+> appendix.
+
+The stop condition is an ordinary `if`; `max_depth` is the safety net, and it is the one
+piece that 1991 could not do without — that language had no conditionals, so the depth
+limit was the *only* thing that ended the recursion.
+
 ## Text and mathematics
 
 Source files are **UTF-8**.
@@ -176,6 +193,7 @@ bin/mg examples/fig6-4.mg out.svg
 | `fig4-4.mg` | three panels, interior axes, analytic curves |
 | `franck_condon.mg`, `turning_points.mg` | **fully computed figures**: you give the physical parameters and the geometry follows |
 | `fig_polybar.mg` | bar histogram with hatching |
+| `fractal_tree.mg` | **recursion**: a structure that contains itself |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | reference sheets |
 
 **[Computing instead of measuring](docs/computing_instead_of_measuring.md)** develops that

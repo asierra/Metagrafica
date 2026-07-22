@@ -63,6 +63,23 @@ Es poderoso en las gráficas, pero MetaGráfica también luce en **ilustraciones
 
 Menos de 60 líneas de MetaGráfica: el detector es una `struct` (asociación de varios elementos gráficos) colocado a 37°, las flechas del haz y del giro del detector son marcadores que **se orientan solos** a su línea o arco —sin ángulos ni posiciones calculados a mano— y la `φ` va en Latin Modern Math.
 
+## Recursión
+
+Una estructura puede contenerse **a sí misma**. Los dos árboles de abajo son la misma
+estructura de cuatro líneas —un tronco con dos copias menores de sí mismo en la punta—
+invocada dos veces con ángulos de rama distintos; cada uno son 511 segmentos:
+
+![Árboles fractales](docs/img/fractal_tree.svg)
+
+> Figura 4 de A. Aguilar Sierra, *Metagrafic: hacia un lenguaje para la graficación por
+> computadora*, Ciencias **21**, 1991 — reconstruida como
+> [`examples/fractal_tree.mg`](examples/fractal_tree.mg) a partir del listado impreso en
+> su apéndice.
+
+La condición de paro es un `if` corriente; `max_depth` es la red, y es la pieza sin la cual
+1991 no podía: aquel lenguaje no tenía condicionales, así que el límite de profundidad era
+lo *único* que terminaba la recursión.
+
 ## Texto y matemáticas
 
 Los archivos fuente son **UTF-8**.
@@ -142,6 +159,7 @@ bin/mg examples/fig6-4.mg sal.svg
 | `fig4-4.mg` | tres paneles, ejes interiores, curvas analíticas |
 | `franck_condon.mg`, `turning_points.mg` | **figuras enteramente calculadas**: se dan los parámetros físicos y la geometría se deduce |
 | `fig_polybar.mg` | histograma de barras con trama |
+| `fractal_tree.mg` | **recursión**: una estructura que se contiene a sí misma |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | láminas de referencia |
 
 **[Calcular en vez de medir](docs/calcular_en_vez_de_medir.md)** desarrolla ese último caso:
