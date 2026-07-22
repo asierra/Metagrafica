@@ -85,6 +85,15 @@ orden de la lista es la ejecución.
         sistemática obliga a ponerlos uno al lado del otro — exactamente el ejercicio que
         destapó el renombre de §13. Es previsible que levante inconsistencias, y conviene
         que lo haga **mientras todavía son baratas**.
+   - 🔎 **Evidencia de campo REFORZADA (2026-07-21): el propio autor tropezó** armando
+     `tiro_parabolico`. Cuatro veces, y son exactamente los temas que la referencia debe
+     aclarar (ya añadidos como trampas a `docs/referencia.md`): (1) **datos fuera de
+     `world_window`** —tres veces, con síntomas que parecen bugs del motor («EPS negro»,
+     «solo 3 puntos»)—; (2) **«no lineal ≠ log»** al querer una malla por los puntos; (3)
+     **`&trayecto` va primero** (`dot(2,&p)` falla); (4) la semántica de **`+=` que suelda
+     relativo**. Si el autor se confunde, un recién llegado se estrella — es la validación
+     más fuerte del requisito, y de que escribir la referencia AFLORA la fricción (cond. 4)
+     antes de congelar.
    - 🤖 **Requisito de diseño: que pegarla en el contexto vuelva competente a un agente.**
      Lo que hace competente a un agente frío y lo que hace competente a un recién llegado
      son **casi el mismo requisito** —completa, autocontenida, guiada por ejemplos y
