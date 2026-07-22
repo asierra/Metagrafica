@@ -217,6 +217,25 @@ orden de la lista es la ejecución.
 - [ ] **Pseudo-3D** (`plan_pseudo3d.md`): refinamientos acotados (`hatch` como parámetro
       de `plano`, refactor de `fig10-2v3`). MG **no** se vuelve 3D — simula volumen con
       shear por composición 2D.
+- [ ] 📥 **Editor web / galería** (`plan_interactivo.md`) — último punto vivo del `TODO` de
+      2024, retirado el 2026-07-22 (`ec0c3d1`); los otros cuatro están cerrados.
+      **El editor queda CONDICIONADO a la condición 4**, no descartado y no abierto sin
+      fecha: su propuesta de valor —bajar la barrera de entrada— **no se puede evaluar sin
+      gente de fuera**, así que decidirla hoy en cualquier sentido sería especular. Es la
+      regla del proyecto aplicada al empaquetado: hace falta un **usuario** que lo pida.
+      Decisión de Alejandro (2026-07-22): conservar la idea justamente para eso.
+      - 🔎 **El dato que hay que releer cuando reaparezca:** la barrera medida NO es
+        instalar. Ocho tropiezos documentados (cuatro del autor en `tiro_parabolico`, cuatro
+        del agente en `figure_02`/`karl.mg`) y **ninguno** fue «no pude compilar el
+        binario». Lo que los quita es la referencia (condición 5), no una interfaz.
+      - ⚠️ **Si se construye, va DESPUÉS de congelar** (condición 1): el resaltado de
+        sintaxis es una segunda implementación de la superficie del lenguaje, y mantenerla
+        contra una gramática en movimiento es comprar trabajo duplicado.
+      - **La GALERÍA no está condicionada y es barata:** HTML estático con cada
+        `examples/*.mg` junto a su `.svg`. No necesita WASM, ni servidor, ni gramática de
+        editor; los `.svg` ya se generan con `mg` y ya tienen compuerta (`docs/img`,
+        `imgfail`). Ataca el cuello de botella real —ver a qué se parece una figura es lo
+        que hace que alguien quiera intentarlo— y sirve a las condiciones 4 y 5.
 - [ ] **Sección "figura paramétrica" en el README** (ambos idiomas) — `franck_condon.mg`
       prueba lo único que la portada afirma y **hoy nadie demuestra**: «a figure is source
       code, so it can be *parameterized* and regenerated». Versionar y hacer diff se ven

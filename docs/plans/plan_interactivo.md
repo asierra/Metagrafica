@@ -1,9 +1,52 @@
 # MetaGráfica interactivo — editor web (DRAFT)
 
-> **Estado: borrador exploratorio.** Extraído del antiguo `ROADMAP.md` (Propuesta 7),
-> actualizado al estado real del proyecto. No es un plan de implementación cerrado como
-> `plan_lineas.md`/`plan_pdf.md`; recoge la visión y las decisiones pendientes para
-> retomarlas cuando toque.
+> **Estado: borrador exploratorio, CONDICIONADO A LA CONDICIÓN 4** (uso real por gente que
+> no es el autor, `PENDIENTES.md`). Extraído del antiguo `ROADMAP.md` (Propuesta 7). No es
+> un plan de implementación cerrado como `plan_lineas.md`/`plan_pdf.md`; recoge la visión y
+> las decisiones pendientes para retomarlas cuando toque.
+>
+> Act. 2026-07-22, al retirar el `TODO` de 2024 —donde este era el último punto vivo— y al
+> repasar `ideas.txt`. Los otros cuatro puntos del `TODO` están cerrados: loops, parámetros
+> a `OPST` (structs parametrizadas §8, hoy incluso por path), **recursividad** (§8.1, con
+> `max_depth` §18 desde el 2026-07-22 y `examples/fractal_tree.mg` que la ejercita) y, del
+> cuarto —«a new cleaner parser with better feedback to final users»—, la mitad del parser
+> quedó **decidida en contra por los hechos** (el descenso recursivo aguantó §13 entero) y
+> la de la retroalimentación avanzó mucho pero **sigue viva**: faltan la columna en los
+> errores, el mensaje de `&path`, el de indexar un literal de lista y los argumentos
+> nombrados que las primitivas se tragan en silencio.
+
+## Cuándo se decide, y por qué no ahora
+
+**Ni descartado ni abierto indefinidamente: esperando usuarios.** La propuesta de valor del
+editor —bajar la barrera de entrada— es de las que **no se pueden evaluar sin gente de
+fuera**, así que decidirla hoy, en un sentido o en el otro, sería especular. Es la regla del
+proyecto («no se construye sin una figura que lo pida») aplicada al empaquetado: aquí hace
+falta un **usuario** que lo pida.
+
+Lo que sí sabemos hoy, y conviene tener a mano cuando el tema reaparezca:
+
+- 🔎 **La barrera medida no es instalar, es no saber el lenguaje.** El autor tropezó cuatro
+  veces armando `tiro_parabolico` y el agente otras cuatro escribiendo `figure_02` y
+  `local/karl.mg` (ver condiciones 4 y 5 en `PENDIENTES.md`). **Ninguno** de esos ocho
+  tropiezos fue «no pude compilar el binario». Un editor web ahorra un `make`; no quita
+  ninguno de los ocho. La **referencia de usuario** (condición 5) sí.
+- ⚠️ **El resaltado de sintaxis es una SEGUNDA implementación de la superficie del
+  lenguaje** (gramática de CodeMirror/Monaco) que hay que mantener en paralelo con el
+  parser. Construirla **antes** de congelar (condición 1), con los nombres todavía en
+  movimiento, compra mantenimiento duplicado; después del congelamiento es un costo único.
+  El orden correcto es el inverso al que este documento asumía.
+- 💡 **El argumento de la IA lo rebasaron los hechos.** Aquí figuraba como funcionalidad del
+  editor («conectar un chat a una herramienta IA con el contexto de mg»), y eso ya ocurrió
+  en una terminal, con la spec y el `CLAUDE.md` en contexto (`figure_02`, `karl.mg`,
+  `fractal_tree`). Lo que lo hizo posible fue **documentación, no interfaz** — y la
+  condición 5 ya lleva ese requisito escrito. La referencia entrega el beneficio que el
+  editor promete, y además el otro.
+- **WASM es barato de construir pero no de tener:** un segundo blanco de compilación, con
+  superficie de despliegue, que se rompe en silencio cuando cambie el motor y sin ninguna de
+  las cuatro compuertas mirándolo.
+
+**La galería NO está condicionada** (ver su sección abajo): es la mitad barata, no necesita
+WASM ni servidor ni gramática de editor, y ataca el cuello de botella real.
 
 ## Visión
 
@@ -80,8 +123,11 @@ tratarlas como un solo esfuerzo de documentación/onboarding:
 - Opción A vs B (servidor vs WASM) — recomendación: B.
 - Estrategia de fuentes matemáticas en el navegador (webfont vs fuentes del sistema).
 - Alcance de la galería: ¿estática primero, o directamente integrada en el editor?
-- ¿Sobre qué versión del lenguaje se construye? Lo natural es apuntar a **V2** (sintaxis
-  moderna, ver `especificacion_mg.md`), pero un prototipo puede arrancar con V1.
+- ~~¿Sobre qué versión del lenguaje se construye?~~ **RESUELTO por los hechos:** V3, que es
+  el único compilador que hay (`bin/mg` en `main`). Este punto decía «lo natural es apuntar
+  a V2… un prototipo puede arrancar con V1», y las dos desaparecieron — V1 quedó congelada
+  en `v1-legacy` y V2 se subsumió en V3. Que el punto siguiera aquí un año es el dato de que
+  **nada ha empujado este plan**.
 - Resaltado de sintaxis: definir la gramática para el editor (CodeMirror/Monaco).
 
 ## Origen
