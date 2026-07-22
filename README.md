@@ -13,13 +13,8 @@ You describe *what the figure is* — points, paths, structures, transformations
 No GUI, no mouse needed: a figure is source code, so it can be versioned, diffed,
 parameterized and regenerated.
 
-Originally created for scientific publications such as Ana María Cetto and Luis de la
-Peña's Quantum Mechanics textbooks, *[Quantum Mechanics: A Physical
-Approach](https://doi.org/10.1017/9781009679633)* (Cambridge University Press, 2025) and
-*[Introducción a la mecánica
-cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* by Luis de la
-Peña (FCE/UNAM, 3rd ed.), and other scientific papers, it has evolved in stages over
-nearly four decades.
+It was created for the figures of scientific publications — among them Ana María Cetto and
+Luis de la Peña's quantum mechanics textbooks — and has been in use for nearly four decades.
 
 ## Quick start
 
@@ -38,7 +33,7 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
         2.5 15.0
         4.2 30.0
         6.75 60.2
-    }  
+    }
     legend(at="top-left", margin=10, sample_width=20, gap=5, font_size=8) {
         entry("Theoretical") { polyline { 0 0.5  1 0.5 } }
         entry("Experimental") { marker(3, shape="cross", color="black") { 0.5 0.5 } }
@@ -115,32 +110,6 @@ names the character, because the glyph simply is not in the font. Supporting the
 embedding a Unicode text font, the way Latin Modern Math is embedded for mathematics.
 Greek in *mathematics* works today: write `$\alpha$`, not a literal α.
 
-## Building
-
-```bash
-make                 # builds bin/mg and the man page
-sudo make install    # optional: puts mg on your PATH
-```
-
-Requires a C++14 compiler (`clang++` or `g++`), `flex`, and `pandoc` for the man page.
-The library for PDF output, [libharu](http://libharu.org/), is vendored in
-`third_party/`, and there is nothing else to install.
-
-## Usage
-
-The output format is chosen by the **extension** of the output file:
-
-```bash
-bin/mg figure.mg              # → figure.eps
-bin/mg figure.mg out.svg      # → SVG
-bin/mg figure.mg out.pdf      # → PDF
-```
-
-| flag | |
-|---|---|
-| `-h` | help |
-| `-v` | version |
-
 ## The language in one minute
 
 A **point** is a pair of coordinates; a **path** is a list of points. Every primitive
@@ -175,6 +144,32 @@ Spanish)*; `man mg` is the reference in English. MetaGráfica is deliberately **
 general-purpose programming language: it has variables, expressions, `for` and `if`,
 logical expressions, and not much more.
 
+## Building
+
+```bash
+make                 # builds bin/mg and the man page
+sudo make install    # optional: puts mg on your PATH
+```
+
+Requires a C++14 compiler (`clang++` or `g++`), `flex`, and `pandoc` for the man page.
+The library for PDF output, [libharu](http://libharu.org/), is vendored in
+`third_party/`, and there is nothing else to install.
+
+## Usage
+
+The output format is chosen by the **extension** of the output file:
+
+```bash
+bin/mg figure.mg              # → figure.eps
+bin/mg figure.mg out.svg      # → SVG
+bin/mg figure.mg out.pdf      # → PDF
+```
+
+| flag | |
+|---|---|
+| `-h` | help |
+| `-v` | version |
+
 ## Examples
 
 [`examples/`](examples/) holds the working corpus, where you can see the different
@@ -203,60 +198,32 @@ the whole figure rearranges itself, because everything else is derived.
 
 ## Project status
 
-**This version is still beta**, and two things follow from that. The **language can
-still change**: names and arguments are not frozen, so a figure that compiles today may
-need an edit tomorrow (the old names fail loudly, never silently). And **parts are
-unbuilt**: the specification describes features that do not exist yet. What is here is
-exercised by the regression corpus on every change.
+**This version is still beta** (`MG_VERSION 3.0.0-beta`). Two things follow from that,
+and both matter to you directly:
 
-Four things stand between here and release ([§22.7](especificacion_mg.md) carries the full
-list), and they come **in this order**:
+1. **The language can still change.** The names of commands and of their arguments are not
+   frozen, so a figure that compiles today may need a small edit later on; the old names
+   fail loudly, never silently. Every change is gated by a regression harness over the
+   whole corpus: "beta" does not mean the output drifts on its own, it means a name may
+   change — and always with a warning.
 
-1. **Finishing `plot`** — `table` is still reserved and unbuilt, waiting for figures that
-   ask for it. (`rule` and `legend` are done: see [§13.8](especificacion_mg.md) and the
-   example above.)
-2. **A user reference** — there are three documents today and none of them is the one
-   that is needed: this README is a front page, `man mg` documents the *binary* rather
-   than the language, and the specification is *forward-looking* (it describes things that
-   do not exist yet). What is missing is the document that describes, completely and
-   without history, **what is there**.
-3. **Real use by other people** — a period of figures written by someone other than the
-   author, with whatever improvements that motivates. **If you use MG at this stage, your
-   opinion on the names and the ergonomics is exactly what is missing**, and it can still
-   be acted on at no cost to anyone. It comes after the reference because without
-   something to read, what you get back is "I couldn't find how to do X" rather than "I
-   found it and it is awkward", and only the second one helps decide names.
-4. **Freezing the grammar** — a figure that compiles keeps compiling. It comes last on
-   purpose: it is the promise that makes every later correction expensive.
+2. **We are looking for your feedback.** Before the grammar is frozen, the tool needs to be
+   validated by real use. **If you use MG at this stage, your opinion on the ergonomics and
+   the names is exactly what is missing**, and there is still time to change things at no
+   cost to anyone — which is precisely what the "beta" label is for.
 
-> **Why the order matters, and is not bureaucracy.** What the word "beta" buys you is
-> *permission to break things*: today a rename costs a `sed`, and after 1.0 it costs a
-> migration and a major version number. So freezing has to come last. The case that proves
-> it happened in this project: `axis(title=)` meant the *axis name* and `axis(labels=)` the
-> *tick numbers* — the two names anyone reaches for first meant something other than they
-> do everywhere else. It was fixed in an afternoon because there were no users; with twenty
-> other people's figures in the wild, it would not have been.
-
-*(Text encoding used to be on this list. Source files are UTF-8 and running text now
-covers the full repertoire of the standard PostScript fonts — accented Latin plus
-typographic punctuation: “curly quotes”, en and em dashes, ellipses, bullets, ‰, ™, €.
-Mathematics is Unicode end to end. See [Text and mathematics](#text-and-mathematics).)*
-
-`mg` is the **version 3** compiler (`MG_VERSION 3.0.0-beta`). The earlier two-letter grammar
-(`PL`, `CR`, `GNNUM`…) — **version 2** in the table above — is frozen on the `v1-legacy`
-branch, and its corpus lives in [`examples/v1/`](examples/v1/) as the migration oracle.
-*(Branch and directory were named before the numbering was aligned with the publication
-history, and keep the old name so existing links do not break.)* **Those sources do not
-compile with this binary.**
-
-Every change is gated by a regression harness over the whole corpus (`bash test/run.sh
-check`): byte-exact goldens for the three backends, a Ghostscript pass over the EPS, and
-a cross-backend parity check.
+The full list of what is left for 1.0 is in [§22.7 of the specification](especificacion_mg.md).
 
 ## History
 
-MetaGráfica has been rewritten four times, and every version has evolved. Like other
-graphics languages, it was initially loosely inspired by MetaPost (hence some
+Originally created for scientific publications such as Ana María Cetto and Luis de la
+Peña's quantum mechanics textbooks, *[Quantum Mechanics: A Physical
+Approach](https://doi.org/10.1017/9781009679633)* (Cambridge University Press, 2025) and
+*[Introducción a la mecánica
+cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* by Luis de la
+Peña (FCE/UNAM, 3rd ed.), and other scientific papers, it has evolved in stages over
+nearly four decades.
+Like other graphics languages, it was initially loosely inspired by MetaPost (hence some
 conventions, like `%` comments). Its output can be embedded in a LaTeX document:
 
 | Version | Year | Language | Output |

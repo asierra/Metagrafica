@@ -10,9 +10,7 @@
 
 Describes *qué es la figura* —puntos, paths, structs, transformaciones— y `mg` la compila a cualquiera de los formatos **EPS**, **SVG** o **PDF** para publicaciones tradicionales o en línea. Sin necesidad de una interfaz gráfica ni ratón: una figura es código fuente, así que se versiona, se compara, se parametriza y se regenera.
 
-Creado originalmente para publicaciones científicas como los libros de texto de Mecánica Cuántica de Ana María Cetto y Luis de la Peña *[Quantum
-Mechanics: A Physical Approach](https://doi.org/10.1017/9781009679633)* (Cambridge University Press, 2025) y *[Introducción a la mecánica
-cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* de Luis de la Peña (FCE/UNAM, 3ª ed.) y otros artículos científicos, ha evolucionado escalonadamente durante cerca de cuatro décadas.
+Se creó para figuras de publicaciones científicas —entre ellas los libros de mecánica cuántica de Ana María Cetto y Luis de la Peña— y lleva cerca de cuatro décadas en uso.
 
 ## Inicio rápido
 
@@ -31,10 +29,10 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
         2.5 15.0
         4.2 30.0
         6.75 60.2
-    }  
+    }
     legend(at="top-left", margin=10, sample_width=20, gap=5, font_size=8) {
         entry("Theoretical") { polyline { 0 0.5  1 0.5 } }
-        entry("Experimental") { marker(3, shape="cross", color="black") { 
+        entry("Experimental") { marker(3, shape="cross", color="black") {
           0.5 0.5 } }
     }
     xaxis(step=2, label="x")
@@ -90,30 +88,6 @@ Los archivos fuente son **UTF-8**.
 
 **El techo es el repertorio de la fuente, no la codificación.** Otros sistemas de escritura —griego *en prosa*, cirílico, CJK, o los tonos del vietnamita— se descartan con un aviso que nombra el carácter, porque el glifo sencillamente no está en la fuente. Soportarlos implica embeber una fuente de texto Unicode, igual que se embebe Latin Modern Math para las matemáticas. El griego *matemático* funciona hoy: se escribe `$\alpha$`, no una α literal.
 
-## Compilación
-
-```bash
-make                 # compila bin/mg y la página de manual
-sudo make install    # opcional: deja mg en el PATH
-```
-
-Se requiere un compilador de C++14 (`clang++` o `g++`), `flex`, y `pandoc` para la página de manual. La biblioteca para la salida PDF, [libharu](http://libharu.org/), viene incluida en `third_party/` y no hace falta nada más que instalar.
-
-## Uso
-
-El formato de salida lo elige la **extensión** del archivo de salida:
-
-```bash
-bin/mg figura.mg              # → figura.eps
-bin/mg figura.mg sal.svg      # → SVG
-bin/mg figura.mg sal.pdf      # → PDF
-```
-
-| opción | |
-|---|---|
-| `-h` | ayuda |
-| `-v` | versión |
-
 ## El lenguaje en un minuto
 
 Un **punto** es una pareja de coordenadas; un **path** es una lista de puntos. Cada primitiva lleva su path entre `{ }` y su estilo entre `( )`:
@@ -143,6 +117,30 @@ for i = 0 to 11 {
 El lenguaje completo está en [`especificacion_mg.md`](especificacion_mg.md), y `man mg` es la referencia. MetaGráfica **no** pretende ser un lenguaje de programación de
 propósito general: tiene variables, expresiones, `for` e `if`, expresiones lógicas y no mucho más.
 
+## Compilación
+
+```bash
+make                 # compila bin/mg y la página de manual
+sudo make install    # opcional: deja mg en el PATH
+```
+
+Se requiere un compilador de C++14 (`clang++` o `g++`), `flex`, y `pandoc` para la página de manual. La biblioteca para la salida PDF, [libharu](http://libharu.org/), viene incluida en `third_party/` y no hace falta nada más que instalar.
+
+## Uso
+
+El formato de salida lo elige la **extensión** del archivo de salida:
+
+```bash
+bin/mg figura.mg              # → figura.eps
+bin/mg figura.mg sal.svg      # → SVG
+bin/mg figura.mg sal.pdf      # → PDF
+```
+
+| opción | |
+|---|---|
+| `-h` | ayuda |
+| `-v` | versión |
+
 ## Ejemplos
 
 En [`examples/`](examples/) está el corpus vivo donde se pueden ver diferentes funcionalidades: todos sus archivos compilan con el binario actual y se verifican en cada cambio.
@@ -169,27 +167,20 @@ reacomoda sola, porque todo lo demás se deduce.
 
 ## Estado del proyecto
 
-**Esta versión es aún beta**, y de ahí se siguen dos cosas. El **lenguaje todavía puede cambiar**: los nombres y los argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste mañana (los nombres viejos fallan de forma ruidosa, nunca en silencio). Y **faltan piezas**: la especificación describe cosas que aún no existen. Lo que sí está se ejercita
-con el corpus de regresión en cada cambio.
+**Esta versión es aún beta** (`MG_VERSION 3.0.0-beta`). Esto tiene dos implicaciones directas para los usuarios:
 
-Faltan cuatro cosas para el release ([§22.7](especificacion_mg.md) lleva la lista completa), y van **en este orden**:
+1. **El lenguaje todavía puede cambiar.** Los nombres de los comandos y de sus argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste menor más adelante; los nombres viejos fallan de forma ruidosa, nunca en silencio. Cada cambio pasa por una red de regresión sobre todo el corpus: «beta» no quiere decir que la salida se mueva sola, quiere decir que un nombre puede cambiar — y siempre avisando.
 
-1. **Terminar `plot`** — `table` sigue reservado y sin construir, esperando figuras que lo pidan. (`rule` y `legend` ya están: ver [§13.8](especificacion_mg.md) y el ejemplo de arriba.)
-2. **Una referencia de usuario** — hoy hay tres documentos y ninguno es el que hace falta: este README es una portada, `man mg` documenta el *binario* y no el lenguaje, y la especificación es *prospectiva* (describe cosas que aún no existen). Falta el documento que describa, completo y sin historia, **lo que hay**.
-3. **Uso real por otras personas** — un periodo de figuras escritas por gente que no es el autor, con las mejoras que eso motive. **Si usas MG en esta etapa, tu opinión sobre los nombres y la ergonomía es justo lo que falta**, y todavía se puede actuar sobre ella sin costo para nadie. Va después de la referencia porque sin algo que leer, lo que se recoge es «no encontré cómo hacer X» y no «lo encontré y es incómodo», que es lo que sirve para decidir nombres.
-4. **Congelar la gramática** — que una figura que compila siga compilando. Va al final a propósito: es la promesa que hace cara cualquier corrección posterior.
+2. **Buscamos tu retroalimentación.** Antes de congelar la gramática hace falta validar la herramienta con uso real. **Si usas MG en esta etapa, tu opinión sobre la ergonomía y los nombres es justo lo que falta**, y todavía estamos a tiempo de cambiar sin costo para nadie — que es exactamente para lo que sirve la etiqueta «beta».
 
-> **Por qué el orden importa, y no es burocracia.** Lo que compra la palabra «beta» es *el permiso para romper*: hoy renombrar algo cuesta un `sed`, y después del 1.0 cuesta una migración y un número de versión mayor. Así que congelar tiene que ser lo último. El caso real que lo demuestra ocurrió en este proyecto: `axis(title=)` significaba el *nombre del eje* y `axis(labels=)` los *números de las marcas* — los dos nombres que cualquiera alcanza primero significaban otra cosa que en el resto del mundo. Se arregló en una tarde porque no había usuarios; con veinte figuras ajenas encima, no.
-
-*(La codificación del texto estaba en esta lista. Los archivos fuente son UTF-8 y el texto corrido cubre ya el repertorio completo de las fuentes PostScript estándar —latín acentuado más la puntuación tipográfica: comillas “de imprenta”, rayas, puntos suspensivos, viñetas, ‰, ™, €—. Las matemáticas son Unicode de punta a punta. Ver [Texto y matemáticas](#texto-y-matemáticas).)*
-
-`mg` es el compilador de la **versión 3** (`MG_VERSION 3.0.0-beta`). La gramática antigua de dos letras (`PL`, `CR`, `GNNUM`…) —la **versión 2** de la tabla de arriba— quedó congelada en la rama `v1-legacy`, y su corpus vive en [`examples/v1/`](examples/v1/) como oráculo de migración. *(La rama y el directorio se nombraron antes de alinear la numeración con la historia editorial, y conservan el nombre viejo para no romper enlaces existentes.)* **Esos archivos no compilan con este binario.**
-
-Cada cambio pasa por una red de regresión sobre todo el corpus (`bash test/run.sh check`): comparación byte a byte contra la salida bendecida de los tres backends, una pasada de Ghostscript sobre el EPS, y una prueba de paridad entre backends.
+La lista completa de lo que falta para el 1.0 está en [§22.7 de la especificación](especificacion_mg.md).
 
 ## Historia
 
-MetaGráfica se ha reescrito cuatro veces, y cada versión evoluciona. Como otros lenguajes gráficos, al principio se inspiró superficialmente en MetaPost (de ahí algunas convenciones, como los comentarios `%`). Su salida puede incluirse en un documento LaTeX:
+Creado originalmente para publicaciones científicas como los libros de texto de Mecánica Cuántica de Ana María Cetto y Luis de la Peña *[Quantum
+Mechanics: A Physical Approach](https://doi.org/10.1017/9781009679633)* (Cambridge University Press, 2025) y *[Introducción a la mecánica
+cuántica](https://www.fondodeculturaeconomica.com/Ficha/9786071601766/F)* de Luis de la Peña (FCE/UNAM, 3ª ed.) y otros artículos científicos, ha evolucionado escalonadamente durante cerca de cuatro décadas.
+Como otros lenguajes gráficos, al principio se inspiró superficialmente en MetaPost (de ahí algunas convenciones, como los comentarios `%`). Su salida puede incluirse en un documento LaTeX:
 
 | Versión | Año | Lenguaje | Salida |
 |---|---|---|---|
