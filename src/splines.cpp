@@ -332,3 +332,84 @@ bool path_x_bounds_at_y(const Path &path, double y_level, double &xmin, double &
   xmax = *mm.second;
   return true;
 }
+
+// ── Muestreo sobre un path (§9, modelo α+β 2026-07-21) ──────────────────────
+// Ver el comentario de familia en splines.h. La longitud de arco es la que hace
+// que t=0.5 sea el medio GEOMÉTRICO y no la mitad de los segmentos (spike).
+
+point bezier_point(point p0, point c1, point c2, point p1, double t) {
+  double u = 1.0 - t;
+  return (u*u*u)*p0 + (3*u*u*t)*c1 + (3*u*t*t)*c2 + (t*t*t)*p1;
+}
+
+// Poliliniza el path en muestras densas y devuelve (puntos, longitudes de arco
+// acumuladas). Con curve=false los "puntos" son los vértices tal cual; con
+// curve=true cada segmento bézier (4 controles, avanzando de 3 en 3) se subdivide
+// en SUB tramos. La tabla la comparten path_point/path_sample/path_angle.
+static void arc_table(const Path &path, bool curve, Path &pts, std::vector<double> &acc) {
+  const int SUB = 24;                          // tramos por segmento bézier
+  pts.clear(); acc.clear();
+  if (path.empty()) return;
+  if (!curve) {
+    pts = path;
+  } else {
+    // 3k+1 controles → k segmentos. Si sobran puntos (no cierra 3k+1), el último
+    // grupo incompleto se ignora: la validación de conteo la hace el parser (§9).
+    pts.push_back(path.front());
+    for (size_t i = 0; i + 3 < path.size(); i += 3) {
+      for (int s = 1; s <= SUB; s++)
+        pts.push_back(bezier_point(path[i], path[i+1], path[i+2], path[i+3],
+                                   (double)s / SUB));
+    }
+  }
+  acc.push_back(0.0);
+  for (size_t i = 1; i < pts.size(); i++)
+    acc.push_back(acc.back() + distance(pts[i-1], pts[i]));
+}
+
+// Índice del último punto con acc <= target, y la fracción local hacia el siguiente.
+static size_t locate(const std::vector<double> &acc, double target, double &frac) {
+  double total = acc.back();
+  if (total <= 0) { frac = 0; return 0; }
+  if (target <= 0)     { frac = 0; return 0; }
+  if (target >= total) { frac = 1; return acc.size() - 2; }
+  size_t lo = 0, hi = acc.size() - 1;          // búsqueda binaria: acc es creciente
+  while (hi - lo > 1) {
+    size_t mid = (lo + hi) / 2;
+    if (acc[mid] <= target) lo = mid; else hi = mid;
+  }
+  double seg = acc[lo+1] - acc[lo];
+  frac = seg > 1e-12 ? (target - acc[lo]) / seg : 0.0;
+  return lo;
+}
+
+point path_point(const Path &path, double t, bool curve) {
+  Path pts; std::vector<double> acc;
+  arc_table(path, curve, pts, acc);
+  if (pts.empty()) return point(0, 0);
+  if (pts.size() == 1) return pts[0];
+  double frac; size_t i = locate(acc, t * acc.back(), frac);
+  return pts[i] + frac * (pts[i+1] - pts[i]);
+}
+
+Path path_sample(const Path &path, int n, bool curve) {
+  Path out;
+  if (n < 2) n = 2;
+  Path pts; std::vector<double> acc;
+  arc_table(path, curve, pts, acc);
+  if (pts.size() < 2) { if (!pts.empty()) out.push_back(pts[0]); return out; }
+  for (int k = 0; k < n; k++) {
+    double frac; size_t i = locate(acc, (double)k / (n-1) * acc.back(), frac);
+    out.push_back(pts[i] + frac * (pts[i+1] - pts[i]));
+  }
+  return out;
+}
+
+double path_angle(const Path &path, double t, bool curve) {
+  Path pts; std::vector<double> acc;
+  arc_table(path, curve, pts, acc);
+  if (pts.size() < 2) return 0.0;
+  double frac; size_t i = locate(acc, t * acc.back(), frac);
+  point d = pts[i+1] - pts[i];                  // tangente = dirección del tramo local
+  return atan2(d.y, d.x) * 180.0 / M_PI;
+}

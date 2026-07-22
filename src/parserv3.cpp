@@ -206,6 +206,8 @@ static ExprPtr parseUnary(Lexer &);   // adelantada: parsePower la necesita
 static ExprPtr parsePathWidthCall(Lexer &);
 // path_x_min_at_y/path_x_max_at_y(&p, y [, expand]): misma clase de puente.
 static ExprPtr parsePathXBoundCall(Lexer &, bool wantMax);
+// point_at(&p, t [, curve=b]) / angle_at(&p, t [, curve=b]): familia de muestreo §9.
+static ExprPtr parsePathSampleCall(Lexer &, bool wantAngle);
 
 static ExprPtr parseAtom(Lexer &lx) {
   const Tok &t = lx.peek();
@@ -245,6 +247,8 @@ static ExprPtr parseAtom(Lexer &lx) {
         if (name == "path_width") return parsePathWidthCall(lx);
         if (name == "path_x_min_at_y") return parsePathXBoundCall(lx, false);
         if (name == "path_x_max_at_y") return parsePathXBoundCall(lx, true);
+        if (name == "point_at") return parsePathSampleCall(lx, false);
+        if (name == "angle_at") return parsePathSampleCall(lx, true);
         auto *call = new CallExpr(name);
         if (lx.peek().type != T_RPAREN) {
           call->args.push_back(parseExpression(lx));
@@ -804,6 +808,30 @@ struct PathXBoundExpr : Expr {
   }
 };
 
+// point_at(&p, t [, curve=b]) / angle_at(&p, t [, curve=b]) — familia de muestreo
+// (§9, α+β). point_at devuelve un PUNTO ([x,y], una lista de 2: funciona en at=/box=,
+// aún no en un bloque {}); angle_at devuelve el ángulo de la tangente (un número).
+// El flag `curve` (default false) interpreta el path como vértices (lineal) o como
+// controles bézier (evalúa la cúbica): ver splines.h. El parámetro t recorre el path
+// por longitud de arco, así que t=0.5 es el medio GEOMÉTRICO.
+struct PathPointExpr : Expr {
+  PathExprPtr arg;
+  ExprPtr param;
+  ExprPtr curve;                     // opcional (nulo = false)
+  bool wantAngle = false;
+  Value eval(Scope &s) const override {
+    double t = param->eval(s).num;
+    bool c = curve ? curve->eval(s).num != 0.0 : false;
+    Path p = arg->evalPath(s);
+    if (wantAngle) return Value(path_angle(p, t, c));
+    point q = path_point(p, t, c);
+    Value v; v.type = Value::LIST;
+    v.items.push_back(Value(q.x));
+    v.items.push_back(Value(q.y));
+    return v;
+  }
+};
+
 // Argumento de invocación de struct (§8.x): exactamente uno de los dos se
 // llena, nunca ambos. Un solo tipo para posicionales y nombrados, en vez de
 // una lista de paths aparte, para que el índice posicional siga
@@ -910,6 +938,21 @@ struct PathConcat : PathExpr {
     Path acc;
     for (auto &e : parts) acc = concat_paths(acc, e->evalPath(s));
     return acc;
+  }
+};
+
+// sample(&p, n [, curve=b]) (§9, α+β): n puntos equiespaciados por longitud de arco
+// (t=0 y t=1 incluidos). Devuelve un PATH, así que es álgebra §9 como concat/reverse
+// —se dibuja con polyline(sample(…)) o se marca con dot(sample(…))—. El flag `curve`
+// interpreta el path como vértices (default) o controles bézier (ver splines.h).
+struct PathSample : PathExpr {
+  PathExprPtr arg;
+  ExprPtr count;
+  ExprPtr curve;                     // opcional (nulo = false)
+  Path evalPath(Scope &s) const override {
+    int n = (int)count->eval(s).num;
+    bool c = curve ? curve->eval(s).num != 0.0 : false;
+    return path_sample(arg->evalPath(s), n, c);
   }
 };
 
@@ -3197,7 +3240,7 @@ static bool startsPathExpr(const Lexer &lx) {
   if (tt == T_IDENTIFIER && lx.peek(1).type != T_ASSIGN) {  // `sine=` sería arg nombrado
     const std::string &n = lx.peek().str;
     return n == "transpose" || n == "flip_x" || n == "flip_y" || n == "reverse" ||
-           n == "concat" || n == "sine" || n == "smooth";
+           n == "concat" || n == "sine" || n == "smooth" || n == "sample";
   }
   return false;
 }
@@ -3743,6 +3786,21 @@ static PathExprPtr parsePathExpr(Lexer &lx) {
       parseSineArgs(lx, ps->named, ps->coords);
       return ps;
     }
+    if (n == "sample") {                         // sample(&p, n [, curve=b]) (§9, α+β)
+      lx.next();
+      if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras sample");
+      auto sp = std::make_unique<PathSample>();
+      sp->arg = parsePathExpr(lx);
+      if (!lx.accept(T_COMMA)) parseError(lx, "',' y el número de puntos");
+      sp->count = parseExpression(lx);
+      if (lx.accept(T_COMMA)) {                  // curve= nombrado, o posicional
+        std::string k;
+        if (attrNameHere(lx, k) && k == "curve") { lx.next(); lx.next(); }
+        sp->curve = parseExpression(lx);
+      }
+      if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+      return sp;
+    }
     if (n == "smooth") {                         // smooth { pts } (§9.2)
       lx.next();
       if (!lx.accept(T_LBRACE)) parseError(lx, "'{' de los puntos de smooth");
@@ -3779,6 +3837,22 @@ static ExprPtr parsePathXBoundCall(Lexer &lx, bool wantMax) {
   if (!lx.accept(T_COMMA)) parseError(lx, "',' y la altura y del corte");
   e->level = parseExpression(lx);
   if (lx.accept(T_COMMA)) e->expand = parseExpression(lx);
+  if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
+  return e;
+}
+
+// point_at(&p, t [, curve=b]) / angle_at(&p, t [, curve=b]) — el '(' ya se consumió.
+static ExprPtr parsePathSampleCall(Lexer &lx, bool wantAngle) {
+  auto e = std::make_unique<PathPointExpr>();
+  e->wantAngle = wantAngle;
+  e->arg = parsePathExpr(lx);
+  if (!lx.accept(T_COMMA)) parseError(lx, "',' y el parámetro t∈[0,1]");
+  e->param = parseExpression(lx);
+  if (lx.accept(T_COMMA)) {                     // curve= nombrado, o posicional
+    std::string k;
+    if (attrNameHere(lx, k) && k == "curve") { lx.next(); lx.next(); }
+    e->curve = parseExpression(lx);
+  }
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
   return e;
 }

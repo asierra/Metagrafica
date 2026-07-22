@@ -162,8 +162,8 @@ orden de la lista es la ejecución.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] 💡 **La familia de operaciones sobre paths §9 — DISEÑO CERRADO 2026-07-21 (α+β con
-      flag `curve=`), falta implementar.** El hallazgo de comparar con CeTZ y MetaPost
+- [~] 💡 **La familia de operaciones sobre paths §9 — α+β IMPLEMENTADO 2026-07-21;
+      reducciones y cobertura PENDIENTES.** El hallazgo de comparar con CeTZ y MetaPost
       (`local/karl.mg`). La lección de MetaPost NO es copiar una operación: es que **el path
       es un tipo algebraico coherente** y su vocabulario se compone. MG lo empezó
       (concat/reverse/flip/transpose componen) y se detuvo en tres funciones ad-hoc
@@ -195,6 +195,20 @@ orden de la lista es la ejecución.
             reducciones. Un solo modelo mental.
         - **`path_x_*_at_y` se REDEFINEN**, no se retiran: pasan a ser
           `path_x_min_at_y(&p, y, curve=false)` — el caso `curve=true` es lo que les faltaba.
+      - ✅ **HECHO 2026-07-21:** `sample(&p, n [, curve=b])` (path-valuado),
+        `point_at(&p, t [, curve=b])` (devuelve `[x,y]`), `angle_at(&p, t [, curve=b])`
+        (número). Geometría en `splines.cpp` (`bezier_point` + `arc_table`/`path_point`/
+        `path_sample`/`path_angle`, longitud de arco por teselación a `SUB=24` tramos/segmento);
+        cableado en `parserv3.cpp`. `curve=` acepta nombrado o posicional. Verificado: los rojos
+        (`curve=true`) sobre la curva, los verdes (default) sobre la envolvente. Cero motor
+        nuevo en backends, golden `ok=60` (aditivo). ⚠️ **SIN cobertura en el corpus** —función
+        de lenguaje sin figura que la ejercite = se puede romper en silencio; cerrar con un
+        ejemplo (candidato: la demo curva-vs-envolvente).
+      - ⏳ **DIFERIDO a otra tanda:** añadir el flag `curve=` a las reducciones existentes
+        (`path_x_min_at_y`/`path_x_max_at_y`/`path_width`) para que puedan tocar la curva. Hoy
+        siguen tocando la envolvente. **`path_width` CONSERVA su prefijo `path_`** (a diferencia
+        de los cortos `sample`/`point_at`): `width` colisiona con el atributo (`polybar(width=)`,
+        `sample_width=`…), y el prefijo lo desambigua.
       - 🔧 **Qué falta en `splines.cpp` (revisado 2026-07-21):**
         - `bezier_point(p0,c1,c2,p1,t)` — Bernstein cúbico, ~6 líneas (la evaluación en `t`
           YA existe en `splines()` pero en base Catmull-Rom, `point p = c0+u*(c1+u*(c2+c3*u))`).

@@ -86,4 +86,32 @@ Path path_to_bezier(Path controlpoints);
  */
 bool path_x_bounds_at_y(const Path &path, double y_level, double &xmin, double &xmax);
 
+/**
+   Familia de muestreo sobre un path (§9), con el modelo α+β decidido 2026-07-21:
+   el path-valor es NEUTRO (la misma lista de puntos se dibuja recta con polyline o
+   curva con bezier; la interpretación la pone la primitiva), así que estas funciones
+   la reciben en el flag `curve`:
+
+     curve=false — los puntos son VÉRTICES. Interp lineal entre ellos; longitud de
+                   arco = suma de segmentos. Exacto para una polilínea.
+     curve=true  — los puntos son CONTROLES bézier (3k+1): p0 c1 c2 p1 [c1 c2 p2 …].
+                   Se evalúa la cúbica de Bernstein. Toca la CURVA, no la envolvente.
+
+   El parámetro global `t∈[0,1]` recorre el path por LONGITUD DE ARCO (t=0 inicio,
+   t=1 final), así que `t=0.5` es el medio GEOMÉTRICO — no la mitad de los segmentos
+   (medido: en segmentos desiguales difieren hasta 2.9 unidades, spike 2026-07-21).
+ */
+
+// Evalúa UNA cúbica de Bézier (control p0,c1,c2,p1) en t∈[0,1].
+point bezier_point(point p0, point c1, point c2, point p1, double t);
+
+// El punto en t∈[0,1] a lo largo del path, por longitud de arco. curve: ver arriba.
+point path_point(const Path &path, double t, bool curve);
+
+// n puntos equiespaciados por longitud de arco (t=0 y t=1 incluidos; n>=2).
+Path path_sample(const Path &path, int n, bool curve);
+
+// Ángulo (grados) de la tangente en t∈[0,1]. curve: ver arriba.
+double path_angle(const Path &path, double t, bool curve);
+
 #endif

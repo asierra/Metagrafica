@@ -912,7 +912,35 @@ path_height(&p)             % reservado
 path_x_bounds(&p, at_y=E)   % reservado
 ```
 
-Exacto cuando el path es monótono en x (los extremos son entonces los puntos inicial y final, que sí están sobre la curva); sobre una Bézier genuinamente curva en esa zona, opera sobre el polígono de **control**, no sobre la curva — misma advertencia que `path_x_bounds_at_y` (motor, `splines.cpp`), el otro miembro de la familia.
+Exacto cuando el path es monótono en x (los extremos son entonces los puntos inicial y final, que sí están sobre la curva); sobre una Bézier genuinamente curva en esa zona, opera sobre el polígono de **control**, no sobre la curva — misma advertencia que `path_x_bounds_at_y` (motor, `splines.cpp`), el otro miembro de la familia. `path_width` **conserva el prefijo `path_`** a propósito: `width` colisiona con el atributo (`polybar(width=)`), y el prefijo desambigua.
+
+#### Muestreo: `sample` / `point_at` / `angle_at` (§9, modelo α+β)
+
+Las operaciones que **leen geometría de un path** en un parámetro `t ∈ [0,1]`, recorrido por **longitud de arco** (así `t=0.5` es el medio *geométrico*, no la mitad de los segmentos):
+
+```text
+sample(&p, n [, curve=b])       % n puntos equiespaciados por arco → un PATH
+point_at(&p, t [, curve=b])     % el punto en t → [x, y]  (una lista de 2)
+angle_at(&p, t [, curve=b])     % ángulo (grados) de la tangente en t → número
+```
+
+**El flag `curve` es la clave del modelo.** Un path-valor es **neutro**: la misma lista de puntos se dibuja recta con `polyline` o curva con `bezier` (la interpretación la pone la primitiva, no el valor). Por eso estas operaciones la reciben:
+
+- **`curve=false`** (default) — los puntos son **vértices**; interpolación lineal. Exacto para una polilínea; sobre una Bézier toca la **envolvente** (el polígono de control).
+- **`curve=true`** — los puntos son **controles Bézier** (3k+1); se evalúa la cúbica. Toca la **curva**.
+
+`curve=` acepta forma nombrada o posicional (`sample(&p, 8, curve=true)` o `sample(&p, 8, true)`).
+
+```text
+polyline(sample(&curva, 60, curve=true))          % densificar una Bézier gruesa
+dot(sample(&curva, 8, curve=true), size=2)        % 8 marcadores repartidos por arco
+Marcador(at=point_at(&curva, 0.5, curve=true))    % colocar en el medio geométrico
+marker(3, shape="arrow",
+       at=point_at(&c, 0.5, curve=true),
+       rotate=angle_at(&c, 0.5, curve=true))       % marcador orientado a la curva
+```
+
+`point_at` devuelve `[x, y]`, que funciona en posiciones de par (`at=`, `box=`) pero **aún no** dentro de un bloque de coordenadas `{ }` (pendiente, junto con `&path` en bloques). Las reducciones `path_x_*_at_y` ganarán el mismo flag `curve=` en una tanda posterior.
 
 ---
 

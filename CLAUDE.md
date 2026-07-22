@@ -1068,6 +1068,33 @@ larga (`Band 13 < 273.15 Probable ash`) y su histograma el más ancho, así que 
 arriba-izquierda ni abajo-izquierda. Se queda en 33. **La restricción es de CONTENIDO, no de
 acomodo:** el tamaño de la figura lo decide la etiqueta más larga, porque el texto es físico.
 
+### Cerrado en la sesión del 2026-07-21 (`sample`/`point_at`/`angle_at`, familia de muestreo §9)
+
+**Implementada la pieza-palanca que MetaPost sugería** (`point t of p`): leer geometría de un
+path en un parámetro `t`. Tres nombres cortos —`sample(&p,n)` (path-valuado), `point_at(&p,t)`
+(devuelve `[x,y]`), `angle_at(&p,t)` (número)— con el **flag `curve=`** que resuelve el modelo
+α+β decidido antes: el path-valor es NEUTRO (probado: el mismo `&sine` se dibuja recto con
+`polyline` y curvo con `bezier`), así que el flag carga la interpretación —`false`=vértices/
+lineal, `true`=controles bézier/cúbica— en vez de que el valor lleve un tipo (γ, descartado).
+
+- **Geometría en `splines.cpp`:** `bezier_point` (Bernstein cúbico, los ~6 renglones), y
+  `arc_table` que **poliliniza y acumula longitud de arco** (SUB=24 tramos/segmento bézier),
+  compartida por `path_point`/`path_sample`/`path_angle`. La **longitud de arco no es
+  opcional** (spike previo): hace que `t=0.5` sea el medio geométrico. De una polilínea es
+  trivial (sumar segmentos); de una curva, se teselaba igual que para dibujar.
+- **Cableado en `parserv3.cpp`:** `point_at`/`angle_at` son `Expr` (puente Expr↔PathExpr como
+  `path_width`); `sample` es operación de PathExpr (como `concat`/`reverse`). `curve=` acepta
+  nombrado o posicional. **Cero motor nuevo en backends, cero elementos gráficos.**
+- **Verificado visualmente** —lo que cierra el hilo de pegaso—: los puntos `curve=true` caen
+  SOBRE la curva; los `curve=false` (default), sobre la ENVOLVENTE (más lejos en los picos,
+  donde la curva se aparta de sus controles). Golden `ok=60` (aditivo puro).
+
+⏳ **Diferido / pendiente:** (1) las reducciones `path_x_*_at_y` ganarán el mismo `curve=` en
+otra tanda —hoy siguen tocando la envolvente—; (2) **SIN cobertura en el corpus**: función de
+lenguaje sin figura que la ejercite = puede romperse en silencio, cerrar con un ejemplo;
+(3) `point_at` devuelve `[x,y]`, que va en `at=`/`box=` pero aún no en un bloque `{ }`.
+`path_width` **conserva** su prefijo (colisión con el atributo `width=`).
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
