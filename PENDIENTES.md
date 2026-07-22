@@ -266,15 +266,27 @@ orden de la lista es la ejecución.
       `shape`/`size`/`width`/`marker_orient`/`closed`/`from`/`to`/`hatch_gap`…) y `evalError`
       ante uno fuera de lista. **Antes de congelar** (un typo silencioso es peor cuanto más
       madura la gramática). Ver también el `rotate=` de abajo, que es un caso de esto.
-- [ ] 🐞 **La invocación de struct NO comprueba la aridad de los parámetros escalares**
-      (hallado 2026-07-22 sembrando la 5ª compuerta — el fixture esperaba un error y el
-      documento compiló). En los DOS sentidos y en silencio: sobre `struct S(a, b)`, la
-      llamada `S(1)` deja **`b = 0`** y `S(1,2,3,4)` **descarta** los sobrantes; las dos
-      salen con código 0. Es de la peor variante de la familia, la que produce una figura
-      **plausible**: la línea se va a (1,0) en vez de (1,3) y nada lo dice. Los parámetros
-      **path** (`&nombre`) sí se validan (verificado 2026-07-18), así que el hueco es solo
-      de los escalares; un parámetro sin argumento y sin default debería ser `evalError`.
-      **Antes de congelar**, y con fixture de la 5ª compuerta al cerrarlo.
+- [x] ~~🐞 **La invocación de struct NO comprueba la aridad de los parámetros
+      escalares**~~ — **CERRADO 2026-07-22**, el mismo día que lo destapó la 5ª compuerta
+      (un fixture esperaba error y el documento compiló). Era la peor variante de la
+      familia, la que produce una figura **plausible**: sobre `struct S(a,b)`, `S(1)`
+      dejaba **`b = 0`** y dibujaba a (1,0) en vez de (1,3), con código 0 y sin una
+      palabra.
+      - **Cuatro casos, el mismo defecto** —un argumento que no liga con nada, o un
+        parámetro que no recibe nada—, cerrados juntos en `bindStructParams`, que es el
+        punto por el que pasan la invocación directa y la de `fit`: parámetro sin
+        argumento y sin default; demasiados posicionales; **argumento nombrado
+        desconocido** (un typo en el nombre se ignoraba); y el mismo parámetro dado por
+        posición **y** por nombre, donde antes ganaba el posicional callando.
+      - `at=`/`rotate=`/`scale=` quedan exentos por ser modificadores de **colocación**
+        (§8) y no parámetros — los consume `InvokeStmt`, y dentro de `fit` ya eran error
+        antes de llegar aquí.
+      - **Cero churn:** los 66 goldens byte-idénticos, o sea que ningún ejemplo del corpus
+        se apoyaba en el cero silencioso ni en argumentos que no ligaban.
+      - Cubierto por cinco fixtures (`aridad_faltante`, `aridad_sobrante`,
+        `arg_nombrado_desconocido`, `arg_duplicado`, `aridad_en_fit`), y verificado
+        reintroduciendo el `Value(0)`: la compuerta lo caza por las dos vías y el golden
+        se queda en `ok=66 fail=0`, ciego.
 - [ ] 🐞 **`scale` DESCARTA su segundo argumento si es una variable** (hallado 2026-07-22
       escribiendo `fractal_tree.mg`). `scale 0.6 0.6` y `scale s 0.6` funcionan; **`scale s s`
       y `scale 0.6 s` no**: `parseStatement` decide si hay 2º argumento con

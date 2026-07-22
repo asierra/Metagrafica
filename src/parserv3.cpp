@@ -906,8 +906,47 @@ struct Arg { ExprPtr e; PathExprPtr p; };
 // `onda` ya ligado aunque `&onda` no sea el parámetro anterior.
 static void bindStructParams(Scope &local, Scope &caller, StructDef *def,
                              std::vector<Arg> &pos, std::map<std::string, Arg> &named) {
+  // --- Aridad (§8) ---------------------------------------------------------
+  // Los parámetros PATH ya se validaban; los ESCALARES no, en ningún sentido: un
+  // parámetro sin argumento y sin default caía a `Value(0)` EN SILENCIO y los
+  // argumentos de más se descartaban igual de callados, los dos con código 0. Es
+  // la peor variante de la familia porque el resultado es PLAUSIBLE: sobre
+  // `struct S(a,b)`, `S(1)` dibujaba con b=0 y no había nada que lo delatara.
+  //
+  // Los tres casos son el mismo defecto —un argumento que no liga con nada, o un
+  // parámetro que no recibe nada— así que se cierran juntos y aquí, que es el
+  // punto por el que pasan la invocación directa y la de fit.
+  if (pos.size() > def->params.size()) {
+    evalError("demasiados argumentos en la struct: ",
+              def->name + " — recibió " + std::to_string(pos.size()) +
+                  " posicionales y declara " + std::to_string(def->params.size()));
+    return;
+  }
+  for (const auto &kv : named) {
+    const std::string &k = kv.first;
+    // at/rotate/scale son modificadores de COLOCACIÓN (§8), no parámetros: los
+    // consume InvokeStmt, y dentro de fit ya son error antes de llegar aquí.
+    if (k == "at" || k == "rotate" || k == "scale") continue;
+    bool isParam = false;
+    for (size_t i = 0; i < def->params.size(); i++)
+      if (def->params[i] == k) { isParam = true; break; }
+    if (!isParam) {
+      evalError("argumento nombrado desconocido en la struct: ",
+                def->name + " — `" + k + "=` no es un parámetro suyo");
+      return;
+    }
+  }
   auto argFor = [&](size_t i, const std::string &pn) -> const Arg * {
-    if (i < pos.size()) return &pos[i];
+    if (i < pos.size()) {
+      // Dar el mismo parámetro por posición y por nombre es ambiguo; antes ganaba
+      // el posicional sin decir nada.
+      if (named.count(pn)) {
+        evalError("argumento duplicado (posicional y nombrado) en la struct: ",
+                  def->name + " — parámetro " + pn);
+        return nullptr;
+      }
+      return &pos[i];
+    }
     auto nit = named.find(pn);
     return nit != named.end() ? &nit->second : nullptr;
   };
@@ -929,7 +968,9 @@ static void bindStructParams(Scope &local, Scope &caller, StructDef *def,
     } else if (def->defaults[i]) {
       local.vars[pn] = def->defaults[i]->eval(local);
     } else {
-      local.vars[pn] = Value(0);
+      evalError("falta el argumento del parámetro en la struct: ",
+                def->name + " — parámetro " + pn + " (sin valor por default)");
+      return;
     }
   }
 }
