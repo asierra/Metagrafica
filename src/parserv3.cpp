@@ -2090,7 +2090,25 @@ struct TextStmt : Stmt {
   ExprPtr content;
   std::map<std::string, ExprPtr> named;   // §7.5: estilo por-primitiva (font_size/size, font, align, valign, color)
   std::vector<ExprPtr> coords;            // coordenadas (Term), en pares x y
+
+  // Atributos que text() reconoce. Lista PROPIA y no la de las primitivas
+  // (isKnownPrimAttr): los ejes no se solapan —`align`/`valign`/`font` no tienen
+  // sentido en un polyline, ni `hatch`/`closed`/`marker_*` en un text— y
+  // compartirla dejaría pasar sinsentidos en las dos direcciones.
+  static bool isKnownAttr(const std::string &k) {
+    return k == "font_size" || k == "size" || k == "color" ||
+           k == "align" || k == "valign" || k == "font";
+  }
+
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    // Mismo silencio que tenían las primitivas: `text("h", tamano=20)` o un
+    // `colour=` compilaban sin hacer nada y sin avisar. (Una cara de fuente
+    // inválida —`font="Helvetika"`— ya avisaba con warn y cae a Times, que es el
+    // criterio no-fatal que ya usaban los colores desconocidos.)
+    for (const auto &kv : named)
+      if (!isKnownAttr(kv.first))
+        evalError("atributo desconocido en text(): ",
+                  "`" + kv.first + "=` no existe (¿mal escrito?)");
     Value c = content->eval(s);
     std::string str;
     if (c.type == Value::STRING) str = c.str;

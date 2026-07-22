@@ -22,7 +22,7 @@
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
 > Build/test: `make` + `bash test/run.sh check` → **ok=66 … errfail=0** (5 compuertas,
-> la 5ª son 29 pruebas NEGATIVAS en `test/errors/`).
+> la 5ª son 30 pruebas NEGATIVAS en `test/errors/`).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -326,6 +326,19 @@ orden de la lista es la ejecución.
       - Resuelve de paso el `rotate=` de `marker`: en vez de ignorarse, ahora dice que no
         existe y remite implícitamente a `marker_orient=`. Cero churn (`ok=66`), dos
         fixtures (`prim_attr_desconocido`, `marker_rotate`).
+- [ ] 🐞 **Los GENERADORES y los constructos de `plot` siguen tragando nombres
+      desconocidos** (medido 2026-07-22 al cerrar el de `text`). `axis(disparate=1)`,
+      `numbers(disparate=1)` y `grid(disparate=1)` compilan y no dicen nada; es
+      previsible que `plot`/`legend`/`table`/`rule`/`place`/`repeat`/`fit` estén igual.
+      Es el mismo arreglo de una línea que recibieron las primitivas y `text`, pero
+      **la superficie es mucho mayor y el riesgo real no es el código sino la LISTA**:
+      cerrando el de primitivas, el corpus cazó al primer intento que la mía estaba
+      incompleta (`marker_start_orient=`, que existe y está en la spec, se pasa a un
+      helper y no salía por grep). Una lista blanca sacada de los accesos DIRECTOS está
+      incompleta por construcción, y aquí cada generador tiene ~15 nombres. Conviene
+      hacerlo **cuando se escriba la referencia** (condición 5), que es justo el
+      ejercicio de enumerar qué acepta cada constructo — la lista sale de ahí verificada
+      en vez de por grep.
 - [ ] **`rotate=` en `marker` (decidido 2026-07-21: se queda como está, revisar antes de
       congelar).** La orientación de un marcador se pide con `marker_orient=<ángulo>`, NO con
       el `rotate=` que giran structs y otras primitivas — `marker(rotate=…)` se ignora (caso
