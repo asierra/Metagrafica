@@ -79,6 +79,11 @@ private:
   void ensurePatternGSave();
   void hatchCurrentPath();
   bool clip_pending = false;
+  // Path abierto (compound §9.4) que aún NO tiene punto: setOpenPath deja la página
+  // en PATH_OBJECT sin cursor, así que el PRIMER trazo debe abrir con MoveTo aunque
+  // openpath ya sea true. Sin esto, un `arc` primero en el compound (que en path
+  // continuado usa LineTo) hacía un LineTo sin MoveTo → HPDF_PAGE_INVALID_GMODE.
+  bool openpath_empty = false;
 
   std::string filename;
 

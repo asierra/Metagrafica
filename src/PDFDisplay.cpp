@@ -282,6 +282,7 @@ void PDFDisplay::moveto(double x, double y) {
   } else
     adjust_limits(x, y, x, y);
   HPDF_Page_MoveTo(page, x, y);
+  openpath_empty = false;                   // el path ya tiene punto
 }
 
 void PDFDisplay::rmoveto(double x, double y) {
@@ -365,6 +366,7 @@ void PDFDisplay::closepath() {
 
 void PDFDisplay::setOpenPath(bool op) {
   Display::setOpenPath(op);
+  openpath_empty = op;                       // aún sin punto; el 1er trazo hará MoveTo
   if (op) {
     set_limits(1e10, 1e10, -1e10, -1e10);  // reinicia bbox del path (como EPS)
     // libharu prohíbe cambiar el estado gráfico (color, gsave) en modo
@@ -401,6 +403,7 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
   } else
     adjust_limits(minx, miny, maxx, maxy);
   HPDF_Page_MoveTo(page, px[0], py[0]);
+  openpath_empty = false;                   // el path ya tiene punto
   HPDF_Page_LineTo(page, px[1], py[1]);
   HPDF_Page_LineTo(page, px[2], py[2]);
   HPDF_Page_LineTo(page, px[3], py[3]);
@@ -421,7 +424,11 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
 void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
   double sa = startAng, ea = endAng;
-  const bool continuePath = dspstate.openpath;   // antes de que prepareDraw lo cambie
+  // continúa el path solo si YA hay un punto: un compound cuyo PRIMER trazo es el
+  // arco tiene openpath=true pero ningún cursor todavía, así que hay que abrir con
+  // MoveTo (no LineTo) o libharu da INVALID_GMODE.
+  const bool continuePath = dspstate.openpath && !openpath_empty;
+  openpath_empty = false;
   mt.transform(x, y);
   // Radios por norma de columna: círculo se conserva bajo isometría+rotación;
   // sin forzado w=h (compensación V1).
