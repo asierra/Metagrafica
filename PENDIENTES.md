@@ -223,14 +223,17 @@ orden de la lista es la ejecución.
         dibujo*. No se contradicen —leer un punto EXACTO de una curva DERIVADA sigue siendo
         cálculo, no ojo—. La operación es legítima; su lugar es una curva con modelo detrás,
         no un trazo a mano.
-      - **Pendiente ORTOGONAL** (no de α/β): el punto `[x,y]` que devuelve `point_at` solo
-        entra por `at=` de una STRUCT (`Mk(at=point_at(...))`). Hallado al armar
-        `path_sample` (2026-07-21): las **primitivas no tienen `at=`** —`marker(shape="arrow",
-        at=…)` COMPILA pero no dibuja (0 arcos), porque `at=` es colocación de structs— y el
-        **bloque `{ }` no desempaqueta la lista**. Así que hoy, para colocar una primitiva en un
-        punto muestreado, hay que envolverla en una struct (es lo que hace `path_sample.mg` con
-        la flecha). Cerrar el hueco = enseñar a `{ }` a aceptar un punto `[x,y]` (misma solución
-        que `&path` en bloques), lo que además dejaría escribir `marker(...) { point_at(...) }`.
+      - ✅ **HECHO 2026-07-21 — el bloque `{ }` acepta un punto `[x,y]`.** `PrimStmt::evalPath`
+        pasó a máquina de estados escalar-o-punto: un término que evalúa a lista de 2 aporta el
+        par entero. Así `marker(...) { point_at(&c,t) }`, `polyline { 0 0  (p)  5 5 }` (mezcla) y
+        literales `dot { [3,4] }` componen sin envolver en struct. La paridad se validaba en
+        parse-time (`checkCoordPairs`) pero un punto en variable no se distingue de un número ahí,
+        así que se movió a eval-time (flag `allowsPoints` que difiere; bloques sin puntos
+        —smooth/place/literal— conservan el chequeo estricto con línea:columna). **Único costo:**
+        el error de coordenada impar en una primitiva ya no trae línea:columna (sí nombra la
+        primitiva). Golden `ok=63` intacto. `path_sample.mg` muestra el marker suelto además de
+        la struct. Queda aparte `&path` DENTRO del bloque (splice), que es redundante con
+        `polyline(&p)` salvo para mezclar, y `place(Struct) { &path }` de §10.1.
 - [ ] **Tangente declarada en un nodo (`{dir 30}`, `tension`) §9** — el término medio que
       MG no tiene: `bezier` te hace poner los tiradores y `smooth` los deriva todos.
       MetaPost deja decir «pasa por este nodo **saliendo a 30°**», que es justo lo que se

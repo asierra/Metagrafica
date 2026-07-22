@@ -156,7 +156,15 @@ static void parseError(const Lexer &lx, const char *what) {
 // `breaks` guarda los índices donde ';' corta; llamar con el lexer en '}'.
 static void checkCoordPairs(const Lexer &lx, const std::string &what,
                             const std::vector<ExprPtr> &coords,
-                            const std::vector<size_t> &breaks) {
+                            const std::vector<size_t> &breaks,
+                            bool allowsPoints = false) {
+  // allowsPoints: un término puede evaluar a un PUNTO [x,y] (una lista de 2, p.ej.
+  // point_at(&p,t)), que vale por DOS coordenadas siendo UN término. Cuando eso es
+  // posible, la paridad por término deja de ser válida en parse-time (un punto en
+  // variable no es distinguible aquí), así que se difiere al eval-time de
+  // PrimStmt::coordsToPath, que sí conoce el tipo. Los bloques que NO aceptan puntos
+  // (smooth/place/literal de path) conservan el chequeo estricto y su línea:columna.
+  if (allowsPoints) return;
   size_t start = 0;
   for (size_t i = 0; i <= breaks.size(); i++) {
     size_t end = (i < breaks.size()) ? breaks[i] : coords.size();
@@ -1555,11 +1563,32 @@ struct PrimStmt : Stmt {
     return i < pos.size() ? pos[i]->eval(s).num : def;
   }
 
-  // Evalúa las coords [from, to) a un Path (pares x y).
+  // Evalúa las coords [from, to) a un Path. Cada término es un ESCALAR (que se
+  // empareja con el siguiente para formar un punto x-y) o un PUNTO ya hecho —una
+  // lista de 2, como devuelve point_at(&p,t) o un literal [x,y]—, que aporta el par
+  // entero de una vez. Así `marker { point_at(...) }`, `polyline { 0 0  p  5 5 }`
+  // (mezcla) y `dot { point_at(...)  point_at(...) }` componen sin ceremonia.
+  // La paridad se valida AQUÍ (no en parse-time): un escalar sin pareja al final es
+  // el error, y un punto en variable solo se distingue de un número al evaluar.
   Path evalPath(Scope &s, size_t from, size_t to) const {
     Path path;
-    for (size_t i = from; i + 1 < to; i += 2)
-      path.push_back(point(coords[i]->eval(s).num, coords[i + 1]->eval(s).num));
+    bool pending = false;
+    double px = 0;
+    for (size_t i = from; i < to; i++) {
+      Value v = coords[i]->eval(s);
+      if (v.type == Value::LIST) {              // un punto ya hecho
+        if (v.items.size() != 2)
+          evalError("una coordenada-lista debe ser un punto [x,y] (2 valores), en ", name);
+        if (pending)
+          evalError("coordenada suelta sin pareja antes de un punto [x,y], en ", name);
+        path.push_back(point(v.items[0].num, v.items[1].num));
+      } else {                                  // un escalar: se empareja
+        if (!pending) { px = v.num; pending = true; }
+        else { path.push_back(point(px, v.num)); pending = false; }
+      }
+    }
+    if (pending)
+      evalError("número impar de coordenadas (una quedó sin pareja), en ", name);
     return path;
   }
 
@@ -3360,7 +3389,11 @@ static StmtPtr parseStatement(Lexer &lx) {
         if (lx.accept(T_NEWLINE)) continue;
         st->coords.push_back(parseTerm(lx));
       }
-      checkCoordPairs(lx, name, st->coords, st->breaks);
+      // allowsPoints=true: una coordenada puede ser un punto [x,y] (point_at, un
+      // literal [a,b] o una variable-punto). La paridad se valida en eval-time
+      // (coordsToPath). bezier NO acepta puntos: sus controles son escalares y el
+      // conteo 3k+1 se sigue validando en parse-time.
+      checkCoordPairs(lx, name, st->coords, st->breaks, /*allowsPoints=*/name != "bezier");
       if (name == "bezier") checkBezierControlCount(lx, st->coords, st->breaks);
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }

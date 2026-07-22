@@ -940,7 +940,7 @@ marker(3, shape="arrow",
        rotate=angle_at(&c, 0.5, curve=true))       % marcador orientado a la curva
 ```
 
-`point_at` devuelve `[x, y]`, que funciona en posiciones de par (`at=`, `box=`) pero **aún no** dentro de un bloque de coordenadas `{ }` (pendiente, junto con `&path` en bloques). Las reducciones `path_x_*_at_y` ganarán el mismo flag `curve=` en una tanda posterior.
+`point_at` devuelve `[x, y]` — un **punto**, que se usa de dos formas: en una posición de par (`at=` de una struct, `box=`), o **directamente en el bloque de coordenadas `{ }` de una primitiva**. El bloque acepta un punto donde iría un par de escalares, y los mezcla: `marker(...) { point_at(&c, t) }`, `polyline { 0 0  point_at(&c, .5)  5 5 }`. (La paridad —que no quede una coordenada suelta— se valida al evaluar, no en parse-time, porque un punto en variable no se distingue de un número hasta entonces.) Las reducciones `path_x_*_at_y` ganarán el mismo flag `curve=` en una tanda posterior.
 
 ---
 

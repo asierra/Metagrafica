@@ -7,9 +7,10 @@
 %   curve=false (default) — puntos como VÉRTICES → toca la ENVOLVENTE (verde)
 %   curve=true            — controles bézier, evalúa la cúbica → toca la CURVA (rojo)
 %
-% point_at devuelve un punto [x,y]: se usa para COLOCAR una struct con at= (no en
-% el bloque {} de una primitiva). Aquí una flecha-struct se orienta a la tangente
-% en t=0.5 con at=point_at(...) + rotate=angle_at(...).
+% point_at devuelve un punto [x,y], que se usa de dos formas: colocando una STRUCT
+% con at= (flecha AZUL, t=0.5), o metiéndolo DIRECTO en el bloque {} de una
+% primitiva (flecha MORADA = marker suelto, t=0.25) — el bloque acepta un punto,
+% no solo pares de escalares. Las dos se orientan con rotate=angle_at(...).
 %
 % Único ejemplo del corpus que ejercita sample/point_at/angle_at.
 % ─────────────────────────────────────────────────────────────────────────────
@@ -29,8 +30,15 @@ line_width 1.2   color "black"   bezier(&c)
 dot(sample(&c, 13),             size=2.2, color="green")   % default: ENVOLVENTE
 dot(sample(&c, 13, curve=true), size=2.2, color="red")     % curve=true: CURVA
 
-% point_at + angle_at: la flecha en el medio geométrico, orientada a la tangente
+% point_at + angle_at, DOS formas de usarlos:
+%  1) colocando una STRUCT con at=/rotate= (la flecha azul, en t=0.5)
 flecha(at=point_at(&c, 0.5, curve=true), rotate=angle_at(&c, 0.5, curve=true), scale=1.4)
+%  2) point_at directo en el BLOQUE de una primitiva (marker morado, en t=0.25)
+%     — el bloque {} acepta un punto [x,y], así que el marker se orienta con su
+%     propio rotate= a la tangente que da angle_at.
+marker(size=7, shape="arrow", color="purple", rotate=angle_at(&c, 0.25, curve=true)) {
+    point_at(&c, 0.25, curve=true)
+}
 
 % leyenda mínima
 dot(size=2.2, color="red")   { 0.1 7.3 }

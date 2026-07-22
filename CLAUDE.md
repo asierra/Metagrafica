@@ -1095,6 +1095,30 @@ lenguaje sin figura que la ejercite = puede romperse en silencio, cerrar con un 
 (3) `point_at` devuelve `[x,y]`, que va en `at=`/`box=` pero aún no en un bloque `{ }`.
 `path_width` **conserva** su prefijo (colisión con el atributo `width=`).
 
+### Cerrado en la sesión del 2026-07-21 (el bloque de coordenadas acepta un punto)
+
+**`marker { point_at(...) }` ahora dibuja** — el bloque `{ }` de una primitiva acepta un
+**punto `[x,y]`** donde iría un par de escalares, así que `point_at` (que devuelve un punto)
+compone en cualquier primitiva sin envolverla en struct. Cierra el hueco que destapó
+`path_sample`: **las primitivas no tienen `at=`** (es de structs), y `marker(at=…)` compilaba
+sin dibujar nada — un `at=` ignorado en silencio, de la peor clase.
+
+- **Un solo sitio:** `PrimStmt::evalPath` pasó de `for(i+=2)` a una máquina de estados
+  escalar-o-punto — un término que evalúa a `Value::LIST` de 2 aporta el par entero; un
+  escalar se empareja con el siguiente. Cubre TODAS las primitivas (comparten `evalPath`):
+  `marker`/`dot`/`polyline`/`polygon`/`rectangle`/`circle`/`arc`/`ellipse`/`polybar`. Mezcla
+  libre: `polyline { 0 0  (p)  5 5 }`; literales: `dot { [3,4] }`.
+- ⚠️ **La paridad se movió a EVAL-TIME.** `checkCoordPairs` la validaba en parse-time contando
+  términos, pero un punto vale 2 coordenadas siendo 1 término, y **un punto en variable no se
+  distingue de un número hasta evaluar**. Flag `allowsPoints` que difiere el chequeo en las
+  primitivas; los bloques que NO aceptan puntos (smooth/place/literal de path) conservan el
+  estricto con línea:columna. **Único costo:** el error de coordenada impar en una primitiva
+  ya no trae línea:columna (sí nombra la primitiva) — se sigue cazando, y el bug del footgun
+  de paréntesis (`{ 1/u (u*u-u) }`) también, solo que en eval-time.
+- `bezier` NO acepta puntos (controles escalares; el conteo 3k+1 sigue en parse-time).
+- `path_sample.mg` gana un `marker` suelto orientado con `rotate=angle_at(...)` **además** de
+  la flecha-struct, para mostrar los dos caminos. Golden `ok=63`.
+
 ## Code style
 
 [Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
