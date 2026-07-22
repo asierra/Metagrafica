@@ -158,6 +158,32 @@ for k = 0 to n {
 polígono de control, así que son exactas en trayectos monótonos y aproximadas en una bézier
 genuinamente curva.
 
+**Muestreo** — leen geometría de un trayecto en un parámetro `t ∈ [0,1]`, recorrido por
+**longitud de arco** (así `t = 0.5` es el medio *geométrico*, no la mitad de los segmentos):
+
+```octave
+sample(&p, n [, curve=b])       % n puntos equiespaciados por arco → un TRAYECTO
+point_at(&p, t [, curve=b])     % el punto en t → [x, y]
+angle_at(&p, t [, curve=b])     % ángulo (grados) de la tangente en t → número
+```
+
+El flag **`curve`** (nombrado o posicional) fija cómo se interpreta el trayecto: `false`
+(default) trata los puntos como **vértices** (interpolación lineal — exacto para una
+polilínea, sobre una bézier toca la *envolvente*), `true` los trata como **controles bézier**
+(evalúa la curva — toca la *curva* real). Usos típicos:
+
+```octave
+polyline(sample(&curva, 60, curve=true))          % densificar una bézier gruesa
+dot(sample(&curva, 8, curve=true), size=2)        % 8 marcadores repartidos por arco
+Marca(at=point_at(&curva, 0.5, curve=true))       % colocar una struct en el medio
+marker(shape="arrow",
+       marker_orient=angle_at(&curva, 0.5, curve=true)) { point_at(&curva, 0.5, curve=true) }
+```
+
+El último renglón muestra las dos formas de usar el punto: en `at=` de una **struct**, o
+**directo en el bloque `{ }`** de una primitiva (§4: el bloque acepta un punto donde iría un
+par de escalares). Un marcador se orienta con `marker_orient=` (grados), no con `rotate=`.
+
 ---
 
 ## 4. Primitivas
@@ -184,6 +210,14 @@ sine(half_cycles=2, amplitude=1) { 0 0  4 0 }
 
 ```octave
 polyline { 0 0  1 1 ;  2 0  3 1 }          % dos trazos, mismo estilo
+```
+
+En el bloque, una coordenada puede ser un par de escalares (`x y`) **o un punto `[x,y]`** —una
+lista de dos, como devuelve `point_at` (§3) o un literal—, y se mezclan:
+
+```octave
+marker(shape="x") { point_at(&curva, 0.5) }   % un punto directo
+polyline { 0 0  (p)  5 5 }                     % escalares y un punto p mezclados
 ```
 
 **Formas de `marker`:** `circle`, `square`, `diamond`, `cross`, `x`, `triangle`, `arrow`,
@@ -497,8 +531,8 @@ salta es `ln: argumento no positivo`.
 **Colocación** · `place` `fit` `repeat` · invocación `Nombre(at=, scale=, rotate=, transform=)`
 
 **Trayectos** · `path x = …` · `path x += …` · `&nombre` · `concat` `reverse` `flip_x`
-`flip_y` `transpose` · generadores `sine` `smooth` · `path_width` `path_x_min_at_y`
-`path_x_max_at_y`
+`flip_y` `transpose` · generadores `sine` `smooth` · reducciones `path_width`
+`path_x_min_at_y` `path_x_max_at_y` · muestreo `sample` `point_at` `angle_at` (flag `curve=`)
 
 **Gráficas** · `plot` `xaxis` `yaxis` `axis` `rule` `legend`/`entry` `table`/`row` `grid`
 `numbers` `ticks`
