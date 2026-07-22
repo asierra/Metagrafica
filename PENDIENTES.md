@@ -21,7 +21,8 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=66 … imgfail=0** (4 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=66 … errfail=0** (5 compuertas,
+> la 5ª son 21 pruebas NEGATIVAS en `test/errors/`).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -91,9 +92,11 @@ orden de la lista es la ejecución.
      - **Cuenta ANIDAMIENTO, no invocaciones:** verificado que 40 invocaciones planas de la
        misma struct no gastan profundidad. Era el riesgo obvio de un contador global.
      - **Cero churn:** los 63 goldens previos byte-idénticos.
-     - ⏳ **Queda sin cubrir por el corpus:** `fractal_tree` para en `if`, así que la guarda
-       en sí no la ejercita ninguna figura (probada a mano, 6 casos). No hay forma de meterla
-       al golden sin un ejemplo que falle a propósito.
+     - ✅ **Cobertura resuelta el mismo día:** la guarda no la puede ejercitar ninguna figura
+       (`fractal_tree` para en `if`), y eso destapó que el harness **no tenía dimensión de
+       error**. Ahora la cubren dos fixtures de la 5ª compuerta (`max_depth_excedido`,
+       `max_depth_cero`), y el caso del segfault es lo que motivó exigir **`exit == 1`
+       exacto** en vez de «≠ 0».
      - **Va en esta condición, no en «importa pero no bloquea»:** es el **único** modo de
        falla del compilador que acaba en crash en vez de en `evalError` —la política del
        proyecto es que un documento roto aborte con mensaje, no que tumbe el binario— y
@@ -263,6 +266,15 @@ orden de la lista es la ejecución.
       `shape`/`size`/`width`/`marker_orient`/`closed`/`from`/`to`/`hatch_gap`…) y `evalError`
       ante uno fuera de lista. **Antes de congelar** (un typo silencioso es peor cuanto más
       madura la gramática). Ver también el `rotate=` de abajo, que es un caso de esto.
+- [ ] 🐞 **La invocación de struct NO comprueba la aridad de los parámetros escalares**
+      (hallado 2026-07-22 sembrando la 5ª compuerta — el fixture esperaba un error y el
+      documento compiló). En los DOS sentidos y en silencio: sobre `struct S(a, b)`, la
+      llamada `S(1)` deja **`b = 0`** y `S(1,2,3,4)` **descarta** los sobrantes; las dos
+      salen con código 0. Es de la peor variante de la familia, la que produce una figura
+      **plausible**: la línea se va a (1,0) en vez de (1,3) y nada lo dice. Los parámetros
+      **path** (`&nombre`) sí se validan (verificado 2026-07-18), así que el hueco es solo
+      de los escalares; un parámetro sin argumento y sin default debería ser `evalError`.
+      **Antes de congelar**, y con fixture de la 5ª compuerta al cerrarlo.
 - [ ] 🐞 **`scale` DESCARTA su segundo argumento si es una variable** (hallado 2026-07-22
       escribiendo `fractal_tree.mg`). `scale 0.6 0.6` y `scale s 0.6` funcionan; **`scale s s`
       y `scale 0.6 s` no**: `parseStatement` decide si hay 2º argumento con
@@ -472,7 +484,15 @@ orden de la lista es la ejecución.
       falta *definir en spec* si transforma solo el ancla o los glifos.
 - [ ] **Ventanas anidadas §16** — desbloquea `axis(edge=)` suelto y paneles reales.
 - [ ] **`transpose` §9** (`plan_transpose.md`, reposando) — falta 2º ejemplo + orientación.
-- [ ] **Error: falta la columna** (§19; hoy reporta `archivo:línea`).
+- [ ] 🐞 **Error: falta el ARCHIVO, no la columna — el ítem estaba INVERTIDO** (medido
+      2026-07-22 al sembrar la 5ª compuerta). §19 y este tablero decían «ya reporta
+      `archivo:línea`, falta la columna»; lo que sale es `Error de sintaxis en 2:1:` — o
+      sea **línea:columna, sin archivo**. Y es más grave que lo que se creía pendiente:
+      con `include` (§15) un mensaje sin nombre de archivo **no dice en cuál de los
+      archivos está el error**, y es requisito para cualquier editor o IDE. La columna,
+      que se daba por faltante, lleva tiempo funcionando (los fixtures
+      `bezier_conteo`, `rule_suelto`, `comando_mal_escrito` y `literal_path_impar` la
+      verifican con `EXPECT_AT`).
 
 ---
 

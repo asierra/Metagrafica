@@ -16,7 +16,7 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad + docs/img: ok=66 … imgfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas: ok=66 … errfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg (salida PUBLICADA; capture NO la toca)
 ```
@@ -24,11 +24,11 @@ bash test/run.sh images   # regenera docs/img/*.svg (salida PUBLICADA; capture N
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
 de `examples/` (22 `.mg` × EPS/SVG/**PDF** = 66 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=66 fail=0 error=0 psfail=0 c3fail=0 imgfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=66 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
-**Cuatro compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+**Cinco compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
 - **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
@@ -58,7 +58,7 @@ files (`test/golden/`) **no están en git** (se regeneran con `capture`).
   sin trackear (bendecir es barato), pero `docs/img` es salida publicada y bendecirla tiene
   que ser un commit consciente. Para eso está `bash test/run.sh images`, modo aparte.
 
-Las cuatro compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
+Las cinco compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
 (la de `docs/img`, con el archivo rancio **real** de `e9198c0`: lo caza, y el golden sigue
 dando `ok=57` — que es justo la prueba de que el golden no puede verlo).
 

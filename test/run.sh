@@ -7,7 +7,7 @@
 #   ./run.sh check     - (default) compare current output against the golden files
 #   ./run.sh images    - regenerate docs/img/*.svg (salida PUBLICADA y versionada)
 #
-# Tres compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
+# Cinco compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
 #   - Golden por bytes (eps/svg/pdf): caza REGRESIONES de salida. No caza un bug
 #     preexistente: se bendice como correcto.
 #   - Ghostscript sobre el EPS (psfail): caza los bugs de PRÓLOGO, que el golden
@@ -37,6 +37,10 @@
 #     PUBLICADA: bendecirla cambia la cara del proyecto y tiene que ser un commit
 #     consciente, no un efecto colateral de "acepta lo que el compilador haga
 #     ahora". Por eso regenerar es un modo aparte y explícito (`images`).
+#   - Pruebas NEGATIVAS (errfail): las otras cuatro miran salida EXITOSA, así que
+#     los ~150 caminos de error del compilador no tenían NINGUNA prueba. Su
+#     regresión natural es volver al SILENCIO, que no mueve un byte de ningún
+#     golden. Ver el bloque de la compuerta al final del archivo.
 #
 set -u
 
@@ -58,6 +62,10 @@ GOLD="$ROOT/test/golden"
 # render no sería ni reproducible ni verificable — que es justo lo que esta compuerta
 # existe para impedir.
 IMGDIR="$ROOT/docs/img"
+
+# Fixtures de la compuerta 5 (pruebas negativas): cada .mg DEBE fallar, y declara
+# en su encabezado el fragmento de mensaje que debe salir. Ver el bloque al final.
+ERRDIR="$ROOT/test/errors"
 
 # PDF entra a la red golden (antes solo eps/svg, "PDF se verifica por vista"):
 # la salida de libharu es byte-determinista y no depende del path ni de la fecha
@@ -187,6 +195,8 @@ error_count=0
 psfail_count=0
 c3fail_count=0
 imgfail_count=0
+errfail_count=0
+err_ok=0
 
 for example in $EXAMPLES; do
     # Capa 3 (paridad entre backends): acumuladores por ejemplo. Se llenan al vuelo
@@ -294,16 +304,80 @@ for svg in "$IMGDIR"/*.svg; do
     rm -rf "$imgtmp"
 done
 
+# --- Compuerta 5: pruebas NEGATIVAS (errfail) --------------------------------
+# Las otras cuatro compuertas miran salida EXITOSA, así que los ~150 caminos de
+# error del compilador (evalError/parseError/exit) no tenían una sola prueba. Y su
+# regresión natural es la peor: volver al SILENCIO — la familia de bugs más
+# recurrente del proyecto (coordenadas sobrantes descartadas, el bool de
+# emitStyleAttr ignorado, el punto muerto de fig1...). Un diagnóstico que deja de
+# dispararse no mueve un byte de ningún golden.
+#
+# Cada test/errors/*.mg declara EN SÍ MISMO lo que espera (va en git, a diferencia
+# de test/golden, y no hay dos listas que desincronizar):
+#     % EXPECT: <fragmento que debe aparecer en stderr>
+#     % EXPECT_AT: <línea>:<columna>     (opcional)
+#
+# Se exigen TRES cosas, y cada una caza algo distinto:
+#   (a) exit == 1 EXACTO, no "!= 0": un segfault también "falla". Ésta es la
+#       aserción que caza el modo de falla de max_depth antes de su guarda (139).
+#   (b) el fragmento aparece: que el diagnóstico siga existiendo.
+#   (c) NO se creó el archivo de salida: la política de que un documento roto no
+#       produce salida (la razón de que evalError e include sean fatales).
+#
+# Se compara un FRAGMENTO y no el mensaje completo a propósito: los mensajes son
+# prosa que se va a reescribir, y un golden por bytes castigaría justo las mejoras
+# de redacción. El fragmento fija la AFIRMACIÓN (qué constructo, qué está mal) y
+# deja libre la forma.
+#
+# Corre en check y en capture (como gs y la Capa 3): no depende de bendecir nada.
+for case in "$ERRDIR"/*.mg; do
+    [ -f "$case" ] || continue
+    name="$(basename "$case" .mg)"
+    want="$(sed -n 's/^% EXPECT: //p' "$case" | head -1)"
+    want_at="$(sed -n 's/^% EXPECT_AT: //p' "$case" | head -1)"
+    if [ -z "$want" ]; then
+        echo "ERRFAIL $name (el fixture no declara '% EXPECT: ...')"
+        errfail_count=$((errfail_count + 1))
+        continue
+    fi
+    errtmp="$(mktemp -d)"
+    ( cd "$ERRDIR" && "$MG" "$name.mg" "$errtmp/out.svg" ) >/dev/null 2>"$errtmp/stderr"
+    code=$?
+    if [ "$code" -eq 0 ]; then
+        echo "ERRFAIL $name (COMPILÓ: se esperaba que fallara con «$want»)"
+        errfail_count=$((errfail_count + 1))
+    elif [ "$code" -ne 1 ]; then
+        # 139 = SIGSEGV, 134 = abort: falla sucia. Es exactamente lo que hacía una
+        # recursión sin max_depth, y lo que un "!= 0" habría dado por bueno.
+        echo "ERRFAIL $name (salió con $code, no 1: no abortó limpio — ¿señal?)"
+        errfail_count=$((errfail_count + 1))
+    elif ! grep -qF "$want" "$errtmp/stderr"; then
+        echo "ERRFAIL $name (falló, pero sin decir «$want»)"
+        echo "        dijo: $(head -1 "$errtmp/stderr")"
+        errfail_count=$((errfail_count + 1))
+    elif [ -n "$want_at" ] && ! grep -qF " $want_at:" "$errtmp/stderr"; then
+        echo "ERRFAIL $name (mensaje correcto pero no señala $want_at)"
+        echo "        dijo: $(head -1 "$errtmp/stderr")"
+        errfail_count=$((errfail_count + 1))
+    elif [ -e "$errtmp/out.svg" ]; then
+        echo "ERRFAIL $name (abortó con mensaje PERO dejó archivo de salida)"
+        errfail_count=$((errfail_count + 1))
+    else
+        err_ok=$((err_ok + 1))
+    fi
+    rm -rf "$errtmp"
+done
+
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count (err_ok=$err_ok)"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0

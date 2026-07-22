@@ -50,10 +50,39 @@ de salida es intencional.
 - La salida de `mg` a stderr (mensajes tipo "Opening/Closing/...") se
   descarta; no afecta el archivo de salida.
 
-## Pendiente: fase 2 (PDF)
+## Pruebas negativas (`test/errors/`, compuerta `errfail`)
 
-La verificación de la salida PDF queda pendiente para una fase 2. El plan es
-comparar por rasterización con `gs` (Ghostscript) en vez de diff byte a byte,
-ya que el PDF generado por libharu no es determinista byte a byte (puede
-variar en metadatos internos aunque el contenido visual sea idéntico). No
-está implementado todavía en este arnés.
+Las otras compuertas miran salida **exitosa**. Los ~150 caminos de error del
+compilador (51 `evalError`, 94 `parseError`, 7 `exit`) no tenían ninguna prueba,
+y su regresión natural es la peor de todas: **volver al silencio**, que no mueve
+un byte de ningún golden. Es la familia de bugs más recurrente del proyecto —
+coordenadas sobrantes descartadas, el `bool` de `emitStyleAttr` ignorado, el
+punto de control muerto de `fig1`.
+
+Cada `test/errors/*.mg` **debe fallar**, y declara en su propio encabezado lo que
+espera (va en git, a diferencia de `test/golden`, y no hay dos listas que
+desincronizar):
+
+```mg
+% EXPECT: profundidad de recursión excedida
+% EXPECT_AT: 4:1          <- opcional: línea:columna a la que debe señalar
+```
+
+Se exigen tres cosas, y cada una caza algo distinto:
+
+1. **`exit == 1` exacto**, no «≠ 0» — un segfault también «falla». Ésta es la que
+   caza el modo de falla de una recursión sin `max_depth` (139).
+2. **El fragmento aparece en stderr** — que el diagnóstico siga existiendo. Se
+   compara un fragmento y **no** el mensaje completo a propósito: los mensajes son
+   prosa que se va a reescribir, y un golden por bytes castigaría justo las mejoras
+   de redacción. El fragmento fija la *afirmación*; la forma queda libre.
+3. **No se creó el archivo de salida** — la política de que un documento roto no
+   produce salida (la razón de que `evalError` e `include` sean fatales).
+
+Corre en `check` **y** en `capture`, como `gs` y la Capa 3: no depende de bendecir
+nada. Añadir un caso es crear el `.mg` con su `% EXPECT:`; no hay lista que tocar.
+
+Verificada como las otras cuatro, reintroduciendo a propósito los bugs que debe
+cazar: al descartar otra vez el retorno de `emitStyleAttr`, el golden da
+`ok=66 fail=0` y las cuatro compuertas viejas quedan verdes —ciegas— y solo ésta
+lo reporta; al quitar la guarda de `max_depth`, la caza por el código 139.
