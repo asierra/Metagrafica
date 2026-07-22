@@ -6,11 +6,22 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-21**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-22**.
+>
+> También reemplaza a **`ideas.txt`** (borrador fundacional de V3, borrado el 2026-07-22).
+> Se repasaron sus 18 puntos contra el código: 14 están superados —varios muy por encima de
+> lo que el documento imaginaba (el álgebra de paths §9, `axis`/`plot`, structs
+> parametrizadas)— y dos más quedaron **resueltos por decisión**, no por omisión: las
+> splines cónicas se retiraron (§9.1) y la normalización «de 0 a 1» del espacio se revirtió
+> a propósito (§3.1, isométrico por construcción). Lo único que **no** estaba en ningún
+> tablero son los tres ítems marcados 📥 abajo (`max_depth`, `exit`, inventario de loops).
+> La reescritura del parser con «herramientas modernas» que proponía su último párrafo se
+> da por **decidida en contra por los hechos**: el descenso recursivo a mano aguantó §13
+> entero y reescribirlo pelea de frente con la condición 1.
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=63 … imgfail=0** (4 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=66 … imgfail=0** (4 compuertas).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -24,6 +35,16 @@ orden de la lista es la ejecución.
 
 1. **Congelar la gramática.** Declarar estable lo que hay; no añadir sintaxis nueva.
    Implica cerrar (4) y el borrador de (5) primero. Es una decisión, no código.
+   - [ ] 📥 **Inventario de los loops que ya existen** (de `ideas.txt`, punto nunca cerrado:
+     «antes de proponer sintaxis nueva, hacer inventario de los loops que ya existen
+     implícitamente»). Hoy son más que entonces: `for` (§6), `repeat` (§17, el que **acumula**
+     transformación), `place` (§10.1, distribuir a lo largo de un locus), `numbers`/`ticks`
+     (§13, generadores), `polybar` (una barra por punto) y `sample` (§9). **Va aquí y no en
+     «importa pero no bloquea»** porque es exactamente el ejercicio de poner los constructos
+     uno al lado del otro que hay que hacer ANTES de congelar —el mismo que destapó el
+     renombre de §13—: la pregunta es si seis formas de iterar son seis conceptos distintos o
+     tres con nombres inconsistentes. **Cero código**: es una revisión, y su salida natural es
+     una sección de la referencia (5). No añadir sintaxis nueva de loops sin este inventario.
 2. ✅ **Cerrar lo aparcado de `plot` — HECHO 2026-07-21** (`rule`, `legend` automática y
    `table`; los tres, trabajo de parser sin tocar motor ni backends):
    - [x] ~~**`rule` (§13.8)**~~ — CERRADO 2026-07-21 con `figure_02` (5 paneles, local por
@@ -52,6 +73,45 @@ orden de la lista es la ejecución.
 4. **Uso real por gente que no es el autor** (añadida 2026-07-21). Las tres primeras
    preguntan *¿está construido?*; esta pregunta *¿está bien?*. Un periodo de figuras
    escritas por otras personas, con las mejoras que motiven, **antes** de congelar.
+   - [x] ~~🐞📥 **`max_depth` (§18): una recursión sin paro SEGFAULTEA**~~ — **CERRADO
+     2026-07-22**, el mismo día que se halló (repasando `ideas.txt`, cuyo punto era
+     «recursión **controlada**»). Era el **único** modo de falla del compilador que moría
+     por señal en vez de por `evalError`: `struct r(n) { … r(n+1) }` daba **Segmentation
+     fault (exit 139)** y `max_depth 8` respondía *«sentencia de estado desconocida»*.
+     - **Implementación:** `g_maxDepth` (default **32**, el que sugiere §18) + `g_structDepth`,
+       y un helper **`execStructBody`** por el que pasan los **cinco** sitios que expanden un
+       cuerpo de struct (`InvokeStmt`, `RepeatStmt`, `FitStmt`, `buildStructure` y el volcado
+       temporal de plot-log). Ese punto único es lo que importa: verificado que las **cuatro**
+       vías de invocación —invoke, `fit(Struct(...))`, `place`, `repeat`— quedan cubiertas;
+       con la guarda puesta en `InvokeStmt` sola, tres de ellas seguían muriendo.
+     - `max_depth n` entra como **control de documento** (`isConfig`, junto a `display_size`/
+       `world_window`) y **no** como sentencia de estado: no es estado gráfico —no se acota por
+       bloque ni lo restaura `gsave`/`grestore`—, es un tope del compilador. `max_depth 0` es
+       `evalError`.
+     - **Cuenta ANIDAMIENTO, no invocaciones:** verificado que 40 invocaciones planas de la
+       misma struct no gastan profundidad. Era el riesgo obvio de un contador global.
+     - **Cero churn:** los 63 goldens previos byte-idénticos.
+     - ⏳ **Queda sin cubrir por el corpus:** `fractal_tree` para en `if`, así que la guarda
+       en sí no la ejercita ninguna figura (probada a mano, 6 casos). No hay forma de meterla
+       al golden sin un ejemplo que falle a propósito.
+     - **Va en esta condición, no en «importa pero no bloquea»:** es el **único** modo de
+       falla del compilador que acaba en crash en vez de en `evalError` —la política del
+       proyecto es que un documento roto aborte con mensaje, no que tumbe el binario— y
+       le toca justo a quien estrena el constructo más llamativo del lenguaje. El primer
+       fractal que alguien de fuera escriba mal no puede contestar con un volcado.
+     - **Costo bajo:** un contador con save/restore en `InvokeStmt` (mismo patrón que
+       `g_plotLogContext`) + `max_depth` como sentencia de estado, y `evalError` al
+       excederlo nombrando la struct. **No implementar todavía** (decisión de Alejandro,
+       2026-07-22).
+     - ✅ **YA TIENE SU FIGURA** (2026-07-22): `examples/fractal_tree.mg`, reconstruido del
+       Apéndice 1 del artículo de V0 (*Ciencias* 21, 1991). Deja de ser una guarda
+       defensiva especulativa: **el listado V0 impreso NO TIENE condición de paro** —no
+       podía tenerla, V0 no tenía condicionales— así que el límite de profundidad era lo
+       ÚNICO que detenía ese árbol. Era infraestructura de carga. Con eso, el ítem cumple
+       la regla del proyecto («no se construye sin una figura que lo pida»).
+     - 🔎 **Dato de archivo:** `MAXDEEP` sobrevive como palabra en el léxico de V1
+       (`src/mgpp.l:43`) pero `parseDef` no tiene caso para ella → **se ignora**, igual
+       que el `$S 1` de las splines cónicas. Murió en la misma transición a EPS de 1991.
    - **Va antes que (1) porque lo que compra la palabra «beta» es el permiso para
      romper.** Hoy un renombre cuesta un `sed`; después de 1.0 cuesta una migración y un
      número mayor. El criterio no es que pase tiempo (tiempo sin usuarios no prueba nada)
@@ -139,6 +199,18 @@ orden de la lista es la ejecución.
       el font Symbol y el markup `/g` desaparecen. Dígitos, operadores y puntuación
       de `$…$` entraron el mismo día (rectos, como en TeX; el `-` es el signo menos
       U+2212). Una fórmula ya no mezcla tipografías.
+- [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
+      `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
+      línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo
+      especifica: «detiene el procesamiento del archivo en ese punto; el resto se ignora».
+      **Es una herramienta de autor, y por eso vale aunque nadie la pida desde una figura
+      terminada** (Alejandro, 2026-07-22): construyendo una figura por partes, deja **probar
+      por etapas** —compilar hasta donde llevas y ver ese estado— sin comentar el resto del
+      archivo ni mantener copias. Con el tiempo de compilación de MG, es el depurador que el
+      lenguaje no tiene. *(V1: `EXIT`.)*
+      - Ojo con el nombre en el mensaje de error: §18 avisa que **no** es condición de paro de
+        una recursión (para eso `if`, §8.1); conviene que el error lo diga si alguien lo usa
+        dentro de una struct.
 - [ ] **Plot Fase 3** (`plan_plot.md`): localizador automático `step`/`decimals`
       (1/2/5·10ᵏ), `format=` con validación, `at=v`, **`title_at=`** (título al extremo
       del eje — hoy obliga a `text()` manuales en fig4-4/fig6-4).
@@ -172,6 +244,26 @@ orden de la lista es la ejecución.
       `shape`/`size`/`width`/`marker_orient`/`closed`/`from`/`to`/`hatch_gap`…) y `evalError`
       ante uno fuera de lista. **Antes de congelar** (un typo silencioso es peor cuanto más
       madura la gramática). Ver también el `rotate=` de abajo, que es un caso de esto.
+- [ ] 🐞 **`scale` DESCARTA su segundo argumento si es una variable** (hallado 2026-07-22
+      escribiendo `fractal_tree.mg`). `scale 0.6 0.6` y `scale s 0.6` funcionan; **`scale s s`
+      y `scale 0.6 s` no**: `parseStatement` decide si hay 2º argumento con
+      `if (t == T_NUMBER || t == T_MINUS)` (`parserv3.cpp`, rama `top == OPMSC`), así que un
+      identificador no cuenta → el escalado queda **uniforme con el primer argumento** y el
+      segundo se cae al flujo como si fuera una sentencia. Hoy eso revienta con un mensaje
+      que **no menciona `scale`** («se esperaba una expresión… fin de línea»), y en un
+      contexto donde el sobrante sí parsee sería un **escalado anisótropo silenciosamente
+      convertido en isótropo**. Es hermano de los silencios ya cazados (`emitStyleAttr`,
+      `checkCoordPairs`), y el único transform con este defecto: `translate`/`shear` usan
+      aridad FIJA 2 y aceptan variables sin problema.
+      - ⚠️ **No es descuido, es una ambigüedad real de la gramática, y por eso hay que
+        DECIDIRLA y no solo parchearla:** con aridad fija 2, `scale s  Arbol(...)` se comería
+        `Arbol` como escala en y; con la heurística actual, `scale s s` pierde la anisotropía.
+        Es la misma familia que el footgun documentado `dx (h+dy)` → `dx(h+dy)`. Opciones:
+        exigir `scale(sx, sy)` con paréntesis para el caso de dos ejes, aceptar identificador
+        solo si NO va seguido de `(`, o dejar la aridad fija y documentar. **Antes de
+        congelar** — es superficie del lenguaje, no motor.
+      - Rodeo mientras tanto: `scale s` (uniforme, que es lo que quería `fractal_tree`) o
+        poner el número al final (`scale s 0.6`).
 - [ ] **`rotate=` en `marker` (decidido 2026-07-21: se queda como está, revisar antes de
       congelar).** La orientación de un marcador se pide con `marker_orient=<ángulo>`, NO con
       el `rotate=` que giran structs y otras primitivas — `marker(rotate=…)` se ignora (caso
