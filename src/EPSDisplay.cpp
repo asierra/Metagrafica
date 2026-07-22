@@ -163,7 +163,12 @@ void EPSDisplay::start() {
   // isometría en el último decimal.
   dvx = dvx * cm_to_point;
   dvy = dvy * cm_to_point;
-  file = fopen(filename.c_str(), "w");
+  // "wb" y no "w": en Windows el modo texto traduce \n -> \r\n, y la salida
+  // dejaría de ser byte-idéntica a la de Unix (66 FAIL en la red golden que no
+  // son regresiones). El compilador ya decide sus propios saltos de línea. En
+  // Unix los dos modos son lo mismo, así que este cambio no mueve un byte aquí.
+  // El PDF ya lo hacía bien: libharu abre con "wb".
+  file = fopen(filename.c_str(), "wb");
   if (!file) {
     fprintf(stderr, "no se pudo abrir %s\n", filename.c_str());
     exit(1);

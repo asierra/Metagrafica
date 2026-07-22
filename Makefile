@@ -26,7 +26,19 @@ SRCS = $(addprefix $(SRCDIR)/, Display.cpp EPSDisplay.cpp PDFDisplay.cpp SVGDisp
 
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 
+# La página de manual necesita `pandoc`, que es una dependencia de DOCUMENTACIÓN y no
+# del compilador. Si está, `make` la genera como siempre; si no, produce el binario y
+# avisa, en vez de fallar. Motivo: quien llega nuevo quiere `bin/mg`, y un `make` que
+# se detiene por una herramienta que no va a usar es el primer obstáculo que se lleva
+# por delante su interés (y en Windows/macOS pandoc es un instalador aparte).
+PANDOC := $(shell command -v pandoc 2>/dev/null)
+
+ifeq ($(PANDOC),)
+all: $(BINDIR)/mg
+	@echo "aviso: pandoc no encontrado; no se generó $(MANDIR)/mg.1 (el binario sí está en $(BINDIR)/mg)"
+else
 all: $(BINDIR)/mg $(MANDIR)/mg.1
+endif
 
 $(MANDIR)/mg.1: $(MANDIR)/mg.1.md
 	pandoc $< -s -t man -o $@

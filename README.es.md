@@ -124,7 +124,7 @@ make                 # compila bin/mg y la página de manual
 sudo make install    # opcional: deja mg en el PATH
 ```
 
-Se requiere un compilador de C++14 (`clang++` o `g++`), `flex`, y `pandoc` para la página de manual. La biblioteca para la salida PDF, [libharu](http://libharu.org/), viene incluida en `third_party/` y no hace falta nada más que instalar.
+Se requiere un compilador de C++14 (`clang++` o `g++`), GNU `make` y **zlib**. La biblioteca para la salida PDF, [libharu](http://libharu.org/), viene incluida en `third_party/`. Otras dos herramientas son opcionales: `flex`, que solo hace falta si modificas el lexer (el generado está en el repositorio), y `pandoc`, solo para la página de manual — sin él `make` compila el binario igual y lo avisa.
 
 ## Uso
 

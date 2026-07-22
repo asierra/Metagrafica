@@ -170,7 +170,9 @@ std::string SVGDisplay::escapeXML(const std::string& data) {
 // CICLO DE VIDA DEL DOCUMENTO Y ESTADO
 // -------------------------------------------------------------
 void SVGDisplay::start() {
-    file = fopen(filename.c_str(), "w");
+    // "wb": ver la nota en EPSDisplay::start (CRLF en Windows rompería la
+    // igualdad byte a byte con la salida de Unix; aquí no cambia nada).
+    file = fopen(filename.c_str(), "wb");
     if (!file) {
         fprintf(stderr, "Error: No se pudo abrir el archivo SVG %s\n", filename.c_str());
         return;

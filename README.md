@@ -151,9 +151,11 @@ make                 # builds bin/mg and the man page
 sudo make install    # optional: puts mg on your PATH
 ```
 
-Requires a C++14 compiler (`clang++` or `g++`), `flex`, and `pandoc` for the man page.
-The library for PDF output, [libharu](http://libharu.org/), is vendored in
-`third_party/`, and there is nothing else to install.
+Requires a C++14 compiler (`clang++` or `g++`), GNU `make`, and **zlib**. The library for
+PDF output, [libharu](http://libharu.org/), is vendored in `third_party/`. Two more tools
+are optional: `flex`, needed only if you modify the lexer (the generated one is in the
+repository), and `pandoc`, only for the man page — without it `make` still builds the
+binary and says so.
 
 ## Usage
 

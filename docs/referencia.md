@@ -349,6 +349,50 @@ if r > 2 and n < 100 { text("grande") { 0 0 } } else { text("chica") { 0 0 } }
 > ⚠️ **Un literal de lista no se puede indexar.** `[10,20,30][1]` es error de sintaxis; hay
 > que pasar por una variable (`xs = [10,20,30]` y luego `xs[1]`).
 
+### Todas las formas de repetir
+
+Hay **un solo lazo general**, `for`. Lo demás son construcciones que repiten algo concreto,
+y lo que las distingue no es *qué* repiten sino **dónde van las copias**:
+
+| construcción | repite | dónde van las copias |
+|---|---|---|
+| `for v = a to b [step s] { }` | lo que escribas en el cuerpo | donde el cuerpo diga — lo calculas tú |
+| bloque de coordenadas `{ p1 p2 … }` | una **primitiva** | un ejemplar por punto |
+| `place(Struct) { p1 p2 p3 … }` (§8) | una **struct** | un ejemplar por punto (3 o más), orientado a la tangente |
+| `place(Struct, count=N) { p1 p2 }` (§8) | una **struct** | N repartidos por igual entre los dos puntos |
+| `repeat(Struct, count=…)` (§8) | una **struct** | progresión, cada copia **relativa a la anterior** |
+| `numbers`, `ticks` (§10) | una etiqueta / una marca | progresión `at` + `advance`·k |
+| `sample(&p, n)` (§3) | — | no repite nada: **produce** n puntos |
+
+💡 **Un bloque de coordenadas ya es un lazo.** `dot(2) { 0 5  1 5  2 5 }` son tres puntos,
+`circle(0.4) { c1 c2 }` dos círculos, `text("×") { p1 p2 }` la misma cadena estampada dos
+veces, `polybar(width=0.4) { … }` una barra por punto. **Todas** las primitivas funcionan
+así, y no hay que hacer nada para que lo hagan. Con **tres o más** puntos, `place` es
+exactamente eso mismo para **structs**, que no caben en un bloque de coordenadas — no son
+dos ideas, es una con dos nombres, y el nombre aparte existe porque una struct no es una
+primitiva.
+
+> ⚠️ **Con DOS puntos, `place` es otra cosa: una línea guía con algo encima**, y **dibuja la
+> línea**. Es la flecha con etiqueta de toda la vida. Sin `count` pone **un** ejemplar (dónde
+> lo dice `shift`, 1 = el segundo punto; `both_sides=true` pone dos), y `gap=` **parte la
+> línea** para dejarle hueco a un letrero. `place(S, r=…, from=…, to=…) { cx cy }` es la
+> versión sobre un **arco**, que también lo dibuja. En cambio `count=N` sobre los dos puntos
+> reparte N ejemplares por igual y **no** dibuja la línea. Cuatro comportamientos bajo un
+> nombre: si lo que quieres es sembrar copias, da los puntos (3 o más) o usa `count`.
+
+💡 **Lo que justifica `repeat` es la acumulación.** Es el único que compone la
+transformación: con `transform=rotate(30)` la copia *k* va girada 30°·*k* respecto a la
+anterior, y de ahí salen abanicos y espirales. Sin acumular, un `for` que invoca la struct
+hace lo mismo — y se lee mejor. Si no estás acumulando, usa `for`.
+
+💡 **`sample` no es iteración**: no dibuja ejemplares, devuelve un trayecto de *n* puntos
+repartidos por longitud de arco. Produce **datos**, y quien los dibuja es la primitiva a la
+que se los pases.
+
+> ⚠️ **`to` es inclusivo; `count` es una cantidad.** `for i = 0 to 4` da **cinco** vueltas
+> (0,1,2,3,4) y `repeat(…, count=4)` da **cuatro** copias. Es el off-by-one de la casa; los
+> constructos que cuentan (`repeat`, `numbers`, `ticks`) usan `count`, y sólo `for` usa `to`.
+
 ---
 
 ## 8. Estructuras
@@ -382,7 +426,9 @@ Nivel(&pw3)
 **Colocar y ajustar:**
 
 ```octave
-place(Cuadro, gap=0.5) { 0 0  3 0  3 3 }   % una instancia por punto del locus
+place(Cuadro) { 0 0  3 0  3 3 }            % 3+ puntos: una instancia por punto
+place(Cuadro, count=5) { 0 0  4 0 }        % 2 puntos: 5 repartidas por igual
+place(Cuadro, gap=0.5) { 0 0  4 0 }        % 2 puntos: línea guía CON hueco, 1 instancia
 fit(Cuadro) { 1 1  4 3 }                   % ajustado a ese rectángulo
 fit(Cuadro, stretch=true) { 1 1  4 3 }     % deformando (si no, MEET centrado)
 repeat(Cuadro, count=6, at=(0,0), advance=(1.2,0), rotate=15)

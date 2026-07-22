@@ -326,6 +326,42 @@ orden de la lista es la ejecución.
       - Resuelve de paso el `rotate=` de `marker`: en vez de ignorarse, ahora dice que no
         existe y remite implícitamente a `marker_orient=`. Cero churn (`ok=66`), dos
         fixtures (`prim_attr_desconocido`, `marker_rotate`).
+- [ ] 🐞 **`place` ignora en silencio los argumentos que no aplican a SU locus** (hallado
+      2026-07-22 escribiendo el inventario de loops de la referencia). `place` tiene tres
+      loci —**3+ puntos**, **línea de 2 puntos** y **arco** (`r=`)— y cada uno atiende un
+      subconjunto distinto de `count`/`gap`/`shift`/`both_sides`/`from`/`to`. Lo que sobra
+      no avisa. Dos casos medidos:
+      - `gap=` con **3 o más puntos**: byte-idéntico a no ponerlo. ⚠️ **El ejemplo de la
+        propia referencia lo traía** (`place(Cuadro, gap=0.5) { 0 0  3 0  3 3 }`), o sea que
+        el silencio ya había producido documentación equivocada. Corregido de paso.
+      - `count=` sobre el locus **arco**: se ignora; el arco coloca un ejemplar (o dos con
+        `both_sides`), no `count`.
+      No es el mismo arreglo que el de las primitivas —aquí el nombre **sí existe**, solo que
+      no en esa forma—, así que la validación es por locus, no por lista. Antes de congelar.
+      💡 Y hay una pregunta de diseño detrás: **`place` son cuatro construcciones bajo un
+      nombre** (sembrar en puntos dados, repartir N entre dos, línea guía con algo encima,
+      y lo mismo sobre un arco). Las dos primeras son colocación; las dos últimas **dibujan
+      el locus**, que es otra cosa. Candidato para el inventario de la condición 1.
+- [ ] **Portabilidad a Windows — revisada el 2026-07-22, sin verificar en máquina.** El
+      **código** es portable por construcción (cero cabeceras POSIX en fuentes propias,
+      ningún `fork`/`popen`/`system`; el único `unistd.h` es andamiaje de flex con su guarda
+      `YY_NO_UNISTD_H`; el lexer generado está en git, así que flex no hace falta; libharu
+      abre el PDF con `"wb"`). Lo POSIX es el **build**: `SHELL=/bin/sh`, `mkdir -p`,
+      `rm -rf`, `install`, `-Wl,--gc-sections` y `CXX = clang++` fijo → compila con
+      **MSYS2/MinGW o Git Bash**, no con `cmd.exe` + MSVC. Precedente: en 1999 el usuario
+      principal estaba en Windows y se resolvió con MinGW; el port a macOS de 2024 no pidió
+      ni un cambio, solo recompilar con GNU.
+      - ✅ **Cerrado en esa revisión** (sin tocar el binario ni quitar `-lz`): EPS y SVG
+        pasan a `fopen(…, "wb")` —en Unix es lo mismo, en Windows evita que CRLF vuelva la
+        salida distinta y produzca **66 FAIL en la red golden que no son regresiones**—, y
+        `pandoc` deja de bloquear el `make` por default (si no está, compila el binario y
+        avisa).
+      - ⏳ **Falta y no se puede hacer desde aquí:** compilarlo de verdad en Windows. Sin
+        eso no se anuncia (decisión de Alejandro; para el release se publicará un **.exe**).
+        Importa para la **condición 4**: si un invitado llega con Windows, el primer `make`
+        que falle se lleva por delante la retroalimentación que se está buscando.
+      - Pendiente menor por verificar: si MinGW deja el binario como `bin/mg` sin `.exe`. El
+        harness (`test/run.sh`) pide bash + `gs` + `diff` + `mktemp`.
 - [ ] 🐞 **Los GENERADORES y los constructos de `plot` siguen tragando nombres
       desconocidos** (medido 2026-07-22 al cerrar el de `text`). `axis(disparate=1)`,
       `numbers(disparate=1)` y `grid(disparate=1)` compilan y no dicen nada; es
