@@ -26,6 +26,28 @@ script that gets lost.
 
 ---
 
+## The simplest case: a parabola is not an arc
+
+Before the potentials and the wave functions, the example everyone knows. A projectile traces
+a **parabola**: `y = y₀ − k(x−x₀)²`. Drawn by hand, you sketch an arc that *looks like* a
+trajectory — and by hand, the most convenient arc is a circle's.
+
+They are not the same curve, and not by a little as a matter of principle: they are
+**different families**. Below, the two with the same launch, the same landing and the same
+initial direction (horizontal tangent) — the **most favorable** circular arc one could draw.
+They still diverge: the parabola (black) falls inside, the arc (grey) bulges outside, up to
+half a unit apart over a span of nine.
+
+![A computed trajectory is a parabola, not the circular arc you would draw by hand](img/parabola_vs_arco.svg)
+
+The reference figure that inspired [`examples/tiro_parabolico.mg`](../examples/tiro_parabolico.mg)
+drew exactly that arc. Ours computes `y ∝ x²`, and measured —`k = (y₀−y)/(x−x₀)²` comes out
+**constant** at every point— it is an exact parabola. **Illustrating and computing do not
+produce the same figure, and only the computed one is right.** What follows is the same
+principle where the stakes are higher: textbook quantum mechanics.
+
+---
+
 ## 1. A figure with parameters: Franck-Condon
 
 [`examples/franck_condon.mg`](../examples/franck_condon.mg) draws two Morse potentials with
