@@ -390,6 +390,33 @@ repeat(Cuadro, count=6, at=(0,0), advance=(1.2,0), rotate=15)
 
 > El orden de las esquinas de `fit` **importa y refleja**: `{ .5 0  0 1 }` espeja en x.
 
+**Recursión** — una struct puede invocarse **a sí misma**, y ahí es donde una definición
+corta produce una figura que no se podría dibujar a mano. La condición de paro es un `if`:
+
+```octave
+struct arbol(theta, phi, n, s) {
+    polyline { 0 0  0 0.5 }                          % el tronco
+    if n > 0 {                                       % <- la condición de paro
+        { translate 0 0.5  scale s  rotate theta   arbol(theta, phi, n-1, s) }
+        { translate 0 0.5  scale s  rotate phi     arbol(theta, phi, n-1, s) }
+    }
+}
+arbol(28, -28, 8, 0.6)        % 511 segmentos de una struct de cuatro líneas
+```
+
+Un tronco y, en su punta, dos copias menores de sí mismo. Cada rama va en **su propio
+bloque** porque `rotate`/`scale` son estado con ámbito (§9): así la segunda no hereda el
+giro de la primera. Cambiar los dos ángulos cambia el árbol entero
+([`examples/fractal_tree.mg`](../examples/fractal_tree.mg) dibuja dos con la misma struct).
+
+`max_depth n` fija el tope de expansión; **32** por default. Cuenta **anidamiento, no
+invocaciones**: mil copias colocadas una al lado de otra no lo tocan, y vale igual para las
+cuatro formas de invocar (directa, `place`, `fit`, `repeat`).
+
+> `max_depth` es la **red**, no el freno. El freno es el `if`. Una recursión sin condición
+> de paro no dibuja «hasta donde alcance»: aborta con el error de profundidad, nombrando la
+> struct.
+
 ---
 
 ## 9. Transformaciones
@@ -512,6 +539,28 @@ derivada de fórmulas, un error de física suele aparecer como error de compilac
 la profundidad de un pozo de Morse hace que su punto de retorno deje de existir, y lo que
 salta es `ln: argumento no positivo`.
 
+**Compilar por partes.** `exit`, en una línea al **nivel superior** del archivo, detiene ahí
+la lectura: lo que sigue se ignora, incluidos sus errores de sintaxis. Sirve para levantar
+una figura por etapas sin comentar el resto ni mantener copias.
+
+```octave
+polyline { 0 0  1 1 }
+exit                       % de aquí para abajo, como si no estuviera
+
+polygon { 2 2   3 2        % a medio escribir: sin cerrar la llave, y sobra una coord
+```
+
+> `exit` es de tiempo de **lectura**, no de dibujo: dentro de un `if` no sería condicional
+> (la condición se evalúa después), así que anidarlo es error. Y no sirve para parar una
+> recursión — para eso, el `if` de §8.
+
+> ⚠️ **Lo que `exit` sí calla y lo que no.** Calla los errores de **sintaxis** de más abajo
+> —llaves sin cerrar, una primitiva mal escrita, coordenadas impares—, que es el caso normal
+> del código a medio escribir. **No** calla los **léxicos**: un carácter que el lenguaje no
+> reconoce (`@`, o una letra acentuada fuera de una cadena) sigue abortando, porque el
+> archivo se convierte en tokens **entero** antes de leerse. Si dejaste una nota en prosa
+> debajo del `exit`, ponla en un comentario `%`.
+
 ---
 
 ## 13. Referencia rápida
@@ -522,11 +571,11 @@ salta es `ln: argumento no positivo`.
 **Sentencias de estado** · `color` `fill` `line_width` `dash` `hatch` `hatch_gap`
 `outlinefill` `font` `font_size` `align` `valign`
 
-**Configuración** · `display_size` `world_window`
+**Configuración** · `display_size` `world_window` `max_depth` `exit`
 
 **Transformaciones** · `translate` `rotate` `scale` `shear`
 
-**Control** · `for … to … [step …] { }` · `if … { } else { }` · `struct` · `include`
+**Control** · `for … to … [step …] { }` · `if … { } else { }` · `struct` (recursivo) · `include`
 
 **Colocación** · `place` `fit` `repeat` · invocación `Nombre(at=, scale=, rotate=, transform=)`
 
