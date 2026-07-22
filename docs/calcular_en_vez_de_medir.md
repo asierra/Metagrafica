@@ -26,6 +26,28 @@ autor o en un script que se pierde.
 
 ---
 
+## El caso más simple: una parábola no es un arco
+
+Antes de los potenciales y las funciones de onda, el ejemplo que todo el mundo conoce. Un
+proyectil describe una **parábola**: `y = y₀ − k(x−x₀)²`. Dibujada a mano, uno traza un arco
+que *se parece* a una trayectoria — y a mano, el arco más cómodo es el de un círculo.
+
+No son la misma curva, y no por poco de principio: son **familias distintas**. Abajo, las dos
+con el mismo lanzamiento, la misma llegada y la misma dirección de salida (tangente
+horizontal) — el arco de círculo **más favorable** que se puede dibujar. Aun así divergen: la
+parábola (negra) cae por dentro, el arco (gris) se abomba por fuera, hasta media unidad de
+separación en un vano de nueve.
+
+![Una trayectoria calculada es una parábola, no el arco de círculo que se dibujaría a mano](img/parabola_vs_arco.svg)
+
+La figura de referencia que inspiró [`examples/tiro_parabolico.mg`](../examples/tiro_parabolico.mg)
+dibujaba justamente ese arco. La nuestra calcula `y ∝ x²`, y medido —`k = (y₀−y)/(x−x₀)²`
+sale **constante** en todos sus puntos— es una parábola exacta. **Ilustrar y calcular no
+producen la misma figura, y solo la calculada es correcta.** Lo que sigue es el mismo
+principio donde las apuestas suben: la física cuántica de un libro de texto.
+
+---
+
 ## 1. Una figura con parámetros: Franck-Condon
 
 [`examples/franck_condon.mg`](../examples/franck_condon.mg) dibuja dos potenciales de Morse
