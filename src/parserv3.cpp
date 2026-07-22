@@ -3670,6 +3670,17 @@ static StmtPtr parseStatement(Lexer &lx) {
   // Mensaje directo (no parseError) por lo mismo que la rama de `polylnie` de abajo:
   // la plantilla "se esperaba X, pero se encontró Y" no aplica a una frase completa,
   // y hay que señalar al NOMBRE, no al '(' que le sigue.
+  // `exit` (§18) lo consume parseProgram, que es el nivel de archivo. Si llega aquí
+  // es que está ANIDADO, y eso no puede funcionar: es un control de PARSE-TIME, así
+  // que dentro de un `if` cortaría el archivo siempre —la condición se evalúa
+  // después— y dentro de un bloque o un struct dejaría las llaves sin cerrar.
+  if (name == "exit") {
+    std::fprintf(stderr, "Error de sintaxis en %d:%d: 'exit' solo va al nivel superior "
+                 "del archivo (§18). Es un control de parse-time: dentro de un if no "
+                 "sería condicional, y dentro de un bloque dejaría las llaves abiertas.\n",
+                 nameLine, nameCol);
+    std::exit(1);
+  }
   if (name == "rule") {
     std::fprintf(stderr, "Error de sintaxis en %d:%d: 'rule' solo es válido dentro de "
                  "un plot { } (es hijo del plot, §13.8)\n", nameLine, nameCol);
@@ -4169,6 +4180,17 @@ static std::vector<StmtPtr> parseProgram(Lexer &lx) {
   std::vector<StmtPtr> prog;
   while (lx.peek().type != T_EOF) {
     if (lx.accept(T_NEWLINE)) continue;          // saltar líneas en blanco/separadores
+    // `exit` (§18): corta el parseo DEL ARCHIVO aquí; lo que sigue no se convierte en
+    // sentencias, así que un error de SINTAXIS posterior tampoco se reporta —llaves sin
+    // cerrar, una primitiva mal escrita— que es justo lo que se quiere al construir la
+    // figura por partes. ⚠️ Un error LÉXICO sí salta (un '@' suelto, una letra acentuada
+    // fuera de una cadena): el Lexer tokeniza el archivo ENTERO antes de que este bucle
+    // corra, y adelantar el corte al lexer costaría más de lo que vale.
+    // Va en este bucle y no en parseStatement porque este ES el nivel de archivo:
+    // parseProgram lo usan tanto el documento principal como cada `include`, de modo
+    // que un `exit` en un incluido corta ESE archivo y el principal sigue, que es lo
+    // que dice la spec («detiene el procesamiento del archivo»).
+    if (lx.peek().type == T_IDENTIFIER && lx.peek().str == "exit") break;
     prog.push_back(parseStatement(lx));
   }
   return prog;
