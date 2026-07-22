@@ -162,6 +162,24 @@ orden de la lista es la ejecución.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
+- [ ] 🐞 **Las primitivas TRAGAN argumentos nombrados desconocidos EN SILENCIO** (hallado
+      2026-07-21). `marker(rotate=90)`, `dot(tamano=5)`, `polyline(colour="red")` (typo
+      clásico), `marker(disparate=5)` — todos COMPILAN sin avisar y no hacen nada. Un typo en
+      un atributo simplemente se ignora. Es la misma clase de silencio que se cazó en las
+      sentencias de estado (`colour 0.5` → error, `emitStyleAttr` devuelve `bool`), pero el
+      atributo POR-PRIMITIVA **descarta ese retorno** (`emitPrimStyle`, `parserv3.cpp:475`).
+      Cerrar = juntar los nombres reconocidos (estilo + los propios de cada primitiva:
+      `shape`/`size`/`width`/`marker_orient`/`closed`/`from`/`to`/`hatch_gap`…) y `evalError`
+      ante uno fuera de lista. **Antes de congelar** (un typo silencioso es peor cuanto más
+      madura la gramática). Ver también el `rotate=` de abajo, que es un caso de esto.
+- [ ] **`rotate=` en `marker` (decidido 2026-07-21: se queda como está, revisar antes de
+      congelar).** La orientación de un marcador se pide con `marker_orient=<ángulo>`, NO con
+      el `rotate=` que giran structs y otras primitivas — `marker(rotate=…)` se ignora (caso
+      del silencio de arriba). **Decisión de Alejandro:** los marcadores son distintos de las
+      structs y varios ni rotan (cruz/x/círculo son simétricos), así que `rotate=` universal
+      no encaja; `marker_orient=` es el nombre correcto. En el radar por si al avanzar hace
+      falta un alias, pero **no** ahora.
+
 - [~] 💡 **La familia de operaciones sobre paths §9 — α+β IMPLEMENTADO 2026-07-21;
       reducciones y cobertura PENDIENTES.** El hallazgo de comparar con CeTZ y MetaPost
       (`local/karl.mg`). La lección de MetaPost NO es copiar una operación: es que **el path
