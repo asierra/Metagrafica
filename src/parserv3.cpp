@@ -660,6 +660,12 @@ struct AssignStmt : Stmt {
   }
 };
 
+// Tope de expansión de structs recursivas (§18) y contador vigente. Declarados
+// aquí porque ConfigStmt (`max_depth n`) los fija; se usan en execStructBody,
+// junto a las structs, donde está el razonamiento.
+static int g_maxDepth = 32;
+static int g_structDepth = 0;
+
 struct ConfigStmt : Stmt {
   std::string which;
   std::vector<ExprPtr> args;
@@ -667,6 +673,11 @@ struct ConfigStmt : Stmt {
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &) override {
     auto n = [&](size_t i) { return args[i]->eval(s).num; };
     if (which == "display_size")      mg.setDimension(n(0), n(1));
+    else if (which == "max_depth") {           // §18: tope de expansión recursiva
+      int d = (int)n(0);
+      if (d < 1) { evalError("max_depth debe ser al menos 1, se dio: ", std::to_string(d)); return; }
+      g_maxDepth = d;
+    }
     else if (which == "world_window") {
       mg.setWindow(n(0), n(2), n(1) - n(0), n(3) - n(2));
       mg.setStretch(stretchE && stretchE->eval(s).num != 0.0);    // §13.7 marco de datos
@@ -740,6 +751,38 @@ static Box path_bbox(const Path &path) {
 
 // Registro global (§15: nombres globales). Posee las definiciones.
 static std::map<std::string, std::unique_ptr<StructDef>> g_structs;
+
+// --- Profundidad de recursión (§18) -----------------------------------------
+// Una struct puede invocarse a sí misma (§8.1). Sin límite, una recursión sin
+// condición de paro agota la pila del proceso y el compilador MUERE POR SEÑAL,
+// que es el único modo de falla que no pasa por evalError. `max_depth n` fija el
+// tope; 32 de default, como pide la spec.
+//
+// El límite es también SEMÁNTICA, no solo defensa: el listado V0 del árbol
+// fractal (Ciencias 21, 1991, Apéndice 1; ver examples/fractal_tree.mg) NO tiene
+// condición de paro —V0 no tenía condicionales— así que la profundidad era lo
+// único que lo detenía. Con V1 la palabra sobrevivió en el léxico (MAXDEEP,
+// src/mgpp.l) pero nadie la aplicaba. (g_maxDepth/g_structDepth se declaran
+// arriba, junto a ConfigStmt, que es quien fija el tope.)
+//
+// Ejecuta el CUERPO de una struct llevando la cuenta de profundidad. Único punto
+// por el que pasan los cinco sitios que expanden un cuerpo (invoke, repeat, fit,
+// buildStructure y el volcado temporal de plot-log), para que ninguno se salte la
+// guarda. Save/restore explícito y no RAII: el proyecto compila sin excepciones,
+// así que el único camino que se salta el decremento es evalError, que sale del
+// proceso.
+static void execStructBody(const StructDef *def, Scope &local, MetaGrafica &mg,
+                           GraphicsItemList &out) {
+  if (g_structDepth >= g_maxDepth) {
+    evalError("profundidad de recursión excedida (§18) en la struct: ",
+              def->name + " — max_depth = " + std::to_string(g_maxDepth) +
+                  ". ¿Falta la condición de paro (if, §8.1)?");
+    return;                                   // inalcanzable: evalError es fatal
+  }
+  ++g_structDepth;
+  for (auto &st : def->body) st->exec(local, mg, out);
+  --g_structDepth;
+}
 
 // Bandera de contexto: activa mientras PlotStmt ejecuta contenido en modo LOG
 // (plan_plot.md Fase 4 Paso 5). Los colocadores de structs (invoke/repeat/fit/
@@ -1094,7 +1137,7 @@ struct InvokeStmt : Stmt {
       t->setOperation(OPMPUSH); t->setMatrix(N);
       out.push_back(std::move(t));
     }
-    for (auto &st : def->body) st->exec(local, mg, out);
+    execStructBody(def, local, mg, out);   // §18: cuenta la profundidad
     popTransforms(countTransforms(def->body), out);   // transforms locales del cuerpo (§11.1)
     if (needN) {
       auto t = std::make_unique<Transform>();
@@ -1229,7 +1272,7 @@ struct RepeatStmt : Stmt {
       M *= Ak;                                           // A^k innermost → M = T·R·S·A^k
       out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
       { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
-      for (auto &st : def->body) st->exec(local, mg, out);
+      execStructBody(def, local, mg, out);   // §18: cuenta la profundidad
       { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
       Ak = Ak * A;
@@ -1310,7 +1353,7 @@ struct FitStmt : Stmt {
     Matrix M = fitMatrix(w, x1, y1, x2, y2, stretch);   // window → rectángulo (esquinas firmadas)
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     { auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(M); out.push_back(std::move(t)); }
-    for (auto &st : def->body) st->exec(local, mg, out);
+    execStructBody(def, local, mg, out);   // §18: cuenta la profundidad
     popTransforms(countTransforms(def->body), out);   // transforms locales del cuerpo (§11.1): sin esto se fugan al fit hermano siguiente
     { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); out.push_back(std::move(t)); }
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
@@ -1334,7 +1377,7 @@ static Structure *buildStructure(StructDef *def, MetaGrafica &mg, Scope &caller)
     auto t = std::make_unique<Transform>(); t->setOperation(OPMPUSH); t->setMatrix(N);
     prlist.push_back(std::move(t));
   }
-  for (auto &st : def->body) st->exec(local, mg, prlist);
+  execStructBody(def, local, mg, prlist);   // §18: cuenta la profundidad
   popTransforms(countTransforms(def->body), prlist);   // §11.1: cierra los transforms del cuerpo antes de la ventana→unidad
   if (needN) { auto t = std::make_unique<Transform>(); t->setOperation(OPMPOP); prlist.push_back(std::move(t)); }
   auto s = std::make_unique<Structure>();
@@ -1536,7 +1579,7 @@ static bool markerShapeFromStruct(Scope &s, MetaGrafica &mg, const std::string &
   for (size_t i = 0; i < def->params.size(); i++)
     local.vars[def->params[i]] = def->defaults[i] ? def->defaults[i]->eval(local) : Value(0);
   GraphicsItemList tmp;
-  for (auto &st : def->body) st->exec(local, mg, tmp);
+  execStructBody(def, local, mg, tmp);   // §18: cuenta la profundidad
   fillable = false;
   for (auto &gi : tmp) {
     GraphicsItemType t = gi->getType();
@@ -3226,7 +3269,18 @@ struct PlotStmt : Stmt {
   }
 };
 
-static bool isConfig(const std::string &n) { return n == "display_size" || n == "world_window"; }
+// Controles del documento (§18): valores sueltos separados por espacio, sin
+// paréntesis ni bloque. max_depth va aquí y no con las sentencias de estado
+// porque no es estado gráfico: no se acota por bloque ni se restaura con
+// gsave/grestore — es un tope del compilador, como display_size.
+static bool isConfig(const std::string &n) {
+  return n == "display_size" || n == "world_window" || n == "max_depth";
+}
+static int configArity(const std::string &n) {
+  if (n == "display_size") return 2;
+  if (n == "max_depth")    return 1;
+  return 4;                                   // world_window
+}
 // Sentencia de transformación local (§11.1) → operación de matriz, o -1 si no lo es.
 static int transformOp(const std::string &n) {
   if (n == "translate") return OPMTL;
@@ -3360,7 +3414,7 @@ static StmtPtr parseStatement(Lexer &lx) {
   if (isConfig(name)) {
     auto st = std::make_unique<ConfigStmt>();
     st->which = name;
-    int n = (name == "display_size") ? 2 : 4;   // world_window: 4 valores
+    int n = configArity(name);
     for (int i = 0; i < n; i++) st->args.push_back(parseTerm(lx));   // valores por espacio -> Term
     std::string k;                              // world_window ... stretch=true (§13.7)
     if (attrNameHere(lx, k) && k == "stretch") { lx.next(); lx.next(); st->stretchE = parseExpression(lx); }

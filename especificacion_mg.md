@@ -2266,7 +2266,7 @@ repeat(Petalo, count=12, transform=rotate(30) scale(0.95))
 - **Terminar el parseo** — `exit` detiene el procesamiento del archivo en ese punto; el resto se ignora. Útil para depurar. Es un control de parse-time: **no** sirve como condición de paro de una recursión (para eso, `if`, §8.1). *(V1: `EXIT`.)*
 - **Salida implícita** — el nombre del archivo de salida se deriva del de entrada (`figura.mg` → `figura.eps`). El backend se selecciona por la extensión del archivo de salida (`.eps`, `.pdf`, `.svg`). *(V1: igual.)*
 - **Caracteres acentuados** — para usar caracteres no-ASCII (á, ñ, …) con las fuentes PostScript estándar, V3 activa automáticamente la recodificación del vector de codificación cuando el texto los contiene. *(V1: bandera interna `reencode`.)*
-- **Profundidad de recursión** — `max_depth n` fija el límite de expansión para structs recursivas (§8.1). Con la recursión ya especificada deja de ser un campo reservado: el motor debe aplicarlo, con un default razonable (p. ej. 32). *(V1: `MAXDEEP n`.)*
+- **Profundidad de recursión** — `max_depth n` fija el límite de expansión para structs recursivas (§8.1). **Implementado** (2026-07-22): default **32**, y al excederlo el compilador aborta con `evalError` nombrando la struct, en vez de agotar la pila. Cuenta **anidamiento**, no invocaciones: mil colocaciones planas de la misma struct no lo tocan. Aplica a las cuatro formas de invocar (directa, `repeat`, `fit(Struct(...))`, `place`). Es la **red**, no el freno: la condición de paro normal es `if` (§8.1) — el límite existe porque la recursión sin paro no puede terminar de otro modo, que es como funcionaba la V0 de 1991, sin condicionales. *(V1: `MAXDEEP n`, que sobrevivía en el léxico pero no se aplicaba.)*
 
 ---
 
