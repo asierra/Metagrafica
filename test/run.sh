@@ -77,6 +77,9 @@ FORMATS="eps svg pdf"
 # symbols es el catálogo de los 69 símbolos de map_symbol que salen por el font
 # Symbol: es la REFERENCIA de la migración P1 (Symbol -> LM Math), que el golden por
 # bytes no puede validar porque todos cambian de fuente por diseño.
+# path_sample es el unico que ejercita la familia de muestreo §9 (sample/point_at/
+# angle_at) con el flag curve=: los puntos curve=true caen sobre la CURVA, los default
+# sobre la ENVOLVENTE; point_at+angle_at colocan una flecha-struct orientada a la tangente.
 # tiro_parabolico ejercita la combinación que nada más cubre: cañón como STRUCT
 # colocado con at= (§8), `path +=` construyendo la curva punto a punto (§9) con las
 # proyecciones a cada eje del mismo lazo, y MALLA AJUSTADA A DATOS (ni grid regular ni
@@ -84,7 +87,7 @@ FORMATS="eps svg pdf"
 # turning_points ejercita `smooth` (§9.2, único del corpus), `path +=` usado como
 # graficador de funciones, y exp/ln/potencia fraccionaria; es el más pesado en
 # cómputo (~4200 iteraciones de cuadratura) y el 2º ejemplo enteramente paramétrico.
-EXAMPLES="curvas3 fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles franck_condon line_patterns markers-demo primitives quickstart rpstest sines symbols texto tiro_parabolico turning_points"
+EXAMPLES="curvas3 fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles franck_condon line_patterns markers-demo path_sample primitives quickstart rpstest sines symbols texto tiro_parabolico turning_points"
 
 export LC_ALL=C
 
