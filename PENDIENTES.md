@@ -162,48 +162,56 @@ orden de la lista es la ejecución.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] 💡 **La familia de operaciones sobre paths §9 — con `sample`/`point t of p` como
-      pieza-palanca.** El hallazgo de comparar con CeTZ y MetaPost (`local/karl.mg`). La
-      lección de MetaPost NO es copiar una operación: es que **el path es un tipo algebraico
-      coherente** y su vocabulario se compone. MG lo empezó (concat/reverse/flip/transpose
-      componen) y se detuvo en tres funciones ad-hoc de nombre provisional (`path_width`,
-      `path_x_min_at_y`, `path_x_max_at_y`).
-      - 🎯 **Una sola pieza de motor desbloquea cuatro cosas: evaluar el path en un
-        parámetro `t`** (`sample`/`point t of p`). De ella cuelgan:
-        - `point t of p` — leer un punto REAL y EXACTO de la curva;
-        - las reducciones `path_x_*_at_y` dejan de ser aproximadas (hoy miden el POLÍGONO
-          DE CONTROL, `splines.h:81`, no la curva);
-        - la "ancla" de CeTZ/TikZ («texto a la mitad de esa línea») = `point 0.5 of p`,
-          **sin sistema de nombres ni referencias entre objetos**;
-        - `intersectionpoint` (path ∩ recta), del que `path_x_*_at_y` es el caso especial
-          —lo que explica por qué esas dos están SIN USO en el corpus—.
-      - 🔧 **Qué falta en `splines.cpp` para `sample` (revisado 2026-07-21):**
-        - La **evaluación de una cúbica en `t` YA EXISTE**, enterrada en `splines()`
-          (`point p = c0 + u*(c1+u*(c2+c3*u))`, Horner) — pero en base **Catmull-Rom**, no
-          la **Bernstein** que necesita un bezier de §9. Falta `bezier_point(p0,c1,c2,p1,t)`,
-          ~6 líneas (De Casteljau).
-        - `path_point(path, t)` con `t` GLOBAL sobre el path multisegmento: **la longitud
-          de arco NO es opcional**, decidido con un spike (2026-07-21). En una curva de
-          segmentos DESIGUALES —el caso de casa: `fig4-4` muestrea `1/r` denso en la rodilla,
-          las ψ de `franck_condon` tienen lóbulos desiguales— `t=0.5` naive (reparto por
-          segmento) cae a **2.9 unidades** del medio geométrico, y encima *sobre la curva*
-          (error plausible, el que no salta). En segmentos parejos las dos coinciden exacto.
-          O sea: el naive funcionaría en las demos y fallaría en el material real → descarta
-          «añadir arc-length después». Costo acotado: teselar+acumular, ~40 líneas, y **MG ya
-          tesela para dibujar** — se reutiliza la teselación para MEDIR, no se inventa nada.
-        - ⚠️ **La decisión, no el código:** un `polyline` guarda VÉRTICES (rectas) y un
-          `bezier` guarda CONTROLES (de tres en tres), y el path como valor de §9 **no lleva
-          esa etiqueta** —es la misma `Path`—. `sample` tiene que saber cuál mira. Es el
-          mismo hueco latente que "mezclar recto y curvo". **Resolver antes de fijar la
-          firma pública.**
-      - Decidir la forma de la familia **antes de congelar** (condición 1); los nombres
-        provisionales no deberían congelarse tal cual. `path_x_*_at_y` probablemente se
-        redefinen en términos de `sample`, o se retiran.
-      - ⚖️ **Tensión filosófica a zanjar por escrito** (no que se cuele con el código):
-        `point t of p` *interroga una curva*, y `docs/calcular_en_vez_de_medir.md` predica
-        *derivar de la fórmula, no medir del dibujo*. No se contradicen —leer un punto
-        EXACTO de una curva DERIVADA sigue siendo cálculo, no ojo— pero es decisión a tomar
-        a conciencia, como se hizo con el solucionador de ecuaciones.
+- [ ] 💡 **La familia de operaciones sobre paths §9 — DISEÑO CERRADO 2026-07-21 (α+β con
+      flag `curve=`), falta implementar.** El hallazgo de comparar con CeTZ y MetaPost
+      (`local/karl.mg`). La lección de MetaPost NO es copiar una operación: es que **el path
+      es un tipo algebraico coherente** y su vocabulario se compone. MG lo empezó
+      (concat/reverse/flip/transpose componen) y se detuvo en tres funciones ad-hoc
+      (`path_width`, `path_x_min_at_y`, `path_x_max_at_y`).
+      - 🎯 **La pieza-palanca es evaluar el path en un parámetro `t`.** De ella cuelgan:
+        `point_at(&p,t)` (punto exacto), las reducciones dejando de aproximar, la "ancla" de
+        CeTZ (`point_at(&p,0.5)`, sin sistema de nombres), e `intersectionpoint` (del que
+        `path_x_*_at_y` es el caso especial — por eso están sin uso).
+      - ✅ **DECISIONES (revisar antes de tocar código, pero cerradas):**
+        - **Nombres CORTOS, sin prefijo `path_`** (el `&p` ya dice que es un path):
+          `sample(&p, n)`, `point_at(&p, t)`, `angle_at(&p, t)`.
+        - **DOS nombres, no sobrecarga:** `sample(&p, n)` (n = nº de puntos, path-valuado)
+          y `point_at(&p, t)` (t∈[0,1], punto-valuado) son operaciones distintas con retorno
+          distinto; NO se funden sobrecargando el 2º arg (¿`3` es «3 puntos» o «en t=3»?).
+        - 🔑 **α+β con un flag `curve=`, NO γ (tipos en el path).** Medido 2026-07-21: un
+          path-valor es NEUTRO —el mismo `&sine` se dibuja entrecortado con `polyline` y
+          suave con `bezier`; la interpretación la pone la PRIMITIVA, no el valor—. Así que
+          el path no puede saber si es vértices o controles: **el flag carga esa
+          interpretación**, no el tipo del valor. γ rompería ese invariante (habría que
+          redefinir `polyline(&curva)`), y es el cambio más grande; descartado.
+          - `curve=false` (DEFAULT): puntos como VÉRTICES → interp/cruce lineal. Exacto en
+            polilíneas; sobre una bézier toca la ENVOLVENTE. **Es lo que hace HOY
+            `path_x_bounds_at_y`** (`splines.cpp`: cruza pares consecutivos con recta), así
+            que α = comportamiento actual → congelable con CERO churn.
+          - `curve=true`: puntos como CONTROLES bézier (3k+1) → evalúa la cúbica. Toca la
+            CURVA real. **Vuelve EXACTAS las reducciones** —el defecto de la envolvente que
+            se señaló en pegaso NO era anticipatorio: β lo arregla—.
+          - El MISMO `curve=` en toda la familia: `sample`/`point_at`/`angle_at` y las
+            reducciones. Un solo modelo mental.
+        - **`path_x_*_at_y` se REDEFINEN**, no se retiran: pasan a ser
+          `path_x_min_at_y(&p, y, curve=false)` — el caso `curve=true` es lo que les faltaba.
+      - 🔧 **Qué falta en `splines.cpp` (revisado 2026-07-21):**
+        - `bezier_point(p0,c1,c2,p1,t)` — Bernstein cúbico, ~6 líneas (la evaluación en `t`
+          YA existe en `splines()` pero en base Catmull-Rom, `point p = c0+u*(c1+u*(c2+c3*u))`).
+        - `path_point(path, t)` con `t` GLOBAL: **la longitud de arco NO es opcional** (spike
+          2026-07-21). En segmentos DESIGUALES —el caso de casa— `t=0.5` naive cae a **2.9
+          unidades** del medio geométrico, y *sobre la curva* (error plausible). Costo:
+          teselar+acumular, ~40 líneas, reutilizando la teselación que MG ya hace para
+          dibujar. De una POLILÍNEA (α, curve=false) la longitud de arco es trivial (sumar
+          segmentos, sin teselar).
+      - ⚖️ **Tensión filosófica ZANJADA por escrito:** `point_at` *interroga una curva*, y
+        `docs/calcular_en_vez_de_medir.md` predica *derivar de la fórmula, no medir del
+        dibujo*. No se contradicen —leer un punto EXACTO de una curva DERIVADA sigue siendo
+        cálculo, no ojo—. La operación es legítima; su lugar es una curva con modelo detrás,
+        no un trazo a mano.
+      - **Pendiente ORTOGONAL** (no de α/β): `point_at` devuelve `[x,y]`, que funciona en
+        `at=`/`box=` pero aún NO en un bloque `{ }` de coordenadas. Va junto con el hueco de
+        `&path` en bloques (misma solución: enseñar a `{ }` a desempaquetar un punto).
 - [ ] **Tangente declarada en un nodo (`{dir 30}`, `tension`) §9** — el término medio que
       MG no tiene: `bezier` te hace poner los tiradores y `smooth` los deriva todos.
       MetaPost deja decir «pasa por este nodo **saliendo a 30°**», que es justo lo que se
