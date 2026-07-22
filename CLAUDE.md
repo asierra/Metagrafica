@@ -16,15 +16,15 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad + docs/img: ok=57 … imgfail=0
+bash test/run.sh check    # golden (EPS+SVG+PDF) + gs + paridad + docs/img: ok=63 … imgfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg (salida PUBLICADA; capture NO la toca)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (19 `.mg` × EPS/SVG/**PDF** = 57 goldens) y compara contra la red golden
+de `examples/` (21 `.mg` × EPS/SVG/**PDF** = 63 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=57 fail=0 error=0 psfail=0 c3fail=0 imgfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=63 fail=0 error=0 psfail=0 c3fail=0 imgfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -72,7 +72,7 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (18 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, primitives, quickstart, rpstest, sines, texto, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (21 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, franck_condon, line_patterns, markers-demo, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
 **Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
@@ -101,7 +101,7 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 ## Roadmap state (act. 2026-07-15)
 
-El parser V3 (`src/parserv3.cpp`) compila los 16 ejemplos de `examples/` a EPS/SVG/PDF.
+El parser V3 (`src/parserv3.cpp`) compila los 21 ejemplos de `examples/` a EPS/SVG/PDF.
 Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
 (§8/§10/§17), generadores §13 (numbers/ticks/axis/grid), primitivas geométricas+bezier+
 sine, texto con markup, estado color/fill/line_width/dash/font/align/valign + atributos

@@ -10,7 +10,7 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=57 … imgfail=0** (4 compuertas).
+> Build/test: `make` + `bash test/run.sh check` → **ok=63 … imgfail=0** (4 compuertas).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
