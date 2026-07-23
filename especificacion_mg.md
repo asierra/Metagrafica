@@ -272,8 +272,11 @@ El bloque `{ }` contiene pares `x y` de centros. Por cada par se dibuja un círc
 ### 4.4 rectangle
 
 ```text
-rectangle(fill="gray") { 1 1  9 7 }  % esquina inferior-izquierda, esquina superior-derecha
+rectangle(fill="gray") { 1 1  9 7 }         % dos esquinas opuestas
+rectangle(fill="gray", w=8, h=6, at=(5,4))  % CENTRO + tamaño (equivale al de arriba)
 ```
+
+Dos formas de darlo. **(a) Dos esquinas opuestas** en el bloque `{ }`. **(b) Centro + tamaño**: `w`/`h` y `at=(cx,cy)` —`at` es el **centro** (como el de `circle`/`dot`), y omitirlo lo pone en el origen; dar solo `w` hace un cuadrado—. La forma (b) evita calcular las esquinas al colocar. Son excluyentes (dar bloque **y** `w/h/at` es error), y `at` sin tamaño también. Internamente (b) sintetiza las dos esquinas, así que todo lo de abajo aplica igual.
 
 Se define por dos esquinas opuestas y es una **forma transformable** (como el `<rect>` de SVG): bajo rotación, shear o escala anisótropa se dibuja transformando **las cuatro esquinas**, produciendo el cuadrilátero girado/deformado correcto —no una caja realineada a los ejes. Bajo traslación y escala uniforme queda el rectángulo de siempre. El orden de las esquinas se respeta: una esquina invertida **refleja** el contenido, igual que en `fit` (§10.2).
 

@@ -118,6 +118,7 @@ polyline { 0 0  1 2  3 1 }                 % polilínea abierta
 polyline(closed=true) { 0 0  1 0  1 1 }    % contorno cerrado, sin repetir el vértice
 polygon { 0 0  1 0  1 1 }                  % relleno
 rectangle { 0 0  4 3 }                     % dos esquinas opuestas
+rectangle(w=4, h=3, at=(2, 1.5))           % …o centro + tamaño (at = centro; solo w = cuadrado)
 circle(2) { 5 5  9 5 }                     % un círculo por punto; 2 = radio (mundo)
 ellipse(3, 1.5) { 5 5 }                    % radios x, y
 arc(2, from=0, to=120) { 0 0 }             % grados, positivo = antihorario

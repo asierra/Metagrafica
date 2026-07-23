@@ -1140,3 +1140,20 @@ Spec §4.11 y `docs/referencia.md` actualizadas; de paso se documentó la ergono
 la sesión: el color de la trama sale de `fill=` (la trama ES el relleno), no de `color=` (que
 contornea). ⚠️ **Cobertura de harness pendiente:** la rama SVG girada no tiene golden (el
 satélite vive en `lib/`); el corpus solo ejercita el 45° legacy. Anotado en `PENDIENTES.md`.
+
+### Cerrado en la sesión del 2026-07-23 (`rectangle(w,h,at)` — centro + tamaño)
+
+**Forma alterna de `rectangle` (§4.4).** Además de las dos esquinas del bloque, ahora acepta
+`rectangle(w=, h=, at=)`: `at` es el **centro** (como el de `circle`/`dot`), `w`/`h` el tamaño,
+dar solo `w` hace un cuadrado, y omitir `at` lo pone en el origen. Lo pidió Alejandro colocando
+el icono del satélite: calcular las dos esquinas para *ubicar* una caja es incómodo. Sintetiza
+las esquinas en `PrimStmt` (`parserv3.cpp`), así que hereda todo lo demás (transformable,
+tramado, reflejo). **Cero motor nuevo en backends**, cero churn (`ok=66`: ningún ejemplo lo
+usa aún). `at` es el centro y no una esquina por consistencia con las primitivas centradas.
+
+Dos guardas, con fixture cada una (`err_ok=36`→**38**): dar bloque **y** `w/h/at` es error
+(ambiguo), y `at` sin tamaño también (era el no-op mudo que la política del proyecto persigue).
+El nombre es `w`/`h` y no `width`/`height` porque `width` ya es el ancho de barra de `polybar`.
+🔎 Detalle: los tres nombres entran a la lista COMÚN `isKnownPrimAttr`, así que `circle(w=2)`
+los acepta y los ignora —la misma holgura que `circle(from=90)` hoy—; afinar por-primitiva es
+la vuelta posterior de siempre.

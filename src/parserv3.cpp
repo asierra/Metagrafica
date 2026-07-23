@@ -492,6 +492,7 @@ static bool isKnownPrimAttr(const std::string &k) {
     "color", "fill", "line_width", "dash", "hatch", "hatch_gap", "hatch_angle",
     // forma
     "closed",                                   // polyline/polygon §4.1
+    "w", "h", "at",                             // rectangle(w,h,at) §4.4 (centro+tamaño)
     "from", "to",                               // arc §4.5
     "width", "dir",                             // polybar §4.12
     "shape", "size",                            // marker/dot §4.6
@@ -1872,7 +1873,36 @@ struct PrimStmt : Stmt {
       // fuera el caso natural de datos generados: `polybar(&hist, width=w)`.
       Path path = pathArg ? pathArg->evalPath(s) : evalPath(s, 0, coords.size());
       std::unique_ptr<GraphicsItem> item;
-      if      (name == "rectangle") { auto p = std::make_unique<Rectangle>(); p->setPath(path); item = std::move(p); }
+      if      (name == "rectangle") {
+        auto p = std::make_unique<Rectangle>();
+        // Forma alterna (§4.4): rectangle(w=, h=, at=) — CENTRO + tamaño, en vez
+        // de las dos esquinas del bloque. `at` es el centro (como el de circle/dot);
+        // omitirlo lo pone en el origen. Cómodo para colocar sin calcular esquinas.
+        bool atForm = named.count("w") || named.count("h") || named.count("at");
+        if (atForm) {
+          if (!path.empty())
+            evalError("rectangle: da las esquinas O (w,h,at), no ambos (§4.4)");
+          if (!named.count("w") && !named.count("h"))
+            evalError("rectangle con at= necesita un tamaño: w= y h= (§4.4)");
+          double w = named.count("w") ? named.at("w")->eval(s).num
+                                      : named.at("h")->eval(s).num;   // solo h → cuadrado
+          double h = named.count("h") ? named.at("h")->eval(s).num : w;
+          double cx = 0, cy = 0;
+          if (named.count("at")) {
+            Value a = named.at("at")->eval(s);
+            if (a.type != Value::LIST || a.items.size() < 2)
+              evalError("rectangle: at= debe ser un punto (x, y) (§4.4)");
+            cx = a.items[0].num; cy = a.items[1].num;
+          }
+          Path r;
+          r.push_back(point(cx - w / 2.0, cy - h / 2.0));
+          r.push_back(point(cx + w / 2.0, cy + h / 2.0));
+          p->setPath(std::move(r));
+        } else {
+          p->setPath(path);
+        }
+        item = std::move(p);
+      }
       else if (name == "dot" || name == "marker") {
         // §4.6: `marker(r, shape=…)` es la primitiva; `dot(r)` es su atajo para el
         // caso común (el disco), y NO lleva shape= — un `dot` que dibuja un cuadrado
