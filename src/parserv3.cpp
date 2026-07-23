@@ -493,6 +493,79 @@ static bool isKnownPrimAttr(const std::string &k) {
   return false;
 }
 
+// Compuerta contra el typo silencioso en los GENERADORES (§13) y en los
+// constructos de colocación (place/repeat/fit). Es el mismo defecto que se cerró
+// en las primitivas y en text() el 2026-07-22: `axis(disparate=1)` compilaba, no
+// hacía nada y no decía una palabra.
+//
+// ⚠️ CÓMO SE ARMARON LAS LISTAS, que es la parte delicada. NO salen de un grep de
+// los accesos directos: eso ya falló una vez (`marker_start_orient=`, que existe y
+// está en la spec, se pasa a un helper y no aparecía). Salen de cruzar TRES
+// fuentes: (1) `docs/referencia.md` §11, que enumera qué acepta cada constructo;
+// (2) un barrido de los accesos a `named` en el cuerpo de cada Stmt, con
+// cualquier nombre de variable —`PlotStmt` lee `m.find("grid")`, no
+// `named.find`—; y (3) los nombres que un constructo INYECTA en otro: `plot`
+// escribe `from`/`to`/`scale`/`field`/`color`/`line_width`… en el `AxisStmt` del
+// usuario y luego lo ejecuta, así que la lista de `axis` es la unión de lo que
+// `axis` lee y lo que `plot` le pone.
+//
+// Los nombres consumidos en PARSE-time (`transform=` de repeat, `stretch=` de fit)
+// nunca llegan a `named`, así que no pueden dar falso positivo aquí.
+template <size_t N>
+static void checkKnownArgs(const char *who,
+                           const std::map<std::string, ExprPtr> &named,
+                           const char *const (&ok)[N]) {
+  for (const auto &kv : named) {
+    bool found = false;
+    for (size_t i = 0; i < N && !found; ++i) found = (kv.first == ok[i]);
+    if (!found)
+      evalError((std::string(who) + ": `" + kv.first +
+                 "=` no existe (¿mal escrito?)").c_str());
+  }
+}
+
+// axis / xaxis / yaxis. La unión que explica el comentario de arriba: lo que lee
+// AxisStmt más lo que plot le inyecta (from/to/scale/field/color/line_width/dash/
+// grid/grid_dash/base).
+static const char *const kAxisArgs[] = {
+  "from", "to", "step", "start", "ticks", "tick_size", "minor",
+  "tick_labels", "decimals", "strip_zero",
+  "tick_label_gap", "tick_label_size", "tick_label_font",
+  "tick_label_align", "tick_label_valign",
+  "label", "label_at", "label_gap", "label_size", "label_font",
+  "base", "extend", "scale", "field",
+  "color", "line_width", "dash", "grid", "grid_dash",
+};
+static const char *const kNumbersArgs[] = {
+  "from", "by", "count", "at", "advance", "decimals", "prefix", "suffix",
+};
+static const char *const kTicksArgs[]  = { "count", "mark", "at", "advance" };
+static const char *const kGridArgs[]   = { "xstep", "ystep" };
+static const char *const kPlotArgs[]   = {
+  "x", "y", "box", "xscale", "yscale", "grid", "grid_dash", "frame",
+};
+static const char *const kRuleArgs[]   = {
+  "x", "y", "to", "label", "label_at", "label_size", "color", "dash", "line_width",
+};
+static const char *const kLegendArgs[] = {
+  "at", "margin", "sample_width", "sample_height", "gap", "row_gap", "font_size",
+};
+static const char *const kTableArgs[]  = {
+  "at", "col_widths", "row_height", "decimals", "align", "border", "fill",
+  "label_col", "label_font", "font_size", "margin",
+};
+// ⚠️ NO lleva amplitude/half_cycles/phase/squared. Los tuve un rato: mi barrido de
+// `named` delimitaba cada Stmt hasta el SIGUIENTE `struct`, y entre PlaceStmt y el
+// siguiente vive el helper de `sine`, así que le atribuyó cuatro nombres ajenos.
+// Lo destapó una prueba de COMPORTAMIENTO, no de lectura de código:
+// `place(P, count=6, half_cycles=2, amplitude=1)` da coordenadas byte-idénticas a
+// `place(P, count=6)` — se aceptaban y no hacían nada, que es justo el bug que esta
+// compuerta cierra. Un locus de onda para `place` no existe.
+static const char *const kPlaceArgs[]  = {
+  "scale", "shift", "count", "gap", "both_sides", "r", "from", "to",
+};
+static const char *const kRepeatArgs[] = { "count", "scale", "rotate", "at", "advance" };
+
 // Estilo por-primitiva (§7.5) compartido por PrimStmt y compound (§9.4):
 // color/fill/line_width + tramado (hatch/hatch_gap, §4.11) + contorno (color con
 // relleno). Emite en `attrs` los GraphicsItem que el llamador acota con push/pop.
@@ -1311,6 +1384,7 @@ struct RepeatStmt : Stmt {
   std::map<std::string, ExprPtr> named;   // count, scale, rotate, at, advance
   std::vector<MatrixCtor> xform;          // transform= (vacío = identidad)
   void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    checkKnownArgs("repeat", named, kRepeatArgs);
     if (logPlotBlocksStruct("repeat")) return;
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (repeat): ", structName); return; }
@@ -1467,6 +1541,7 @@ struct PlaceStmt : Stmt {
   std::map<std::string, ExprPtr> named;   // scale, shift, count, gap, both_sides, r, from, to
   std::vector<ExprPtr> coords;
   void exec(Scope &caller, MetaGrafica &mg, GraphicsItemList &out) override {
+    checkKnownArgs("place", named, kPlaceArgs);
     if (logPlotBlocksStruct("place")) return;
     auto it = g_structs.find(structName);
     if (it == g_structs.end()) { evalError("struct no definida (place): ", structName); return; }
@@ -2160,9 +2235,39 @@ struct TextStmt : Stmt {
 // `prefix`/`suffix` (cadenas literales). La POSICIÓN arranca en `at` y avanza
 // `advance` por paso (§13; forma compacta at/advance, sin pluma). Las etiquetas
 // heredan el estado de texto vigente, como text(). V1: GNNUM i0 inc n decimals.
+// Formatea un número para un rótulo y MATA el "-0" (y "-0.00"). Un cero con signo
+// no es correcto en ningún eje, y sale en cuanto el paso es fraccionario: con
+// `yaxis(step=0.5)` los rótulos eran «-1 -1 -0 0 1 1». Lo destapó una prueba en
+// frío de la referencia (2026-07-23) — es lo primero que escribe quien quiere
+// marcas cada medio.
+static void formatLabel(char *out, size_t n, const char *fmt, double v) {
+  std::snprintf(out, n, fmt, v);
+  if (out[0] != '-') return;
+  for (const char *p = out + 1; *p; ++p)
+    if (*p != '0' && *p != '.') return;          // hay un dígito significativo
+  std::memmove(out, out + 1, std::strlen(out));  // era -0, -0.0, -0.00…
+}
+
+// Decimales por default de un eje: los que hacen falta para que el PASO se
+// distinga. Con step=0.5 y el default viejo (0), dos marcas vecinas se rotulaban
+// IGUAL —«-1 -1 -0 0 1 1»: seis marcas, tres parejas repetidas—. Solo se aplica
+// cuando el documento no dijo `decimals=`; un `decimals=` explícito manda siempre.
+static int decimalsForStep(double step) {
+  double a = std::fabs(step);
+  if (!(a > 0)) return 0;
+  double p = 1.0;
+  for (int d = 0; d <= 6; ++d, p *= 10.0) {
+    double escalado = a * p;
+    if (std::fabs(escalado - (double)std::llround(escalado)) < 1e-9 * (escalado > 1 ? escalado : 1))
+      return d;
+  }
+  return 6;
+}
+
 struct NumbersStmt : Stmt {
   std::map<std::string, ExprPtr> named;
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    checkKnownArgs("numbers", named, kNumbersArgs);
     double from = namedNum(s, named, "from", 0);
     double by   = namedNum(s, named, "by", 1);
     int    count = (int)namedNum(s, named, "count", 0);
@@ -2175,7 +2280,7 @@ struct NumbersStmt : Stmt {
     std::snprintf(fmt, sizeof fmt, "%%.%df", dec < 0 ? 0 : dec);
     for (int i = 0; i < count; i++) {
       char num[64];
-      std::snprintf(num, sizeof num, fmt, from + i * by);
+      formatLabel(num, sizeof num, fmt, from + i * by);
       std::string label = prefix + num + suffix;
       auto gs = std::make_unique<GraphicsState>();
       gs->setPosition(point(at.x + i * adv.x, at.y + i * adv.y));
@@ -2193,6 +2298,7 @@ struct TicksStmt : Stmt {
   std::vector<ExprPtr> pos;                // count posicional (§13.1)
   std::map<std::string, ExprPtr> named;
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    checkKnownArgs("ticks", named, kTicksArgs);
     int count = pos.empty() ? (int)namedNum(s, named, "count", 0) : (int)pos[0]->eval(s).num;
     point mark = namedPoint(s, named, "mark", 0, 0);
     point at   = namedPoint(s, named, "at", 0, 0);
@@ -2218,6 +2324,7 @@ struct GridStmt : Stmt {
   std::map<std::string, ExprPtr> named;
   std::vector<ExprPtr> coords;              // 2 puntos: (x0 y0) (x1 y1)
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    checkKnownArgs("grid", named, kGridArgs);
     if (coords.size() < 4) return;
     double x0 = coords[0]->eval(s).num, y0 = coords[1]->eval(s).num;
     double x1 = coords[2]->eval(s).num, y1 = coords[3]->eval(s).num;
@@ -2314,6 +2421,12 @@ struct AxisStmt : Stmt {
   std::map<std::string, ExprPtr> named;
   std::vector<ExprPtr> coords;              // 2 puntos: p1 p2
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    // ORDEN IMPORTANTE: el de renombrados va PRIMERO. Los nombres viejos
+    // (`title=`, `labels=`…) tampoco están en kAxisArgs, así que si la compuerta
+    // genérica corre antes, se traga el mensaje que dice a qué se renombraron —
+    // que es justo el que hace barata la migración. Lo cazó test/errors.
+    checkRenamedAxisArgs(named);
+    checkKnownArgs("axis", named, kAxisArgs);
     if (coords.size() < 4) return;
     point p1(coords[0]->eval(s).num, coords[1]->eval(s).num);
     point p2(coords[2]->eval(s).num, coords[3]->eval(s).num);
@@ -2321,9 +2434,10 @@ struct AxisStmt : Stmt {
     double step = namedNum(s, named, "step", 1);
     double startv = named.count("start") ? namedNum(s, named, "start", from) : from;
     std::string tdir = namedStr(s, named, "ticks"); if (tdir.empty()) tdir = "out";
-    checkRenamedAxisArgs(named);                              // §13.0 (ver arriba)
     bool tickLabels = named.count("tick_labels") ? namedNum(s, named, "tick_labels", 1) != 0.0 : true;
-    int decimals = (int)namedNum(s, named, "decimals", 0);
+    int decimals = named.count("decimals")
+                 ? (int)namedNum(s, named, "decimals", 0)
+                 : decimalsForStep(namedNum(s, named, "step", 1));
     // label = NOMBRE DEL EJE (§13.0; el `xlabel`/`ylabel` de matplotlib). NO es el
     // encabezado del plot: ese nombre (`title`) queda reservado para `plot`.
     std::string axisLabel = namedStr(s, named, "label");
@@ -2526,7 +2640,7 @@ struct AxisStmt : Stmt {
           if (n == 0) std::snprintf(num, sizeof num, "1");
           else        std::snprintf(num, sizeof num, "$10{^%d}$", n);
         } else {
-          std::snprintf(num, sizeof num, fmt, v);
+          formatLabel(num, sizeof num, fmt, v);
           if (stripZero) {
             size_t len = std::strlen(num);
             if (len >= 2 && num[0] == '0' && num[1] == '.')
@@ -2662,6 +2776,7 @@ struct RuleStmt : Stmt {
   }
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    checkKnownArgs("rule", named, kRuleArgs);
     GraphicsItemList attrs;
     emitStyle(s, attrs);
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
@@ -2732,6 +2847,7 @@ struct LegendStmt : Stmt {
   double boxX0 = 0, boxY0 = 0, boxX1 = 1, boxY1 = 1;   // caja del plot; PlotStmt la fija antes de exec()
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    checkKnownArgs("legend", named, kLegendArgs);
     if (entries.empty() && autoRules.empty()) return;
     std::string at = namedStr(s, named, "at"); if (at.empty()) at = "top-right";
     bool top    = at.compare(0, 3, "top") == 0;
@@ -2857,6 +2973,7 @@ struct TableStmt : Stmt {
   bool inPlot = false;
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    checkKnownArgs("table", named, kTableArgs);
     if (rows.empty()) return;
 
     // Anchos de columna (pt). Su tamaño fija el nº de columnas.
@@ -3032,6 +3149,7 @@ struct PlotStmt : Stmt {
   std::vector<std::unique_ptr<RuleStmt>> rules;   // valores notables (§13.8), coords exteriores
 
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    checkKnownArgs("plot", named, kPlotArgs);
     // Rangos de datos (x=(from,to), y=(from,to)). Deben ser TUPLAS, igual que box=:
     // un escalar (`x=5`) es error, no se acepta en silencio cayendo al default (0,1).
     auto getRange = [&](const char *k, point &r) -> bool {
@@ -4105,7 +4223,12 @@ static StmtPtr parseFit(Lexer &lx) {
     if (!attrNameHere(lx, k)) parseError(lx, "un argumento nombrado (stretch=)");
     lx.next(); lx.next();
     ExprPtr v = parseExpression(lx);
-    if (k == "stretch") st->stretchE = std::move(v);
+    // `fit` es el único de la familia que descarta en PARSE-time: su `named` no
+    // llega a exec(), así que la compuerta de checkKnownArgs no lo alcanzaría.
+    if (k != "stretch")
+      evalError(("fit: `" + k + "=` no existe (¿mal escrito?); el único "
+                 "argumento nombrado de fit es `stretch=`").c_str());
+    st->stretchE = std::move(v);
   }
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
   if (!lx.accept(T_LBRACE)) parseError(lx, "'{' del rectángulo de fit");
