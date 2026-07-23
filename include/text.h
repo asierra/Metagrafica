@@ -174,7 +174,28 @@ private:
 };
 
 
-/** 
+/**
+   SPIKE \frac: composición 2-D de numerador sobre denominador con raya.
+   A diferencia de TextBlock (que APILA renglones sin componer), esto MIDE cada
+   parte, centra la más angosta sobre la más ancha, traza la raya y avanzaría la
+   pluma por su ancho. Solo usa virtuals de Display (device-space), así que NO
+   toca los backends. Exploratorio: standalone (frac como todo el text()), sin
+   inline dentro de una fórmula mayor.
+ */
+class Fraction : public GraphicsItem {
+public:
+  Fraction() : GraphicsItem(GI_FRACTION) { }
+  void draw(Display &) override;
+  void setNum(std::unique_ptr<GraphicsItem> n) { num = std::move(n); }
+  void setDen(std::unique_ptr<GraphicsItem> d) { den = std::move(d); }
+
+private:
+  std::unique_ptr<GraphicsItem> num, den;
+  static double childWidth(GraphicsItem *g);   // ancho em del hijo (Text/TextLine)
+};
+
+
+/**
    A text struct uses one or more text lines to show a fraction, sum, product, etc.
    RESERVADO (ver el comentario de GI_TEXTSTRUCT en primitives.h).
  *

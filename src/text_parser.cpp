@@ -517,6 +517,43 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
     fprintf(stderr, "Error: void text.\n");
     return nullptr;
   }
+
+  // SPIKE \frac: si el text() es (opcionalmente entre $…$) un solo \frac{A}{B},
+  // devuelve una Fraction con A y B parseados como math. Standalone, no inline.
+  {
+    string s = input_utf8;
+    bool wrapped = s.size() >= 2 && s.front() == '$' && s.back() == '$';
+    string body = wrapped ? s.substr(1, s.size() - 2) : s;
+    size_t a = body.find_first_not_of(" \t");
+    if (a != string::npos && body.compare(a, 5, "\\frac") == 0) {
+      // extrae dos grupos {…} balanceados tras \frac
+      size_t i = a + 5, g1s = 0, g1e = 0, g2s = 0, g2e = 0;
+      int depth = 0;
+      for (; i < body.size(); i++) {
+        if (body[i] == '{') { if (depth == 0) g1s = i + 1; depth++; }
+        else if (body[i] == '}') { if (--depth == 0) { g1e = i; i++; break; } }
+      }
+      if (g1e && i < body.size() && body[i] == '{') {
+        depth = 0;
+        for (; i < body.size(); i++) {
+          if (body[i] == '{') { if (depth == 0) g2s = i + 1; depth++; }
+          else if (body[i] == '}') { if (--depth == 0) { g2e = i; break; } }
+        }
+        if (g2e) {
+          string A = body.substr(g1s, g1e - g1s);
+          string B = body.substr(g2s, g2e - g2s);
+          auto frac = std::make_unique<Fraction>();
+          bool r1 = false, r2 = false, c1 = false, c2 = false;
+          frac->setNum(parse_text("$" + A + "$", ff, r1, c1));
+          frac->setDen(parse_text("$" + B + "$", ff, r2, c2));
+          using_reencode = using_reencode || r1 || r2;
+          using_fontcmmi = using_fontcmmi || c1 || c2;
+          return std::move(frac);
+        }
+      }
+    }
+  }
+
   FontFace font_face = ff;
   text = nullptr;
   text_line = nullptr;

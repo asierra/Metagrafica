@@ -564,3 +564,61 @@ double TextLine::width() {
   }
   return w;
 }
+
+// SPIKE \frac ---------------------------------------------------------------
+// Ancho em de un hijo. Sin RTTI (-fno-rtti): se decide por getType() + cast.
+double Fraction::childWidth(GraphicsItem *g) {
+  if (!g) return 0;
+  if (g->getType() == GI_TEXTLINE) return static_cast<TextLine *>(g)->width();
+  if (g->getType() == GI_TEXT) {
+    Text *t = static_cast<Text *>(g);
+    return text_width(t->getState(), t->getText());
+  }
+  return 0;   // TextBlock u otros: fuera del spike
+}
+
+void Fraction::draw(Display &g) {
+  point anchor;
+  g.getPlumePosition(anchor);            // coord de mundo del text() (como TextBlock)
+  double fs = g.getFontSize();
+  double wn = childWidth(num.get()) * fs;   // a puntos de dispositivo
+  double wd = childWidth(den.get()) * fs;
+  double W  = (wn > wd) ? wn : wd;
+
+  // La fracción se ancla según el align del text(): center (1) = -W/2, right (2) = -W.
+  int al = g.getTextAlign();
+  double alignShift = (al == 1) ? -W / 2.0 : (al == 2 ? -W : 0.0);
+
+  // Métricas TeX-simplificadas, relativas al tamaño de fuente.
+  double axis     = 0.32 * fs;   // altura de la raya sobre la línea base
+  double numDrop  = 0.55 * fs;   // base del numerador por ENCIMA de la raya
+  double denRaise = 0.30 * fs;   // base del denominador por DEBAJO de la raya
+
+  g.setTextAlign(0);             // yo coloco cada parte; los hijos no re-centran
+  g.setTextValign(0);
+
+  // Numerador (centrado sobre W).
+  g.pushDrawState();
+  g.moveto_nopath(anchor.x, anchor.y);
+  g.rmoveto(alignShift + (W - wn) / 2.0, axis + numDrop);
+  if (num) num->draw(g);
+  g.popDrawState();
+
+  // Denominador (centrado sobre W).
+  g.pushDrawState();
+  g.moveto_nopath(anchor.x, anchor.y);
+  g.rmoveto(alignShift + (W - wd) / 2.0, axis - denRaise);
+  if (den) den->draw(g);
+  g.popDrawState();
+
+  // Raya: path device-relativo (rmoveto/rlineto no transforman).
+  g.pushDrawState();
+  g.setLineWidth(fs * 0.045);
+  g.moveto(anchor.x, anchor.y);          // newpath + moveto (transforma el ancla)
+  g.rmoveto(alignShift, axis);
+  g.rlineto(W, 0);
+  g.stroke();
+  g.popDrawState();
+
+  g.setTextAlign(al);                    // align es persistente: restaurar
+}
