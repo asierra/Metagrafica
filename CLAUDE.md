@@ -1190,4 +1190,36 @@ documentados (cuatro del autor, cuatro del agente) y ninguno fue «no pude compi
 
 ## Code style
 
-[Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b): no RTTI, no exceptions; `std::unique_ptr` for ownership, raw pointers non-owning. `-Wall -Wpedantic -Wsuggest-override`, warnings-clean. In headers: fully qualified `std::` (no `using` at namespace scope), `override` on all overrides, include guards `MG_*_H` (never `__*`), in-class member initializers. Project language for comments/messages is Spanish; keep new features in the compiler itself (no external preprocessors).
+**C++14, y el estilo se describe en vez de etiquetarse** (act. 2026-07-22; antes decía
+«[Orthodox C++](https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b)», que sigue siendo la
+inspiración pero describía mal lo que el código hace):
+
+- **Sin excepciones ni RTTI** (`-fno-rtti -fno-exceptions`). Esa parte no se ha movido, y es
+  la que condiciona el resto: por eso el manejo de errores es `evalError`/`parseError` con
+  `exit`, y por eso los guardados de estado son save/restore explícito y no RAII.
+- **STL para estructura, con soltura:** `std::unique_ptr` para propiedad (punteros crudos =
+  no-propietarios), `std::vector`/`map`/`string` sin reparos. Aquí *sí* se diverge de
+  Orthodox C++, que pide usar la STL con moderación; la divergencia es deliberada y no hay
+  intención de revertirla.
+- **Salida formateada con `printf`, no con iostreams**, en los tres backends — y eso *coincide*
+  con Orthodox C++, aunque por razones propias: los backends emiten un **formato de cable**
+  (operadores PostScript, atributos SVG), donde la cadena de formato muestra la línea que va a
+  salir; y el código entremezcla `%f` (decimales fijos) con `%g` (cifras significativas), que
+  iostreams modelan con manipuladores **pegajosos** — un `fixed` sin restaurar cambiaría en
+  silencio los números del otro formato. `-Wformat` (dentro de `-Wall`) recupera la seguridad
+  de tipos que se le suele reprochar a `printf`. **Los streams se usan solo para ARMAR
+  cadenas** (`std::ostringstream` en `SVGDisplay` para atributos y listas de puntos), nunca
+  para escribir el archivo: son dos capas, no una mezcla. Revisado en 2026-07-22 al preguntarse
+  si convenía convertir: no — reescribiría todos los números de los tres backends (`%f` = 6
+  decimales fijos vs `<<` = 6 cifras significativas) y movería los 66 goldens a cambio de nada.
+  En C++14 tampoco está `std::format`, que sería la respuesta moderna a las dos opciones.
+- **Locale:** `main` fija `setlocale(LC_NUMERIC, "C")`. `printf` respeta `LC_NUMERIC`, así que
+  una coma decimal corrompería EPS, SVG y PDF a la vez; el entorno no puede provocarlo (un
+  programa C arranca en locale «C») pero una biblioteca que llame a `setlocale` sí. ⚠️ La red
+  de pruebas **no** lo cazaría: `test/run.sh` exporta `LC_ALL=C`.
+- **Compilación limpia:** `-Wall -Wpedantic -Wsuggest-override`, sin warnings.
+- **En headers:** `std::` cualificado (nada de `using` en ámbito de espacio de nombres),
+  `override` en todas las sobrescrituras, guardas `MG_*_H` (nunca `__*`), inicializadores de
+  miembro en clase.
+- Idioma de comentarios y mensajes: **español**. Las características nuevas van **en el
+  compilador** (nada de preprocesadores externos).

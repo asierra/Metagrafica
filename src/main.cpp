@@ -12,6 +12,7 @@ salida. El front-end V1 (Parser.cpp/mgpp.l) que este archivo reemplazó sigue en
 el árbol como referencia del traductor mg1to2.py, pero fuera del build.
 */
 
+#include <clocale>   // setlocale: la salida numérica no depende del entorno
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -27,6 +28,20 @@ el árbol como referencia del traductor mg1to2.py, pero fuera del build.
 #include "version.h"
 
 int main(int argc, char **argv) {
+  // Los tres backends emiten números con printf ("%f"/"%g"), y printf respeta
+  // LC_NUMERIC: en un locale de coma decimal, cada coordenada saldría «12,5» y
+  // el EPS, el SVG y el PDF quedarían corruptos.
+  //
+  // Hoy esto NO puede pasar por el entorno —un programa C arranca en el locale
+  // "C" pase lo que pase en las variables, y nadie en este árbol llama a
+  // setlocale (verificado 2026-07-22)—, pero sí podría pasar si alguna
+  // biblioteca enlazada lo llamara, incluso desde un inicializador estático
+  // antes de main. Fijarlo aquí es el seguro, y cuesta una línea.
+  //
+  // ⚠️ La red de pruebas NO cazaría esa rotura: test/run.sh exporta LC_ALL=C, así
+  // que pasaría verde mientras el binario falla en la máquina del usuario.
+  std::setlocale(LC_NUMERIC, "C");
+
   std::string inname;
   std::string outfmt;   // extensión de salida solicitada por el usuario
 
