@@ -213,6 +213,17 @@ orden de la lista es la ejecución.
       el font Symbol y el markup `/g` desaparecen. Dígitos, operadores y puntuación
       de `$…$` entraron el mismo día (rectos, como en TeX; el `-` es el signo menos
       U+2212). Una fórmula ya no mezcla tipografías.
+- [~] **Tipografía math: `\frac` + espaciado automático** (`plan_frac.md`; un paquete, lo pide
+      `examples/gravitacion_orbita`). **(1) `\frac`** — SPIKE hecho 2026-07-23, producción
+      diferida: las fórmulas de la figura fingen fracción con `/n` (apila renglones, no
+      compone). El spike probó la composición 2-D con **cero métodos nuevos en backends**
+      (EPS/PDF centran bien; SVG con un bug de centrado acotado) en ~118 líneas; el costo real
+      (~1 semana) está en generalizar `TextLine` a un contenedor de items para el caso INLINE,
+      no en los backends. Código del spike **sin commitear** como base. **(2) Espaciado
+      automático estilo TeX** — diagnosticado 2026-07-23: hoy los espacios de `$…$` se imprimen
+      literales; quitarlos a secas rompe 12 goldens (cramps `=`, funciones, comas). El arreglo
+      correcto es ignorar el espacio del fuente **e insertar** por clase de átomo (relación /
+      función / operador / puntuación), ~2 días. Detalle y plan de ambos en `plan_frac.md`.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo
