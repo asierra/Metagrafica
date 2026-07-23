@@ -78,6 +78,54 @@ La condición de paro es un `if` corriente; `max_depth` es la red, y es la pieza
 1991 no podía: aquel lenguaje no tenía condicionales, así que el límite de profundidad era
 lo *único* que terminaba la recursión.
 
+## Una figura con parámetros
+
+Versionar una figura o compararla se imagina solo. **Parametrizarla** no, y es la afirmación
+del encabezado que ninguna herramienta de dibujo puede igualar: en un SVG no hay número que
+cambiar. [`examples/franck_condon.mg`](examples/franck_condon.mg) dibuja dos potenciales de
+Morse con sus niveles vibracionales y sus funciones de onda, y **nada en él está medido**: se
+dan cinco números por estado electrónico y el resto es forma cerrada.
+
+```octave
+a1  = 1.8            % alcance del potencial
+re1 = 1.15           % distancia de equilibrio
+we1 = 0.56           % frecuencia vibracional
+xe1 = 0.028          % anarmonicidad
+D1  = we1/(4*xe1)    % profundidad — se deduce de los dos anteriores
+```
+
+Un nivel vibracional se traza entonces entre sus propios puntos de retorno, calculados en el
+mismo renglón a partir de su energía:
+
+```octave
+E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
+s = sqrt(E/D1)
+polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+```
+
+Sus extremos no son coordenadas: son la fórmula.
+
+**La prueba es cambiar un número.** Las dos figuras de abajo salen del mismo archivo, con un
+solo carácter de diferencia entre ellas — la anarmonicidad `xe1`, de `0.028` a `0.045`:
+
+| `xe1 = 0.028` | `xe1 = 0.045` |
+|:---:|:---:|
+| ![Franck-Condon con anarmonicidad 0.028](docs/img/franck_condon.svg) | ![La misma figura con anarmonicidad 0.045](docs/img/franck_condon_anarm.svg) |
+
+El pozo se hace menos profundo (`D` pasa de 5.0 a 3.1), la línea de disociación baja con él,
+los niveles se separan y se apiñan antes, las ondas se reajustan a sus nuevos puntos de
+retorno, y el número de estados ligados cae de v = 17 a v = 10, porque `vmax = 1/(2·xe) − ½`.
+Nada de eso está escrito en el archivo: están escritas las **fórmulas**, y la figura es lo
+que se deduce de ellas.
+
+El detalle que mejor resume la idea es que la transición vertical de Franck-Condon —la que
+le da nombre al principio— aterriza en el nivel v′≈6 del estado excitado **sin que nadie la
+ponga ahí**. Sale del desplazamiento entre las dos distancias de equilibrio (`re1 = 1.15`
+frente a `re2 = 1.48`). Acerca los pozos y la transición se mueve sola al nivel que le toca.
+
+**[Calcular en vez de medir](docs/calcular_en_vez_de_medir.md)** desarrolla el caso: figuras
+cuya geometría sale de las fórmulas y no de medir un dibujo.
+
 ## Texto y matemáticas
 
 Los archivos fuente son **UTF-8**.
@@ -162,11 +210,6 @@ bin/mg examples/fig6-4.mg sal.svg
 
 Si quieres trabajar en el compilador, [`CONTRIBUTING.md`](CONTRIBUTING.md) tiene las reglas
 y las compuertas de prueba.
-
-**[Calcular en vez de medir](docs/calcular_en_vez_de_medir.md)** desarrolla ese último caso:
-figuras cuya geometría sale de las fórmulas y no de medir un dibujo. Cambias un número —la
-anarmonicidad de un potencial, el número de nodos de un estado— y la figura entera se
-reacomoda sola, porque todo lo demás se deduce.
 
 ## Estado del proyecto
 

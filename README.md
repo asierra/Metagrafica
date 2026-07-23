@@ -89,6 +89,56 @@ The stop condition is an ordinary `if`; `max_depth` is the safety net, and it is
 piece that 1991 could not do without — that language had no conditionals, so the depth
 limit was the *only* thing that ended the recursion.
 
+## A figure with parameters
+
+Versioning a figure or diffing it is easy to picture. **Parameterizing** one is not, and it
+is the claim at the top of this page that no drawing tool can match — in an SVG there is no
+number to change. [`examples/franck_condon.mg`](examples/franck_condon.mg) draws two Morse
+potentials with their vibrational levels and their wave functions, and **nothing in it is
+measured**: you give five numbers per electronic state and the rest is closed form.
+
+```octave
+a1  = 1.8            % range of the potential
+re1 = 1.15           % equilibrium distance
+we1 = 0.56           % vibrational frequency
+xe1 = 0.028          % anharmonicity
+D1  = we1/(4*xe1)    % depth — follows from the two above
+```
+
+A vibrational level is then drawn between its own turning points, worked out on the same
+line from its energy:
+
+```octave
+E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
+s = sqrt(E/D1)
+polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+```
+
+Its endpoints are not coordinates; they are the formula.
+
+**The proof is changing one number.** Both figures below come from the same file, with a
+single character different between them — the anharmonicity `xe1`, from `0.028` to `0.045`:
+
+| `xe1 = 0.028` | `xe1 = 0.045` |
+|:---:|:---:|
+| ![Franck-Condon with anharmonicity 0.028](docs/img/franck_condon.svg) | ![The same figure with anharmonicity 0.045](docs/img/franck_condon_anarm.svg) |
+
+The well gets shallower (`D` goes from 5.0 to 3.1), the dissociation line drops with it, the
+levels spread out and crowd together sooner, the waves readjust to their new turning points,
+and the number of bound states falls from v = 17 to v = 10, because `vmax = 1/(2·xe) − ½`.
+None of that is written in the file: the **formulas** are, and the figure is what follows
+from them.
+
+The detail that best sums it up is that the vertical Franck-Condon transition —the one the
+principle is named after— lands on level v′≈6 of the excited state **without anyone putting
+it there**. It comes out of the offset between the two equilibrium distances (`re1 = 1.15`
+against `re2 = 1.48`). Move the wells closer and the transition shifts by itself to the
+level it belongs on.
+
+**[Computing instead of measuring](docs/computing_instead_of_measuring.md)** develops the
+case: figures whose geometry comes out of the formulas rather than out of measuring a
+drawing.
+
 ## Text and mathematics
 
 Source files are **UTF-8**.
@@ -195,11 +245,6 @@ bin/mg examples/fig6-4.mg out.svg
 
 If you want to work on the compiler itself, [`CONTRIBUTING.md`](CONTRIBUTING.md) has the
 rules and the test gates.
-
-**[Computing instead of measuring](docs/computing_instead_of_measuring.md)** develops that
-last case: figures whose geometry comes out of the formulas rather than out of measuring a
-drawing. Change one number —the anharmonicity of a potential, the node count of a state— and
-the whole figure rearranges itself, because everything else is derived.
 
 ## Project status
 
