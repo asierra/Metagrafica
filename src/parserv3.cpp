@@ -4383,11 +4383,39 @@ static std::vector<StmtPtr> parseFile(const std::string &path) {
   return parseProgram(lx);
 }
 
+static bool fileReadable(const std::string &p) {
+  std::ifstream f(p.c_str());
+  return f.good();
+}
+
 static StmtPtr parseInclude(Lexer &lx) {
   lx.next();                                     // 'include'
   if (lx.peek().type != T_STRING) parseError(lx, "el nombre de archivo (cadena) tras include");
   std::string fname = lx.next().str;
-  std::string path = g_baseDir.empty() ? fname : g_baseDir + "/" + fname;
+  // Búsqueda (§15): una ruta ABSOLUTA se toma tal cual; si no, LOCAL primero —junto
+  // al archivo principal (g_baseDir)— y luego la BIBLIOTECA instalada (MG_LIBDIR, que
+  // el Makefile hornea al compilar). Lo local PISA lo instalado: una copia junto a la
+  // figura gana sobre la de la lib del sistema (útil para tantear una variante sin
+  // reinstalar). Sin MG_LIBDIR (build sin la macro) solo se mira lo local.
+  std::vector<std::string> cands;
+  if (!fname.empty() && fname[0] == '/')
+    cands.push_back(fname);
+  else {
+    cands.push_back(g_baseDir.empty() ? fname : g_baseDir + "/" + fname);
+#ifdef MG_LIBDIR
+    cands.push_back(std::string(MG_LIBDIR) + "/" + fname);
+#endif
+  }
+  std::string path;
+  for (const std::string &c : cands)
+    if (fileReadable(c)) { path = c; break; }
+  if (path.empty()) {
+    // FATAL, como cualquier include que no resuelve: el documento queda incompleto.
+    std::fprintf(stderr, "Error: include no encontró \"%s\" (busqué:", fname.c_str());
+    for (const std::string &c : cands) std::fprintf(stderr, " %s", c.c_str());
+    std::fprintf(stderr, ")\n");
+    std::exit(1);
+  }
   auto st = std::make_unique<IncludeStmt>();
   st->prog = parseFile(path);                    // parseo recursivo (permite includes anidados)
   return st;

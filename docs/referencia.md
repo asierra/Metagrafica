@@ -665,8 +665,13 @@ prisma(2, 1, 1.5)               % ancho, alto, profundidad
 ```
 
 El `include` debe preceder al uso, y **falla el compilado** si el archivo no resuelve. En
-`lib/` viene `pseudo3d.mg` (volumen simulado por proyección oblicua, sin z-buffer: el orden
-de pintado es el de escritura).
+`lib/` vienen `pseudo3d.mg` (volumen simulado por proyección oblicua, sin z-buffer: el orden
+de pintado es el de escritura) y `satellite.mg` (un icono, `struct Satellite`).
+
+**Dónde busca el `include`:** primero **junto a tu archivo** (ruta relativa), y luego en la
+**biblioteca instalada** (`make install` copia `lib/*.mg` a `$PREFIX/share/metagrafica/lib`).
+Lo local **pisa** lo instalado. Por eso `include "satellite.mg"` a secas usa la lib del
+sistema, y en el repo se escribe la ruta relativa (`include "../lib/satellite.mg"`).
 
 ---
 

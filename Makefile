@@ -3,12 +3,15 @@ CXX = clang++
 CXXFLAGS = -g -std=c++14 -ffunction-sections -fdata-sections
 LIBS = -lm -Wmultichar
 LDFLAGS = -g -Wpedantic -Wl,--gc-sections
-CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3
+CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3 -DMG_LIBDIR='"$(LIBDIR)"'
 HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -I$(HARUDIR)/include
 
 SHELL = /bin/sh
 PREFIX = /usr/local
 MANPREFIX ?= ${PREFIX}/share/man
+# Biblioteca de .mg incluibles (§15): `include "x.mg"` la busca DESPUÉS de lo local.
+# La ruta se hornea en el binario vía -DMG_LIBDIR (CPPFLAGS). Overridable para probar.
+LIBDIR = $(PREFIX)/share/metagrafica/lib
 
 SRCDIR = src
 INCDIR = include
@@ -102,10 +105,14 @@ v3test: $(BINDIR)/mg | $(BINDIR)
 install: $(BINDIR)/mg $(MANDIR)/mg.1
 	install -m 755 $(BINDIR)/mg $(PREFIX)/bin
 	install $(MANDIR)/mg.1 ${MANPREFIX}/man1/
+	install -d $(LIBDIR)
+	install -m 644 lib/*.mg $(LIBDIR)
 
 uninstall:
 	rm $(PREFIX)/bin/mg
 	rm ${MANPREFIX}/man1/mg.1
+	rm -f $(LIBDIR)/*.mg
+	-rmdir $(LIBDIR)
 
 clean:
 	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp $(SRCDIR)/lexv3.cpp

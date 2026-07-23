@@ -2206,6 +2206,8 @@ include "estilos"
 
 Las structs y paths definidos en el archivo incluido quedan disponibles en el archivo que lo importa.
 
+**Búsqueda del archivo.** Una ruta **absoluta** (`/…`) se toma tal cual. Si no, se busca **primero junto al archivo principal** (ruta relativa a él) y **después en la biblioteca instalada** —`make install` copia `lib/*.mg` a `$PREFIX/share/metagrafica/lib`, y esa ruta queda horneada en el binario—. **Lo local pisa lo instalado:** una copia del `.mg` junto a la figura gana sobre la de la lib del sistema, útil para tantear una variante sin reinstalar. Así, `include "satellite.mg"` a secas encuentra la biblioteca instalada, mientras que en el árbol de desarrollo se usa la ruta relativa (`include "../lib/satellite.mg"`). Si no está en ninguno, el `include` **falla** (fatal, listando dónde buscó): un documento incompleto no debe producir salida.
+
 **Alcance (scope).** Las structs y paths son **globales**: una struct definida en un archivo incluido es visible en el archivo padre y en cualquier `include` posterior. Reglas:
 
 - El `include` debe **preceder** al uso de las structs o paths que define.

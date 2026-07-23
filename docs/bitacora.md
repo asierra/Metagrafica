@@ -1157,3 +1157,22 @@ El nombre es `w`/`h` y no `width`/`height` porque `width` ya es el ancho de barr
 🔎 Detalle: los tres nombres entran a la lista COMÚN `isKnownPrimAttr`, así que `circle(w=2)`
 los acepta y los ignora —la misma holgura que `circle(from=90)` hoy—; afinar por-primitiva es
 la vuelta posterior de siempre.
+
+### Cerrado en la sesión del 2026-07-23 (`lib/` instalable + búsqueda `include` local→lib)
+
+**La biblioteca deja de ser una carpeta suelta.** Motivado por el icono del satélite: para
+que `include "satellite.mg"` sirva desde cualquier figura sin ruta relativa, `lib/` pasa a ser
+la biblioteca estándar **instalable**. `make install` copia `lib/*.mg` a
+`$PREFIX/share/metagrafica/lib`, y esa ruta se **hornea en el binario** vía `-DMG_LIBDIR`
+(CPPFLAGS). `parseInclude` busca en orden: ruta **absoluta** tal cual → **local** (junto al
+archivo principal, `g_baseDir`) → **lib instalada**. **Lo local pisa lo instalado** (tantear
+una variante sin reinstalar). Sin la macro (build sin `MG_LIBDIR`) solo mira lo local, así que
+el árbol de desarrollo sigue usando rutas relativas (`../lib/satellite.mg`).
+
+🔎 **Trampa de método anotada:** `make LIBDIR=/tmp/…` NO recompila —make no rastrea cambios de
+variable, y `parserv3.cpp` se compila en la regla de ENLACE—; hay que `touch src/parserv3.cpp`
+para forzar el relink con el nuevo `MG_LIBDIR`. Verificado así el fallback (cae a la lib) y el
+override (una copia local gana). El mensaje de `include` perdido ahora **lista dónde buscó**
+(mejor diagnóstico); se actualizó su fixture (`include_perdido`, la 5ª compuerta lo cazó al
+cambiar el texto). Cero churn en el golden (`ok=66`); la resolución de includes no toca la
+salida. Cierra la 3ª de las tres necesidades que destapó `gravitacion_orbita`.
