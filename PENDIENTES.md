@@ -21,8 +21,11 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=66 … errfail=0** (5 compuertas,
-> la 5ª son 30 pruebas NEGATIVAS en `test/errors/`).
+> Build/test: `make` + `bash test/run.sh check` → **ok=66 … galfail=0** (6 compuertas: la
+> 5ª son 36 pruebas NEGATIVAS en `test/errors/`; la 6ª, nueva el 2026-07-23, vigila que
+> `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva incrustado el
+> código de cada ejemplo, así que **editar un comentario la desactualiza** y ninguna de
+> las otras cinco puede verlo).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -36,7 +39,15 @@ orden de la lista es la ejecución.
 
 1. **Congelar la gramática.** Declarar estable lo que hay; no añadir sintaxis nueva.
    Implica cerrar (4) y el borrador de (5) primero. Es una decisión, no código.
-   - [ ] 📥 **Inventario de los loops que ya existen** (de `ideas.txt`, punto nunca cerrado:
+   - [x] ~~📥 **Inventario de los loops que ya existen**~~ — **HECHO**: está escrito en
+     `docs/referencia.md` §7, «Todas las formas de repetir», y **llegó a un veredicto**, que
+     era el punto: hay **un solo lazo general** (`for`); el **bloque de coordenadas ya es un
+     lazo** y `place` con 3+ puntos es exactamente ese mismo lazo para structs (una idea con
+     dos nombres, y el nombre aparte existe porque una struct no es una primitiva); lo que
+     justifica a `repeat` es la **acumulación** de la transformación —sin acumular, un `for`
+     se lee mejor—; y `sample` **no itera**, produce datos. O sea: no son seis conceptos,
+     son tres. Con eso, la condición 1 ya no está bloqueada por este ítem. Texto original:
+     (de `ideas.txt`, punto nunca cerrado:
      «antes de proponer sintaxis nueva, hacer inventario de los loops que ya existen
      implícitamente»). Hoy son más que entonces: `for` (§6), `repeat` (§17, el que **acumula**
      transformación), `place` (§10.1, distribuir a lo largo de un locus), `numbers`/`ticks`
@@ -362,19 +373,45 @@ orden de la lista es la ejecución.
         que falle se lleva por delante la retroalimentación que se está buscando.
       - Pendiente menor por verificar: si MinGW deja el binario como `bin/mg` sin `.exe`. El
         harness (`test/run.sh`) pide bash + `gs` + `diff` + `mktemp`.
-- [ ] 🐞 **Los GENERADORES y los constructos de `plot` siguen tragando nombres
-      desconocidos** (medido 2026-07-22 al cerrar el de `text`). `axis(disparate=1)`,
-      `numbers(disparate=1)` y `grid(disparate=1)` compilan y no dicen nada; es
-      previsible que `plot`/`legend`/`table`/`rule`/`place`/`repeat`/`fit` estén igual.
-      Es el mismo arreglo de una línea que recibieron las primitivas y `text`, pero
-      **la superficie es mucho mayor y el riesgo real no es el código sino la LISTA**:
-      cerrando el de primitivas, el corpus cazó al primer intento que la mía estaba
-      incompleta (`marker_start_orient=`, que existe y está en la spec, se pasa a un
-      helper y no salía por grep). Una lista blanca sacada de los accesos DIRECTOS está
-      incompleta por construcción, y aquí cada generador tiene ~15 nombres. Conviene
-      hacerlo **cuando se escriba la referencia** (condición 5), que es justo el
-      ejercicio de enumerar qué acepta cada constructo — la lista sale de ahí verificada
-      en vez de por grep.
+- [x] ~~🐞 **Los GENERADORES y los constructos de `plot` siguen tragando nombres
+      desconocidos**~~ — **CERRADO 2026-07-23**, y salió como estaba previsto: se hizo
+      *después* de la referencia, y la referencia es la que hizo verificables las listas.
+      Once constructos validados (`axis`/`xaxis`/`yaxis`, `numbers`, `ticks`, `grid`,
+      `plot`, `rule`, `legend`, `table`, `place`, `repeat`, `fit`) contra una lista propia
+      cada uno, con `evalError` que nombra el constructo y el argumento.
+      - 🔑 **Las listas se armaron cruzando TRES fuentes, y las tres hicieron falta:**
+        (1) `docs/referencia.md` §11, que enumera qué acepta cada constructo; (2) un
+        barrido de los accesos a `named` **con cualquier nombre de variable** —`PlotStmt`
+        lee `m.find("grid")`, no `named.find`, así que el barrido ingenuo lo perdía—; y
+        (3) los nombres que un constructo **INYECTA** en otro: `plot` escribe
+        `from`/`to`/`scale`/`field`/`color`/`line_width` en el `AxisStmt` **del usuario**
+        y luego lo ejecuta, así que la lista de `axis` es la unión. Con la lista sacada
+        solo de lo que `AxisStmt` lee, `xaxis(color="red")` habría dejado de compilar.
+        Es la lección de `marker_start_orient=` confirmada por segunda vez.
+      - **`fit` necesitó otro arreglo:** es el único que descarta en **parse-time** (su
+        `named` no llega a `exec`), así que la compuerta genérica no lo alcanzaba.
+      - 💡 **Y la lista de `place` salió MAL en el primer intento, por la misma clase de
+        error que la lección anterior pero al revés:** el barrido delimitaba cada `Stmt`
+        hasta el *siguiente* `struct`, y entre `PlaceStmt` y el siguiente vive el helper de
+        `sine`, así que le atribuyó `amplitude`/`half_cycles`/`phase`/`squared`. Lo destapó
+        una prueba de **comportamiento**, no de lectura de código: `place(P, count=6,
+        half_cycles=2, amplitude=1)` daba coordenadas **byte-idénticas** a `place(P,
+        count=6)`. O sea que se aceptaban y no hacían nada — el bug que la compuerta
+        cierra, colado dentro de la lista blanca que lo cierra. **Leer el código dice qué
+        nombres aparecen; solo ejecutarlo dice cuáles hacen algo.**
+      - ⚠️ **ORDEN en `axis`:** `checkRenamedAxisArgs` va ANTES que la lista genérica. Los
+        nombres viejos (`title=`, `labels=`…) tampoco están en la lista, así que con el
+        orden inverso el mensaje que dice *a qué se renombraron* —el que hace barata la
+        migración— quedaba tapado por un «no existe» genérico. **Lo cazó la 5ª compuerta**,
+        no el corpus.
+      - **Cero churn** (`ok=66`): ningún ejemplo se apoyaba en un nombre fuera de lista.
+        Cinco fixtures nuevos (`gen_axis_desconocido`, `gen_plot_desconocido`,
+        `gen_legend_desconocido`, `fit_arg_desconocido`, `place_arg_desconocido`),
+        `err_ok=31`→**36**. Verificado quitando el chequeo de `plot`: el documento
+        **compila en silencio** y el golden sigue en `ok=66`, ciego.
+      - ⏳ **Queda de la misma familia:** afinar por-constructo lo que hoy es una lista
+        por-constructo pero generosa, y el ítem de `place` de abajo —que es otro problema:
+        ahí el nombre **sí existe**, solo que no en ese locus.
 - [ ] **`rotate=` en `marker` (decidido 2026-07-21: se queda como está, revisar antes de
       congelar).** La orientación de un marcador se pide con `marker_orient=<ángulo>`, NO con
       el `rotate=` que giran structs y otras primitivas — `marker(rotate=…)` se ignora (caso

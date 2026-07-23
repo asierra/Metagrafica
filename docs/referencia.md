@@ -66,6 +66,12 @@ se convierte en elipse.
 `world_window` no coincide con la de `display_size`, la figura queda centrada con márgenes
 (*letterbox*); para llenar el lienzo, iguala las dos proporciones.
 
+> 💡 **`plot` es la excepción, y es deliberada.** Un `plot` mapea sus **unidades de datos** a
+> su caja, y ahí x e y se estiran por separado: segundos contra voltios no tienen una
+> proporción común que respetar. Lo isométrico gobierna el **plano de la figura**
+> —centímetros contra unidades de mundo—; el mapeo de datos de un `plot` es otra cosa
+> ([§11](#11-gráficas)).
+
 > ⚠️ **Achicar `display_size` no achica el texto** — lo agranda relativamente ([detalle](#14-errores-comunes)).
 
 ---
@@ -169,12 +175,18 @@ polyline(color="red", line_width=0.8) { 0 0  1 1 }
 polyline { 1 1  2 0 }      % NO es roja
 ```
 
-| se puede como sentencia | y como atributo |
+| se puede como sentencia | y como atributo de cualquier primitiva |
 |---|---|
 | `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=` |
 
-> ⚠️ **`outlinefill`, `font`, `align` y `valign` solo valen como sentencia, no como
-> atributo** ([detalle](#14-errores-comunes)).
+> ⚠️ **`outlinefill`, `font`, `font_size`, `align` y `valign` no son atributos de estilo
+> genéricos:** `polyline(align="center")` es error. Pero **`text()` sí los acepta**, porque
+> ahí no son estilo prestado sino argumentos propios suyos —
+> `text("m", align="center", font="italic", font_size=9) { 5 1 }` es correcto.
+> Son dos cosas distintas con la misma pinta: el **atributo de estilo**, que vale en toda
+> primitiva, y el **argumento propio** de una primitiva concreta (como `shape=` en `marker`
+> o `closed=` en `polyline`). `outlinefill` no vale en ninguna de las dos formas: el
+> contorno sobre relleno se pide dando `color=` junto a `fill=`.
 
 **Relleno y contorno.** `fill=` enciende el relleno; `color=` es el trazo. Juntos = relleno
 contorneado. `fill="none"` apaga el relleno.
@@ -223,6 +235,50 @@ figura se ve igual en cualquier máquina, sin fuentes ni TeX instalados.
 > leen `\alpha` y `\nabla`—, así que `"uno\ndos"` buscaría un símbolo llamado `ndos`.
 
 En un texto multilínea, `valign` alinea **el bloque entero**, no cada renglón.
+
+### Los símbolos que se escriben `\comando`
+
+Son **110**, y esta es la lista completa. Se pueden escribir dentro o fuera de `$…$`.
+La lámina [`examples/symbols.mg`](../examples/symbols.mg) los muestra dibujados, uno a uno.
+
+**Letras griegas** (41) — minúsculas, sus variantes, mayúsculas, y la ħ:
+
+```
+\alpha \beta \gamma \delta \epsilon \zeta \eta \theta \iota \kappa \lambda \mu
+\nu \xi \pi \rho \sigma \tau \upsilon \phi \chi \psi \omega
+\varepsilon \vartheta \varpi \varrho \varsigma \varphi
+\Gamma \Delta \Theta \Lambda \Xi \Pi \Sigma \Upsilon \Phi \Psi \Omega
+\hbar
+```
+
+**Operadores y relaciones** (34):
+
+```
+\int \prod \sum \partial \nabla \surd \pm \cdot \times \div \oplus \otimes \oslash
+\wedge \vee \cap \cup \diamond \bullet \sharp \neg
+\leq \geq \neq \approx \cong \equiv \sim \propto \mid \in \ni \colon \angle
+```
+
+**Conjuntos, flechas y delimitadores** (23):
+
+```
+\subset \supset \subseteq \supseteq \forall \exists \therefore \bot
+\leftarrow \rightarrow \leftrightarrow \Leftarrow \Rightarrow \Leftrightarrow
+\uparrow \downarrow \Uparrow \Downarrow
+\langle \rangle \lceil \rceil \lfloor \rfloor
+```
+
+**Otros** (12):
+
+```
+\aleph \wp \Re \Im \infty \prime \textdegree
+\clubsuit \diamondsuit \heartsuit \spadesuit
+```
+
+> ⚠️ Un nombre que no esté en esta lista **no aborta la compilación**: avisa por la salida
+> de error (`Warning: symbol name unknown alfa`) y **descarta el símbolo**, así que la
+> figura se genera con un hueco donde iba el glifo. Si te falta un símbolo, el aviso está
+> en la terminal aunque el `.svg` se haya escrito.
 
 ---
 
@@ -431,6 +487,37 @@ for k = 0 to n {
 > ⚠️ **`+=` SUELDA piezas relativas**: cada una se traslada para continuar donde acabó la
 > anterior, así que se escriben relativas, no absolutas ([detalle](#14-errores-comunes)).
 
+**Una curva calculada, punto por punto.** Es el caso más común del lenguaje —la curva sale
+de una fórmula, no de coordenadas medidas— y tiene su propia forma, porque una pieza de **un
+solo punto se añade tal cual, en coordenadas absolutas**:
+
+```octave
+A = 1   tau = 4   T = 1.5   n = 200
+
+path onda = { 0 (A) }                       % semilla: el primer punto, literal
+for i = 1 to n {
+    t = i * 10 / n
+    path onda += { (t) (A*exp(-t/tau)*cos(2*pi*t/T)) }
+}
+polyline(&onda)
+```
+
+Cada vuelta calcula su punto y lo añade; al final el trayecto se dibuja **una vez**, con la
+primitiva que quieras (`polyline` para quebrada, `bezier` o `smooth` para curva). Es lo que
+hace [`examples/tiro_parabolico.mg`](../examples/tiro_parabolico.mg).
+
+> 🔑 **Las dos reglas de `+=`, que no son la misma:**
+> - Pieza de **un punto** → se añade **absoluto**. Es la forma de arriba, la de una curva
+>   muestreada: tú calculas cada punto en el sistema de la figura.
+> - Pieza de **dos o más** → el primer punto es un **ancla**: se pega al final de lo
+>   acumulado y no se duplica, y los demás son **desplazamientos desde él**. El valor del
+>   ancla da igual: `+= { 5 5  6 6 }` y `+= { 0 0  1 1 }` producen exactamente lo mismo.
+>   Por eso las piezas de varios puntos se escriben empezando en `{ 0 0 … }`.
+
+> ⚠️ **Un `for` NO puede ir dentro de un bloque de coordenadas.** `polyline { for i = … }`
+> es error de sintaxis: el bloque `{ }` es una lista de coordenadas, no un cuerpo de
+> sentencias. Para generar puntos con un lazo, se acumulan en un `path` como arriba.
+
 > ⚠️ **`path x = …` se evalúa al DIBUJAR; `path x += …` en el acto.** Por eso la semilla de un
 > acumulador tiene que ser un literal, sin variables que el lazo vaya a pisar ([detalle](#14-errores-comunes)).
 
@@ -501,7 +588,8 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 | malla | `step`, `start`, `ticks` (`"out"`/`"in"`/`"both"`/`"none"`/`"grid"`), `tick_size`, `minor` |
 | rótulos de marca | `tick_labels` (true/false), `decimals`, `strip_zero`, `tick_label_gap`, `tick_label_size`, `tick_label_font`, `tick_label_align`, `tick_label_valign` |
 | nombre del eje | `label`, `label_at` (`"center"`/`"start"`/`"end"`), `label_gap`, `label_size`, `label_font` |
-| geometría y estilo | `base=`, `extend=`, `scale="log"`, `color`, `line_width`, `dash`, `grid`, `grid_dash` |
+| rango de datos | `from`, `to` (dentro de un `plot` los hereda de `x=`/`y=`; en un `axis` suelto los pones tú) |
+| geometría y estilo | `base=`, `extend=`, `scale="log"`, `field=`, `color`, `line_width`, `dash`, `grid`, `grid_dash` |
 
 > **La nomenclatura, que es la que usa todo el mundo:** `label` es el **nombre del eje** (el
 > `xlabel` de matplotlib) y `tick_labels` son **los números de las marcas**. `title` queda
@@ -509,7 +597,8 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 
 **`rule`** — el valor notable (un umbral, un nivel), distinto de la malla regular:
 `x=` o `y=` (uno de los dos), `to=`, `label=`, `label_at` (`"axis"`/`"legend"`), `color`,
-`dash`, `line_width`.
+`dash`, `line_width`. **Sin `to=` la línea cruza la caja entera**, que es lo que suele
+quererse; `to=` la corta en ese valor de datos.
 
 > ⚠️ **«No lineal» no quiere decir «log».** La escala log es para datos *multiplicativos* y
 > no existe en valores ≤ 0; si tus puntos solo están mal repartidos, lo que quieres son
@@ -528,11 +617,33 @@ legend(at="top-right") {
 ```
 
 **`table`** — `col_widths=(…)` en pt (obligatorio; su tamaño fija el nº de columnas),
-`row_height`, `decimals`, `align`, `border`, `fill`, `label_col`, `label_font`, `font_size`.
+`row_height`, `decimals`, `align`, `border`, `fill`, `label_col`, `label_font`, `font_size`,
+`margin`.
 `at=` acepta una **esquina nombrada** (dentro de un plot) o un **punto `(x,y)`** (fuera).
 
-**Generadores sueltos:** `numbers`, `ticks`, `axis`, `grid` funcionan también fuera de
-un `plot`, con su propio bloque de coordenadas.
+### Generadores sueltos
+
+`numbers`, `ticks`, `axis` y `grid` funcionan también **fuera** de un `plot`, en
+coordenadas del mundo. Los tres primeros no llevan mapeo: colocas tú el primero y dices
+cuánto avanza cada paso, con el par `at=` (dónde empieza) y `advance=` (cuánto se mueve por
+paso). Es el molde compacto del que `axis` es la versión que se arma sola.
+
+```octave
+numbers(from=0, by=0.1, count=10, decimals=1, at=(0.5, 0.2), advance=(1, 0))
+ticks(10, mark=(0, 0.15), at=(0.5, 0.35), advance=(1, 0))
+grid(xstep=1, ystep=0.5) { 0 0  10 5 }
+axis(from=0, to=100, step=25, label="v") { 0 0  10 0 }
+```
+
+| | |
+|---|---|
+| **`numbers`** | `from` (primer **valor**), `by` (cuánto crece), `count`, `decimals`, `prefix`, `suffix` (cadenas que envuelven al número), `at`, `advance` |
+| **`ticks`** | `count` (también posicional: `ticks(10, …)`), `mark=(dx,dy)` (el segmento que se traza en cada marca, y su dirección), `at`, `advance` |
+| **`grid`** | `xstep`, `ystep` sobre el rectángulo del bloque `{ esq-inf-izq  esq-sup-der }`, inclusivo en ambos extremos |
+| **`axis`** | todo lo de la tabla de arriba; el bloque son **dos puntos** (los extremos del eje) y el rango de datos va en `from=`/`to=` |
+
+Las etiquetas de `numbers` heredan el estado de texto vigente (`font`, `font_size`, `align`,
+`color`), igual que un `text()`.
 
 > ⚠️ **Bajo escala log**, colocar structs dentro del contenido es error (su matriz no compone
 > con un mapeo no afín), igual que `grid()`/`ticks()`/`axis()` pelados: usa `grid=` y
@@ -615,9 +726,12 @@ los paneles son cantidad de **mundo**, así que achicar `display_size` no achica
 agranda en relación con el dibujo, y los rótulos se encabalgan. Para una figura más pequeña,
 baja `font_size`; el lienzo no es la palanca.
 
-**`polyline(…, outlinefill)` da error.** `outlinefill`, `font`, `align` y `valign` existen
-solo como **sentencia de estado**, no como atributo entre paréntesis. El contorno sobre un
-relleno, como atributo, se pide dando `color=` junto a `fill=`: eso ya implica contornear.
+**`polyline(…, outlinefill)` da error, y `polyline(align="center")` también.** Ninguno de
+`outlinefill`, `font`, `font_size`, `align` y `valign` es un atributo de estilo genérico: como
+atributo entre paréntesis solo valen donde son argumentos **propios** de la primitiva, o sea
+en `text()` —`text("m", align="center", font_size=9) { 5 1 }` es correcto—. Fuera de ahí van
+como **sentencia de estado**. `outlinefill` no vale como atributo en ninguna primitiva: el
+contorno sobre un relleno se pide dando `color=` junto a `fill=`, que ya implica contornear.
 
 **Una curva acumulada con `+=` sale desplazada o encimada.** `+=` **suelda piezas
 relativas**: cada una se traslada para que su primer punto continúe donde acabó la anterior.
@@ -649,6 +763,10 @@ caso normal del código a medio escribir. No calla los **léxicos**: un carácte
 no reconoce (`@`, o una letra acentuada fuera de una cadena) aborta igual, porque el archivo
 se convierte en tokens **entero** antes de leerse. Una nota en prosa debajo del `exit` va en
 un comentario `%`.
+
+> 💡 **Los comentarios `%` sí admiten acentos** —y eñes, y cualquier cosa: el lexer se salta
+> el comentario entero sin mirarlo. La regla de los acentos vale para el **código**, no para
+> lo que escribes sobre él.
 
 **Un lazo hace una vuelta de más o de menos.** `to` es **inclusivo** y `count` es una
 **cantidad**: `for i = 0 to 4` da cinco vueltas y `repeat(…, count=4)` da cuatro copias.
