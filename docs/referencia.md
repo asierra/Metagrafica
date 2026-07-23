@@ -177,7 +177,7 @@ polyline { 1 1  2 0 }      % NO es roja
 
 | se puede como sentencia | y como atributo de cualquier primitiva |
 |---|---|
-| `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=` |
+| `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=`, `hatch_angle=` |
 
 > ⚠️ **`outlinefill`, `font`, `font_size`, `align` y `valign` no son atributos de estilo
 > genéricos:** `polyline(align="center")` es error. Pero **`text()` sí los acepta**, porque
@@ -199,7 +199,10 @@ contorneado. `fill="none"` apaga el relleno.
 
 **Tramas:** `hatch` acepta un **ángulo libre** en grados o un estilo nombrado
 (`"hatch"` 45°, `"hatchback"` 135°, `"crosshatch"` ambas). `hatch_gap` es la separación en
-pt. La trama usa el **color de relleno**; no hay `hatch_color`.
+pt; `hatch_angle` es la **orientación base** (desacopla el ángulo del tipo, como `hatch_gap`
+desacopla el paso): en `"crosshatch"` gira toda la rejilla, así que `hatch_angle=0` la
+**endereza** a 0°+90°. La trama usa el **color de relleno** (`fill=`, no `color=`, que
+contornea el borde); no hay `hatch_color`.
 
 ---
 

@@ -444,11 +444,21 @@ static bool emitStyleAttr(const std::string &, const Value &, GraphicsItemList &
 // estilo nombrado (à la Asymptote) — "hatch"→45°, "hatchback"→135°,
 // "crosshatch"→45°+135° (dos familias). Estilo desconocido → sin trama (vector
 // vacío, silencioso, igual que el hatchIndex→0 de la tabla FPATRN anterior).
-static FillPattern buildHatchPattern(const Value &v, double gap) {
+//
+// `hatch_angle` (angleGiven) DESACOPLA la orientación del tipo: `hatch` = qué
+// trama, `hatch_angle` = a qué ángulo, igual que `hatch_gap` = a qué paso. En un
+// estilo simple fija el ángulo de las líneas; en `crosshatch` gira TODA la familia
+// (base y base+90 siguen perpendiculares) → `hatch_angle=0` da la rejilla RECTA.
+// El `hatch=<número>` sobrecargado sigue siendo el atajo de la familia simple.
+static FillPattern buildHatchPattern(const Value &v, double gap,
+                                     double angle, bool angleGiven) {
   if (v.type == Value::STRING) {
-    if (v.str == "hatch")           return { HatchLine{45.0, gap} };
-    if (v.str == "hatchback")       return { HatchLine{135.0, gap} };
-    if (v.str == "crosshatch")      return { HatchLine{45.0, gap}, HatchLine{135.0, gap} };
+    if (v.str == "hatch")      return { HatchLine{angleGiven ? angle :  45.0, gap} };
+    if (v.str == "hatchback")  return { HatchLine{angleGiven ? angle : 135.0, gap} };
+    if (v.str == "crosshatch") {
+      double b = angleGiven ? angle : 45.0;
+      return { HatchLine{b, gap}, HatchLine{b + 90.0, gap} };
+    }
     return {};
   }
   return { HatchLine{v.num, gap} };
@@ -456,9 +466,11 @@ static FillPattern buildHatchPattern(const Value &v, double gap) {
 
 // §4.11: emite el HatchAttr (FillPattern completo) + activa el relleno.
 // Compartido por el atributo por-primitiva (emitPrimStyle) y la sentencia de
-// estado (StateStmt), para que ambos registros se comporten idéntico.
-static void emitHatch(const Value &v, double gap, GraphicsItemList &out) {
-  FillPattern fp = buildHatchPattern(v, gap);
+// estado (StateStmt), para que ambos registros se comporten idéntico. El ángulo
+// base es opcional (la forma posicional `hatch <a> [paso]` no lo pasa).
+static void emitHatch(const Value &v, double gap, GraphicsItemList &out,
+                      double angle = 0.0, bool angleGiven = false) {
+  FillPattern fp = buildHatchPattern(v, gap, angle, angleGiven);
   if (fp.empty()) return;
   g_flags.using_hatcher = true;
   out.push_back(std::make_unique<HatchAttr>(fp));
@@ -477,7 +489,7 @@ static void emitHatch(const Value &v, double gap, GraphicsItemList &out) {
 static bool isKnownPrimAttr(const std::string &k) {
   static const char *ok[] = {
     // estilo (emitPrimStyle / emitStyleAttr)
-    "color", "fill", "line_width", "dash", "hatch", "hatch_gap",
+    "color", "fill", "line_width", "dash", "hatch", "hatch_gap", "hatch_angle",
     // forma
     "closed",                                   // polyline/polygon §4.1
     "from", "to",                               // arc §4.5
@@ -575,10 +587,12 @@ static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
     auto it = named.find(k);
     if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
   }
-  if (named.count("hatch")) {   // §4.11: hatch=ángulo|"estilo" [+ hatch_gap]
+  if (named.count("hatch")) {   // §4.11: hatch=ángulo|"estilo" [+ hatch_gap/hatch_angle]
     Value hv = named.at("hatch")->eval(s);
     double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
-    emitHatch(hv, gap, attrs);
+    bool angGiven = named.count("hatch_angle");
+    double ang = angGiven ? named.at("hatch_angle")->eval(s).num : 0.0;
+    emitHatch(hv, gap, attrs, ang, angGiven);
   }
   // color= junto a un relleno (fill= o hatch) = contornear (§4).
   if (named.count("color") && (named.count("fill") || named.count("hatch")))

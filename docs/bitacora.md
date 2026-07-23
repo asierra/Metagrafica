@@ -1106,3 +1106,37 @@ decisión) y el `TODO` de 2024 (4 de 5 cerrados). Lo que debía sobrevivir está
 abierto sin fecha (`plan_interactivo.md`): su valor no se puede evaluar sin usuarios. 🔎 Y el
 dato para cuando reaparezca: **la barrera medida no es instalar** — ocho tropiezos
 documentados (cuatro del autor, cuatro del agente) y ninguno fue «no pude compilar».
+
+### Cerrado en la sesión del 2026-07-23 (`hatch_angle`: desacoplar orientación de tipo)
+
+**`hatch_angle` — orientación de trama como perilla propia.** Surgió armando
+`lib/satellite.mg` (un icono de satélite para clase, fuera del corpus): la rejilla recta de
+los paneles solares obligaba a superponer **dos** tramas simples (`hatch=0` + `hatch=90`)
+porque `crosshatch` estaba cableado a 45°/135°. 💡 **La forma correcta la propuso Alejandro
+y era mejor que la mía:** yo había anotado `crosshatch=<ángulo>` (otra sobrecarga); él pidió
+separar tipo de ángulo. Resultado: `hatch` = **qué** trama, `hatch_angle` = **a qué** ángulo,
+`hatch_gap` = **a qué** paso — tres perillas ortogonales. `hatch_angle=0` endereza el
+`crosshatch` a 0°+90°; el default (45°) queda igual.
+
+**El reparto de trabajo entre backends fue lo instructivo.** EPS y PDF ya iteraban sobre el
+ángulo de cada `HatchLine` (`th = 90 - h.angle`), así que soportaban cualquier orientación
+**gratis** — cero cambios. El único rezagado era SVG: su emisor de familia **simple** ya
+giraba con `patternTransform="rotate(90-θ)"`, pero el de familia **doble** (crosshatch) estaba
+cableado a dos diagonales `√2` a 45°, ignorando los ángulos. 🔑 **La generalización salió más
+simple que el caso especial:** como un `crosshatch` es por construcción `{θ, θ+90}`, una
+**rejilla cuadrada girada θ** ES exactamente eso — tile `gap×gap` con una horizontal y una
+vertical, orientado con `patternTransform="rotate(θ)"`. Eso cubre CUALQUIER ángulo, así que el
+"nivel 3" que se había estimado difícil (rejilla oblicua arbitraria) cayó junto con el fácil.
+El único caso genuinamente duro —una malla **no** ortogonal— no es producible hoy.
+
+**Cero churn, verificado contra el binario pre-cambio.** La rama por defecto (45/135) conserva
+su `fprintf` histórico tras una guardia explícita, así que `fill_styles` (único que usa
+crosshatch) sale byte-idéntico en los tres backends. Trampa de método anotada: el EPS incrusta
+el **nombre del archivo de salida** en `%%Title`, así que `cmp` de dos archivos con nombres
+distintos «difiere» sin que cambie nada — con nombre fijo, old==new idéntico.
+
+**`hatch_angle` entró a `isKnownPrimAttr`** (la 5ª compuerta lo valida contra typos).
+Spec §4.11 y `docs/referencia.md` actualizadas; de paso se documentó la ergonomía que destapó
+la sesión: el color de la trama sale de `fill=` (la trama ES el relleno), no de `color=` (que
+contornea). ⚠️ **Cobertura de harness pendiente:** la rama SVG girada no tiene golden (el
+satélite vive en `lib/`); el corpus solo ejercita el 45° legacy. Anotado en `PENDIENTES.md`.

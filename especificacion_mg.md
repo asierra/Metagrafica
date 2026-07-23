@@ -496,6 +496,8 @@ En vez de relleno sólido, una primitiva cerrada puede rellenarse con una **tram
 
 `hatch_gap` — separación perpendicular entre líneas en **puntos**; **opcional** (default 4 pt). Es una cantidad física (pt), no escala con `world_window` (§3.2), porque el tramado se barre en el espacio de dispositivo ya transformado a pt (`EPSDisplay::rect`/`useFillPattern` aplican la matriz antes de emitir; SVG teja un `<pattern>` en userSpace de pt). Las tres densidades de V1 (`FPATRN`) equivalían a `hatch_gap` de **4, 2 y 1 pt**; ese mapeo sigue funcionando pero `hatch_gap` ya no está limitado a esos tres valores.
 
+`hatch_angle` — **orientación base** en grados; **opcional**. Desacopla el ángulo del tipo, igual que `hatch_gap` desacopla el paso: `hatch` dice **qué** trama, `hatch_angle` **a qué ángulo**. En un estilo simple fija el ángulo de las líneas; en `"crosshatch"` gira **toda** la familia manteniendo la ortogonalidad, así que `hatch_angle=0` da la **rejilla recta** (0°+90°) y `hatch_angle=45` reproduce el default. El `hatch=<número>` sobrecargado sigue siendo el atajo de la familia simple (equivale a `hatch="hatch", hatch_angle=<número>`); `hatch_angle` es para poder girar los estilos nombrados sin recurrir a ese atajo. Solo aplica al registro por-atributo (la sentencia de estado posicional no lo lee).
+
 No hay más: la trama es una forma de **relleno**, así que sus líneas toman el **color de relleno** (`fill`, §4; negro por default si no se fijó). Su **grosor** sale del estado de trazo (`line_width`, §4.10). No existe un `hatch_color` ni un `hatch_width` aparte.
 
 **Contorno de la región.** Como en el modelo de estado (§7) *siempre* hay un color de trazo vigente, la presencia de `color=` no puede servir de disparador del contorno ahí. El contorno se controla así:
@@ -512,6 +514,7 @@ polygon(hatch=30)                        { 0 0  5 0  5 5  0 5 } % una familia, �
 polygon(hatch="hatch", hatch_gap=3)      { 0 0  5 0  5 5  0 5 } % 45°, paso 3 pt
 polygon(hatch="hatchback")               { 0 0  5 0  5 5  0 5 } % 135°
 polygon(hatch="crosshatch", hatch_gap=2) { 0 0  5 0  5 5  0 5 } % rejilla 45°+135°, paso 2 pt
+polygon(hatch="crosshatch", hatch_angle=0){ 0 0  5 0  5 5  0 5 } % rejilla RECTA 0°+90°
 ```
 
 - **Sentencia de estado** (posicional, rige hasta el fin del bloque, §7) — nombre o ángulo, y el paso opcional caben en una sola línea, igual que `translate dx dy`:

@@ -1,8 +1,8 @@
 % Rellenos de área — lámina de referencia de tramas, grises y contornos.
 %
-% El catálogo de tramados (cuatro ángulos por tres densidades), la escala de
-% grises y la combinación de relleno con contorno. Hermana de primitives.mg y
-% line_patterns.mg.
+% El catálogo de tramados (hatch, hatchback, crosshatch, y el crosshatch
+% enderezado a rejilla recta con hatch_angle=0), la escala de grises y la
+% combinación de relleno con contorno. Hermana de primitives.mg y line_patterns.mg.
 %
 % NOTAS --------------------------------------------------------------------
 % La separación de la trama va en PUNTOS y no necesita calibrarse: el tramado se
@@ -20,21 +20,21 @@ font_size 8
 text("To outline just add the parameter /ecolor") { 0 .8 }
 
 font_size 9
-text("For patterns use hatch, hatchback and crosshatch ahd hatch_gap") { 0 .13 }
+text("For patterns: hatch, hatchback, crosshatch, hatch_gap, hatch_angle") { 0 .13 }
 
 line_width 0.2
 
-% --- Tramas: el ángulo cicla por familias y el paso por densidades ---
-% Ángulo cíclico con mod(); paso por familias desde una lista.
-gaps = [4, 4, 4, 2, 2, 2, 1, 1, 1]
-hatchs = [ "hatch", "hatchback", "crosshatch" ]
-font_size 5
-for i = 0 to 8 {
-    x = i * 0.11111111
-    hh = hatchs[mod(i, 3)]
-    gap = gaps[i]
-    rectangle(hatch=hh, hatch_gap = gap) { x 0  (x+0.1) .1 }
-    text(hh+str(gap, 0), font_size=6) { x -0.055}
+% --- Tramas: un swatch por estilo, rótulo limpio (paso fijo de 4 pt) ---
+% El cuarto es el crosshatch ENDEREZADO con hatch_angle=0 (rejilla recta). Se pasan
+% los ángulos por defecto (45/135) en los demás para que la salida no se mueva.
+styles = ["hatch", "hatchback", "crosshatch", "crosshatch"]
+angles = [45,      135,         45,           0]
+labels = ["hatch", "hatchback", "crosshatch", "hatch_angle=0"]
+font_size 6
+for i = 0 to 3 {
+    x = i * 0.25
+    rectangle(hatch=styles[i], hatch_gap=4, hatch_angle=angles[i]) { x 0  (x+0.13) .1 }
+    text(labels[i], font_size=6) { x -0.055}
 }
 
 % --- Grises con gray(x), de 0 (negro) a 1 (blanco) ---

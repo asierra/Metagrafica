@@ -420,6 +420,35 @@ orden de la lista es la ejecución.
       no encaja; `marker_orient=` es el nombre correcto. En el radar por si al avanzar hace
       falta un alias, pero **no** ahora.
 
+- [x] ~~**`crosshatch` con ángulo → rejilla recta directa**~~ — **CERRADO 2026-07-23** (pedido
+      por Alejandro armando `lib/satellite.mg` para ilustraciones de clase). Se resolvió como
+      **`hatch_angle`** —un compañero de `hatch_gap`— y **NO** como el `crosshatch=<ángulo>` que
+      proponía este ítem, que era otra sobrecarga: `hatch` dice **qué** trama, `hatch_angle` **a
+      qué** ángulo, `hatch_gap` **a qué** paso. Tres perillas ortogonales; idea de Alejandro,
+      mejor que la mía.
+      - **`hatch_angle=0` endereza el `crosshatch`** a 0°+90°; el default (45°) queda intacto.
+        En un estilo simple fija el ángulo de las líneas. El `hatch=<número>` sobrecargado sigue
+        siendo el atajo de la familia simple.
+      - **Backends:** EPS/PDF **cero cambios** (ya iteraban sobre los ángulos de cada familia).
+        Solo SVG: su emisor de familia doble estaba cableado a 45° (dos diagonales √2). Se
+        generalizó a **rejilla cuadrada girada** (`patternTransform="rotate(θ)"`) — como el
+        `crosshatch` es siempre ortogonal `{θ,θ+90}`, eso lo cubre a CUALQUIER ángulo, así que
+        salió también el "nivel 3" que se había estimado difícil. El 45/135 por defecto conserva
+        su emisión histórica byte-idéntica (guardia explícita) → **cero churn** (verificado con
+        binario pre-cambio: EPS/SVG/PDF idénticos con nombre de archivo fijo).
+      - `hatch_angle` entró a `isKnownPrimAttr` (la 5ª compuerta lo valida contra typos).
+      - Docs: spec §4.11 y `docs/referencia.md` actualizadas.
+      - ✅ **Cobertura CERRADA el mismo día:** `fill_styles.mg` (lámina de referencia de
+        tramas) muestra ahora el `crosshatch` oblicuo en dos densidades y su tercer hueco es la
+        **rejilla recta** (`hatch_angle=0`, rotulada "cross 0°") → la rama SVG girada ya tiene
+        golden que la vigila. Se regeneraron sus artefactos publicados (`docs/img/fill_styles.svg`
+        + galería) por `images`; los otros 23 `docs/img` quedaron byte-idénticos, confirmando
+        que el motor fue cero-churn. `ok=66`, todas las compuertas en 0.
+      - 🔎 **Nota de ergonomía anexa (NO es bug), ya cerrada en la referencia:** el color de las
+        líneas de un tramado sale de **`fill=`**, no de `color=` (`fillColorHex()`,
+        `SVGDisplay.cpp:107`) — la trama ES el relleno; `color=` contornea el borde. Documentado
+        en spec §4.11 y `docs/referencia.md`.
+
 - [~] 💡 **La familia de operaciones sobre paths §9 — α+β IMPLEMENTADO 2026-07-21;
       reducciones y cobertura PENDIENTES.** El hallazgo de comparar con CeTZ y MetaPost
       (`local/karl.mg`). La lección de MetaPost NO es copiar una operación: es que **el path

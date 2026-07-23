@@ -127,15 +127,35 @@ std::string SVGDisplay::ensureHatchPattern(const FillPattern &fp) {
         return id;
     }
 
+    // Familia doble (crosshatch): por construcción son 2 familias ORTOGONALES
+    // {θ, θ+90}. El caso por defecto (45/135) conserva su emisión histórica —dos
+    // diagonales esquina a esquina en un tile gap·√2— BYTE-IDÉNTICA. Cualquier otro
+    // ángulo base sale como una REJILLA CUADRADA girada: una rejilla
+    // horizontal+vertical de paso gap girada θ ES dos familias a θ y θ+90 (lo mismo
+    // que EPS/PDF ya obtienen iterando sobre los ángulos). Así `hatch_angle=0` da la
+    // rejilla recta sin caso especial.
     double gap = fp[0].gap;
-    double d = gap * sqrt(2.0);
+    double base = fp[0].angle;
+    bool legacy = (fp.size() == 2 && fabs(base - 45.0) < 1e-6 &&
+                   fabs(fp[1].angle - 135.0) < 1e-6);
+    if (legacy) {
+        double d = gap * sqrt(2.0);
+        fprintf(file,
+                "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
+                "width=\"%f\" height=\"%f\">"
+                "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"%f\" stroke=\"#%s\" stroke-width=\"%f\"/>"
+                "<line x1=\"0\" y1=\"%f\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" stroke-width=\"%f\"/>"
+                "</pattern></defs>\n",
+                id.c_str(), d, d, d, d, color.c_str(), sw, d, d, color.c_str(), sw);
+        return id;
+    }
     fprintf(file,
             "<defs><pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" "
-            "width=\"%f\" height=\"%f\">"
-            "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"%f\" stroke=\"#%s\" stroke-width=\"%f\"/>"
-            "<line x1=\"0\" y1=\"%f\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" stroke-width=\"%f\"/>"
+            "width=\"%f\" height=\"%f\" patternTransform=\"rotate(%f)\">"
+            "<line x1=\"0\" y1=\"0\" x2=\"%f\" y2=\"0\" stroke=\"#%s\" stroke-width=\"%f\"/>"
+            "<line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"%f\" stroke=\"#%s\" stroke-width=\"%f\"/>"
             "</pattern></defs>\n",
-            id.c_str(), d, d, d, d, color.c_str(), sw, d, d, color.c_str(), sw);
+            id.c_str(), gap, gap, base, gap, color.c_str(), sw, gap, color.c_str(), sw);
     return id;
 }
 
