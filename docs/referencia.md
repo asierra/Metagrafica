@@ -59,21 +59,14 @@ font_size 9                    % cuerpo de letra en puntos tipográficos
 Por eso `dot` es el marcador correcto dentro de una gráfica deformada: cae donde debe y no
 se convierte en elipse.
 
-> ⚠️ **La causa nº 1 de «no se ve nada» o «se ve a medias»: los datos caen FUERA de la
-> ventana.** `world_window` no se ajusta solo a lo que dibujas — es un recorte fijo. Si tu
-> curva vive en `y` de 9 a 15 y la ventana es `y` de 0 a 8, no verás casi nada, y **no hay
-> ningún error**: el compilador dibujó bien, simplemente fuera de cuadro. Los síntomas
-> engañan (una figura vacía, «solo salen 3 puntos», un EPS casi en blanco) y parecen bugs
-> del motor. Antes de sospechar del motor, **comprueba que el rango de tus datos quepa en
-> `world_window`**. Es el tropiezo más común, y le pasa hasta a quien conoce el lenguaje.
+> ⚠️ **Si no ves nada, o ves la figura a medias, mira `world_window` antes que nada:** es un
+> recorte fijo, no se ajusta a tus datos. Es el tropiezo nº 1 ([detalle](#14-errores-comunes)).
 
-> ⚠️ **El motor es isométrico.** La escala es la misma en x y en y, así que si la proporción
-> de `world_window` no coincide con la de `display_size`, la figura queda centrada con
-> márgenes (*letterbox*). Para llenar el lienzo, iguala las dos proporciones.
+**El motor es isométrico:** la escala es la misma en x y en y. Si la proporción de
+`world_window` no coincide con la de `display_size`, la figura queda centrada con márgenes
+(*letterbox*); para llenar el lienzo, iguala las dos proporciones.
 
-> ⚠️ **Consecuencia poco intuitiva:** como el texto es físico y los paneles son cantidad de
-> mundo, **achicar `display_size` no achica el texto** — lo hace relativamente más grande y
-> encima los rótulos. Para una figura más pequeña, baja `font_size`.
+> ⚠️ **Achicar `display_size` no achica el texto** — lo agranda relativamente ([detalle](#14-errores-comunes)).
 
 ---
 
@@ -90,7 +83,7 @@ polyline { 0 0  1 2  3 1 }
 ```
 
 Pero un trayecto también es un **valor** con nombre propio, que se declara con `path` y se
-pasa a una primitiva con el sigilo `&`:
+pasa a una primitiva anteponiéndole `&`:
 
 ```octave
 path perfil = { 0 0  1 2  3 1  4 0 }
@@ -102,87 +95,11 @@ polygon(&perfil)                           % …o rellenarlo, es el mismo trayec
 `&perfil` sirve igual a `polyline` (lo traza), `polygon` (lo rellena) o `polybar` (lee cada
 punto como el tope de una barra) — cada primitiva lo lee a su manera.
 
-> ⚠️ **`&trayecto` va como PRIMER argumento, siempre.** `dot(&p, size=2, color="lime")` ✅,
-> pero `dot(2, &p)` (radio primero) ❌ y `dot(size=2) { &p }` (en el bloque) ❌. El radio y
-> el estilo van **nombrados** después del trayecto: `dot(&p, size=2)`, `marker(&p,
-> shape="x")`, `polybar(&p, width=0.5)`. El error que sale —«se esperaba una expresión, se
-> encontró `&`»— no lo dice, así que conviene saberlo de antemano.
+Con eso basta para dibujar. Un trayecto además se puede **operar** —encadenar, espejar,
+suavizar, muestrear— y eso vive aparte, en §10: no hace falta para empezar.
 
-**Operaciones sobre trayectos** — producen otro trayecto, así que se anidan:
-
-| | |
-|---|---|
-| `concat(a, b, …)` | encadena, en ese orden. **Variádica, sin auto-reversión** |
-| `reverse(p)` | invierte el orden de los puntos |
-| `flip_x(p)` `flip_y(p)` | espeja |
-| `transpose(p)` | intercambia x↔y |
-
-```octave
-path media    = { 0 0  1 2  2 2  3 0 }
-path completa = concat(reverse(flip_x(&media)), &media)   % un perfil simétrico
-bezier(&completa)
-```
-
-**Generadores** — construyen un trayecto a partir de parámetros, no de puntos escritos:
-
-```octave
-path onda = sine(half_cycles=2, amplitude=1) { 0 0  4 0 }   % media entre dos extremos
-path suave = smooth { 0 0  1 2  3 1  4 3 }                   % pasa por esos NODOS
-```
-
-**Acumular en un lazo** — para una curva cuyo número de piezas depende de una variable, algo
-que `concat` (de aridad fija en el fuente) no cubre:
-
-```octave
-path w = { 0 0 }
-for k = 0 to n {
-    path w += sine(half_cycles=1, phase=90, amplitude=amp) { (k) 0  (k+1) 0 }
-}
-```
-
-> ⚠️ **`+=` SUELDA piezas relativas, no añade puntos absolutos.** Cada pieza se traslada para
-> que su primer punto continúe desde el final de la anterior. Por eso las piezas del ejemplo
-> empiezan en `{ 0 0 }` (o `{ (k) 0 … }` ya conectado): se escriben *relativas* y `+=` las
-> encadena. Si escribes puntos **absolutos** sueltos esperando que se acumulen tal cual, el
-> resultado no es el que crees — la pieza se desplaza. (Un punto suelto sí se añade sin
-> trasladar, pero para acumular puntos absolutos punto a punto es más claro escribir cada
-> `{ x y }` como su propia pieza y dejar que la traslación sea nula porque ya coinciden.)
-
-> ⚠️ **`path x = …` es DIFERIDO** (guarda la expresión y la evalúa al dibujar); `path x += …`
-> **evalúa en el acto**. Por eso la semilla de un acumulador no puede llevar variables que el
-> lazo vaya a pisar — usa un literal, como el `{ 0 0 }` de arriba. Y al reasignar dentro del
-> lazo se repite la palabra `path`.
-
-**Reducciones trayecto→número** — leen una medida de un trayecto: `path_width(&p)`,
-`path_x_min_at_y(&p, y [, expand])`, `path_x_max_at_y(&p, y [, expand])`. Operan sobre el
-polígono de control, así que son exactas en trayectos monótonos y aproximadas en una bézier
-genuinamente curva.
-
-**Muestreo** — leen geometría de un trayecto en un parámetro `t ∈ [0,1]`, recorrido por
-**longitud de arco** (así `t = 0.5` es el medio *geométrico*, no la mitad de los segmentos):
-
-```octave
-sample(&p, n [, curve=b])       % n puntos equiespaciados por arco → un TRAYECTO
-point_at(&p, t [, curve=b])     % el punto en t → [x, y]
-angle_at(&p, t [, curve=b])     % ángulo (grados) de la tangente en t → número
-```
-
-El flag **`curve`** (nombrado o posicional) fija cómo se interpreta el trayecto: `false`
-(default) trata los puntos como **vértices** (interpolación lineal — exacto para una
-polilínea, sobre una bézier toca la *envolvente*), `true` los trata como **controles bézier**
-(evalúa la curva — toca la *curva* real). Usos típicos:
-
-```octave
-polyline(sample(&curva, 60, curve=true))          % densificar una bézier gruesa
-dot(sample(&curva, 8, curve=true), size=2)        % 8 marcadores repartidos por arco
-Marca(at=point_at(&curva, 0.5, curve=true))       % colocar una struct en el medio
-marker(shape="arrow",
-       marker_orient=angle_at(&curva, 0.5, curve=true)) { point_at(&curva, 0.5, curve=true) }
-```
-
-El último renglón muestra las dos formas de usar el punto: en `at=` de una **struct**, o
-**directo en el bloque `{ }`** de una primitiva (§4: el bloque acepta un punto donde iría un
-par de escalares). Un marcador se orienta con `marker_orient=` (grados), no con `rotate=`.
+> ⚠️ **`&trayecto` va como PRIMER argumento, siempre**, y el resto nombrado detrás:
+> `dot(&p, size=2)` ✅, `dot(2, &p)` ❌ ([detalle](#14-errores-comunes)).
 
 ---
 
@@ -213,7 +130,7 @@ polyline { 0 0  1 1 ;  2 0  3 1 }          % dos trazos, mismo estilo
 ```
 
 En el bloque, una coordenada puede ser un par de escalares (`x y`) **o un punto `[x,y]`** —una
-lista de dos, como devuelve `point_at` (§3) o un literal—, y se mezclan:
+lista de dos, como devuelve `point_at` (§10) o un literal—, y se mezclan:
 
 ```octave
 marker(shape="x") { point_at(&curva, 0.5) }   % un punto directo
@@ -256,9 +173,8 @@ polyline { 1 1  2 0 }      % NO es roja
 |---|---|
 | `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=` |
 
-> ⚠️ **`outlinefill`, `font`, `align` y `valign` NO son atributos por-primitiva.**
-> `polyline(..., outlinefill)` da error. Como atributo, el contorno sobre relleno se pide
-> **dando `color=` junto a `fill=`**: eso ya implica contornear.
+> ⚠️ **`outlinefill`, `font`, `align` y `valign` solo valen como sentencia, no como
+> atributo** ([detalle](#14-errores-comunes)).
 
 **Relleno y contorno.** `fill=` enciende el relleno; `color=` es el trazo. Juntos = relleno
 contorneado. `fill="none"` apaga el relleno.
@@ -337,11 +253,8 @@ if r > 2 and n < 100 { text("grande") { 0 0 } } else { text("chica") { 0 0 } }
 
 `for` acepta `step`: `for t = 0 to 1 step 0.05 { … }`.
 
-> ⚠️ **La trampa de los bloques de coordenadas.** Dentro de `{ }` los valores se separan por
-> espacios, así que `+` y `-` y los paréntesis interactúan: `{ 12 y-11 }` son **tres**
-> términos (`12`, `y`, `-11`), no dos. La regla práctica: **o parentizas todas las
-> coordenadas o ninguna** — `{ (12) (y-11) }`. Un conteo impar es error de compilación con
-> línea y columna, así que no falla en silencio.
+> ⚠️ **En un bloque `{ }` los valores se separan por espacios**, así que `{ 12 y-11 }` son
+> **tres** términos, no dos. Regla: o parentizas todas las coordenadas o ninguna ([detalle](#14-errores-comunes)).
 
 > ⚠️ **Un identificador seguido de `(` es una llamada.** En coordenadas, `dx (h+dy)` se lee
 > como `dx(h+dy)`. Parentiza: `(dx) (h+dy)`.
@@ -361,8 +274,8 @@ y lo que las distingue no es *qué* repiten sino **dónde van las copias**:
 | `place(Struct) { p1 p2 p3 … }` (§8) | una **struct** | un ejemplar por punto (3 o más), orientado a la tangente |
 | `place(Struct, count=N) { p1 p2 }` (§8) | una **struct** | N repartidos por igual entre los dos puntos |
 | `repeat(Struct, count=…)` (§8) | una **struct** | progresión, cada copia **relativa a la anterior** |
-| `numbers`, `ticks` (§10) | una etiqueta / una marca | progresión `at` + `advance`·k |
-| `sample(&p, n)` (§3) | — | no repite nada: **produce** n puntos |
+| `numbers`, `ticks` (§11) | una etiqueta / una marca | progresión `at` + `advance`·k |
+| `sample(&p, n)` (§10) | — | no repite nada: **produce** n puntos |
 
 💡 **Un bloque de coordenadas ya es un lazo.** `dot(2) { 0 5  1 5  2 5 }` son tres puntos,
 `circle(0.4) { c1 c2 }` dos círculos, `text("×") { p1 p2 }` la misma cadena estampada dos
@@ -372,13 +285,8 @@ exactamente eso mismo para **structs**, que no caben en un bloque de coordenadas
 dos ideas, es una con dos nombres, y el nombre aparte existe porque una struct no es una
 primitiva.
 
-> ⚠️ **Con DOS puntos, `place` es otra cosa: una línea guía con algo encima**, y **dibuja la
-> línea**. Es la flecha con etiqueta de toda la vida. Sin `count` pone **un** ejemplar (dónde
-> lo dice `shift`, 1 = el segundo punto; `both_sides=true` pone dos), y `gap=` **parte la
-> línea** para dejarle hueco a un letrero. `place(S, r=…, from=…, to=…) { cx cy }` es la
-> versión sobre un **arco**, que también lo dibuja. En cambio `count=N` sobre los dos puntos
-> reparte N ejemplares por igual y **no** dibuja la línea. Cuatro comportamientos bajo un
-> nombre: si lo que quieres es sembrar copias, da los puntos (3 o más) o usa `count`.
+> ⚠️ **Con DOS puntos `place` es otra cosa: una línea guía con algo encima, y dibuja la
+> línea.** Para sembrar copias, da 3 o más puntos, o usa `count=` ([detalle](#14-errores-comunes)).
 
 💡 **Lo que justifica `repeat` es la acumulación.** Es el único que compone la
 transformación: con `transform=rotate(30)` la copia *k* va girada 30°·*k* respecto a la
@@ -413,7 +321,7 @@ for i = 0 to 11 { Cuadro(rotate=i*7.5, scale=1+i*0.35) }
 
 Argumentos de colocación: `at=(x,y)`, `scale=`, `rotate=` (grados), `transform=`.
 
-**Parámetros de tipo path** — el sigilo `&` en la declaración:
+**Parámetros de tipo trayecto** — se marcan con `&` en la declaración:
 
 ```octave
 struct Nivel(&onda, w = path_width(&onda)) {
@@ -481,7 +389,86 @@ También como argumento por-primitiva o de colocación: `polyline(transform=rota
 
 ---
 
-## 10. Gráficas
+## 10. Álgebra de trayectos
+
+Un trayecto no solo se escribe: se **opera**. Todo lo de esta sección toma trayectos y
+devuelve otro trayecto (o una medida suya), así que se anida y se compone. Nada de esto hace
+falta para dibujar —§3 basta—, pero es lo que permite construir una curva a partir de otras
+en vez de teclear sus puntos.
+
+**Operaciones** — producen otro trayecto, así que se anidan:
+
+| | |
+|---|---|
+| `concat(a, b, …)` | encadena, en ese orden — cuantos quieras, y **sin darles la vuelta por su cuenta** (para orientar, `reverse`) |
+| `reverse(p)` | invierte el orden de los puntos |
+| `flip_x(p)` `flip_y(p)` | espeja |
+| `transpose(p)` | intercambia x↔y |
+
+```octave
+path media    = { 0 0  1 2  2 2  3 0 }
+path completa = concat(reverse(flip_x(&media)), &media)   % un perfil simétrico
+bezier(&completa)
+```
+
+**Generadores** — construyen un trayecto a partir de parámetros, no de puntos escritos:
+
+```octave
+path onda = sine(half_cycles=2, amplitude=1) { 0 0  4 0 }   % media entre dos extremos
+path suave = smooth { 0 0  1 2  3 1  4 3 }                   % pasa por esos NODOS
+```
+
+**Acumular en un lazo** — para una curva cuyo número de piezas depende de una variable, algo
+que `concat` no cubre, porque sus piezas hay que escribirlas una por una:
+
+```octave
+path w = { 0 0 }
+for k = 0 to n {
+    path w += sine(half_cycles=1, phase=90, amplitude=amp) { (k) 0  (k+1) 0 }
+}
+```
+
+> ⚠️ **`+=` SUELDA piezas relativas**: cada una se traslada para continuar donde acabó la
+> anterior, así que se escriben relativas, no absolutas ([detalle](#14-errores-comunes)).
+
+> ⚠️ **`path x = …` se evalúa al DIBUJAR; `path x += …` en el acto.** Por eso la semilla de un
+> acumulador tiene que ser un literal, sin variables que el lazo vaya a pisar ([detalle](#14-errores-comunes)).
+
+**Reducciones trayecto→número** — leen una medida de un trayecto: `path_width(&p)`,
+`path_x_min_at_y(&p, y [, expand])`, `path_x_max_at_y(&p, y [, expand])`. Operan sobre el
+polígono de control, así que son exactas en trayectos monótonos y aproximadas en una bézier
+genuinamente curva.
+
+**Muestreo** — leen geometría de un trayecto en un parámetro `t ∈ [0,1]`, recorrido por
+**longitud de arco** (así `t = 0.5` es el medio *geométrico*, no la mitad de los segmentos):
+
+```octave
+sample(&p, n [, curve=b])       % n puntos equiespaciados por arco → un TRAYECTO
+point_at(&p, t [, curve=b])     % el punto en t → [x, y]
+angle_at(&p, t [, curve=b])     % ángulo (grados) de la tangente en t → número
+```
+
+El argumento **`curve`** (nombrado o posicional) fija cómo se interpreta el trayecto: `false`
+(default) trata los puntos como **vértices** (interpolación lineal — exacto para una
+polilínea; sobre una bézier toca el *polígono de control*, no la curva), `true` los trata
+como **controles bézier**
+(evalúa la curva — toca la *curva* real). Usos típicos:
+
+```octave
+polyline(sample(&curva, 60, curve=true))          % densificar una bézier gruesa
+dot(sample(&curva, 8, curve=true), size=2)        % 8 marcadores repartidos por arco
+Marca(at=point_at(&curva, 0.5, curve=true))       % colocar una struct en el medio
+marker(shape="arrow",
+       marker_orient=angle_at(&curva, 0.5, curve=true)) { point_at(&curva, 0.5, curve=true) }
+```
+
+El último renglón muestra las dos formas de usar el punto: en `at=` de una **struct**, o
+**directo en el bloque `{ }`** de una primitiva (§4: el bloque acepta un punto donde iría un
+par de escalares). Un marcador se orienta con `marker_orient=` (grados), no con `rotate=`.
+
+---
+
+## 11. Gráficas
 
 `plot` mapea **unidades de datos** a una caja física y dibuja su contenido dentro:
 
@@ -524,15 +511,9 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 `x=` o `y=` (uno de los dos), `to=`, `label=`, `label_at` (`"axis"`/`"legend"`), `color`,
 `dash`, `line_width`.
 
-> ⚠️ **«No lineal» no quiere decir «log».** Una escala **log** es para datos
-> **multiplicativos** —cada paso multiplica, como potencias de diez—, y *no existe* en
-> valores ≤ 0. Si tus puntos no están regularmente espaciados pero tampoco crecen
-> multiplicando (una parábola, una `1/r`, cualquier cosa que pase por cero o se vuelva
-> negativa), **una malla log no pasaría por ellos**. Lo que quieres entonces no es una
-> escala de eje sino **líneas guía en los puntos**: dibújalas tú, en el mismo lazo que genera
-> los datos (`polyline` de cada punto a los ejes). Malla regular y «líneas donde están los
-> puntos» son cosas distintas — es la misma distinción entre `grid=` y `rule`. Ver
-> `examples/tiro_parabolico.mg`.
+> ⚠️ **«No lineal» no quiere decir «log».** La escala log es para datos *multiplicativos* y
+> no existe en valores ≤ 0; si tus puntos solo están mal repartidos, lo que quieres son
+> líneas guía, no una escala ([detalle](#14-errores-comunes)).
 
 **`legend`** — `at=` combina `"top"`/`"center"`/`"bottom"` con `"-left"`/`"-right"`; más
 `margin`, `sample_width`, `sample_height`, `gap`, `row_gap`, `font_size` (todos en pt). Con
@@ -559,7 +540,7 @@ un `plot`, con su propio bloque de coordenadas.
 
 ---
 
-## 11. Bibliotecas
+## 12. Bibliotecas
 
 Una **biblioteca es un `.mg` de structs** que se trae con `include` (§15):
 
@@ -574,7 +555,7 @@ de pintado es el de escritura).
 
 ---
 
-## 12. Errores
+## 13. Cómo falla el compilador
 
 MG **aborta** en vez de producir una figura a medias: un error de evaluación, un `include`
 que no resuelve o un conteo impar de coordenadas terminan la compilación con código 1. Los
@@ -600,16 +581,81 @@ polygon { 2 2   3 2        % a medio escribir: sin cerrar la llave, y sobra una 
 > (la condición se evalúa después), así que anidarlo es error. Y no sirve para parar una
 > recursión — para eso, el `if` de §8.
 
-> ⚠️ **Lo que `exit` sí calla y lo que no.** Calla los errores de **sintaxis** de más abajo
-> —llaves sin cerrar, una primitiva mal escrita, coordenadas impares—, que es el caso normal
-> del código a medio escribir. **No** calla los **léxicos**: un carácter que el lenguaje no
-> reconoce (`@`, o una letra acentuada fuera de una cadena) sigue abortando, porque el
-> archivo se convierte en tokens **entero** antes de leerse. Si dejaste una nota en prosa
-> debajo del `exit`, ponla en un comentario `%`.
+> ⚠️ **`exit` calla los errores de sintaxis de más abajo, pero no los léxicos** (un `@`
+> suelto, una letra acentuada fuera de una cadena) ([detalle](#14-errores-comunes)).
 
 ---
 
-## 13. Referencia rápida
+## 14. Errores comunes
+
+Los tropiezos que se repiten, con el síntoma primero — porque cuando ocurren no se sabe
+todavía cuál es la causa. Los tres primeros son, con diferencia, los más frecuentes.
+
+**No se ve nada, o se ve a medias, o «solo salen 3 puntos».** Casi siempre los datos caen
+**fuera de `world_window`**, que es un recorte fijo y no se ajusta a lo que dibujas. Si tu
+curva vive en `y` de 9 a 15 y la ventana va de 0 a 8, el compilador dibujó bien: fuera de
+cuadro. **No hay ningún error**, y por eso el síntoma parece un bug del motor (una figura
+vacía, un EPS casi en blanco). Antes de sospechar del motor, comprueba que el rango de tus
+datos quepa en la ventana. Le pasa hasta a quien conoce el lenguaje.
+
+**Un `{ }` de coordenadas se queja de un número impar, o la figura sale deformada.** Dentro
+de un bloque los valores se separan por **espacios**, así que los signos y los paréntesis
+interactúan con esa separación: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`), no
+dos. La regla práctica es **o parentizas todas las coordenadas o ninguna**: `{ (12) (y-11) }`.
+El conteo impar sí es error de compilación, con línea y columna, así que al menos no falla
+en silencio. Emparentado: un identificador pegado a un paréntesis es una **llamada**, de modo
+que `dx (h+dy)` se lee `dx(h+dy)`.
+
+**`dot(2, &p)` no compila y el error habla de una expresión inesperada.** El trayecto va
+**siempre como primer argumento** y el resto nombrado detrás: `dot(&p, size=2)`,
+`marker(&p, shape="x")`, `polybar(&p, width=0.5)`. En el bloque `{ }` tampoco vale.
+
+**El texto se ve enorme al reducir la figura.** El texto es una cantidad **física** (pt) y
+los paneles son cantidad de **mundo**, así que achicar `display_size` no achica el texto: lo
+agranda en relación con el dibujo, y los rótulos se encabalgan. Para una figura más pequeña,
+baja `font_size`; el lienzo no es la palanca.
+
+**`polyline(…, outlinefill)` da error.** `outlinefill`, `font`, `align` y `valign` existen
+solo como **sentencia de estado**, no como atributo entre paréntesis. El contorno sobre un
+relleno, como atributo, se pide dando `color=` junto a `fill=`: eso ya implica contornear.
+
+**Una curva acumulada con `+=` sale desplazada o encimada.** `+=` **suelda piezas
+relativas**: cada una se traslada para que su primer punto continúe donde acabó la anterior.
+Por eso las piezas se escriben relativas (`{ 0 0  … }`) y no con coordenadas absolutas — si
+las escribes absolutas esperando que se acumulen tal cual, la pieza se desplaza.
+
+**Un acumulador `path` da valores raros dentro de un lazo.** `path x = …` es **diferido**:
+guarda la expresión y la evalúa al dibujar, así que si la semilla lleva variables que el lazo
+pisa, leerá los valores finales. `path x += …` evalúa en el acto. La semilla, por tanto, tiene
+que ser un literal. Y al reasignar dentro del lazo se repite la palabra `path`.
+
+**`place` me dibujó una línea que yo no pedí.** Con **dos** puntos `place` no es «una copia
+por punto» sino una **línea guía con algo encima** —la flecha con etiqueta de toda la vida— y
+dibuja la línea: `shift` mueve el ejemplar, `both_sides=true` pone dos, `gap=` parte la línea
+para dejar hueco a un letrero, y la forma sobre **arco** (`r=`, `from=`, `to=`) también la
+dibuja. Para sembrar copias sin línea: da **3 o más** puntos, o usa `count=` sobre los dos.
+
+**La malla logarítmica no pasa por mis puntos.** «No lineal» no quiere decir «log». La escala
+log es para datos **multiplicativos** —cada paso multiplica— y no existe en valores ≤ 0. Si
+tus puntos simplemente no están regularmente espaciados (una parábola, una `1/r`, algo que
+cruza el cero), ninguna malla log va a pasar por ellos. Lo que quieres no es una escala de
+eje sino **líneas guía en los puntos**, dibujadas en el mismo lazo que genera los datos.
+Malla regular y «líneas donde están los puntos» son cosas distintas — la misma distinción que
+hay entre `grid=` y `rule`. Ver `examples/tiro_parabolico.mg`.
+
+**Puse `exit` y sigue fallando más abajo.** `exit` calla los errores de **sintaxis**
+posteriores —llaves sin cerrar, una primitiva mal escrita, coordenadas impares—, que es el
+caso normal del código a medio escribir. No calla los **léxicos**: un carácter que el lenguaje
+no reconoce (`@`, o una letra acentuada fuera de una cadena) aborta igual, porque el archivo
+se convierte en tokens **entero** antes de leerse. Una nota en prosa debajo del `exit` va en
+un comentario `%`.
+
+**Un lazo hace una vuelta de más o de menos.** `to` es **inclusivo** y `count` es una
+**cantidad**: `for i = 0 to 4` da cinco vueltas y `repeat(…, count=4)` da cuatro copias.
+
+---
+
+## 15. Referencia rápida
 
 **Primitivas** · `polyline` `polygon` `rectangle` `circle` `ellipse` `arc` `dot` `marker`
 `bezier` `smooth` `polybar` `sine` `compound` `text`
@@ -627,7 +673,7 @@ polygon { 2 2   3 2        % a medio escribir: sin cerrar la llave, y sobra una 
 
 **Trayectos** · `path x = …` · `path x += …` · `&nombre` · `concat` `reverse` `flip_x`
 `flip_y` `transpose` · generadores `sine` `smooth` · reducciones `path_width`
-`path_x_min_at_y` `path_x_max_at_y` · muestreo `sample` `point_at` `angle_at` (flag `curve=`)
+`path_x_min_at_y` `path_x_max_at_y` · muestreo `sample` `point_at` `angle_at` (argumento `curve=`)
 
 **Gráficas** · `plot` `xaxis` `yaxis` `axis` `rule` `legend`/`entry` `table`/`row` `grid`
 `numbers` `ticks`
