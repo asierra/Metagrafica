@@ -5,9 +5,10 @@
 # Modes:
 #   ./run.sh capture   - (re)generate the golden files from the current build
 #   ./run.sh check     - (default) compare current output against the golden files
-#   ./run.sh images    - regenerate docs/img/*.svg (salida PUBLICADA y versionada)
+#   ./run.sh images    - regenerate docs/img/*.svg + docs/galeria.html (salida
+#                        PUBLICADA y versionada)
 #
-# Cinco compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
+# Seis compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
 #   - Golden por bytes (eps/svg/pdf): caza REGRESIONES de salida. No caza un bug
 #     preexistente: se bendice como correcto.
 #   - Ghostscript sobre el EPS (psfail): caza los bugs de PRÓLOGO, que el golden
@@ -41,6 +42,12 @@
 #     los ~150 caminos de error del compilador no tenían NINGUNA prueba. Su
 #     regresión natural es volver al SILENCIO, que no mueve un byte de ningún
 #     golden. Ver el bloque de la compuerta al final del archivo.
+#   - La GALERÍA al día (galfail): docs/galeria.html es publicada y DERIVADA, y
+#     lo que la vuelve rancia es editar un COMENTARIO — lleva incrustados el
+#     encabezado y el código de cada ejemplo. Ninguna de las otras cinco puede
+#     verlo: un cambio de comentario no mueve un byte de ningún .svg ni de ningún
+#     golden. Se regenera con `images`, no con `capture`, por la misma razón que
+#     docs/img: bendecir la cara pública es un commit consciente.
 #
 set -u
 
@@ -138,6 +145,14 @@ if [ "$MODE" = "images" ]; then
         echo "regenerado docs/img/$name.svg"
         img_n=$((img_n + 1))
     done
+    # La galería es salida publicada igual que los renders, y depende de las dos
+    # cosas que este modo bendice (los .svg y el texto de los .mg), así que se
+    # regenera aquí y no en `capture`.
+    if command -v python3 >/dev/null 2>&1; then
+        python3 "$ROOT/tools/galeria.py" || exit 1
+    else
+        echo "WARN: python3 no encontrado; docs/galeria.html NO se regeneró" >&2
+    fi
     echo "---"
     echo "images done: $img_n regenerado(s). Revisa el diff ANTES de commitear: es la cara pública."
     exit 0
@@ -196,6 +211,7 @@ psfail_count=0
 c3fail_count=0
 imgfail_count=0
 errfail_count=0
+galfail_count=0
 err_ok=0
 
 for example in $EXAMPLES; do
@@ -304,6 +320,24 @@ for svg in "$IMGDIR"/*.svg; do
     rm -rf "$imgtmp"
 done
 
+# --- Compuerta 6: la GALERÍA al día (galfail) --------------------------------
+# docs/galeria.html es salida publicada y DERIVADA (la sirve GitHub Pages), y lo
+# que la vuelve rancia no es tocar el motor sino editar un COMENTARIO: la página
+# lleva incrustados el encabezado y el código fuente completo de cada ejemplo. O
+# sea que ninguna de las otras cinco compuertas puede verlo — imgfail vigila los
+# renders, y un cambio de comentario no mueve un solo byte de ningún .svg.
+#
+# Se compara regenerando en memoria (galeria.py --check), no por mtime. Se omite
+# con aviso si no hay python3, igual que gs.
+if command -v python3 >/dev/null 2>&1; then
+    if ! galout="$(python3 "$ROOT/tools/galeria.py" --check 2>&1)"; then
+        echo "GALFAIL docs/galeria.html ($galout)"
+        galfail_count=$((galfail_count + 1))
+    fi
+else
+    echo "WARN: python3 no encontrado; se omite la compuerta de la galería"
+fi
+
 # --- Compuerta 5: pruebas NEGATIVAS (errfail) --------------------------------
 # Las otras cuatro compuertas miran salida EXITOSA, así que los ~150 caminos de
 # error del compilador (evalError/parseError/exit) no tenían una sola prueba. Y su
@@ -370,14 +404,14 @@ done
 
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count (err_ok=$err_ok)"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count (err_ok=$err_ok)"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
