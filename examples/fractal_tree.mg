@@ -1,12 +1,22 @@
-% Árboles fractales — reconstrucción de la Fig. 4 de:
+% Árboles fractales — una estructura que se contiene a sí misma.
 %
-%   Alejandro Aguilar Sierra, "Metagrafic: hacia un lenguaje para la graficación
-%   por computadora", Ciencias 21, enero 1991, pp. 29-33 (docs/11195-10937-0-PB.pdf).
+% Los dos árboles son la misma estructura de cuatro líneas —un tronco con dos
+% copias menores de sí mismo en la punta— invocada con ángulos de rama distintos;
+% cada uno son 511 segmentos. La condición de paro es un `if` corriente, y
+% `max_depth` es la red de seguridad.
 %
-% Es la figura que demuestra la afirmación central del artículo, y la única de
-% ellas que V3 no había reproducido: «Lo que hace realmente poderoso a MG es el
-% uso de estructuras. […] Recursividad. Una estructura puede contenerse a sí
-% misma, permitiendo sorprendentes efectos.»
+% NOTAS --------------------------------------------------------------------
+% Reconstrucción de la Fig. 4 de: Alejandro Aguilar Sierra, «Metagrafic: hacia un
+% lenguaje para la graficación por computadora», Ciencias 21, enero 1991,
+% pp. 29-33 (docs/11195-10937-0-PB.pdf), a partir del listado impreso en su
+% apéndice. Es la figura que demuestra la afirmación central del artículo:
+% «Lo que hace realmente poderoso a MG es el uso de estructuras. […]
+% Recursividad. Una estructura puede contenerse a sí misma, permitiendo
+% sorprendentes efectos.»
+%
+% Aquel listado NO tenía condición de paro —no había condicionales en el lenguaje
+% de 1991—, así que el límite de profundidad era lo ÚNICO que detenía el árbol:
+% era infraestructura de carga, no una guarda defensiva.
 
 % --- Procedencia y advertencia -----------------------------------------------
 % El Apéndice 1 del artículo IMPRIME el listado V0 de esta figura, así que esto
@@ -25,22 +35,19 @@
 %   AF 0 0.5 NL
 %   CLST
 %
-% El mapeo a V3 es casi 1:1 (VAR → parámetros de struct §8; SCST/RTST → scale y
-% rotate como sentencias §11.1; la colocación por lista de puntos → translate).
+% El mapeo a V3 es casi 1:1 (VAR → parámetros de struct; SCST/RTST → scale y
+% rotate como sentencias; la colocación por lista de puntos → translate).
 
 % --- Lo que este archivo cubre en exclusiva ----------------------------------
 % ⚠ Es el ÚNICO ejemplo del corpus donde una struct se invoca a sí misma
-% (recursión, §8.1). Verificado por barrido de examples/, lib/ y simulate3d/ el
+% (recursión). Verificado por barrido de examples/ y lib/ el
 % 2026-07-22: cero recursión en todo el árbol antes de este archivo.
 %
-% 🔎 Y el listado de arriba es lo que motivó implementar `max_depth` (§18): NO
-% TIENE CONDICIÓN DE PARO. No podía tenerla — V0 no tenía condicionales (`if`
-% llega hasta §6.1, en V3). El límite de profundidad era lo ÚNICO que detenía
-% este árbol: infraestructura de carga, no una red de seguridad. En V1 la palabra
-% sobrevivió en el léxico (`MAXDEEP`, `src/mgpp.l:43`) pero `parseDef` no tenía
-% caso para ella y se ignoraba, igual que el `$S 1` de las splines cónicas; una
-% recursión sin paro terminaba en SEGFAULT. Implementado el 2026-07-22: tope por
-% default 32, `max_depth n` para cambiarlo, y `evalError` —no volcado— al pasarse.
+% 🔎 Y el listado de arriba es lo que motivó implementar `max_depth`: NO
+% TIENE CONDICIÓN DE PARO. No podía tenerla: no había condicionales. El límite de profundidad era lo ÚNICO que detenía
+% este árbol: infraestructura de carga, no una red de seguridad. De ahí el tope
+% por default de 32 niveles, `max_depth n` para cambiarlo, y un error con mensaje
+% —no un volcado— al pasarse.
 %
 % Aquí el paro es explícito, con `if`, que es el idioma V3 correcto: `max_depth`
 % es la red, no el freno. Con 8 niveles la profundidad de anidamiento es 9, muy
@@ -58,7 +65,7 @@ display_size 16 9
 % letterboxea (0.00 pt por los cuatro lados) y la escala es 188.98 pt por unidad.
 % ⚠ Vale la pena conservarlo así: en cuanto la ventana deja de ser 16:9, el meet
 % ajusta al lado que sobra y ENCOGE el dibujo — ensancharla a 2.72 lo achicaba al
-% 88.2% y metía 0.53 cm de banda arriba y abajo (§3.1). Para dar más aire, mover
+% 88.2% y metía 0.53 cm de banda arriba y abajo. Para dar más aire, mover
 % los dos números de x por igual (o cambiar display_size), no uno solo.
 world_window -1.2 1.2 -0.05 1.30
 
@@ -74,7 +81,7 @@ struct arbol(theta, phi, n, s) {
 
     if n > 0 {
         % Cada rama se arma en su propio bloque: `rotate` y `scale` son estado
-        % con ámbito (§7/§11.1), así que la segunda rama no hereda el giro de la
+        % con ámbito, así que la segunda rama no hereda el giro de la
         % primera. Componen en orden de escritura (T·S·R): el giro ocurre en la
         % base de la rama, la escala la encoge, y la traslación la lleva a la
         % punta del tronco.

@@ -1,26 +1,20 @@
-% ───────────────────────────────────────────────────────────────────────────────
-% Fig. 4.4 de «Quantum Mechanics» (Cambridge University Press, 2025), p. 78.
-% Antes: Fig. 3.1 de IMQ, 3a. ed. (sept. 1998, dic. 2002).
-% Potenciales y estructura del espectro: tres pozos con sus puntos de retorno.
+% Tres pozos de potencial y la estructura de su espectro.
 %
-% El nombre del archivo sigue a la edición de Cambridge porque es la referencia
-% de más peso y la más fácil de verificar: el libro se descarga gratis.
+% Cada panel es un plot en unidades físicas, con su origen real. Los niveles de
+% energía y los puntos de retorno se DERIVAN de E: mover una energía reacomoda
+% sola su línea, sus marcas y sus rótulos. Varios plot en un documento, y ejes
+% con `base=` (el eje V centrado de a, el eje x sobre V=0 de c).
 %
-% Port V3 de examples/fig4-5v1.mg. Dos cambios de fondo frente a una traducción
-% literal (que solo cambiaría la sintaxis):
+% NOTAS --------------------------------------------------------------------
+% Fig. 4.4 de «Quantum Mechanics» (Cambridge University Press, 2025), p. 78;
+% antes Fig. 3.1 de IMQ, 3a. ed. El nombre del archivo sigue a la edición de
+% Cambridge porque es la referencia más fácil de verificar: se descarga gratis.
 %
-%  1. Las tres curvas son ANALÍTICAS, no datos. El V1 las traía digitalizadas a 69
-%     puntos sobre la caja unitaria de una struct; las fórmulas se recuperaron de
-%     esos mismos puntos (ajustan a ~1e-6) y aquí se calculan. Cero coordenada
-%     digitalizada.
-%  2. Cada panel es un plot{} en unidades FÍSICAS, con su origen real: la caja
-%     unitaria de V1 había corrido el origen de b) y c) a un r arbitrario distinto
-%     de cero. Los niveles de energía y los puntos de retorno se DERIVAN de E, así
-%     que mover una E reacomoda sola su línea, sus marcas y sus rótulos.
-%
-% Ejercita: varios plot{} en un documento (rejilla de paneles) y `base=` en los
-% ejes — el eje V centrado de a), el eje x sobre V=0 de c).
-% ───────────────────────────────────────────────────────────────────────────────
+% Las tres curvas son ANALÍTICAS, no datos. La versión anterior las traía
+% digitalizadas a 69 puntos sobre una caja unitaria; las fórmulas se recuperaron
+% de esos mismos puntos (ajustan a ~1e-6) y aquí se calculan. Cero coordenada
+% digitalizada, y de paso cada panel recupera su origen físico: la caja unitaria
+% había corrido el de b) y c) a un r arbitrario distinto de cero.
 
 display_size 12 4.5
 font_size 8
@@ -50,7 +44,7 @@ plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
     dash "solid"
     dot(2) { a1 Ea  a2 Ea }
 
-    text("/iE") { 0.81 (Ea-0.05) }         % resta en coord → paréntesis (§4)
+    text("/iE") { 0.81 (Ea-0.05) }         % resta en coord → paréntesis
     text("$x_1$", align="center") { a1 -0.18 }
     text("$x_2$", align="center") { a2 -0.18 }
 
@@ -106,7 +100,7 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     for i = 0 to n-1 {
         u = ctop - i*((ctop-cend)/n)
         v = ctop - (i+1)*((ctop-cend)/n)
-        % La resta exige paréntesis (§4), y por eso el 1/u de al lado también los
+        % La resta exige paréntesis, y por eso el 1/u de al lado también los
         % lleva: `1/u (…)` leería `u` como llamada a función.
         polyline { (1/u)  (u*u/2-u)   (1/v)  (v*v/2-v) }
     }
@@ -136,7 +130,7 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
 
 % ── Mobiliario de página: coords de la ventana ────────────────────────────────
 % Los rótulos de abscisa (`x`) YA NO viven aquí: son `xaxis(label=…, label_at="end")`
-% en cada panel (§13.0). Los de ordenada sí se quedan a mano, y NO por el centrado:
+% en cada panel. Los de ordenada sí se quedan a mano, y NO por el centrado:
 %  1. van a una misma altura en los tres paneles — decisión de página, no de datos:
 %     un `label_at` los ataría al extremo de SU eje, cada uno a distinta altura;
 %  2. en a) el eje V es INTERIOR (base=0, en x=15.5) y su rótulo va al borde de la

@@ -1,0 +1,2137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaGráfica — galería de ejemplos</title>
+<style>
+:root {
+  --fondo: #ffffff; --texto: #1a1a1a; --tenue: #5b6472; --borde: #e2e5ea;
+  --tarjeta: #ffffff; --acento: #2b5c8a; --codigo: #f6f7f9;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #14171c; --texto: #e6e8ec; --tenue: #99a2b0; --borde: #2b3038;
+    --tarjeta: #1b1f26; --acento: #7fb2e0; --codigo: #101318;
+  }
+}
+:root[data-theme="dark"] {
+  --fondo: #14171c; --texto: #e6e8ec; --tenue: #99a2b0; --borde: #2b3038;
+  --tarjeta: #1b1f26; --acento: #7fb2e0; --codigo: #101318;
+}
+:root[data-theme="light"] {
+  --fondo: #ffffff; --texto: #1a1a1a; --tenue: #5b6472; --borde: #e2e5ea;
+  --tarjeta: #ffffff; --acento: #2b5c8a; --codigo: #f6f7f9;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2.5rem 1.25rem 4rem;
+  background: var(--fondo); color: var(--texto);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.envoltura { max-width: 1180px; margin: 0 auto; }
+header { border-bottom: 1px solid var(--borde); padding-bottom: 1.75rem; margin-bottom: 2.5rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .4rem; letter-spacing: -.02em; }
+header p { margin: .4rem 0; color: var(--tenue); max-width: 62ch; }
+a { color: var(--acento); }
+h2 { font-size: 1.25rem; margin: 3rem 0 .3rem; letter-spacing: -.01em; }
+h2:first-of-type { margin-top: 0; }
+.grupo-desc { color: var(--tenue); margin: 0 0 1.5rem; max-width: 62ch; font-size: .95rem; }
+.rejilla { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+.tarjeta {
+  border: 1px solid var(--borde); border-radius: 10px; overflow: hidden;
+  background: var(--tarjeta); display: flex; flex-direction: column;
+}
+.lienzo {
+  background: #fff; border-bottom: 1px solid var(--borde);
+  padding: 1rem; display: flex; align-items: center; justify-content: center;
+  min-height: 210px;
+}
+.lienzo img { max-width: 100%; height: auto; max-height: 380px; }
+.cuerpo { padding: 1rem 1.15rem 1.15rem; flex: 1; display: flex; flex-direction: column; }
+.cuerpo h3 { font-size: 1.02rem; margin: 0 0 .45rem; }
+.cuerpo p { margin: 0 0 .9rem; color: var(--tenue); font-size: .9rem; flex: 1; }
+.pie { display: flex; align-items: center; gap: .9rem; font-size: .85rem; }
+.pie code { background: var(--codigo); padding: .15rem .4rem; border-radius: 4px; font-size: .85em; }
+details { margin-top: .9rem; }
+details summary { cursor: pointer; font-size: .85rem; color: var(--acento); }
+details pre {
+  margin: .7rem 0 0; padding: .85rem; background: var(--codigo);
+  border: 1px solid var(--borde); border-radius: 6px;
+  overflow-x: auto; font-size: .78rem; line-height: 1.45; max-height: 460px;
+}
+footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--borde);
+         color: var(--tenue); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+<header>
+  <h1>MetaGráfica — galería</h1>
+  <p>Un lenguaje descriptivo para figuras técnicas y científicas. Cada figura de
+  esta página es un archivo de texto: despliega el código bajo cualquiera de
+  ellas y lo verás entero, tal como se compiló.</p>
+  <p>Todas se generaron con <code>bin/mg ejemplo.mg salida.svg</code>. El mismo
+  archivo produce EPS, SVG o PDF según la extensión que le pidas.</p>
+  <p><a href="https://github.com/asierra/Metagrafica">Repositorio</a> ·
+     <a href="https://github.com/asierra/Metagrafica/blob/main/docs/referencia.md">Referencia del lenguaje</a> ·
+     <a href="https://github.com/asierra/Metagrafica#building">Cómo compilarlo</a></p>
+</header>
+    <h2>Gráficas de datos</h2>
+    <p class="grupo-desc">El plot mapea unidades de datos a una caja en centímetros; los ejes heredan los rangos y se rotulan solos.</p>
+    <div class="rejilla">
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/quickstart.svg" alt="El ejemplo del README — y = x², con ejes, malla y leyenda." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>El ejemplo del README — y = x², con ejes, malla y leyenda.</h3>
+          <p>La figura más corta que muestra el lenguaje de gráficas completo: <code>plot</code> mapea unidades de datos a una caja en centímetros, y los ejes heredan los rangos y se rotulan solos.</p>
+          <div class="pie"><code>quickstart.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/quickstart.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% El ejemplo del README — y = x², con ejes, malla y leyenda.
+%
+% La figura más corta que muestra el lenguaje de gráficas completo: `plot` mapea
+% unidades de datos a una caja en centímetros, y los ejes heredan los rangos y se
+% rotulan solos.
+%
+% NOTAS --------------------------------------------------------------------
+% Si lo cambias, regenera su SVG:
+%     bin/mg examples/quickstart.mg docs/img/quickstart.svg
+%
+% Está en el corpus golden a propósito: el ejemplo que la portada del proyecto le
+% enseña al mundo no puede romperse en silencio. Le pasó al ejemplo del man, que
+% se quedó en la sintaxis vieja sin que nadie lo notara hasta que dejó de
+% compilar.
+
+display_size 9 5.5
+font_size 9
+world_window -2 11 -1.5 5.5
+
+% plot mapea unidades de DATOS a una caja física en cm; los ejes heredan los rangos
+% x=/y= y se rotulan solos.
+plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
+    line_width 0.8
+    polyline { 0 0  1 1  2 4  3 9  4 16  5 25  6 36  7 49  8 64  9 81  10 100 }
+    marker(size=4, shape=&quot;cross&quot;) {
+        0.9 10.0
+        2.5 15.0
+        4.2 30.0
+        6.75 60.2
+    }  
+    legend(at=&quot;top-left&quot;, margin=10, sample_width=20, gap=5, font_size=8) {
+        entry(&quot;Theoretical&quot;) { polyline { 0 0.5  1 0.5 } }
+        entry(&quot;Experimental&quot;) { marker(3, shape=&quot;cross&quot;, color=&quot;black&quot;) { 0.5 0.5 } }
+    }
+    xaxis(step=2, label=&quot;x&quot;)
+    yaxis(step=25, label=&quot;$y = x^2$&quot;)
+}</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig6-4.svg" alt="Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall.</h3>
+          <p>Eje y LOGARÍTMICO: los datos van en unidades reales y el plot los mapea a su caja; los ejes heredan los rangos y se rotulan solos, sin un solo rótulo de potencia de diez escrito a mano. Los isótopos son texto anclado a sus datos.</p>
+          <div class="pie"><code>fig6-4.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig6-4.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall.
+%
+% Eje y LOGARÍTMICO: los datos van en unidades reales y el plot los mapea a su
+% caja; los ejes heredan los rangos y se rotulan solos, sin un solo rótulo de
+% potencia de diez escrito a mano. Los isótopos son texto anclado a sus datos.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 6.4 de «Introducción a la mecánica cuántica», L. de la Peña, 3a. ed.
+% Los datos van en unidades reales (E^{-1/2} en MeV^{-1/2}, λ⁻¹ en s),
+% convertidos de los píxeles digitalizados del escaneo.
+%
+% Layout del libro: el eje x cae ABAJO de la primera marca (10^{-15}), con un
+% hueco. Se reproduce con la caja de fondo al nivel del eje x y el rango y
+% extendido a 1e-20; yaxis(start=1e-15) rotula desde ahí hacia arriba.
+%
+% ⚠ COBERTURA EXCLUSIVA: es el único ejemplo con texto anclado a datos DENTRO de
+% un plot logarítmico, o sea el único que ejercita el remapeo puntual del ancla.
+% Sin él, un bug ahí pasaría todas las compuertas sin que nadie lo note. También
+% es el único sin `font` explícito, y por eso el que caza la cara ambiente en PDF.
+
+display_size 9 6.7
+font_size 8
+
+% Lienzo exterior (world coords) con margen para el nombre del eje y y los isótopos.
+world_window -1 7.2 -0.95 6.25
+
+% x = E^{-1/2} (0.30..0.50, lineal) ; y = λ⁻¹ (log). box=(0,0,6,5) = región de datos
+% en world coords; la anisotropía y el mapeo log los hace plot.
+plot(x=(0.30,0.50), y=(1e-20,1e5), yscale=&quot;log&quot;, box=(0,0, 6,5)) {
+
+    % recta de ajuste (Geiger-Nuttall), EN DATOS
+    line_width 0.8
+    polyline { 0.320 1.0e7  0.493 3.2e-17 }
+
+    % puntos experimentales, EN DATOS (dot = marcador físico: posición mapeada,
+    % radio inmune al mapper → discos redondos en su sitio)
+    fill &quot;black&quot;
+    dot(1.5) { 0.324 9.3e5  0.349 1.9e3  0.358 1.8e2  0.373 4.1e0
+               0.360 2.4e-1  0.376 5.7e-2  0.383 6.7e-3  0.395 5.3e-3
+               0.398 9.4e-5  0.409 2.0e-3  0.411 2.7e-6  0.416 3.4e-6
+               0.406 6.4e-7  0.411 6.4e-7  0.422 1.4e-8  0.438 2.7e-9
+               0.447 3.0e-11  0.441 1.1e-12  0.450 4.2e-13  0.454 1.7e-12
+               0.442 9.4e-15  0.480 6.9e-16  0.482 5.1e-17  0.490 3.2e-17 }
+
+    % Isótopos que abren y cierran la serie: anotaciones EN DATOS, junto a su punto
+    % (Po: 0.324 9.3e5 ; U: 0.490 3.2e-17). Van DENTRO del plot para que el ancla la
+    % mapee él —incluso en el eje log, donde el mapeo es puntual— en vez de fijarla a
+    % mano en coords de ventana: mover un rango o la caja las reacomoda solas.
+    text(&quot;$Po{^292}$&quot;) { 0.3367 3.16e5 }
+    text(&quot;$ U{^238}$&quot;) { 0.4967 1.0e-17 }
+
+    % Eje x: E^{-1/2} lineal, .30..50 cada .05, marcas adentro, sobrante de línea.
+    xaxis(line_width=0.2, step=0.05, decimals=2, strip_zero=true, ticks=&quot;in&quot;,
+          extend=0.4, label=&quot;$/iE^{/r-1/2} (MeV)^{/r-1/2} $&quot;)
+    % Eje y: λ⁻¹ log; rótulos 10^n desde 10^{-15} (start), 5 décadas por marca.
+    yaxis(line_width=0.2, start=1e-15, step=5, ticks=&quot;in&quot;, extend=(0, 0.3))
+}
+
+% Nombre del eje y: mobiliario de página, NO una anotación de datos — va horizontal
+% y arriba (estilo del libro), y `label=` lo rotaría a lo largo del eje. Se queda en
+% coords de ventana, fuera del plot.
+text(&quot;$\lambda^{-1} (/rs)$&quot;) { -0.83 5.5 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig4-4.svg" alt="Tres pozos de potencial y la estructura de su espectro." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Tres pozos de potencial y la estructura de su espectro.</h3>
+          <p>Cada panel es un plot en unidades físicas, con su origen real. Los niveles de energía y los puntos de retorno se DERIVAN de E: mover una energía reacomoda sola su línea, sus marcas y sus rótulos. Varios plot en un documento, y ejes con <code>base=</code> (el eje V centrado de a, el eje x sobre V=0 de c).</p>
+          <div class="pie"><code>fig4-4.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig4-4.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Tres pozos de potencial y la estructura de su espectro.
+%
+% Cada panel es un plot en unidades físicas, con su origen real. Los niveles de
+% energía y los puntos de retorno se DERIVAN de E: mover una energía reacomoda
+% sola su línea, sus marcas y sus rótulos. Varios plot en un documento, y ejes
+% con `base=` (el eje V centrado de a, el eje x sobre V=0 de c).
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 4.4 de «Quantum Mechanics» (Cambridge University Press, 2025), p. 78;
+% antes Fig. 3.1 de IMQ, 3a. ed. El nombre del archivo sigue a la edición de
+% Cambridge porque es la referencia más fácil de verificar: se descarga gratis.
+%
+% Las tres curvas son ANALÍTICAS, no datos. La versión anterior las traía
+% digitalizadas a 69 puntos sobre una caja unitaria; las fórmulas se recuperaron
+% de esos mismos puntos (ajustan a ~1e-6) y aquí se calculan. Cero coordenada
+% digitalizada, y de paso cada panel recupera su origen físico: la caja unitaria
+% había corrido el de b) y c) a un r arbitrario distinto de cero.
+
+display_size 12 4.5
+font_size 8
+world_window 0 120 2 43
+
+n = 60                                     % segmentos por curva
+
+% ── a) Oscilador armónico: V = x² ──────────────────────────────────────────────
+% El eje V va CENTRADO (base=0) porque ahí está el origen físico del oscilador.
+% E fija los puntos de retorno clásicos en ±√E.
+Ea = 0.4
+a1 = -sqrt(Ea)
+a2 = sqrt(Ea)
+
+plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
+    line_width 0.6
+    for i = 0 to n-1 {                     % la curva sube hasta el techo: V=0.85 → x=±0.922
+        p = -0.92 + i*(1.84/n)
+        q = -0.92 + (i+1)*(1.84/n)
+        polyline { p  p*p   q  q*q }
+    }
+    line_width 0
+    polyline { a1 Ea  a2 Ea }              % nivel de energía
+    dash &quot;dashed&quot;
+    polyline { a1 Ea  a1 -0.1 }            % retornos, hasta el eje x
+    polyline { a2 Ea  a2 -0.1 }
+    dash &quot;solid&quot;
+    dot(2) { a1 Ea  a2 Ea }
+
+    text(&quot;/iE&quot;) { 0.81 (Ea-0.05) }         % resta en coord → paréntesis
+    text(&quot;$x_1$&quot;, align=&quot;center&quot;) { a1 -0.18 }
+    text(&quot;$x_2$&quot;, align=&quot;center&quot;) { a2 -0.18 }
+
+    xaxis(ticks=&quot;none&quot;, tick_labels=false, line_width=0.2, label=&quot;/ix&quot;, label_at=&quot;end&quot;, label_gap=2)
+    yaxis(base=0, ticks=&quot;none&quot;, tick_labels=false, line_width=0.2)
+}
+
+% ── b) Barrera coulombiana repulsiva: V = 1/r ─────────────────────────────────
+% Ambos ejes caen en el borde de la caja → sin base= (el caso por default).
+% La curva se muestrea uniforme en V (= 1/r), no en r: así los puntos se juntan en
+% la rodilla, donde 1/r es casi vertical, y se ralean en la cola plana. 60 bastan.
+Eb = 0.4
+b1 = 1/Eb                                  % retorno: V(r)=E → r=1/E
+btop = 0.95                                % techo del panel (donde arranca la curva)
+bend = 1/36                                % cola: r=36
+
+plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
+    line_width 0.6
+    for i = 0 to n-1 {
+        u = btop - i*((btop-bend)/n)
+        v = btop - (i+1)*((btop-bend)/n)
+        polyline { 1/u  u   1/v  v }       % sin paréntesis: pondrían `u (1/v)` = llamada
+    }
+    line_width 0
+    polyline { b1 Eb  36 Eb }              % nivel de energía
+    dash &quot;dashed&quot;
+    polyline { b1 Eb  b1 0 }               % retorno, hasta el eje x
+    dash &quot;solid&quot;
+    dot(2) { b1 Eb }
+
+    text(&quot;/iE&quot;) { 37.3 Eb }
+    text(&quot;$x_1$&quot;, align=&quot;center&quot;) { b1 -0.075 }
+
+    xaxis(ticks=&quot;none&quot;, tick_labels=false, line_width=0.2, label=&quot;/ix&quot;, label_at=&quot;end&quot;, label_gap=2)
+    yaxis(ticks=&quot;none&quot;, tick_labels=false, line_width=0.2)
+}
+
+% ── c) Potencial efectivo: V = 1/(2r²) − 1/r ──────────────────────────────────
+% Centrífugo + Coulomb atractivo. Mínimo en r=1, V=−1/2. El eje x va sobre V=0
+% (base=0), INTERIOR al rango −0.5…0.45: es lo que `base=` hace posible.
+% Muestreo uniforme en s = 1/r, donde V = s²/2 − s es una PARÁBOLA — 60 segmentos
+% dan una curva suave incluso en la pared repulsiva.
+Ec1 =  0.3                                 % E &gt; 0: un retorno (dispersión)
+Ec2 = -0.3                                 % E &lt; 0: dos retornos (estado ligado)
+c0 = 0.4415                                % V(r) = Ec1
+c1 = 0.6125                                % V(r) = Ec2, interno
+c2 = 2.7208                                % V(r) = Ec2, externo
+ctop = 1/0.42                              % pared: la curva arranca en V=0.45
+cend = 1/6.3                               % cola
+
+plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
+    line_width 0.6
+    for i = 0 to n-1 {
+        u = ctop - i*((ctop-cend)/n)
+        v = ctop - (i+1)*((ctop-cend)/n)
+        % La resta exige paréntesis, y por eso el 1/u de al lado también los
+        % lleva: `1/u (…)` leería `u` como llamada a función.
+        polyline { (1/u)  (u*u/2-u)   (1/v)  (v*v/2-v) }
+    }
+    line_width 0
+    polyline { c0 Ec1  6.3 Ec1 }           % niveles de energía
+    polyline { c1 Ec2  c2 Ec2 }
+    dash &quot;dashed&quot;
+    polyline { c0 Ec1  c0 0 }              % retornos, hasta el eje x
+    polyline { c1 Ec2  c1 0 }
+    polyline { c2 Ec2  c2 0 }
+    dash &quot;solid&quot;
+    dot(2) { c0 Ec1  c1 Ec2  c2 Ec2 }
+
+    text(&quot;/iE&quot;) { 3.46 (Ec1+0.03) }
+    text(&quot;&gt;0&quot;)  { 3.85 (Ec1+0.03) }
+    text(&quot;/iE&quot;) { 3.46 (Ec2-0.07) }
+    text(&quot;&lt;0&quot;)  { 3.85 (Ec2-0.07) }
+    % Zona apretada: los rótulos van a la derecha de su línea, como en el libro.
+    % x&#x27;_1 se corre además lo justo para librar su marca (que en el original falta).
+    text(&quot;$x&#x27;_1$&quot;) { (c0+0.35) 0.2 }
+    text(&quot;$x_1$&quot;)  { c1 0.033 }
+    text(&quot;$x_2$&quot;, align=&quot;center&quot;) { c2 0.033 }
+
+    xaxis(base=0, ticks=&quot;none&quot;, tick_labels=false, line_width=0.2, label=&quot;/ix&quot;, label_at=&quot;end&quot;, label_gap=2)
+    yaxis(ticks=&quot;none&quot;, tick_labels=false, line_width=0.2)
+}
+
+% ── Mobiliario de página: coords de la ventana ────────────────────────────────
+% Los rótulos de abscisa (`x`) YA NO viven aquí: son `xaxis(label=…, label_at=&quot;end&quot;)`
+% en cada panel. Los de ordenada sí se quedan a mano, y NO por el centrado:
+%  1. van a una misma altura en los tres paneles — decisión de página, no de datos:
+%     un `label_at` los ataría al extremo de SU eje, cada uno a distinta altura;
+%  2. en a) el eje V es INTERIOR (base=0, en x=15.5) y su rótulo va al borde de la
+%     caja (x=1), no junto a su eje — ahí lo pondría encima de la curva.
+% O sea: son mobiliario de página, no el nombre del eje. Ningún `axis` los absorbe.
+line_width 0.2
+font &quot;roman&quot;
+text(&quot;/iV(x)&quot;) { 1 35 }
+text(&quot;/iV(x)&quot;) { 34.5 35 }
+text(&quot;/iV(x)&quot;) { 74.5 35 }
+
+dot(2) { 5 40.5 }
+text(&quot;classical turning point&quot;) { 7 40 }
+text(&quot;a)&quot;) { 13 3 }
+text(&quot;b)&quot;) { 51 3 }
+text(&quot;c)&quot;) { 94 3 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig_polybar.svg" alt="Espectros de absorción del CO₂ — histogramas con polybar." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Espectros de absorción del CO₂ — histogramas con <code>polybar</code>.</h3>
+          <p>Dos espesores de CO₂ superpuestos; el área rayada entre ambos es la diferencia entre los dos espectros. Ejercita polybar y el relleno tramado sin contorno.</p>
+          <div class="pie"><code>fig_polybar.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig_polybar.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Espectros de absorción del CO₂ — histogramas con `polybar`.
+%
+% Dos espesores de CO₂ superpuestos; el área rayada entre ambos es la diferencia
+% entre los dos espectros. Ejercita polybar y el relleno tramado sin contorno.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 5 de docs/first_article.pdf (p. 13) — espectros calculados con el método
+% de Smith (1969) a 0.5 µm de resolución. El histograma inferior es 261 cm de
+% CO₂, el superior 522 cm; el área rayada vale 0.374 µm.
+%
+% PROCEDENCIA. La figura es de 1988 y el PDF es un escaneo: no hay vectores que
+% rescatar ni fórmula que recuperar (son la salida de un modelo de banda, no un
+% 1-exp(-tau)). Los píxeles son la fuente primaria, así que aquí SÍ se vale
+% digitalizar, a diferencia de fig4-4, cuyas curvas resultaron analíticas.
+% Medidas del escaneo: caja de datos 12.46 × 8.0 cm, eje y en λ=11.5 con marcas
+% adentro, eje x sin marcas (la tinta bajo 12..20 son cantos de barra).
+%
+% ⚠ VERIFICADOR (regalo de la leyenda): sum(a522 - a261)*0.5 debe dar 0.374 µm.
+% Lo reconstruido da 0.3695 (−1.2%, dentro del grosor de línea de la cadena
+% láser 1988 → papel → escáner 2008 → umbral). SI ESE NÚMERO SE MUEVE, ALGO SE
+% ROMPIÓ.
+%
+% SON TRES PASADAS, no una barra blanca encima de una rayada: eso habría borrado
+% los costados verticales del rayado, que en el escaneo sí están.
+%   1. 522 con trama, sin contorno       → rayado de 0 a a522
+%   2. 261 en blanco opaco, sin contorno → borra el rayado bajo a261, con costados
+%   3. 522 solo contorno                 → repone costados completos y tope
+% Cada pasada va completa antes de la siguiente: el z-order es el orden de
+% escritura.
+
+display_size 14.25 9.35
+font_size 9.5
+line_width 0.4
+
+world_window -1 13.43 -0.4 8.95
+
+% x = λ (µm, lineal), y = a_B (absortividad de banda, 0..1).
+% El tope del eje y y la meseta 14.0-16.0 caen en el MISMO píxel del escaneo:
+% esa meseta está saturada en 1.000 exacto para ambas concentraciones.
+plot(x=(11.5,22.5), y=(0,1), box=(0,0, 12.46,8.0)) {
+
+    % --- Pasada 1: 522 cm, trama sin contorno (hatch= enciende el relleno; sin
+    % color= no hay outlinefill, así que rellena sin trazar).
+    polybar(width=0.5, hatch=45, hatch_gap=1.4) {
+        12.25 0.031   12.75 0.132   13.25 0.599   13.75 0.976
+        14.25 1.000   14.75 1.000   15.25 1.000   15.75 1.000
+        16.25 0.983   16.75 0.908   17.25 0.526   17.75 0.165
+        18.25 0.062   18.75 0.033   19.25 0.020   19.75 0.007
+    }
+
+    % --- Pasada 2: 261 cm, blanco opaco sin contorno. Borra el rayado por debajo
+    % de a261; NO deja línea en a261 (en el escaneo tampoco la hay).
+    polybar(width=0.5, fill=&quot;white&quot;) {
+        12.25 0.016   12.75 0.067   13.25 0.454   13.75 0.930
+        14.25 1.000   14.75 1.000   15.25 1.000   15.75 1.000
+        16.25 0.946   16.75 0.805   17.25 0.347   17.75 0.078
+        18.25 0.030   18.75 0.015   19.25 0.008   19.75 0.007
+    }
+
+    % --- Pasada 3: 522 cm, solo contorno (polybar pelado = stroke sin fill).
+    % MISMAS coords que la pasada 1 — si se editan unas hay que editar las otras
+    % (y re-verificar el checksum de 0.374 de arriba).
+    polybar(width=0.5) {
+        12.25 0.031   12.75 0.132   13.25 0.599   13.75 0.976
+        14.25 1.000   14.75 1.000   15.25 1.000   15.75 1.000
+        16.25 0.983   16.75 0.908   17.25 0.526   17.75 0.165
+        18.25 0.062   18.75 0.033   19.25 0.020   19.75 0.007
+    }
+
+    % Eje x: λ de 12 a 22 cada 2, SIN marcas (así está en el original).
+    xaxis(step=2, start=12, ticks=&quot;none&quot;, tick_label_gap=2)
+    % Eje y: a_B de 0 a 1 cada 0.2, marcas adentro y cortas.
+    yaxis(step=0.2, decimals=1, ticks=&quot;in&quot;, tick_size=1.5, tick_label_gap=2, label=&quot;$a_B$&quot;)
+}
+
+% Rótulos de eje al EXTREMO (estilo del libro), en coords de mundo fuera del plot:
+% label= los centraría. Posiciones tomadas del escaneo; λ(µm) comparte la línea
+% base con los números del eje x.
+%text(&quot;$a_B$&quot;) { -0.62 8.75 }
+text(&quot;$\lambda(\mu/rm)$&quot;) { 12.34 -0.28 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig1.svg" alt="Contenido de H₂O en la atmósfera como función de la altura." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Contenido de H₂O en la atmósfera como función de la altura.</h3>
+          <p>La línea continua son los valores calculados; los círculos y las cruces, dos conjuntos de valores observados. Marcadores sobre datos, con rótulos de ejes en notación matemática.</p>
+          <div class="pie"><code>fig1.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig1.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Contenido de H₂O en la atmósfera como función de la altura.
+%
+% La línea continua son los valores calculados; los círculos y las cruces, dos
+% conjuntos de valores observados. Marcadores sobre datos, con rótulos de ejes en
+% notación matemática.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 1 de R. Garduño, Atmósfera 1, 1988 — https://doi.org/10.20937/ATM.25946
+% Pie original: «The H₂O content in the atmosphere (−u_A_x) as a function of
+% height (z). The continuous line corresponds to the computed values using
+% formulas (15) and (18). The encircled dots and crosses correspond to the
+% Houghton (1979) - Holton (1979) and Peixóto and Oort (1984) - Holton (1979)
+% observed values, respectively.»
+
+display_size 12 8
+
+world_window 0 12 0 8
+
+plot(x=(0,12), y=(0,10), box=(1.3,1.1, 11.5,7.5)) {
+
+  line_width 0.6
+
+  % Adem (1967) / Garduño and Adem (1988)
+  bezier {
+    0.0 10.0
+    0.033 9.667 0.050 9.333 0.100 9.000
+    0.150 8.667 0.217 8.333 0.300 8.000
+    0.383 7.667 0.483 7.333 0.600 7.000
+    0.717 6.667 0.867 6.333 1.000 6.000
+    1.133 5.667 1.233 5.333 1.400 5.000
+    1.567 4.667 1.750 4.333 2.000 4.000
+    2.250 3.667 2.517 3.333 2.900 3.000
+    3.283 2.667 3.667 2.333 4.300 2.000
+    4.933 1.667 5.550 1.333 6.700 1.000
+    7.850 0.667 9.700 0.333 11.200 0.000
+  }
+
+  % Houghton (1971)/Holton (1979)
+  marker(3, shape=&quot;circle-dot&quot;, color=&quot;black&quot;) {
+    0.1 8.7
+    0.4 7.3
+    0.9 5.9
+    1.9 4.4
+    3.8 2.6
+    6.4 1.6
+    9.4 0.8
+  11.6 0.4 }
+
+  % Peixoto and Oort (1984)/Holton (1979)
+  marker(size=4, shape=&quot;cross&quot;) {
+    0.9 6.2
+    1.8 4.8
+    3.8 2.5
+    6.5 1.5
+    8.2 0.9
+    9.2 0.1
+  }
+
+  legend(at=&quot;top-right&quot;, margin=10, sample_width=20, gap=5, font_size=8) {
+    entry(&quot;Adem (1967)/Garduño and Adem (1988)&quot;) { polyline { 0 0.5  1 0.5 } }
+    entry(&quot;Houghton (1971)/Holton (1979)&quot;) { marker(3, shape=&quot;circle-dot&quot;, color=&quot;black&quot;) { 0.5 0.5 } }
+    entry(&quot;Peixoto and Oort (1984)/Holton (1979)&quot;) { marker(size=4, shape=&quot;cross&quot;) { 0.5 0.5 } }
+  }
+
+  xaxis(line_width=0.2, tick_label_font=&quot;italic&quot;,
+  step=2, start=0, decimals=0,
+  label=&quot;$-U_A$ ($10^-6$ cm)&quot;, label_font=&quot;roman&quot;, label_size=10)
+
+  yaxis(line_width=0.2, tick_label_font=&quot;italic&quot;,
+  step=1, decimals=0,
+  label=&quot;z(km)&quot;, label_font=&quot;roman&quot;, label_size=10)
+}</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/tiro_parabolico.svg" alt="Tiro parabólico — una trayectoria muestreada punto a punto." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Tiro parabólico — una trayectoria muestreada punto a punto.</h3>
+          <p>Tres cosas a la vez: <code>path +=</code> construye la curva dentro de un <code>for</code>, y las mismas coordenadas alimentan las proyecciones a cada eje; la malla no es regular ni logarítmica, sino que cae donde la física pone los puntos; y el cañón es una struct con la BOCA en su origen local, colocada con la misma variable que fija el origen de la trayectoria, así que mover y0 mueve el cañón y la curva JUNTOS.</p>
+          <div class="pie"><code>tiro_parabolico.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/tiro_parabolico.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Tiro parabólico — una trayectoria muestreada punto a punto.
+%
+% Tres cosas a la vez: `path +=` construye la curva dentro de un `for`, y las
+% mismas coordenadas alimentan las proyecciones a cada eje; la malla no es
+% regular ni logarítmica, sino que cae donde la física pone los puntos; y el
+% cañón es una struct con la BOCA en su origen local, colocada con la misma
+% variable que fija el origen de la trayectoria, así que mover y0 mueve el cañón
+% y la curva JUNTOS.
+%
+% NOTAS --------------------------------------------------------------------
+% Y ES UNA PARÁBOLA DE VERDAD, no la ilustración de una. La trayectoria sale de
+% y = y0 − k·(x−x0)², así que k = (y0−y)/(x−x0)² es CONSTANTE en los siete puntos
+% (0.06838) — verificado. La figura de referencia que inspiró este ejemplo
+% dibujaba un arco que se PARECE a una trayectoria; medido, es un semicírculo,
+% que se desvía unas 4 unidades de la parábola en el punto medio. No es que se
+% parezca menos: es una curva cualitativamente distinta. Ilustrar y calcular
+% producen curvas diferentes, y solo la calculada es correcta — la tesis de
+% docs/calcular_en_vez_de_medir.md, en pequeño.
+
+display_size 13 7
+world_window -2 11 2 9
+
+% cañón esquemático: boca en el origen local (0,0), apunta a +x
+struct canon() {
+    compound(fill=&quot;black&quot;) {
+        arc(0.5, from=90, to=270) { -2 0 }
+        polyline { -2 -0.5   -0.25 -0.3   -0.25 0.3  -2 0.5 }
+     }    
+    circle(0.62, fill=&quot;#5a3a1c&quot;, color=&quot;black&quot;) { -1.5 -0.6 }                        % rueda
+    circle(0.28, fill=&quot;#2a2a2a&quot;) { -1.5 -0.6 }                                       % cubo
+}
+x0 = 1        % boca del cañón = origen de la trayectoria
+y0 = 8
+y1 = 2.4615
+n  = 6
+
+path tray  = { (x0) (y0) }
+path proyx = { (x0) (y0) }     % proyección al eje IZQUIERDO (misma y)
+path proyy = { (x0) (y0) }     % proyección al borde SUPERIOR (misma x)
+
+% malla ajustada a los datos + acumulación de puntos, todo en el mismo lazo
+line_width 0.3   color &quot;gray&quot;   dash &quot;dotted&quot;
+for i = 1 to n {
+    x = x0 + i*1.5
+    y = y0 - i*i/6.5
+    path tray  += { (x) (y) }
+    path proyx += { (x0) (y) }
+    path proyy += { (x) (y0) }
+    polyline { (x) (y1)  (x) (y0) }        % vertical: piso → borde superior
+    polyline { (x0) (y)  (10) (y) }     % horizontal: eje y → borde derecho
+}
+
+% ejes en L (eje y izquierdo + borde superior)
+dash &quot;solid&quot;   line_width 0.5   color &quot;black&quot;
+polyline { (x0) (y1) (x0) (y0)  (10) (y0) }
+
+% cañón, con la boca en (x0,y0)
+canon(at=(x0, y0))
+
+% plataforma
+rectangle(fill=&quot;green&quot;) { -1.75 (y1) 0.75 6.75  }
+ 
+% trayectoria y puntos, encima de todo
+line_width 1.5   color &quot;black&quot;   dash &quot;dashed&quot;   smooth(&amp;tray)
+dash &quot;solid&quot;
+dot(&amp;tray,  size=2.6, color=&quot;lime&quot;)
+dot(&amp;proyx, size=2.6, color=&quot;orange&quot;)
+dot(&amp;proyy, size=2.6, color=&quot;blue&quot;)</pre></details>
+        </div>
+      </article>
+    </div>
+    <h2>Figuras calculadas</h2>
+    <p class="grupo-desc">Nada está medido: se dan los parámetros físicos y la geometría se deduce. Cambia un número y la figura entera se reacomoda.</p>
+    <div class="rejilla">
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/franck_condon.svg" alt="Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO.</h3>
+          <p>Nada está medido: se dan los parámetros de Morse (a, re, we, xe) de cada estado electrónico más Te, y de ahí salen en forma cerrada la curva, los niveles vibracionales, los puntos de retorno y las funciones de onda. Cambia un número y la figura entera se reacomoda de forma coherente.</p>
+          <div class="pie"><code>franck_condon.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/franck_condon.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO.
+%
+% Nada está medido: se dan los parámetros de Morse (a, re, we, xe) de cada estado
+% electrónico más Te, y de ahí salen en forma cerrada la curva, los niveles
+% vibracionales, los puntos de retorno y las funciones de onda. Cambia un número
+% y la figura entera se reacomoda de forma coherente.
+%
+% NOTAS --------------------------------------------------------------------
+%   V(r) = D(1 - exp(-a(r-re)))²                    la curva
+%   E_v  = we(v+½) - we·xe(v+½)²                    los niveles
+%   r±   = re - ln(1 ∓ sqrt(E/D))/a                 los puntos de retorno
+%   vmax = 1/(2·xe) - ½                             cuántos niveles ligados hay
+%
+% Los puntos de retorno fijan el ancho de cada onda: la oscilación va entre r- y
+% r+, y las colas asoman a la región prohibida con penetración asimétrica (efecto
+% túnel; ver el lazo). Las ψ son CON SIGNO —cruzan la línea— con envolvente
+% semiclásica WKB, armadas pieza a pieza con `path +=`; los dos pozos comparten un
+% solo lazo, con sus parámetros en listas. Necesita exp y ln: un Morse no es
+% escribible sin ellas.
+%
+% Es la figura de la sección «Una figura con parámetros» del README, junto con su
+% variante docs/img/franck_condon_anarm.mg (la misma con xe1 = 0.045). Si cambias
+% este archivo, hay que rehacer las dos.
+
+display_size 9 11
+font_size 9
+world_window 0 9 0 11
+
+% ---- estado fundamental ---------------------------------------------------
+% we (frecuencia vibracional) y xe (anarmonicidad) son lo que se mide en el
+% espectro; la profundidad del pozo NO es independiente de ellas: la relación
+% de Morse D = we/(4·xe) la fija. Darlas por separado produce niveles por
+% encima de la disociación (y un ln de argumento negativo, que aborta).
+a1  = 1.8
+re1 = 1.15
+we1 = 0.56
+xe1 = 0.028
+D1  = we1/(4*xe1)
+
+% ---- estado excitado (Te = origen electrónico) ----------------------------
+Te  = 5.8
+a2  = 1.9
+re2 = 1.48
+we2 = 0.40
+xe2 = 0.0385
+D2  = we2/(4*xe2)
+
+ytop = 8.9
+nseg = 90                                  % segmentos por curva
+rfin = 3.10                                % donde terminan las dos curvas
+
+% Los números de nivel van a la DERECHA de cada onda. Su x sale de la forma
+% cerrada —el retorno externo de la energía E+elab— para que la separación al
+% trazo sea constante y no dependa de la pendiente de la pared. Acotado a
+% [0.05, 0.20] del retorno (los extremos fallan solos: cerca del fondo cae dentro
+% de la cola, cerca de la disociación la curva se aplana y el número se va lejos).
+elab = 0.30
+
+% ---- funciones de onda ----------------------------------------------------
+% Cada ψ: v+1 lóbulos (v nodos) que CRUZAN la línea, entre dos colas planas (el
+% decaimiento en la región prohibida). Las colas son piezas `sine(amplitude=0)`
+% de ancho PARAMÉTRICO (línea recta), una por pared, para la penetración distinta.
+
+% Una onda: base gris + relleno con contorno negro. El ancho de la ventana local
+% es un parámetro con default calculado, `w = path_width(&amp;onda)`, así una
+% sola struct con parámetros sirve para todos los niveles.
+struct Nivel(&amp;onda, w = path_width(&amp;onda)) {
+    world_window 0 w -2 2
+    line_width 0.1   color &quot;lightgray&quot;   polyline { 0 0  w 0 }
+    fill &quot;orange&quot;   outlinefill   color &quot;black&quot;   line_width 0.4
+    bezier(&amp;onda)
+}
+
+plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
+
+    % ---- las dos curvas ---------------------------------------------------
+    % Arrancan donde la pared repulsiva alcanza el techo de la figura: también
+    % es un punto de retorno, el de energía ytop.
+    line_width 0.7
+    rini = re1 - ln(1 + sqrt((ytop-0.1)/D1))/a1
+    for i = 0 to nseg-1 {
+        p = rini + i*((rfin-rini)/nseg)
+        q = rini + (i+1)*((rfin-rini)/nseg)
+        polyline { (p)  (D1*(1-exp(-a1*(p-re1)))*(1-exp(-a1*(p-re1))))
+            (q)  (D1*(1-exp(-a1*(q-re1)))*(1-exp(-a1*(q-re1)))) }
+    }
+    rini = re2 - ln(1 + sqrt((ytop-Te-0.1)/D2))/a2
+    for i = 0 to nseg-1 {
+        p = rini + i*((rfin-rini)/nseg)
+        q = rini + (i+1)*((rfin-rini)/nseg)
+        polyline { (p)  (Te + D2*(1-exp(-a2*(p-re2)))*(1-exp(-a2*(p-re2))))
+            (q)  (Te + D2*(1-exp(-a2*(q-re2)))*(1-exp(-a2*(q-re2)))) }
+    }
+
+    % ---- niveles no resueltos, hacia la disociación -----------------------
+    % Se apiñan solos: E_v es cuadrática en v y su derivada se anula en vmax.
+    line_width 0.15
+    for v = 7 to 12 {
+        E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
+        s = sqrt(E/D1)
+        polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+    }
+    for v = 7 to 8 {
+        E = we2*(v+0.5) - we2*xe2*(v+0.5)*(v+0.5)
+        s = sqrt(E/D2)
+        polyline { (re2 - ln(1+s)/a2)  (Te+E)   (re2 - ln(1-s)/a2)  (Te+E) }
+    }
+
+    % ---- líneas de disociación --------------------------------------------
+    line_width 0.15   dash &quot;dashed&quot;
+    polyline { 0.66 (D1)  (rfin) (D1) }
+    polyline { 0.66 (Te+D2)  (rfin) (Te+D2) }
+    dash &quot;solid&quot;
+
+    % ---- las ondas vibracionales ------------------------------------------
+    % UN solo lazo para los dos pozos: sus parámetros van en listas
+    % indexadas por `pozo`, así la construcción de la onda aparece UNA vez en vez
+    % de duplicada. El offset en energía (0 para el fundamental, Te para el
+    % excitado) y la etiqueta del nivel 0 (v&#x27;&#x27; vs v&#x27;) también salen de listas.
+    aa  = [a1, a2]     rre = [re1, re2]   DD  = [D1, D2]
+    wwe = [we1, we2]   xxe = [xe1, xe2]   TT  = [0, Te]
+    lab0 = [&quot;$v&#x27;&#x27;=0$&quot;, &quot;$v&#x27;=0$&quot;]
+    for pozo = 0 to 1 {
+        a = aa[pozo]   re = rre[pozo]   D = DD[pozo]
+        we = wwe[pozo]   xe = xxe[pozo]   toff = TT[pozo]
+        for v = 0 to 6 {
+            E  = we*(v+0.5) - we*xe*(v+0.5)*(v+0.5)
+            Es = we*(v+1.5) - we*xe*(v+1.5)*(v+1.5)
+            s  = sqrt(E/D)
+            rm = re - ln(1+s)/a
+            rp = re - ln(1-s)/a
+            h  = 0.60*(Es-E)
+
+            % --- penetración asimétrica en la región prohibida (efecto túnel) -------
+            % ψ no se anula en el retorno: decae hacia afuera. La longitud de
+            % penetración es la escala de Airy d ∝ |V&#x27;(retorno)|^(−⅓) (raíz CÚBICA de
+            % la pendiente, NO 1/√(V−E), que diverge en el retorno). El COCIENTE entre
+            % las dos paredes sale sin masa ni ħ: |V&#x27;(r±)| = 2a√(DE)(1∓s) → el factor
+            % común se cancela y queda ((1+s)/(1−s))^⅓. Pared interna empinada = cola
+            % corta; externa tendida = cola larga; la razón crece con v sola (s→1).
+            % Las colas planas del path llevan ese ancho (media geométrica 0.5, para
+            % conservar la tinta); el fit las mapea a voladizos gL/gR en r.
+            ratio = exp(ln((1+s)/(1-s))/3)
+            tL = 0.5/sqrt(ratio)                   % cola interna (pared empinada)
+            tR = 0.5*sqrt(ratio)                   % cola externa (pared tendida)
+            sx = (rp-rm)/(v+2)                      % escala local→r del tramo oscilante
+            gL = tL*sx   gR = tR*sx                 % voladizos en unidades de r
+
+            % --- la onda: v+1 lóbulos ψ (cruzan la línea) con envolvente WKB ------
+            % Cada lóbulo es un medio ciclo entre extremos consecutivos (pendiente
+            % cero en la unión → empalme liso); su altura es la amplitud semiclásica
+            % |ψ| ∝ (E−V)^(−¼), máxima en los retornos. Al ser ψ CON SIGNO, el traslape
+            % de Franck-Condon puede cancelarse — lo que |ψ|² no mostraría.
+            % El `for` acumula los medios ciclos con `path +=`, cada uno con SU
+            % amplitud (un concat no cubre la longitud variable en v).
+            eprev = 0                              % extremo previo (arranca en la cola)
+            path w = sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tL) 0 }
+            for k = 1 to v+1 {                     % un pico por lóbulo, en el JOIN
+                rr  = rm + (rp-rm)*k/(v+2)          % posición del pico en r
+                Vr  = D*(1-exp(-a*(rr-re)))*(1-exp(-a*(rr-re)))
+                mag = exp(-0.25*ln(E-Vr))          % (E−V)^(−¼), envolvente WKB
+                ek  = mag                          % signo alterno: par hacia abajo
+                if mod(k,2) == 0 { ek = -mag }
+                amp = (eprev-ek)/2                  % swing eprev→ek; phase 270 = +A→−A
+                ph  = 270
+                if amp &lt; 0 { amp = -amp   ph = 90 }
+                path w += sine(half_cycles=1, phase=ph, amplitude=amp) { 0 0  1 0 }
+                eprev = ek
+            }
+            amp = eprev/2                          % último medio ciclo: de vuelta a 0
+            ph  = 270
+            if amp &lt; 0 { amp = -amp   ph = 90 }
+            path w += sine(half_cycles=1, phase=ph, amplitude=amp) { 0 0  1 0 }
+            path w += sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tR) 0 }
+
+            % El rect del fit: en x, los retornos ensanchados por los voladizos
+            % ASIMÉTRICOS (gL interno, gR externo); en y, la energía ± una altura del
+            % espaciamiento al nivel siguiente, que se cierra sola al apiñarse.
+            fit(Nivel(&amp;w), stretch=true) { (rm-gL) (toff+E-h)  (rp+gR) (toff+E+h) }
+
+            etq = str(v)
+            if v == 0 { etq = lab0[pozo] }         % default afuera, if lo ajusta
+            xl = re - ln(1 - sqrt((E+elab)/D))/a
+            if xl &lt; rp+gR+0.05 { xl = rp+gR+0.05 }
+            if xl &gt; rp+gR+0.20 { xl = rp+gR+0.20 }
+            text(etq, font_size=7, align=&quot;left&quot;, valign=&quot;middle&quot;) { (xl) (toff+E) }
+        }
+    }
+
+    % ---- transición de Franck-Condon --------------------------------------
+    % Vertical desde v=0 del fundamental: la molécula no cambia de r durante la
+    % transición electrónica. Llega donde la curva excitada corta esa vertical.
+    %
+    % Lo que la figura tiene que dejar ver es que la transición electrónica
+    % CAMBIA el número cuántico vibracional, y eso aquí es un RESULTADO, no una
+    % colocación: la vertical sube a 7.776, entre v&#x27;=6 (7.749) y v&#x27;=7 (7.934) y
+    % casi encima del 6 — o sea v&#x27;&#x27;=0 → v&#x27;≈6. Sale solo del desplazamiento de los
+    % mínimos (re1=1.15 vs re2=1.48); mover re2 mueve el nivel de llegada sin
+    % tocar nada más, que es justo la enseñanza. La marca en la punta (abajo) hace
+    % legible el 0 → 6 sin cruzar la vista a los números de la derecha.
+    E0 = we1*0.5 - we1*xe1*0.25
+    Vfc = Te + D2*(1-exp(-a2*(re1-re2)))*(1-exp(-a2*(re1-re2)))
+    line_width 0.5
+    polyline(marker_end=&quot;arrow&quot;) { (re1) (E0)  (re1) (Vfc) }
+
+    % Marca del nivel de llegada, junto a la punta (que cae en el retorno interno
+    % de v&#x27;=6): hace legible &quot;0 → v&#x27;≈6&quot; sin cruzar la vista a los números de la
+    % derecha. Es &quot;≈6&quot; porque Vfc=7.776 cae entre v&#x27;=6 (7.749) y v&#x27;=7 (7.934) — el
+    % nivel más cercano, el que la transición puebla sobre todo.
+    text(&quot;$v&#x27;\approx6$&quot;, font_size=7, align=&quot;right&quot;, valign=&quot;middle&quot;) { (re1-0.06) (Vfc) }
+
+    xaxis(from=0.66, to=rfin, label=&quot;distancia internuclear  $r$&quot;, ticks=&quot;none&quot;,
+    tick_labels=false, label_at=&quot;center&quot;)
+    yaxis(from=-0.4, to=ytop, label=&quot;energía  $E$&quot;, ticks=&quot;none&quot;,
+    tick_labels=false, label_at=&quot;center&quot;)
+}</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/turning_points.svg" alt="Comportamiento de ψ según la energía — los puntos de retorno clásicos." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Comportamiento de ψ según la energía — los puntos de retorno clásicos.</h3>
+          <p>Oscilatoria donde E &gt; V, exponencial donde E &lt; V, y los puntos de retorno como frontera entre ambas. Figura PARAMÉTRICA: se dan las asíntotas del potencial, su mínimo, los tres retornos y las tres energías, y de ahí salen en forma cerrada la curva V(x) y, por WKB, las longitudes de onda, las amplitudes y las colas.</p>
+          <div class="pie"><code>turning_points.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/turning_points.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Comportamiento de ψ según la energía — los puntos de retorno clásicos.
+%
+% Oscilatoria donde E &gt; V, exponencial donde E &lt; V, y los puntos de retorno como
+% frontera entre ambas. Figura PARAMÉTRICA: se dan las asíntotas del potencial,
+% su mínimo, los tres retornos y las tres energías, y de ahí salen en forma
+% cerrada la curva V(x) y, por WKB, las longitudes de onda, las amplitudes y las
+% colas.
+%
+% NOTAS --------------------------------------------------------------------
+% Contraparte de la Fig. 4.5 de «Quantum Mechanics» (Cambridge, 2025), p. 80, que
+% ilustra lo mismo con las ondas dibujadas a mano. NO lleva número de figura
+% porque NO es un port fiel, y no puede serlo (medido sobre la figura publicada,
+% 2026-07-20): las tres ondas del libro no pueden ser la misma partícula. La fase
+% ∫k dx por lóbulo varía hasta 3× dentro de una misma onda —cada región se dibujó
+% repitiendo un ciclo a escala elegida a ojo— y no existe constante de fase que
+% reproduzca a la vez sus tres densidades: con ψ_c de 4 antinodos, los que tiene,
+% la misma partícula exige ψ_a≈24 y ψ_b≈13 lóbulos, contra 13 y 8 dibujados. Aquí
+% las tres COMPARTEN constante, que es la afirmación fuerte. El número de figura
+% es una promesa de fidelidad, y por eso este archivo no lo usa.
+%
+% CÓMO RE-MEDIR LA FIGURA PUBLICADA. Es VECTORIAL en el PDF de Cambridge (no hay
+% imágenes en la página), así que se extrae con
+%     mutool draw -F trace -o - Quantum_Mechanics.pdf 94      (pág. 80 del libro)
+% Su sistema de coordenadas se deduce de las tres verticales y las ocho
+% horizontales, cuyos valores se conocen:
+%     x = 0 → 245.89 pt,  x = 1 → 308.25 pt   (62.360 pt/unidad)
+%     y = 5.2 → 77.99 pt, y = 4.9 →  85.67 pt (25.600 pt/unidad, hacia abajo)
+% De ahí la anisotropía publicada, 62.360/25.600 = 2.4359, que es exactamente el
+% aspecto de la ventana (9.5/3.9) y es el `kx` de abajo. Esa figura resultó ser el
+% MISMO dibujo que el EPS original de 1998 —mismos conteos de segmentos
+% (ψ_a=13, ψ_b=9, ψ_c=5) y mismos extremos dentro de 0.002 unidades—, así que el
+% EPS se borró: éste es mejor oráculo, y es público.
+%
+% Los nodos con que se dibujaba V(x) a mano eran, por si hicieran falta:
+%   -1.3 4.9  -1 4.9  -0.6 4.8  -0.35 4.5  0 3.7  0.25 3.3  0.576 3.25
+%   0.7 3.35  1 3.7  1.15 3.85  1.36 4.075  1.6 4.225  2 4.35  2.3 4.4
+% El V(x) analítico de abajo los reproduce con 0.9 pt de error máximo, por debajo
+% del ruido de digitalización, y además clava los retornos en −0.35, 0 y 1.
+
+display_size 8.5 8.5
+font_size 8
+
+% ── el potencial ─────────────────────────────────────────────────────────────
+% Pozo asimétrico con asíntotas distintas a cada lado:
+%     V(x) = V∞ − (V∞−Vm)·exp(−|(x−xm)/w|^s)
+% Los anchos y exponentes NO se ajustan a ojo: se despejan exigiendo que la
+% curva pase por los puntos de retorno rotulados. El lado izquierdo tiene dos
+% condiciones —V(x0)=Eb y V(x1)=Ec— que fijan exactamente sus dos parámetros;
+% el derecho tiene una, V(x2)=Ec, y su exponente qr queda como única forma libre.
+Vl = 4.9        % V_-  asíntota izquierda
+Vr = 4.4        % V_+  asíntota derecha
+xm = 0.576      % posición del mínimo
+Vm = 3.25       % profundidad del mínimo
+qr = 1.4        % forma de la pared derecha (único parámetro de forma libre)
+KAIRY = 0.11    % escala visual de la penetración; la ASIMETRÍA entre paredes
+                % no depende de ella (sale de V&#x27;), solo la profundidad absoluta,
+                % que sí llevaría m y ħ — igual que en franck_condon.mg
+
+Ea = 5.2        % por encima de las dos asíntotas → oscila en todo x
+Eb = 4.5        % entre V_+ y V_-  → un retorno, a la izquierda
+Ec = 3.7        % por debajo de las dos → dos retornos, estado ligado
+
+x0 = -0.35      % retorno de Eb
+x1 = 0          % retornos de Ec
+x2 = 1
+
+% Despeje del lado izquierdo (dos ecuaciones, dos incógnitas)
+AL = ln((Vl-Eb)/(Vl-Vm))
+BL = ln((Vl-Ec)/(Vl-Vm))
+pl = ln(AL/BL) / ln((xm-x0)/(xm-x1))
+wl = (xm-x0) / ((0-AL)^(1/pl))
+% Lado derecho: el ancho sale de V(x2)=Ec
+wr = (x2-xm) / ((0-ln((Vr-Ec)/(Vr-Vm)))^(1/qr))
+
+% ── encuadre ─────────────────────────────────────────────────────────────────
+% La ventana tiene aspecto 3.9:9.5 y el lienzo es cuadrado. V3 es isométrico
+%, así que sin corregir letterboxearía a un buzón angosto. Se ensancha la
+% ventana en x por el mismo factor y se dibuja bajo un `scale` anisótropo. Es
+% seguro para los rótulos: bajo un transform V3 mueve el ANCLA del texto, no los
+% glifos (verificado: el `scalefont` del EPS sale idéntico).
+xmin = -1.3   xmax = 2.3
+kx = 2.4358974                       % = 9.5/3.9
+world_window -3.1666667 6.3333333 -4 5.5
+scale kx 1
+
+% ── constante de fase ────────────────────────────────────────────────────────
+% Es el ÚNICO parámetro visual libre, y equivale a elegir la masa: fija cuántos
+% lóbulos caben. Se despeja de la cuantización de Bohr-Sommerfeld del estado
+% ligado —∫k dx = (n+½)π entre sus retornos—, así que las otras dos ondas NO
+% tienen libertad: comparten partícula, luego comparten constante.
+nodos = 3                            % nodos interiores de ψ_c → nodos+1 antinodos
+NQ = 400
+hq = (x2-x1)/NQ
+Sq = 0
+for i = 1 to NQ {
+    xq = x1 + (i-0.5)*hq
+    Vq = Vr - (Vr-Vm)*exp(0 - (((xq-xm)/wr)^qr))
+    if xq &lt; xm { Vq = Vl - (Vl-Vm)*exp(0 - (((xm-xq)/wl)^pl)) }
+    dq = Ec - Vq
+    if dq &gt; 0 { Sq = Sq + sqrt(dq)*hq }
+}
+C = (nodos+0.5)*pi/Sq
+
+% ── la curva del potencial ───────────────────────────────────────────────────
+% Se acumula como segmentos rectos con `path +=`: cada pieza es RELATIVA,
+% y el empalme de concat (inicio de la siguiente = final de la anterior) las
+% encadena en la curva absoluta. Es la vía para dibujar una función cuando el
+% nº de puntos depende de una variable — un bloque de coordenadas no lleva `for`.
+NV = 300
+hv = (xmax-xmin)/NV
+Vprev = Vl - (Vl-Vm)*exp(0 - (((xm-xmin)/wl)^pl))
+Vini = Vprev
+path curvaV = { 0 0 }
+for i = 1 to NV {
+    xv = xmin + i*hv
+    Vv = Vr - (Vr-Vm)*exp(0 - (((xv-xm)/wr)^qr))
+    if xv &lt; xm { Vv = Vl - (Vl-Vm)*exp(0 - (((xm-xv)/wl)^pl)) }
+    path curvaV += { 0 0  (hv) (Vv-Vprev) }
+    Vprev = Vv
+}
+
+% ── mobiliario: niveles, asíntotas y verticales de los retornos ──────────────
+line_width 0
+polyline { (xmin) (Ea)  (xmax) (Ea) }
+polyline { (xmin) (Vl)  (xmax) (Vl) }
+polyline { (x0-0.05) (Eb)  (xmax) (Eb) }
+polyline { (x1-0.05) (Ec)  (xmax) (Ec) }
+polyline { (xmin) 3.2  (xmax) 3.2 }
+% bases de las tres funciones de onda
+ba = 2        bb = -0.5     bc = -3
+polyline { (xmin) (ba)  (xmax) (ba) }
+polyline { (xmin) (bb)  (xmax) (bb) }
+polyline { (xmin) (bc)  (xmax) (bc) }
+% verticales: cada retorno hasta su propio nivel
+polyline { (x0) (bb)  (x0) (Eb) }
+polyline { (x1) -3.5  (x1) (Ec) }
+polyline { (x2) -3.5  (x2) (Ec) }
+
+line_width 0.8
+tvx = xmin   tvy = Vini
+{ translate tvx tvy   polyline(&amp;curvaV) }
+
+% ── las tres funciones de onda ───────────────────────────────────────────────
+% Un solo lazo para las tres (listas), así la construcción WKB aparece UNA
+% vez. Cada onda marcha en x acumulando la fase ∫k dx; cada vez que la fase
+% avanza π hay un extremo, y entre extremos consecutivos se emite un medio ciclo
+% de `sine` con `path +=` — pendiente cero en la unión, luego empalme liso.
+% La amplitud de cada extremo es la semiclásica |ψ| ∝ (E−V)^(−¼): grande donde
+% la partícula va lenta (cerca de los retornos), pequeña en el fondo del pozo.
+EE   = [ Ea, Eb, Ec ]
+XA   = [ -1.3, x0, x1 ]              % inicio del tramo oscilante
+XB   = [ 2.3, 2.3, x2 ]              % fin
+BASE = [ ba, bb, bc ]
+% Escala visual de amplitud, por onda. Es lo único que se elige mirando: fija
+% que cada onda quepa en su banda sin tocar la vecina. La FORMA de la envolvente
+% —dónde crece y cuánto— la manda (E−V)^(−¼), no estos números.
+ESC  = [ 0.533, 0.486, 0.590 ]
+TL   = [ 0, 1, 1 ]                   % ¿lleva cola exponencial a la izquierda?
+TR   = [ 0, 0, 1 ]                   % ¿y a la derecha?
+XT0  = [ 0, x0, x1 ]                 % retorno izquierdo (donde nace la cola)
+XT1  = [ 0, 0, x2 ]                  % retorno derecho
+gx0 = 0  gy0 = 0  gx1 = 0  gy1 = 0
+
+line_width 0.6
+for onda = 0 to 2 {
+    E = EE[onda]   xa = XA[onda]   xb = XB[onda]
+    yb = BASE[onda]   S = ESC[onda]
+    N = 1400
+    h = (xb-xa)/N
+    fase = 0
+    kk = 0                           % extremos ya detectados
+    xpre = xa
+    epre = 0
+    path w = { 0 0 }
+    for i = 1 to N {
+        x = xa + i*h
+        xc = x - h/2
+        Vc = Vr - (Vr-Vm)*exp(0 - (((xc-xm)/wr)^qr))
+        if xc &lt; xm { Vc = Vl - (Vl-Vm)*exp(0 - (((xm-xc)/wl)^pl)) }
+        dd = E - Vc
+        if dd &gt; 0 { fase = fase + C*sqrt(dd)*h }
+        % Los extremos de ψ ~ cos(φ−π/4)/√k caen cada π de fase
+        if fase &gt; pi/4 + kk*pi {
+            Vx = Vr - (Vr-Vm)*exp(0 - (((x-xm)/wr)^qr))
+            if x &lt; xm { Vx = Vl - (Vl-Vm)*exp(0 - (((xm-x)/wl)^pl)) }
+            mag = S*((E-Vx)^(0-0.25))
+            ecur = mag
+            if mod(kk,2) == 1 { ecur = 0 - mag }
+            if kk &gt; 0 {
+                amp = (ecur-epre)/2
+                ph = 270
+                if amp &lt; 0 { amp = 0 - amp   ph = 90 }
+                path w += sine(half_cycles=1, phase=ph, amplitude=amp) { 0 0  (x-xpre) 0 }
+            }
+            if kk == 0 { gx0 = x   gy0 = ecur }
+            gx1 = x   gy1 = ecur
+            xpre = x   epre = ecur   kk = kk+1
+        }
+    }
+    twx = gx0   twy = yb + gy0
+    { translate twx twy   bezier(&amp;w) }
+
+    % ── colas en la región prohibida (E &lt; V) ─────────────────────────────────
+    % ψ no se anula en el retorno: decae hacia afuera. La longitud de decaimiento
+    % NO es 1/√(V−E) —que DIVERGE justo en el retorno, donde V−E=0 y WKB se
+    % rompe—: es la escala de Airy, d ∝ |V&#x27;(retorno)|^(−⅓), raíz CÚBICA de la
+    % pendiente. Por eso la cola es más larga contra la pared tendida que contra
+    % la empinada, sin que nadie lo ponga a mano. V&#x27; por diferencia centrada.
+    ee = 0.004
+    for lado = 0 to 1 {
+        hay = TL[onda]   xr = XT0[onda]   xg = gx0   yg = gy0   dir = 0-1
+        if lado == 1 { hay = TR[onda]   xr = XT1[onda]   xg = gx1   yg = gy1   dir = 1 }
+        if hay == 1 {
+            xp = xr + ee
+            xn = xr - ee
+            Vp = Vr - (Vr-Vm)*exp(0 - (((xp-xm)/wr)^qr))
+            if xp &lt; xm { Vp = Vl - (Vl-Vm)*exp(0 - (((xm-xp)/wl)^pl)) }
+            Vn = Vr - (Vr-Vm)*exp(0 - (((xn-xm)/wr)^qr))
+            if xn &lt; xm { Vn = Vl - (Vl-Vm)*exp(0 - (((xm-xn)/wl)^pl)) }
+            pend = abs((Vp-Vn)/(2*ee))
+            dd = KAIRY*(pend^(0-1/3))
+            % 7 muestras de yb + yg·exp(−|x−xg|/dd), del extremo hacia afuera
+            L = 3.2*dd
+            u1 = xg + dir*L/6      u2 = xg + dir*2*L/6    u3 = xg + dir*3*L/6
+            u4 = xg + dir*4*L/6    u5 = xg + dir*5*L/6    u6 = xg + dir*L
+            smooth {
+                (u6) (yb + yg*exp(0-L/dd))
+                (u5) (yb + yg*exp(0-5*L/(6*dd)))
+                (u4) (yb + yg*exp(0-4*L/(6*dd)))
+                (u3) (yb + yg*exp(0-3*L/(6*dd)))
+                (u2) (yb + yg*exp(0-2*L/(6*dd)))
+                (u1) (yb + yg*exp(0-L/(6*dd)))
+                (xg) (yb + yg)
+            }
+        }
+    }
+}
+
+% ── rótulos ──────────────────────────────────────────────────────────────────
+% Anclados a los parámetros, no a coordenadas sueltas: si se mueve una energía,
+% su rótulo la sigue.
+font &quot;Times-Roman&quot;
+xlab = xmax + 0.1
+text(&quot;$E_a$&quot;) { (xlab) (Ea-0.1) }
+text(&quot;$V_-$&quot;) { (xlab) (Vl-0.1) }
+text(&quot;$E_b$&quot;) { (xlab) (Eb-0.1) }
+text(&quot;$V_+$&quot;) { (xlab) (Vr-0.3) }
+text(&quot;$E_c$&quot;) { (xlab) (Ec-0.1) }
+% Las ψ van al margen, a la altura de su base: con la envolvente WKB las ondas
+% llenan su banda de lado a lado y ya no queda hueco interior donde ponerlas.
+text(&quot;$\psi_a$&quot;) { (xlab) (ba-0.1) }
+text(&quot;$\psi_b$&quot;) { (xlab) (bb-0.1) }
+text(&quot;$\psi_c$&quot;) { (xlab) (bc-0.1) }
+text(&quot;$V(x)$&quot;) { -0.09 4 }
+ylab = 2.96
+text(&quot;$x_0$&quot;) { (x0+0.06) (ylab) }
+text(&quot;$x_1$&quot;) { (x1+0.07) (ylab) }
+text(&quot;$x_2$&quot;) { (x2+0.05) (ylab) }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fractal_tree.svg" alt="Árboles fractales — una estructura que se contiene a sí misma." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Árboles fractales — una estructura que se contiene a sí misma.</h3>
+          <p>Los dos árboles son la misma estructura de cuatro líneas —un tronco con dos copias menores de sí mismo en la punta— invocada con ángulos de rama distintos; cada uno son 511 segmentos. La condición de paro es un <code>if</code> corriente, y <code>max_depth</code> es la red de seguridad.</p>
+          <div class="pie"><code>fractal_tree.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fractal_tree.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Árboles fractales — una estructura que se contiene a sí misma.
+%
+% Los dos árboles son la misma estructura de cuatro líneas —un tronco con dos
+% copias menores de sí mismo en la punta— invocada con ángulos de rama distintos;
+% cada uno son 511 segmentos. La condición de paro es un `if` corriente, y
+% `max_depth` es la red de seguridad.
+%
+% NOTAS --------------------------------------------------------------------
+% Reconstrucción de la Fig. 4 de: Alejandro Aguilar Sierra, «Metagrafic: hacia un
+% lenguaje para la graficación por computadora», Ciencias 21, enero 1991,
+% pp. 29-33 (docs/11195-10937-0-PB.pdf), a partir del listado impreso en su
+% apéndice. Es la figura que demuestra la afirmación central del artículo:
+% «Lo que hace realmente poderoso a MG es el uso de estructuras. […]
+% Recursividad. Una estructura puede contenerse a sí misma, permitiendo
+% sorprendentes efectos.»
+%
+% Aquel listado NO tenía condición de paro —no había condicionales en el lenguaje
+% de 1991—, así que el límite de profundidad era lo ÚNICO que detenía el árbol:
+% era infraestructura de carga, no una guarda defensiva.
+
+% --- Procedencia y advertencia -----------------------------------------------
+% El Apéndice 1 del artículo IMPRIME el listado V0 de esta figura, así que esto
+% es un port y no una invención. El PDF es un ESCANEO sin capa de texto y el
+% listado sale garabateado (O por 0, &quot;AS&quot; por &quot;AF&quot;, &quot;STST&quot; por &quot;SCST&quot;), de modo
+% que lo de abajo es una RECONSTRUCCIÓN, no una transcripción. Lo que el listado
+% fija sin ambigüedad —y es todo lo que hace falta— es la geometría:
+%
+%   OPST AF            % abre la estructura
+%   VAR THETA PHI      % ¡structs parametrizadas, en 1991!
+%   PL 0 0 0 0.5 NL    % el tronco: un segmento de (0,0) a (0,0.5)
+%   SCST 0.6 0.6       % las ramas van a 0.6 de la escala
+%   RTST THETA         % ...giradas theta...
+%   AF 0 0.5 NL        % ...y colocadas en la PUNTA del tronco
+%   RTST PHI           % la segunda rama, con el OTRO ángulo
+%   AF 0 0.5 NL
+%   CLST
+%
+% El mapeo a V3 es casi 1:1 (VAR → parámetros de struct; SCST/RTST → scale y
+% rotate como sentencias; la colocación por lista de puntos → translate).
+
+% --- Lo que este archivo cubre en exclusiva ----------------------------------
+% ⚠ Es el ÚNICO ejemplo del corpus donde una struct se invoca a sí misma
+% (recursión). Verificado por barrido de examples/ y lib/ el
+% 2026-07-22: cero recursión en todo el árbol antes de este archivo.
+%
+% 🔎 Y el listado de arriba es lo que motivó implementar `max_depth`: NO
+% TIENE CONDICIÓN DE PARO. No podía tenerla: no había condicionales. El límite de profundidad era lo ÚNICO que detenía
+% este árbol: infraestructura de carga, no una red de seguridad. De ahí el tope
+% por default de 32 niveles, `max_depth n` para cambiarlo, y un error con mensaje
+% —no un volcado— al pasarse.
+%
+% Aquí el paro es explícito, con `if`, que es el idioma V3 correcto: `max_depth`
+% es la red, no el freno. Con 8 niveles la profundidad de anidamiento es 9, muy
+% por debajo del tope; súbelo si quieres un árbol más profundo.
+
+display_size 16 9
+
+% El árbol crece hacia +y desde el origen. La ventana se fija a mano porque el
+% alcance depende de los ángulos: con escala 0.6 la altura converge a lo más a
+% 0.5/(1-0.6) = 1.25 (el caso degenerado de ramas verticales), y menos en cuanto
+% se abren. Medido sobre la salida: el contenido mide 2.143 × 1.202 y queda con
+% 0.130 / 0.126 de margen lateral.
+%
+% 2.4 × 1.35 es EXACTAMENTE el 16:9 del lienzo, así que el meet isométrico no
+% letterboxea (0.00 pt por los cuatro lados) y la escala es 188.98 pt por unidad.
+% ⚠ Vale la pena conservarlo así: en cuanto la ventana deja de ser 16:9, el meet
+% ajusta al lado que sobra y ENCOGE el dibujo — ensancharla a 2.72 lo achicaba al
+% 88.2% y metía 0.53 cm de banda arriba y abajo. Para dar más aire, mover
+% los dos números de x por igual (o cambiar display_size), no uno solo.
+world_window -1.2 1.2 -0.05 1.30
+
+% --- La estructura recursiva -------------------------------------------------
+% Un tronco vertical y, en su punta, DOS copias de sí misma: más chicas y con
+% ángulos distintos. Todo el detalle del dibujo sale de eso.
+%
+%   theta, phi  ángulos de las dos ramas (grados; el signo abre a cada lado)
+%   n           niveles que faltan por dibujar = la condición de paro
+%   s           razón de escala entre un nivel y el siguiente
+struct arbol(theta, phi, n, s) {
+    polyline { 0 0  0 0.5 }            % el tronco
+
+    if n &gt; 0 {
+        % Cada rama se arma en su propio bloque: `rotate` y `scale` son estado
+        % con ámbito, así que la segunda rama no hereda el giro de la
+        % primera. Componen en orden de escritura (T·S·R): el giro ocurre en la
+        % base de la rama, la escala la encoge, y la traslación la lleva a la
+        % punta del tronco.
+        { translate 0 0.5   scale s   rotate theta
+          arbol(theta, phi, n-1, s) }
+
+        { translate 0 0.5   scale s   rotate phi
+          arbol(theta, phi, n-1, s) }
+    }
+}
+
+% --- Los dos árboles de la Fig. 4 --------------------------------------------
+% El artículo los pone lado a lado, y el contraste es justo lo que se quiere
+% mostrar: MISMA estructura, mismo número de niveles, misma escala — solo cambian
+% dos números y el resultado no se parece.
+
+% Los troncos NO están en ±x simétricas, y la razón es medible: el árbol derecho
+% se recuesta, así que su copa no queda sobre su tronco (medido sobre la salida:
+% ocupa 0.384 a la izquierda del tronco y 0.621 a la derecha, contra ±0.54 del
+% simétrico). Las posiciones están puestas para que el CONJUNTO quede centrado,
+% que es lo que se ve; centrar los troncos dejaría la figura cargada a un lado.
+
+% Izquierdo: ángulos simétricos (theta = -phi) → copa equilibrada.
+{ translate -0.53 0   arbol(28, -28, 8, 0.6) }
+
+% Derecho: «ángulos distintos de rotación», como dice el texto del artículo.
+% La asimetría se propaga a todas las escalas: el árbol se recuesta.
+{ translate 0.45 0    arbol(15, -42, 8, 0.6) }</pre></details>
+        </div>
+      </article>
+    </div>
+    <h2>Ilustraciones</h2>
+    <p class="grupo-desc">Diagramas de aparato y esquemas, donde mandan las estructuras, la colocación y los marcadores que se orientan solos.</p>
+    <div class="rejilla">
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig2-5.svg" alt="Difracción de electrones — el experimento de Davisson-Germer." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Difracción de electrones — el experimento de Davisson-Germer.</h3>
+          <p>Es el ejemplo de ILUSTRACIÓN del README. El detector es una struct colocada girada 37°; el haz, la cota y el giro del detector son marcadores que se ORIENTAN SOLOS a la tangente de su línea o de su arco y se anclan al vértice, sin un solo ángulo calculado a mano.</p>
+          <div class="pie"><code>fig2-5.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig2-5.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Difracción de electrones — el experimento de Davisson-Germer.
+%
+% Es el ejemplo de ILUSTRACIÓN del README. El detector es una struct colocada
+% girada 37°; el haz, la cota y el giro del detector son marcadores que se
+% ORIENTAN SOLOS a la tangente de su línea o de su arco y se anclan al vértice,
+% sin un solo ángulo calculado a mano.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 2.5 de Cetto &amp; de la Peña, «Quantum Mechanics: A Physical Approach»
+% (Cambridge University Press, 2025) — https://doi.org/10.1017/9781009679633.
+% El nombre del archivo sigue esa numeración. Coincide por casualidad con la
+% Fig. 2.5 del libro en español: el archivo se llamaba fig2-6 porque esa era su
+% numeración en un borrador de Cambridge, y al eliminarse una figura anterior del
+% capítulo pasó a ser la 2.5.
+%
+% El texto matemático usa Latin Modern Math, así que la φ no tiene el trazo ni la
+% inclinación de las ediciones impresas. Es un cambio deliberado del proyecto.
+%
+% Si lo cambias, regenera su SVG:
+%     bin/mg examples/fig2-5.mg docs/img/fig2-5.svg
+
+display_size 12 4
+font_size 8
+
+% ── Pila (batería) ───────────────────────────────────────────────────────────
+struct Pila() {
+    world_window -0.125 0.875 0.5 1.5
+    color &quot;red&quot;
+    line_width 0.2
+    polyline { 0 0 0 1 ;  0.5 0 0.5 1 ;  -0.125 0.5 0 0.5 ;  0.75 0.5 0.875 0.5 }
+    line_width 1.6
+    polyline { 0.25 0.2 0.25 0.8 ;  0.75 0.2 0.75 0.8 }
+}
+
+% ── Detector (soporte en L) ──────────────────────────────────────────────────
+struct Detector() {
+    world_window 0.5 1.2 0.5 1.2
+    line_width 1.0
+    polyline { 1 0.3  1 0  0 0  0 1  1 1  1 0.7 }
+}
+
+% ── Dispositivo ──────────────────────────────────────────────────────────────
+world_window -1 11 -1 3
+
+dot(1.0) { -0.5 1  -0.5 1.5 }                    % terminales
+
+line_width 0.2
+polyline { -0.5 1 0.4 1 0.4 1.15 0.55 1.25 0.4 1.35 0.4 1.5 -0.5 1.5 ;
+           0.5 0.8 -0.2 0.8 -0.2 -0.4 2 -0.4 ;  2.6 -0.4 4.5 -0.4 4.5 0 }
+
+polyline(dash=&quot;dashed&quot;) { 4.5 0 4.5 1 ;  4.5 1.5 4.5 2.5 }
+
+line_width 0.4
+polyline { 1 0 1 1 ;  1 2.5 1 1.5 ;  8.9 0.5 8.9 2 9.1 2 9.1 0.5 8.9 0.5 ;
+           0.55 1.25 0.4 1.35 }
+
+% cátodo
+line_width 0.2
+polyline { 0.5 0.8 0.7 0.8 ;  0.7 1.7 0.5 1.7 }
+line_width 1.6
+polyline { 0.7 0.8 0.7 1.7 }
+
+% caja del tubo
+line_width 0.4
+polyline { 5.7 1.15  5.7 0  0 0  0 2.5  5.7 2.5  5.7 1.35 }
+
+% Detector girado 37° y a escala
+Detector(at=(7, -0.2), scale=0.2, rotate=37)
+
+% Pila ajustada a su caja
+fit(Pila, stretch=true) { 2 -0.4  2.6 0 }
+
+% cota
+line_width 0.1
+polyline(marker_end=&quot;arrow&quot;, marker_end_shift=0.75) { 8 1.25  8.9 1.25  7.19 -0.0552 }
+
+% Rayos catódicos — ⚠ params por calibrar
+{
+line_width 0.2
+dash &quot;shortdashed&quot;
+for i = 0 to 9 {
+  y = 0.8 + i*0.1
+  % w se fija por defecto (8.9) y las ramas lo modifican: una asignación dentro
+  % de un if altera el w de afuera (alcance de bloque), así que el caso restante
+  % (i==4,5) no necesita un else. ⚠ fronteras y anchos por calibrar.
+  w = 8.9
+  if i &lt; 3 or i &gt; 6      { w = 1.0 }
+  else if i==3 or i==6   { w = 5.7 }
+  polyline { 0.76 y w y }
+}
+}
+
+% Flechas de haz: sobre arco (both_sides) y sobre línea, con from/to nombrados,
+% igual que en `arc`.
+color &quot;blue&quot;
+arc(2.39, from=197.35, to=237.35, marker_size=3, marker_end=&quot;arrow&quot;, marker_start_orient=&quot;reverse&quot;, marker_start=&quot;arrow&quot;) { 8.9 1.25 }
+color &quot;black&quot;
+
+% Arco del ángulo φ
+arc(0.7, from=180, to=218) { 8.9 1.25 }
+
+% ── Etiquetas ────────────────────────────────────────────────────────────────
+text(&quot;cathode&quot;)  { 0.1 2.70 }
+text(&quot;anode&quot;)    { 4 2.70 }
+text(&quot;crystal&quot;)  { 9.3 1.75 }
+text(&quot;detector&quot;) { 7.8 -0.50 }
+text(&quot;$V$&quot;)      { 2.20 -1.0 }
+text(&quot;+&quot;)        { 2.55 -0.75 }
+text(&quot;$\varphi$&quot;)   { 8 0.9 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig2-1.svg" alt="Modelo de cuerpo negro — la cavidad y su orificio." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Modelo de cuerpo negro — la cavidad y su orificio.</h3>
+          <p>La caja y el arco del orificio se unen en UN solo trayecto cerrado con <code>compound</code>: al cerrar, los extremos se juntan solos, sin una línea que los conecte. Relleno tramado con contorno.</p>
+          <div class="pie"><code>fig2-1.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig2-1.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Modelo de cuerpo negro — la cavidad y su orificio.
+%
+% La caja y el arco del orificio se unen en UN solo trayecto cerrado con
+% `compound`: al cerrar, los extremos se juntan solos, sin una línea que los
+% conecte. Relleno tramado con contorno.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 1.1 de «Introducción a la mecánica cuántica», L. de la Peña (FCE/UNAM).
+
+display_size 3 3
+
+struct Fg1() {
+    % figura radiante (hairline). Las dos flechas de los extremos son marcadores del
+    % propio polyline: marker_start/marker_end orientados a la pendiente local.
+    % marker_start_shift corre la de arranque adentro, sobre su segmento.
+    line_width 0.1
+    polyline(marker_start=&quot;arrow&quot;, marker_start_shift=0.9, marker_end=&quot;arrow&quot;,
+             marker_size=2.5) { -1.11111 -0.046   0.7071 0.7071   0 -1   -0.7071 0.7071
+               1 0   -0.7071 -0.7071   0 0.8 }
+
+
+    % caja con orificio: polilínea + arco en UN path cerrado (compound), tramado.
+    line_width 0.4
+    compound(hatch=135, hatch_gap=2, color=&quot;black&quot;) {
+        polyline { -1 0.1736  -1 1.015  1.015 1.015  1.015 -1.015  -1 -1.015  -1 -0.1736 }
+        arc(1, from=190, to=530) { 0 0 }   % barrido de 340° desde 190°
+    }
+}
+
+Fg1(at=(0.52, 0.5), scale=0.46)</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fig4-1.svg" alt="Difracción de electrones — cuatro paneles, de una y de dos rendijas." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Difracción de electrones — cuatro paneles, de una y de dos rendijas.</h3>
+          <p>Las curvas de intensidad viven en curvas3.mg como datos naturales (posición contra intensidad); aquí se TRANSPONEN para que la intensidad quede horizontal y se colocan con <code>fit</code> en su rectángulo, sin rotar nada. La base común —pantallas y haz— se factoriza en una struct.</p>
+          <div class="pie"><code>fig4-1.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig4-1.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Difracción de electrones — cuatro paneles, de una y de dos rendijas.
+%
+% Las curvas de intensidad viven en curvas3.mg como datos naturales (posición
+% contra intensidad); aquí se TRANSPONEN para que la intensidad quede horizontal
+% y se colocan con `fit` en su rectángulo, sin rotar nada. La base común
+% —pantallas y haz— se factoriza en una struct.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 2.1 de «Introducción a la mecánica cuántica», L. de la Peña (FCE/UNAM).
+% Orden de los paneles: aparato con detectores arriba (a, b), aparato con curvas
+% abajo (c, d).
+
+display_size 11 7.7
+font_size 8
+
+include &quot;curvas3.mg&quot;     % curvas de onda TRANSPUESTAS: SenDeriv2Sym / SenCosDeriv2Sym
+
+% ── Aparato: pantallas con rendijas ──────────────────────────────────────────
+struct Marco() {
+    world_window 0 2.2 0 1
+    line_width 0.1
+    polyline { 0.3 0 0.3 0.45 ; 0.3 0.55 0.3 1 ;               % x=.3, rendija .45–.55
+               0.9 0 0.9 1 ;                                   % x=.9 (completa)
+               1.6 0 1.6 0.3 ; 1.6 0.4 1.6 0.6 ; 1.6 0.7 1.6 1 ; % x=1.6, dos rendijas
+               2.2 0 2.2 1 }                                    % detector x=2.2
+}
+
+% ── Haz de flechas de electrones ─────────────────────────────────────────────
+% Dos haces VERTICALES de 9 flechas (el arpón built-in `arrow` se orienta a la
+% tangente → apunta a la derecha), a la izquierda de cada pantalla. repeat =
+% traslación pura hacia arriba (advance), sin rotar. Antes venían de arrow.mg
+% (struct Arrowr) con include; hoy es el marcador built-in (tamaño físico en pt).
+struct Flechas() {
+    world_window 0 2.2 0 1
+    line_width 0.2
+    for i = 0 to 8 {
+        y = .1 + i*0.1
+        polyline(marker_end=&quot;arrow&quot;, marker_size=4.5) { .01 y .28 y }
+        polyline(marker_end=&quot;arrow&quot;, marker_size=4.5) { 1.3 y 1.58 y }
+    }
+}
+
+% Base común de ambos paneles: pantallas + haz de electrones.
+struct Aparato() {
+    world_window 0 2.2 0 1
+    fit(Marco,   stretch=true) { 0 0  2.2 1 }
+    fit(Flechas, stretch=true) { 0 0  2.2 1 }
+}
+
+% ── Paneles a) b): aparato + patrones de difracción ──────────────────────────
+% `transpose` pone la intensidad horizontal (dato natural = posición horizontal);
+% fit directo, sin rotar. Una rendija tras x=0.3–0.9; doble rendija tras x=1.6–2.2.
+struct PanelCurvas() {
+    world_window 0 2.2 0 1
+    fit(Aparato, stretch=true) { 0 0  2.2 1 }
+    line_width 0.4
+    fit(flip_x(transpose(&amp;SenDeriv2Sym)),    stretch=true) { 0.35 0  0.9 1 }   % patrón de una rendija
+    fit(flip_x(transpose(&amp;SenCosDeriv2Sym)), stretch=true) { 1.6  0  2.2 1 }   % patrón de doble rendija
+}
+
+% ── Paneles c) d): aparato + detectores ──────────────────────────────────────
+struct PanelDetectores() {
+    world_window 0 2.2 0 1
+    fit(Aparato, stretch=true) { 0 0  2.2 1 }
+    line_width 0.4
+    polyline { 0.9 0.45 0.5 0.45 0.5 0.55 0.9 0.55 ;      % detector izq.
+               2.2 0.3 1.8 0.3 1.8 0.4 2.2 0.4 ;          % detectores der.
+               2.2 0.7 1.8 0.7 1.8 0.6 2.2 0.6 }
+}
+
+% ── Composición: dos bandas horizontales (curvas abajo, detectores arriba) ────
+world_window -0.07 1.03  -0.05 1.05
+fit(PanelCurvas,     stretch=true) { 0 0    1 0.45 }   % banda inferior → c) d)
+fit(PanelDetectores, stretch=true) { 0 0.55 1 1 }      % banda superior → a) b)
+
+text(&quot;a)&quot;) { 0.22 0.53 }
+text(&quot;b)&quot;) { 0.81 0.55 }
+text(&quot;c)&quot;) { 0.22 -0.03 }
+text(&quot;d)&quot;) { 0.81 -0.03 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/rpstest.svg" alt="Repetición de estructuras — las formas de colocar una struct muchas veces." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Repetición de estructuras — las formas de colocar una struct muchas veces.</h3>
+          <p>Un cuadro repetido con <code>repeat</code>: avanzando en x, en diagonal y deformado, y girando sobre el mismo punto, donde <code>transform=</code> acumula el giro en cada copia. La última no es un repeat, sino colocación puntual con at= y scale=.</p>
+          <div class="pie"><code>rpstest.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/rpstest.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Repetición de estructuras — las formas de colocar una struct muchas veces.
+%
+% Un cuadro repetido con `repeat`: avanzando en x, en diagonal y deformado, y
+% girando sobre el mismo punto, donde `transform=` acumula el giro en cada copia.
+% La última no es un repeat, sino colocación puntual con at= y scale=.
+%
+% NOTAS --------------------------------------------------------------------
+% Cada repeat es autocontenido —posición y avance van en la propia llamada— y no
+% comparte estado de pluma con los demás, así que no hay nada que reiniciar entre
+% uno y otro.
+
+struct Cuadro() {
+    % rectangle ya es transformable (rota/deforma como SVG) → uso directo
+    rectangle { 0 0  1 1 }
+}
+
+% 1) Repetición simple: 3 copias avanzando en x. Posición y avance en la propia
+%    llamada (at/advance) → repeat autocontenido, sin moveto/step.
+repeat(Cuadro, count=3, scale=0.3, at=(0.05, 0.05), advance=(0.3, 0))
+
+align &quot;center&quot;
+text(&quot;Repeate Structure Test&quot;) { 0.5 0.94 }
+
+% 2) 4 copias en diagonal, verdes, con struct deformado (scale anisotrópico)
+color &quot;green&quot;
+repeat(Cuadro, count=4, scale=(0.2, 0.125), at=(0.05, 0.37), advance=(0.2, 0.135))
+
+% 3) Sin avance: omitir advance → todas las copias en el mismo punto; transform=
+%    rotate(60) acumula el giro en cada una.
+color &quot;red&quot;
+repeat(Cuadro, count=5, scale=(0.2, 0.125), at=(0.7, 0.5), transform=rotate(60))
+
+% 4) Colocación puntual: NO es un place (no hay locus), es invocación directa con
+%    at/scale.
+Cuadro(scale=(0.2, 0.125), at=(0.1, 0.75))</pre></details>
+        </div>
+      </article>
+    </div>
+    <h2>Láminas de referencia</h2>
+    <p class="grupo-desc">Catálogos: cada forma, cada relleno y cada símbolo en su expresión más simple, para copiar y pegar.</p>
+    <div class="rejilla">
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/primitives.svg" alt="Formas básicas — lámina de referencia de las primitivas geométricas." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Formas básicas — lámina de referencia de las primitivas geométricas.</h3>
+          <p>Es un catálogo, no una figura: cada primitiva en su forma más simple, y luego las mismas con relleno y trama. Las formas se escriben AL RAS, sin envolverlas en structs, para que quien viene a buscar «cómo se dibuja una elipse» encuentre la línea que la dibuja. Hermana de fill_styles.mg y line_patterns.mg.</p>
+          <div class="pie"><code>primitives.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/primitives.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Formas básicas — lámina de referencia de las primitivas geométricas.
+%
+% Es un catálogo, no una figura: cada primitiva en su forma más simple, y luego
+% las mismas con relleno y trama. Las formas se escriben AL RAS, sin envolverlas
+% en structs, para que quien viene a buscar «cómo se dibuja una elipse» encuentre
+% la línea que la dibuja. Hermana de fill_styles.mg y line_patterns.mg.
+%
+% NOTAS --------------------------------------------------------------------
+% ⚠ NO BORRAR sin mudar antes lo que cubre en exclusiva. Medido sobre el corpus
+% (2026-07-22), es el ÚNICO de los 22 ejemplos que ejercita:
+%   - ellipse()                    (y con ella el procedimiento /ellipse del EPS)
+%   - polyline(closed=true)
+%   - arc con barrido NEGATIVO (to=-30)
+% y uno de solo dos con circle(), polygon() y translate. Además es el caso que
+% reproducen los dos pendientes de fase abiertos (guiones EPS vs PDF; trama SVG
+% vs EPS/PDF — ver PENDIENTES.md, deuda técnica).
+%
+% Convención de coordenadas: las coordenadas SIEMPRE van en el bloque { }, y los
+% paréntesis llevan el contenido y los atributos. Por eso el texto se escribe
+% text(&quot;cadena&quot;) { x y }, igual que circle(r) { x y }.
+
+% El canvas mide 11 cm y la ventana 2.2 unidades de ancho, así que 1 unidad de
+% mundo = 5 cm.
+display_size 11 11
+
+% Tamaño base de texto: 15 pt ≈ 0.53 cm (font_size es absoluto, mismo keyword
+% en documento y en bloque)
+font_size 15
+
+world_window -1.1 1.1 -1.1 1.1
+
+% --- Marcas de calibración. No son adorno: son las dos varas del documento, y
+% por eso van antes que nada. El motor las emite en unidades FÍSICAS y el mundo es cantidad, así
+% que compararlas a ojo en el render es la prueba de que la escala está bien.
+
+% Vara de ANCHO: 12 pt de grosor. El trazo mide 0.1 u = 0.5 cm de largo, o sea
+% que sale casi cuadrado — si el &quot;cuadrado&quot; se ve rectangular, el grosor miente.
+line_width 12
+polyline { 0.05 0.1  0.05 0.2 }
+
+% Vara de TEXTO: 0.1 u = 0.5 cm = 14.17 pt, junto a una &quot;M&quot; de 15 pt. Están
+% puestas para medirse una contra otra: la regleta debe quedar apenas por debajo
+% de la altura nominal del cuerpo. En V3 el grosor nunca depende del aparato
+% (no hay &quot;hairline&quot; del dispositivo), así que el trazo fino se pide explícito.
+line_width 0.1
+polyline { 0.1 0  0.1 0.1 }
+text(&quot;M&quot;) { 0 0 }
+
+% Ejes
+polyline { -1 0  1 0 }
+polyline { 0 -1  0 0.95 }
+
+% Todo el texto que sigue va centrado. align (horizontal) y valign
+% (vertical) son ortogonales; aquí basta el horizontal.
+align &quot;center&quot;
+text(&quot;Primitivos gráficos&quot;) { 0 1 }
+
+% El pentágono se dibuja dos veces (contorno y tramado): se construye UNA vez
+% como path. `+=` evalúa ya, así que lee la k del lazo; la semilla, en
+% cambio, es diferida y por eso va vacía (un literal, sin variables).
+pcx = -0.5   % centro
+pcy = -0.5
+pr  = 0.3    % radio (el vértice k=0 cae en -0.2 -0.5)
+path pentagon = { }
+for k = 0 to 4 {
+    path pentagon += { (pcx + pr*cos(k*72*pi/180))  (pcy + pr*sin(k*72*pi/180)) }
+}
+
+{                              % acota font_size/line_width de la sección
+    font_size 10
+    line_width 0.8
+
+    text(&quot;Círculo y arcos&quot;) { 0.5 0.75 }
+    circle(0.2)               { 0.5 0.5 }   % r posicional
+    arc(0.25, from=0,  to=90) { 0.5 0.5 }   % r posicional, ángulos nombrados
+    arc(0.3,  from=30, to=45) { 0.5 0.5 }   % barrido de 15° desde 30°
+    arc(0.3,  from=0,  to=-30){ 0.5 0.5 }
+
+    text(&quot;Elipse&quot;) { -0.5 0.75 }
+    ellipse(0.2, 0.1) { -0.5 0.5 }          % rx, ry posicionales (x, y)
+
+    % Caracteres acentuados: el motor recodifica el vector de las fuentes
+    % estándar cuando el texto los contiene.
+    text(&quot;Rectángulo&quot;) { 0.5 -0.2 }
+    rectangle { 0.5 -0.25  0.75 -0.6 }
+
+    text(&quot;Polígono&quot;) { -0.5 -0.2 }
+    % Una polilínea se cierra con closed=true. Abajo el MISMO path se
+    % dibuja con polygon(), que cierra por construcción: el par documenta la
+    % diferencia entre las dos primitivas, que es lo único que las distingue.
+    polyline(&amp;pentagon, closed=true)
+
+    {                          % los mismos, ahora tramados y desplazados
+        translate -0.2 -0.15
+        % La trama es relleno: sus líneas toman el color de RELLENO (fill, cyan),
+        % mientras que color (verde) es el del contorno, que se dibuja al pedir
+        % outlinefill. La sentencia es &quot;hatch &lt;ángulo&gt; [paso]&quot;.
+        color &quot;green&quot;      % color del contorno (con outlinefill)
+        fill &quot;cyan&quot;        % color de las líneas de la trama
+        outlinefill        % contornea la región
+        hatch 45 4
+        polygon(&amp;pentagon)                      % cierra por construcción
+        circle(0.2)       { 0.5 0.5 }
+        ellipse(0.2, 0.1) { -0.5 0.5 }
+        rectangle { 0.5 -0.25  0.75 -0.6 }      % mismas esquinas que arriba
+    }
+}</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/fill_styles.svg" alt="Rellenos de área — lámina de referencia de tramas, grises y contornos." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Rellenos de área — lámina de referencia de tramas, grises y contornos.</h3>
+          <p>El catálogo de tramados (cuatro ángulos por tres densidades), la escala de grises y la combinación de relleno con contorno. Hermana de primitives.mg y line_patterns.mg.</p>
+          <div class="pie"><code>fill_styles.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fill_styles.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Rellenos de área — lámina de referencia de tramas, grises y contornos.
+%
+% El catálogo de tramados (cuatro ángulos por tres densidades), la escala de
+% grises y la combinación de relleno con contorno. Hermana de primitives.mg y
+% line_patterns.mg.
+%
+% NOTAS --------------------------------------------------------------------
+% La separación de la trama va en PUNTOS y no necesita calibrarse: el tramado se
+% barre en el espacio de dispositivo YA transformado (EPS aplica la matriz antes
+% de emitir; SVG usa un &lt;pattern&gt; en unidades de usuario), así que hatch_gap
+% 4/2/1 son 4/2/1 pt en la salida, venga de donde venga la ventana.
+
+display_size 10 10
+world_window -0.1 1.1 -0.08 0.92
+
+% --- Títulos ---
+font_size 12
+text(&quot;Different ways to fill areas&quot;) { 0 .85 }
+font_size 8
+text(&quot;To outline just add the parameter /ecolor&quot;) { 0 .8 }
+
+font_size 9
+text(&quot;For patterns use hatch, hatchback and crosshatch ahd hatch_gap&quot;) { 0 .13 }
+
+line_width 0.2
+
+% --- Tramas: el ángulo cicla por familias y el paso por densidades ---
+% Ángulo cíclico con mod(); paso por familias desde una lista.
+gaps = [4, 4, 4, 2, 2, 2, 1, 1, 1]
+hatchs = [ &quot;hatch&quot;, &quot;hatchback&quot;, &quot;crosshatch&quot; ]
+font_size 5
+for i = 0 to 8 {
+    x = i * 0.11111111
+    hh = hatchs[mod(i, 3)]
+    gap = gaps[i]
+    rectangle(hatch=hh, hatch_gap = gap) { x 0  (x+0.1) .1 }
+    text(hh+str(gap, 0), font_size=6) { x -0.055}
+}
+
+% --- Grises con gray(x), de 0 (negro) a 1 (blanco) ---
+% Van de OSCURO a claro, de izquierda a derecha: el gris se computa del índice,
+% i = 0..8 → gray(0.1)..gray(0.9).
+
+font_size 9
+text(&quot;For grays use gray(0.0) to gray(1.0)&quot;)  { 0 .43 }
+for i = 0 to 8 {
+    x = i * 0.1
+    rectangle(fill = gray(i*0.1)) { x .3  (x+0.1) .4 }   % gray(0.1)..gray(0.9)
+}
+rectangle(fill=&quot;white&quot;, color=gray(0)) { .9 .3  1 .4 }       % blanco, contorneado en negro
+
+% --- Colores con nombre; el contorno se pide con color= ---
+% Los colores son una lista; el índice da la posición.
+
+text(&quot;For colors use fill=/icolorname&quot;) { 0 .73 }
+fills = [&quot;black&quot;, &quot;blue&quot;, &quot;brown&quot;, &quot;cyan&quot;, &quot;green&quot;, &quot;magenta&quot;, &quot;orange&quot;, &quot;red&quot;, &quot;white&quot;, &quot;yellow&quot;]
+font_size 6
+for i = 0 to 9 {
+    x = i * 0.1
+    % el blanco (i=8) se contornea para que se vea sobre el fondo
+    if i == 8 { 
+        rectangle(fill=&quot;white&quot;, color=&quot;black&quot;) { x .6  (x+0.1) .7 } 
+        text(&quot;white&quot;) { 0.8 .55 }
+    }    
+    else { 
+        rectangle(fill=fills[i]) { x .6  (x+0.1) .7 } 
+        text(fills[i])   { (0.1*i) .55 }
+    }
+}
+
+% --- Etiquetas numéricas: pluma y avance en la propia llamada ---
+numbers(from=0.1, by=0.1, count=10,  decimals=1, at=(0.025,  .25),   advance=(0.1, 0))  % 10..90 en la fila de grises</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/line_patterns.svg" alt="Patrones y anchos de línea — lámina de referencia." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Patrones y anchos de línea — lámina de referencia.</h3>
+          <p>Los seis estilos de <code>dash</code> a la izquierda y una escala de <code>line_width</code> en puntos tipográficos a la derecha, generados con un <code>for</code> sobre una lista. Hermana de primitives.mg y fill_styles.mg.</p>
+          <div class="pie"><code>line_patterns.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/line_patterns.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Patrones y anchos de línea — lámina de referencia.
+%
+% Los seis estilos de `dash` a la izquierda y una escala de `line_width` en
+% puntos tipográficos a la derecha, generados con un `for` sobre una lista.
+% Hermana de primitives.mg y fill_styles.mg.
+
+display_size 14 7
+font_size 8
+world_window -1 13 -0.5 6.5
+
+% marco
+rectangle { -0.95 -0.45  12.95 6.45 }
+
+% Patrones de línea: los alias de dash.
+% dash por primitiva: cada línea usa uno distinto; line_width compartido como estado.
+
+text(&quot;Line Patterns with dash&quot;) { 1 6.0 }
+{
+    align &quot;center&quot;
+    text(&quot;Line Widths with /tline_width&quot;) { 8.5 6.0 }
+    font_size 6
+    text(&quot;(units of typographic points)&quot;) { 8.5 5.7 }
+}
+line_width 0.2
+pattern = [ &quot;solid&quot;, &quot;longdashed&quot;, &quot;dashed&quot;, &quot;dotted&quot;, &quot;dashdot&quot;, &quot;dashdotdot&quot; ]
+for i = 0 to 5 {
+  polyline(dash=pattern[i])      { 0 i  5 i }
+  text(&quot;Pattern &quot; + pattern[i]) { 0 (i+0.1) }
+
+  % Anchos de línea 
+  polyline(line_width=(0.2*i)) { 6 i  11 i }
+  text(&quot;Width &quot; + str(0.2*i, 1)) { 6 (i+0.1) }
+}</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/markers-demo.svg" alt="Marcadores — las siete formas del catálogo, y cómo se orientan." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Marcadores — las siete formas del catálogo, y cómo se orientan.</h3>
+          <p>Las formas, la orientación tangente sobre una curva (<code>arrow</code> se orienta sola) y el color independiente entre marcador y curva. El tamaño es FÍSICO, en puntos: inmune a la ventana, porque solo la posición se transforma.</p>
+          <div class="pie"><code>markers-demo.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/markers-demo.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Marcadores — las siete formas del catálogo, y cómo se orientan.
+%
+% Las formas, la orientación tangente sobre una curva (`arrow` se orienta sola) y
+% el color independiente entre marcador y curva. El tamaño es FÍSICO, en puntos:
+% inmune a la ventana, porque solo la posición se transforma.
+%
+% NOTAS --------------------------------------------------------------------
+% Los dos `marker` de este archivo NO son lo mismo: `marker(shape=…)` es la
+% PRIMITIVA (estampa un símbolo por punto), mientras que `polyline(marker=…)` es
+% el ATRIBUTO que decora los vértices de una curva. Ahí el argumento se llama
+% `marker` porque nombra QUÉ se pone; en la primitiva se llama `shape` porque la
+% primitiva ya ES el marcador. `dot(r)` es el atajo del disco y no lleva shape.
+%
+% triangle es el triángulo relleno estático; arrow es el arpón de contorno
+% DIRECCIONAL. Son ejes distintos: forma contra papel. Solo arrow se orienta a la
+% tangente por default; el resto queda fijo, y las dos cosas se sobreescriben con
+% marker_orient=&quot;auto&quot;|&quot;fixed&quot;.
+%
+% Relleno: a secas = relleno; color= sin fill= = ABIERTO (solo contorno); fill= =
+% relleno en ese color. cross, x y arrow son siempre contorno, por ser geometría
+% a trazo. No hay forma &quot;disk&quot;: el disco es un circle relleno.
+
+display_size 12 12
+world_window 0 12 0 12
+
+align &quot;center&quot;
+text(&quot;{/bMarcadores estándar y orientación tangente}&quot;) { 6 11.4 }
+
+% --- 1. Fila con los 7 marcadores estándar con sus defaults ---
+marker(size=8, shape=&quot;circle&quot;)   { 1.2 10 }
+marker(size=8, shape=&quot;square&quot;)   { 2.9 10 }
+marker(size=8, shape=&quot;diamond&quot;)  { 4.6 10 }
+marker(size=8, shape=&quot;cross&quot;)    { 6.3 10 }
+marker(size=8, shape=&quot;x&quot;)        { 8.0 10 }
+marker(size=8, shape=&quot;triangle&quot;) { 9.7 10 }
+marker(size=8, shape=&quot;arrow&quot;)    { 11.4 10 }
+
+% --- 1b. Orientación por ÁNGULO FIJO (marker_orient=grados): el triángulo (▶ por
+%     default) rota a ▲ 90 / ◀ 180 / ▼ 270; un ángulo sirve para cualquier forma. ---
+marker(size=8, shape=&quot;triangle&quot;, marker_orient=90)  { 3.5 8.6 }
+marker(size=8, shape=&quot;triangle&quot;, marker_orient=180) { 5.5 8.6 }
+marker(size=8, shape=&quot;triangle&quot;, marker_orient=270) { 7.5 8.6 }
+marker(size=8, shape=&quot;square&quot;,   marker_orient=45)  { 9.5 8.6 }
+
+% --- 2. Flechas orientadas siguiendo la tangente de una curva ---
+color &quot;blue&quot;
+polyline(marker=&quot;arrow&quot;, marker_size=10) { 1 6  3 8  6 8  9 6  11 5 }
+
+% --- 3. Dispersión: curva roja, puntos negros (marcador ≠ color de curva) ---
+color &quot;red&quot;
+polyline(marker=&quot;circle&quot;, marker_size=5, marker_color=&quot;black&quot;, marker_fill=&quot;none&quot;) { 1 2.5  3 3.7  5 2.9  7 4.1  9 3.3  11 3.9 }
+
+% --- 4. Dispersión sin curva: rombos ABIERTOS (color= sin fill=) en otro color ---
+marker(size=7, shape=&quot;diamond&quot;, color=&quot;green&quot;) { 1 1  3 1.6  5 0.8  7 1.7  9 1.1  11 1.4 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/symbols.svg" alt="Catálogo de los símbolos matemáticos que se escriben \comando." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Catálogo de los símbolos matemáticos que se escriben \comando.</h3>
+          <p>Los 69 nombres de la tabla de símbolos, compuestos en Latin Modern Math. Las letras griegas no están aquí: viajan por otra tabla, y las ejercitan turning_points.mg y franck_condon.mg.</p>
+          <div class="pie"><code>symbols.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/symbols.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Catálogo de los símbolos matemáticos que se escriben \comando.
+%
+% Los 69 nombres de la tabla de símbolos, compuestos en Latin Modern Math. Las
+% letras griegas no están aquí: viajan por otra tabla, y las ejercitan
+% turning_points.mg y franck_condon.mg.
+%
+% NOTAS --------------------------------------------------------------------
+% Su trabajo es que la tabla de símbolos no pueda romperse en silencio. El golden
+% por bytes NO pudo validar la migración a Latin Modern Math —todos los símbolos
+% cambian de fuente, así que los bytes se mueven por diseño— y lo único que
+% distinguía «arreglado» de «roto» fue comparar estos 69 glifos antes y después.
+
+display_size 17 12
+world_window 0 7 0 10.6
+font &quot;Times-Roman&quot;
+
+simb = [
+       &quot;$\aleph$&quot;, &quot;$\wp$&quot;, &quot;$\Re$&quot;, &quot;$\Im$&quot;,
+       &quot;$\partial$&quot;, &quot;$\infty$&quot;, &quot;$\prime$&quot;, &quot;$\nabla$&quot;,
+       &quot;$\bot$&quot;, &quot;$\forall$&quot;, &quot;$\exists$&quot;, &quot;$\neg$&quot;,
+       &quot;$\sharp$&quot;, &quot;$\clubsuit$&quot;, &quot;$\diamondsuit$&quot;, &quot;$\heartsuit$&quot;,
+       &quot;$\spadesuit$&quot;, &quot;$\int$&quot;, &quot;$\prod$&quot;, &quot;$\sum$&quot;,
+       &quot;$\wedge$&quot;, &quot;$\vee$&quot;, &quot;$\cap$&quot;, &quot;$\cup$&quot;,
+       &quot;$\diamond$&quot;, &quot;$\bullet$&quot;, &quot;$\div$&quot;, &quot;$\oslash$&quot;,
+       &quot;$\otimes$&quot;, &quot;$\oplus$&quot;, &quot;$\pm$&quot;, &quot;$\cdot$&quot;,
+       &quot;$\times$&quot;, &quot;$\propto$&quot;, &quot;$\mid$&quot;, &quot;$\Leftrightarrow$&quot;,
+       &quot;$\Leftarrow$&quot;, &quot;$\Rightarrow$&quot;, &quot;$\leq$&quot;, &quot;$\geq$&quot;,
+       &quot;$\approx$&quot;, &quot;$\supset$&quot;, &quot;$\subset$&quot;, &quot;$\supseteq$&quot;,
+       &quot;$\subseteq$&quot;, &quot;$\in$&quot;, &quot;$\ni$&quot;, &quot;$\leftrightarrow$&quot;,
+       &quot;$\leftarrow$&quot;, &quot;$\rightarrow$&quot;, &quot;$\sim$&quot;, &quot;$\equiv$&quot;,
+       &quot;$\colon$&quot;, &quot;$\uparrow$&quot;, &quot;$\downarrow$&quot;, &quot;$\Uparrow$&quot;,
+       &quot;$\Downarrow$&quot;, &quot;$\rangle$&quot;, &quot;$\langle$&quot;, &quot;$\rceil$&quot;,
+       &quot;$\lceil$&quot;, &quot;$\rfloor$&quot;, &quot;$\lfloor$&quot;, &quot;$\angle$&quot;,
+       &quot;$\therefore$&quot;, &quot;$\neq$&quot;, &quot;$\textdegree$&quot;, &quot;$\cong$&quot;,
+       &quot;$\surd$&quot;
+]
+nom = [
+       &quot;aleph&quot;, &quot;wp&quot;, &quot;Re&quot;, &quot;Im&quot;,
+       &quot;partial&quot;, &quot;infty&quot;, &quot;prime&quot;, &quot;nabla&quot;,
+       &quot;bot&quot;, &quot;forall&quot;, &quot;exists&quot;, &quot;neg&quot;,
+       &quot;sharp&quot;, &quot;clubsuit&quot;, &quot;diamondsuit&quot;, &quot;heartsuit&quot;,
+       &quot;spadesuit&quot;, &quot;int&quot;, &quot;prod&quot;, &quot;sum&quot;,
+       &quot;wedge&quot;, &quot;vee&quot;, &quot;cap&quot;, &quot;cup&quot;,
+       &quot;diamond&quot;, &quot;bullet&quot;, &quot;div&quot;, &quot;oslash&quot;,
+       &quot;otimes&quot;, &quot;oplus&quot;, &quot;pm&quot;, &quot;cdot&quot;,
+       &quot;times&quot;, &quot;propto&quot;, &quot;mid&quot;, &quot;Leftrightarrow&quot;,
+       &quot;Leftarrow&quot;, &quot;Rightarrow&quot;, &quot;leq&quot;, &quot;geq&quot;,
+       &quot;approx&quot;, &quot;supset&quot;, &quot;subset&quot;, &quot;supseteq&quot;,
+       &quot;subseteq&quot;, &quot;in&quot;, &quot;ni&quot;, &quot;leftrightarrow&quot;,
+       &quot;leftarrow&quot;, &quot;rightarrow&quot;, &quot;sim&quot;, &quot;equiv&quot;,
+       &quot;colon&quot;, &quot;uparrow&quot;, &quot;downarrow&quot;, &quot;Uparrow&quot;,
+       &quot;Downarrow&quot;, &quot;rangle&quot;, &quot;langle&quot;, &quot;rceil&quot;,
+       &quot;lceil&quot;, &quot;rfloor&quot;, &quot;lfloor&quot;, &quot;angle&quot;,
+       &quot;therefore&quot;, &quot;neq&quot;, &quot;textdegree&quot;, &quot;cong&quot;,
+       &quot;surd&quot;
+]
+
+for i = 0 to 68 {
+    col = mod(i, 7)
+    fil = (i - col)/7
+    x = col + 0.5
+    y = 10 - fil
+    font_size 13
+    align &quot;center&quot;
+    text(simb[i]) { (x) (y) }
+    font_size 6
+    text(nom[i]) { (x) (y-0.42) }
+}</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/texto.svg" alt="Texto — alineación, marcado, matemáticas y tipografía fina." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Texto — alineación, marcado, matemáticas y tipografía fina.</h3>
+          <p>Rótulos anclados a líneas guía para ver align y valign; negrita y énfasis; subíndices, superíndices y letras griegas; comillas tipográficas, rayas, viñetas y símbolos fuera de Latin-1; y texto de varios renglones con /n.</p>
+          <div class="pie"><code>texto.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/texto.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Texto — alineación, marcado, matemáticas y tipografía fina.
+%
+% Rótulos anclados a líneas guía para ver align y valign; negrita y énfasis;
+% subíndices, superíndices y letras griegas; comillas tipográficas, rayas,
+% viñetas y símbolos fuera de Latin-1; y texto de varios renglones con /n.
+%
+% NOTAS --------------------------------------------------------------------
+% ⚠ COBERTURA EXCLUSIVA, y por partida doble. Es la única cobertura de los
+% caracteres fuera de Latin-1 —que las fuentes base-14 SÍ tienen y que hasta
+% 2026-07-20 se descartaban en silencio, porque la codificación no sabía
+% nombrarlos— y la única de TextBlock, el texto multilínea: sin las últimas
+% líneas de este archivo, el interlineado y el valign de BLOQUE quedan sin red.
+% Los tres rótulos de valign sobre la línea de la pluma ejercitan además la ruta
+% de texto SIMPLE (un solo run), distinta de la de texto compuesto.
+
+display_size 10 7.2
+font_size 8
+world_window -5 5 -3.6 3
+
+line_width 1
+polyline { 0 -2.5 0 2.75 }
+
+text(&quot;&quot;) { }
+
+text(&quot;\hbar{/bk}$_0$&quot;) { 0 -2 }
+text(&quot;$x_0 2x_\gamma x^{2x}\delta$&quot;) { 0 -1.5 } 
+text(&quot;Un subíndice $x_0$ y un superíndice $x^2$&quot;) { 0 -1 } 
+
+% centrado
+align &quot;center&quot;
+line_width 0.2
+polyline { -2 0 2 0 ; -2 0.5 2 0.5  ; -2 1 2 1 }
+
+text(&quot;Una letra griega \alpha y otra no.&quot;) { 0 0 }
+valign &quot;middle&quot;
+text(&quot;Aep $2x_0 ek$.&quot;) { 0 0.5 } 
+%text(&quot;Aep $2x_0 ek$.&quot;, valign=&quot;middle&quot;) { 0 0.5 } 
+valign &quot;top&quot;
+text(&quot;\beta empezando por griega.&quot;) { 0 1 } 
+%text(&quot;\beta empezando por griega.&quot;, valign=&quot;top&quot;) { 0 1 } 
+
+% alineado a la derecha
+align &quot;right&quot;
+
+text(&quot;una {/bnegrita} y /eénfasis el resto.&quot;) { 0 2 }
+text(&quot;un número \infty de posibilidades.&quot;) { 0 2.5 }
+
+% --- valign con texto SIMPLE (sin marcado) y align por defecto (left) ---
+% La línea horizontal es la pluma (y = 2.7): cada rótulo la ancla distinto.
+%   top    → el texto cuelga por debajo de la línea
+%   middle → el texto queda centrado sobre la línea
+%   bottom → el texto se apoya (su base) en la línea
+% Son rótulos de un solo run: ejercitan la ruta de texto simple (Text::draw), no
+% la de texto compuesto; y con align=left comprueban que valign no mueve la x.
+align &quot;left&quot;
+line_width 0.2
+polyline { -4.5 2.7 4.5 2.7 }
+valign &quot;top&quot;
+text(&quot;arriba&quot;) { -4.5 2.7 }
+valign &quot;middle&quot;
+text(&quot;medio&quot;) { -1.5 2.7 }
+valign &quot;bottom&quot;
+text(&quot;abajo&quot;) { 1.7 2.7 }
+
+
+
+% --- Tipografia fuera de Latin-1 -------------------------------------
+% Comillas «españolas» y “de imprenta”, raya de diálogo, puntos suspensivos, vinetas
+% y el resto de kExtraTextGlyphs: caracteres que las fuentes base-14 SI tienen y
+% que hasta 2026-07-20 se DESCARTABAN, porque ISOLatin1Encoding no sabia
+% nombrarlos. Es la unica cobertura que tienen; sin esta linea, volverian a
+% perderse en silencio.
+valign &quot;bottom&quot;
+align &quot;left&quot;
+text(&quot;Comillas “inglesas” y ‘simples’, raya — y puntos…&quot;) { -4.5 -3.05 }
+text(&quot;Viñeta • daga † por mil ‰ marca ™ euro € œuvre&quot;) { -4.5 -3.45 }
+
+% Multilinea: `/n` rompe el renglon. Unica cobertura de TextBlock en el
+% corpus -- sin esta linea, el interlineado y el valign de BLOQUE quedan sin red.
+% Se prueban las tres cosas que solo pasan con varios renglones: el estado
+% tipografico sobrevive al corte (la negrita sigue), un renglon vacio consume
+% interlinea sin dibujar, y `valign` centra el CONJUNTO y no cada linea.
+align &quot;center&quot;
+valign &quot;middle&quot;
+text(&quot;/bdos renglones/nen negrita&quot;) { -3.2 -1.2 }
+text(&quot;con un renglon/n/nvacio en medio&quot;) { -3.2 -2.15 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/path_sample.svg" alt="Muestreo de un trayecto: sample, point_at y angle_at." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Muestreo de un trayecto: sample, point_at y angle_at.</h3>
+          <p>Esta familia LEE la geometría de una curva en un parámetro t entre 0 y 1 recorrido por LONGITUD DE ARCO, así que t=0.5 es el medio GEOMÉTRICO y no la mitad de los segmentos. El flag <code>curve</code> fija cómo se interpreta el trayecto, que es neutro: en verde los puntos como vértices (toca la envolvente), en rojo como controles bézier (toca la curva).</p>
+          <div class="pie"><code>path_sample.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/path_sample.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Muestreo de un trayecto: sample, point_at y angle_at.
+%
+% Esta familia LEE la geometría de una curva en un parámetro t entre 0 y 1
+% recorrido por LONGITUD DE ARCO, así que t=0.5 es el medio GEOMÉTRICO y no la
+% mitad de los segmentos. El flag `curve` fija cómo se interpreta el trayecto,
+% que es neutro: en verde los puntos como vértices (toca la envolvente), en rojo
+% como controles bézier (toca la curva).
+%
+% NOTAS --------------------------------------------------------------------
+% point_at devuelve un punto [x,y], que se usa de dos formas: colocando una
+% struct con at= (flecha AZUL, t=0.5), o metiéndolo DIRECTO en el bloque {} de
+% una primitiva (flecha MORADA, un marker suelto en t=0.25) — el bloque acepta un
+% punto, no solo pares de escalares. Las dos se orientan con rotate=angle_at(…).
+%
+% ⚠ COBERTURA EXCLUSIVA: es el único ejemplo que ejercita sample, point_at y
+% angle_at.
+
+display_size 15 7.5
+world_window -0.4 8.4 -0.9 7.6
+
+% flecha corta como struct (apunta a +x en su marco local; rotate= la orienta)
+struct flecha() {
+    polygon(fill=&quot;blue&quot;) { 0 0  -0.5 0.22  -0.35 0  -0.5 -0.22 }
+}
+
+% una curva suave (bézier de control) — el objeto que se muestrea
+path c = smooth { 0.5 1  2.5 6  4.5 1.5  6.5 6  7.5 2 }
+line_width 1.2   color &quot;black&quot;   bezier(&amp;c)
+
+% sample: 13 puntos por arco, en los dos modos — envolvente vs curva
+dot(sample(&amp;c, 13),             size=2.2, color=&quot;green&quot;)   % default: ENVOLVENTE
+dot(sample(&amp;c, 13, curve=true), size=2.2, color=&quot;red&quot;)     % curve=true: CURVA
+
+% point_at + angle_at, DOS formas de usarlos:
+%  1) colocando una STRUCT con at=/rotate= (la flecha azul, en t=0.5)
+flecha(at=point_at(&amp;c, 0.5, curve=true), rotate=angle_at(&amp;c, 0.5, curve=true), scale=1.4)
+%  2) point_at directo en el BLOQUE de una primitiva (marker morado, en t=0.25)
+%     — el bloque {} acepta un punto [x,y]. El marcador se orienta con su propio
+%     `marker_orient=` (ángulo en grados), aquí el que da angle_at a la tangente.
+marker(size=7, shape=&quot;arrow&quot;, color=&quot;purple&quot;, marker_orient=angle_at(&amp;c, 0.25, curve=true)) {
+    point_at(&amp;c, 0.25, curve=true)
+}
+
+% leyenda mínima
+dot(size=2.2, color=&quot;red&quot;)   { 0.1 7.3 }
+text(&quot;curve=true — punto sobre la curva&quot;,   align=&quot;left&quot;, valign=&quot;middle&quot;, size=8) { 0.4 7.3 }
+dot(size=2.2, color=&quot;green&quot;) { 0.1 6.7 }
+text(&quot;default — punto sobre la envolvente&quot;, align=&quot;left&quot;, valign=&quot;middle&quot;, size=8) { 0.4 6.7 }
+flecha(at=(0.1, 6.1), scale=1.4)
+text(&quot;point_at + angle_at en t=0.5&quot;,        align=&quot;left&quot;, valign=&quot;middle&quot;, size=8) { 0.4 6.1 }</pre></details>
+        </div>
+      </article>
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/sines.svg" alt="Ondas — la primitiva sine." loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Ondas — la primitiva <code>sine</code>.</h3>
+          <p>Cada <code>sine</code> recibe una base de dos puntos, un número de medios ciclos y una amplitud, y genera por dentro las curvas bézier: la onda oscila perpendicular a su base, sea cual sea su orientación. Aquí se ven la fase 0 y la variante cuadrada.</p>
+          <div class="pie"><code>sines.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/sines.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Ondas — la primitiva `sine`.
+%
+% Cada `sine` recibe una base de dos puntos, un número de medios ciclos y una
+% amplitud, y genera por dentro las curvas bézier: la onda oscila perpendicular a
+% su base, sea cual sea su orientación. Aquí se ven la fase 0 y la variante
+% cuadrada.
+%
+% NOTAS --------------------------------------------------------------------
+% `phase` (múltiplos de 90°: coseno, etc.) está implementado por cuartos de
+% ciclo. `sine` sirve también como expresión del álgebra de trayectos, no solo
+% como primitiva que dibuja — ver franck_condon.mg.
+
+display_size 12 10
+font_size 9
+
+world_window 0 12 0 10
+
+% líneas base tenues (la onda oscila alrededor de ellas)
+line_width 0.1
+color &quot;lightgray&quot;
+polyline { 1 9  11 9 }   polyline { 1 8  11 8 }   polyline { 1 7  11 7 }   polyline { 1 6  11 6 }
+polyline { 1 4.5  11 4.5 }   polyline { 1 3.5  11 3.5 }   polyline { 1 2.5  11 2.5 }
+
+% --- φ = sin(nπx): medios ciclos n = 1..4, jorobas de signo alterno ---
+line_width 0.5
+color &quot;blue&quot;
+sine(half_cycles=1, amplitude=0.4) { 1 9  11 9 }
+sine(half_cycles=2, amplitude=0.4) { 1 8  11 8 }
+sine(half_cycles=3, amplitude=0.4) { 1 7  11 7 }
+sine(half_cycles=4, amplitude=0.4) { 1 6  11 6 }
+
+% --- ρ = |φ|² (squared): jorobas todas positivas ---
+color &quot;red&quot;
+sine(half_cycles=1, amplitude=0.6, squared=true) { 1 4.5  11 4.5 }
+sine(half_cycles=2, amplitude=0.6, squared=true) { 1 3.5  11 3.5 }
+sine(half_cycles=3, amplitude=0.6, squared=true) { 1 2.5  11 2.5 }
+
+% --- Base inclinada y vertical: la onda oscila perpendicular a la base ---
+color &quot;green&quot;
+sine(half_cycles=3, amplitude=0.35) { 0.5 0.4  5 1.7 }   % diagonal
+sine(half_cycles=2, amplitude=0.35) { 7 0.3  7 2 }       % vertical
+
+% --- Etiquetas ---
+color &quot;black&quot;
+text(&quot;$\phi = sin(n \pi x),  n = 1..4$&quot;) { 1 9.6 }
+text(&quot;$\rho = |\phi|^2$  (squared=true)&quot;) { 1 5.1 }
+text(&quot;base diagonal / vertical&quot;) { 0.3 0.05 }</pre></details>
+        </div>
+      </article>
+    </div>
+<footer>
+  Página generada por <code>tools/galeria.py</code> a partir de
+  <code>examples/</code> y <code>docs/img/</code>. El título y la descripción de
+  cada tarjeta salen del encabezado de su propio <code>.mg</code>.
+</footer>
+</div>
+</body>
+</html>

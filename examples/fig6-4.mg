@@ -1,21 +1,22 @@
-% Fig. 6.4 — Vidas medias alfa nucleares (ley de Geiger-Nuttall):
-% log(λ⁻¹) vs. E^{-1/2}, del Po al U. IMQ 3a. ed.
+% Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall.
 %
-% Versión V3 con plot { } (plan_plot.md Fase 4). Los datos van EN UNIDADES REALES
-% (E^{-1/2} en MeV^{-1/2}, λ⁻¹ en s), convertidos de los píxeles digitalizados del
-% escaneo con un script de un solo uso (inversión derivada en plan_plot.md). plot mapea
-% datos→caja: x lineal, y LOGARÍTMICO (mapper puntual, log no es afín). Los ejes
-% (xaxis/yaxis) heredan x=/y= y se rotulan solos: adiós a los cinco text() de
-% potencias de diez y a las coords digitalizadas.
+% Eje y LOGARÍTMICO: los datos van en unidades reales y el plot los mapea a su
+% caja; los ejes heredan los rangos y se rotulan solos, sin un solo rótulo de
+% potencia de diez escrito a mano. Los isótopos son texto anclado a sus datos.
 %
-% Layout del libro: el eje x cae ABAJO de la 1ª marca log (10^{-15}), con un hueco.
-% Se reproduce con box de fondo en y=0 (nivel del eje x) y el rango y extendido a
-% 1e-20; yaxis(start=1e-15) rotula desde 10^{-15} hacia arriba.
+% NOTAS --------------------------------------------------------------------
+% Fig. 6.4 de «Introducción a la mecánica cuántica», L. de la Peña, 3a. ed.
+% Los datos van en unidades reales (E^{-1/2} en MeV^{-1/2}, λ⁻¹ en s),
+% convertidos de los píxeles digitalizados del escaneo.
 %
-% Es el ÚNICO ejemplo con text() anclado a datos DENTRO de un plot log (los isótopos):
-% ejercita el remapeo puntual del ancla —GS_PLUMEPOSITION, la razón única de los dos
-% accesores que ganó el motor en la Fase 4— que ningún otro ejercita. Sin él, un bug ahí
-% pasaría las tres compuertas sin que nadie lo note.
+% Layout del libro: el eje x cae ABAJO de la primera marca (10^{-15}), con un
+% hueco. Se reproduce con la caja de fondo al nivel del eje x y el rango y
+% extendido a 1e-20; yaxis(start=1e-15) rotula desde ahí hacia arriba.
+%
+% ⚠ COBERTURA EXCLUSIVA: es el único ejemplo con texto anclado a datos DENTRO de
+% un plot logarítmico, o sea el único que ejercita el remapeo puntual del ancla.
+% Sin él, un bug ahí pasaría todas las compuertas sin que nadie lo note. También
+% es el único sin `font` explícito, y por eso el que caza la cara ambiente en PDF.
 
 display_size 9 6.7
 font_size 8

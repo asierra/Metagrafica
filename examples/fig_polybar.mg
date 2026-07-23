@@ -1,30 +1,32 @@
-% Fig. 5 de docs/first_article.pdf (p. 13) — espectros de CO₂ calculados con el
-% método de Smith (1969) a 0.5 µm de resolución. El histograma inferior es 261 cm
-% de CO₂, el superior 522 cm; el área rayada entre ambos vale 0.374 µm.
+% Espectros de absorción del CO₂ — histogramas con `polybar`.
 %
-% Primer ejemplo del corpus que ejercita `polybar` (§4.12) y `fill`-SIN-`outlinefill`.
+% Dos espesores de CO₂ superpuestos; el área rayada entre ambos es la diferencia
+% entre los dos espectros. Ejercita polybar y el relleno tramado sin contorno.
 %
-% PROCEDENCIA. Esta figura es de 1988: la V0 imprimía directo a láser (no había EPS)
-% y el PDF es un escaneo (JPEG gris a 300 dpi + capa OCR). No hay vectores que
-% rescatar ni fórmula que recuperar — son la salida de un modelo de banda de Smith,
-% no un 1-exp(-tau). Los píxeles son la fuente primaria, así que aquí SÍ se vale
-% digitalizar (a diferencia de fig4-5, cuyas curvas resultaron analíticas). El
-% método de digitalización y su inversión están en plan_polybar.md.
+% NOTAS --------------------------------------------------------------------
+% Fig. 5 de docs/first_article.pdf (p. 13) — espectros calculados con el método
+% de Smith (1969) a 0.5 µm de resolución. El histograma inferior es 261 cm de
+% CO₂, el superior 522 cm; el área rayada vale 0.374 µm.
 %
-% VERIFICADOR (regalo de la leyenda): sum(a522 - a261)*0.5 debe dar 0.374 µm.
-% Lo reconstruido da 0.3695 (-1.2%, dentro del grosor de línea de la cadena
-% láser 1988 → papel → escáner 2008 → umbral). SI ESE NÚMERO SE MUEVE, ALGO SE ROMPIÓ.
+% PROCEDENCIA. La figura es de 1988 y el PDF es un escaneo: no hay vectores que
+% rescatar ni fórmula que recuperar (son la salida de un modelo de banda, no un
+% 1-exp(-tau)). Los píxeles son la fuente primaria, así que aquí SÍ se vale
+% digitalizar, a diferencia de fig4-4, cuyas curvas resultaron analíticas.
+% Medidas del escaneo: caja de datos 12.46 × 8.0 cm, eje y en λ=11.5 con marcas
+% adentro, eje x sin marcas (la tinta bajo 12..20 son cantos de barra).
 %
-% LA FIGURA SON TRES PASADAS, no una barra blanca encima de una rayada: eso habría
-% borrado los costados verticales del rayado, que en el escaneo sí están.
-%   1. 522 con trama, sin contorno  → rayado de 0 a a522
-%   2. 261 en blanco opaco, sin contorno → borra el rayado bajo a261, costados incluidos
-%   3. 522 solo contorno → repone costados de altura completa + tope en a522
-% Cada pasada completa va antes de la siguiente (el z-order es el orden de escritura).
+% ⚠ VERIFICADOR (regalo de la leyenda): sum(a522 - a261)*0.5 debe dar 0.374 µm.
+% Lo reconstruido da 0.3695 (−1.2%, dentro del grosor de línea de la cadena
+% láser 1988 → papel → escáner 2008 → umbral). SI ESE NÚMERO SE MUEVE, ALGO SE
+% ROMPIÓ.
 %
-% Medidas tomadas del escaneo: caja de datos 12.46 × 8.0 cm, eje y en λ=11.5 con
-% marcas adentro, eje x sin marcas (la tinta bajo 12..20 son cantos de barra, no
-% marcas: en 22 no hay nada).
+% SON TRES PASADAS, no una barra blanca encima de una rayada: eso habría borrado
+% los costados verticales del rayado, que en el escaneo sí están.
+%   1. 522 con trama, sin contorno       → rayado de 0 a a522
+%   2. 261 en blanco opaco, sin contorno → borra el rayado bajo a261, con costados
+%   3. 522 solo contorno                 → repone costados completos y tope
+% Cada pasada va completa antes de la siguiente: el z-order es el orden de
+% escritura.
 
 display_size 14.25 9.35
 font_size 9.5

@@ -1,3 +1,18 @@
+% Texto — alineación, marcado, matemáticas y tipografía fina.
+%
+% Rótulos anclados a líneas guía para ver align y valign; negrita y énfasis;
+% subíndices, superíndices y letras griegas; comillas tipográficas, rayas,
+% viñetas y símbolos fuera de Latin-1; y texto de varios renglones con /n.
+%
+% NOTAS --------------------------------------------------------------------
+% ⚠ COBERTURA EXCLUSIVA, y por partida doble. Es la única cobertura de los
+% caracteres fuera de Latin-1 —que las fuentes base-14 SÍ tienen y que hasta
+% 2026-07-20 se descartaban en silencio, porque la codificación no sabía
+% nombrarlos— y la única de TextBlock, el texto multilínea: sin las últimas
+% líneas de este archivo, el interlineado y el valign de BLOQUE quedan sin red.
+% Los tres rótulos de valign sobre la línea de la pluma ejercitan además la ruta
+% de texto SIMPLE (un solo run), distinta de la de texto compuesto.
+
 display_size 10 7.2
 font_size 8
 world_window -5 5 -3.6 3
@@ -49,7 +64,7 @@ text("abajo") { 1.7 2.7 }
 
 
 
-% --- Tipografia fuera de Latin-1 (§14.4) -------------------------------------
+% --- Tipografia fuera de Latin-1 -------------------------------------
 % Comillas «españolas» y “de imprenta”, raya de diálogo, puntos suspensivos, vinetas
 % y el resto de kExtraTextGlyphs: caracteres que las fuentes base-14 SI tienen y
 % que hasta 2026-07-20 se DESCARTABAN, porque ISOLatin1Encoding no sabia
@@ -60,7 +75,7 @@ align "left"
 text("Comillas “inglesas” y ‘simples’, raya — y puntos…") { -4.5 -3.05 }
 text("Viñeta • daga † por mil ‰ marca ™ euro € œuvre") { -4.5 -3.45 }
 
-% Multilinea §14.1: `/n` rompe el renglon. Unica cobertura de TextBlock en el
+% Multilinea: `/n` rompe el renglon. Unica cobertura de TextBlock en el
 % corpus -- sin esta linea, el interlineado y el valign de BLOQUE quedan sin red.
 % Se prueban las tres cosas que solo pasan con varios renglones: el estado
 % tipografico sobrevive al corte (la negrita sigue), un renglon vacio consume

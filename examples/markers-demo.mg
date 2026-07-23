@@ -1,27 +1,24 @@
-% markers-demo.mg — Demostración V3 de los marcadores físicos (§4.6): las 7 formas
-% del catálogo, la orientación tangente sobre una curva (shape="arrow" se orienta
-% por default) y el color independiente marcador/curva.
+% Marcadores — las siete formas del catálogo, y cómo se orientan.
 %
-% Ejecutar desde examples/:  ../bin/mg markers-demo.mg markers-demo.eps
+% Las formas, la orientación tangente sobre una curva (`arrow` se orienta sola) y
+% el color independiente entre marcador y curva. El tamaño es FÍSICO, en puntos:
+% inmune a la ventana, porque solo la posición se transforma.
 %
-% `marker(r, shape=…)` es la primitiva; `dot(r)` es su atajo para el disco y no
-% lleva shape. Ojo con los dos `marker` de este archivo, que NO son lo mismo:
-% `marker(shape=…)` es la PRIMITIVA (estampa un símbolo por punto), mientras que
-% `polyline(marker=…)` es el ATRIBUTO que decora los vértices de una curva. Ahí el
-% argumento se llama `marker` porque nombra QUÉ se pone; en la primitiva se llama
-% `shape` porque la primitiva ya ES el marcador.
+% NOTAS --------------------------------------------------------------------
+% Los dos `marker` de este archivo NO son lo mismo: `marker(shape=…)` es la
+% PRIMITIVA (estampa un símbolo por punto), mientras que `polyline(marker=…)` es
+% el ATRIBUTO que decora los vértices de una curva. Ahí el argumento se llama
+% `marker` porque nombra QUÉ se pone; en la primitiva se llama `shape` porque la
+% primitiva ya ES el marcador. `dot(r)` es el atajo del disco y no lleva shape.
 %
-% El tamaño es FÍSICO (size, en puntos): inmune a la ventana, solo la posición se
-% transforma. arrow (el arpón del libro) se orienta a la tangente local por
-% default; el resto —triangle incluido— queda fijo (sobreescribible con
-% marker_orient="auto"|"fixed").
+% triangle es el triángulo relleno estático; arrow es el arpón de contorno
+% DIRECCIONAL. Son ejes distintos: forma contra papel. Solo arrow se orienta a la
+% tangente por default; el resto queda fijo, y las dos cosas se sobreescriben con
+% marker_orient="auto"|"fixed".
 %
-% triangle es el triángulo relleno estático (el `triangle_right` de matplotlib);
-% arrow es el arpón de contorno DIRECCIONAL. Son ejes distintos: forma vs papel.
-%
-% Relleno como en los círculos (§4.6): a secas = relleno; color= sin fill= = ABIERTO
-% (solo contorno); fill= = relleno en ese color. cross/x/arrow son siempre contorno
-% (geometría a trazo). No hay forma "disk": el disco es `circle` relleno.
+% Relleno: a secas = relleno; color= sin fill= = ABIERTO (solo contorno); fill= =
+% relleno en ese color. cross, x y arrow son siempre contorno, por ser geometría
+% a trazo. No hay forma "disk": el disco es un circle relleno.
 
 display_size 12 12
 world_window 0 12 0 12

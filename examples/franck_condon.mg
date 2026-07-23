@@ -1,8 +1,11 @@
-% Principio de Franck-Condon, PARAMÉTRICO: dos potenciales de Morse con sus
-% niveles vibracionales y funciones de onda. Aquí NADA está medido: se dan los
-% parámetros de Morse (a, re, we, xe) de cada estado más Te, y el resto es forma
-% cerrada.
+% Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO.
 %
+% Nada está medido: se dan los parámetros de Morse (a, re, we, xe) de cada estado
+% electrónico más Te, y de ahí salen en forma cerrada la curva, los niveles
+% vibracionales, los puntos de retorno y las funciones de onda. Cambia un número
+% y la figura entera se reacomoda de forma coherente.
+%
+% NOTAS --------------------------------------------------------------------
 %   V(r) = D(1 - exp(-a(r-re)))²                    la curva
 %   E_v  = we(v+½) - we·xe(v+½)²                    los niveles
 %   r±   = re - ln(1 ∓ sqrt(E/D))/a                 los puntos de retorno
@@ -10,11 +13,14 @@
 %
 % Los puntos de retorno fijan el ancho de cada onda: la oscilación va entre r- y
 % r+, y las colas asoman a la región prohibida con penetración asimétrica (efecto
-% túnel; ver el lazo). Las ψ son CON SIGNO (cruzan la línea) con envolvente
-% semiclásica WKB, armadas pieza a pieza con `path +=` (§9); los dos pozos
-% comparten un solo lazo con sus parámetros en listas (§5.1).
+% túnel; ver el lazo). Las ψ son CON SIGNO —cruzan la línea— con envolvente
+% semiclásica WKB, armadas pieza a pieza con `path +=`; los dos pozos comparten un
+% solo lazo, con sus parámetros en listas. Necesita exp y ln: un Morse no es
+% escribible sin ellas.
 %
-% Necesita exp/ln (§5.2): un Morse no es escribible sin ellas.
+% Es la figura de la sección «Una figura con parámetros» del README, junto con su
+% variante docs/img/franck_condon_anarm.mg (la misma con xe1 = 0.045). Si cambias
+% este archivo, hay que rehacer las dos.
 
 display_size 9 11
 font_size 9
@@ -56,7 +62,7 @@ elab = 0.30
 % de ancho PARAMÉTRICO (línea recta), una por pared, para la penetración distinta.
 
 % Una onda: base gris + relleno con contorno negro. El ancho de la ventana local
-% es un parámetro con default calculado, `w = path_width(&onda)` (§8.2), así una
+% es un parámetro con default calculado, `w = path_width(&onda)`, así una
 % sola struct con parámetros sirve para todos los niveles.
 struct Nivel(&onda, w = path_width(&onda)) {
     world_window 0 w -2 2
@@ -107,7 +113,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
     dash "solid"
 
     % ---- las ondas vibracionales ------------------------------------------
-    % UN solo lazo para los dos pozos: sus parámetros van en listas (§5.1)
+    % UN solo lazo para los dos pozos: sus parámetros van en listas
     % indexadas por `pozo`, así la construcción de la onda aparece UNA vez en vez
     % de duplicada. El offset en energía (0 para el fundamental, Te para el
     % excitado) y la etiqueta del nivel 0 (v'' vs v') también salen de listas.
@@ -145,7 +151,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
             % cero en la unión → empalme liso); su altura es la amplitud semiclásica
             % |ψ| ∝ (E−V)^(−¼), máxima en los retornos. Al ser ψ CON SIGNO, el traslape
             % de Franck-Condon puede cancelarse — lo que |ψ|² no mostraría.
-            % El `for` acumula los medios ciclos con `path +=` (§9), cada uno con SU
+            % El `for` acumula los medios ciclos con `path +=`, cada uno con SU
             % amplitud (un concat no cubre la longitud variable en v).
             eprev = 0                              % extremo previo (arranca en la cola)
             path w = sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tL) 0 }
@@ -173,7 +179,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
             fit(Nivel(&w), stretch=true) { (rm-gL) (toff+E-h)  (rp+gR) (toff+E+h) }
 
             etq = str(v)
-            if v == 0 { etq = lab0[pozo] }         % §5.3: default afuera, if lo ajusta
+            if v == 0 { etq = lab0[pozo] }         % default afuera, if lo ajusta
             xl = re - ln(1 - sqrt((E+elab)/D))/a
             if xl < rp+gR+0.05 { xl = rp+gR+0.05 }
             if xl > rp+gR+0.20 { xl = rp+gR+0.20 }

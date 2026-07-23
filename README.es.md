@@ -12,6 +12,9 @@ Describes *qué es la figura* —puntos, paths, structs, transformaciones— y `
 
 Se creó para figuras de publicaciones científicas —entre ellas los libros de mecánica cuántica de Ana María Cetto y Luis de la Peña— y lleva cerca de cuatro décadas en uso.
 
+**→ [Ver la galería](https://asierra.github.io/Metagrafica/docs/galeria.html)** — las 21
+figuras de ejemplo, cada una junto al código que la dibuja.
+
 ## Inicio rápido
 
 Nada mejor que un ejemplo para una primera impresión del lenguaje.
@@ -190,6 +193,9 @@ bin/mg figura.mg sal.pdf      # → PDF
 | `-v` | versión |
 
 ## Ejemplos
+
+La **[galería](https://asierra.github.io/Metagrafica/docs/galeria.html)** los muestra a
+todos renderizados, con su código.
 
 En [`examples/`](examples/) está el corpus vivo donde se pueden ver diferentes funcionalidades: todos sus archivos compilan con el binario actual y se verifican en cada cambio.
 

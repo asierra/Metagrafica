@@ -1,10 +1,17 @@
-% El ejemplo del README (sección "Quick start"). Si lo cambias, regenera su SVG:
+% El ejemplo del README — y = x², con ejes, malla y leyenda.
 %
+% La figura más corta que muestra el lenguaje de gráficas completo: `plot` mapea
+% unidades de datos a una caja en centímetros, y los ejes heredan los rangos y se
+% rotulan solos.
+%
+% NOTAS --------------------------------------------------------------------
+% Si lo cambias, regenera su SVG:
 %     bin/mg examples/quickstart.mg docs/img/quickstart.svg
 %
-% Está en el corpus golden (test/run.sh) a propósito: el ejemplo que la portada del
-% proyecto le enseña al mundo no puede romperse en silencio — es exactamente lo que
-% le pasó al ejemplo del man, que quedó en sintaxis V1 y hoy ni compila.
+% Está en el corpus golden a propósito: el ejemplo que la portada del proyecto le
+% enseña al mundo no puede romperse en silencio. Le pasó al ejemplo del man, que
+% se quedó en la sintaxis vieja sin que nadie lo notara hasta que dejó de
+% compilar.
 
 display_size 9 5.5
 font_size 9

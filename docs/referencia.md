@@ -141,7 +141,7 @@ polyline { 0 0  (p)  5 5 }                     % escalares y un punto p mezclado
 `circle-dot`. También el nombre de un `struct` propio. `dot(r)` es el atajo del disco y no
 lleva `shape=`.
 
-**`compound`** une varias primitivas en **un solo** trazo relleno (§9.4):
+**`compound`** une varias primitivas en **un solo** trazo relleno:
 
 ```octave
 compound(fill="orange") { circle(2) { 0 0 }   circle(1) { 0 0 } }
@@ -185,7 +185,7 @@ contorneado. `fill="none"` apaga el relleno.
 **Líneas:** `line_width` en pt. `dash` acepta `"solid"`, `"dashed"`, `"dotted"`,
 `"longdashed"`, `"shortdashed"`, `"dashdot"`, `"dashdotdot"`.
 
-**Tramas** (§4.11): `hatch` acepta un **ángulo libre** en grados o un estilo nombrado
+**Tramas:** `hatch` acepta un **ángulo libre** en grados o un estilo nombrado
 (`"hatch"` 45°, `"hatchback"` 135°, `"crosshatch"` ambas). `hatch_gap` es la separación en
 pt. La trama usa el **color de relleno**; no hay `hatch_color`.
 
@@ -375,7 +375,7 @@ cuatro formas de invocar (directa, `place`, `fit`, `repeat`).
 
 ## 9. Transformaciones
 
-Sentencias que afectan a lo que sigue en el bloque (§11.1), en orden de escritura:
+Sentencias que afectan a lo que sigue en el bloque, en orden de escritura:
 
 ```octave
 { translate 3 2   rotate 30   scale 2 1   shear 0.4 0
@@ -531,7 +531,7 @@ legend(at="top-right") {
 `row_height`, `decimals`, `align`, `border`, `fill`, `label_col`, `label_font`, `font_size`.
 `at=` acepta una **esquina nombrada** (dentro de un plot) o un **punto `(x,y)`** (fuera).
 
-**Generadores sueltos** (§13): `numbers`, `ticks`, `axis`, `grid` funcionan también fuera de
+**Generadores sueltos:** `numbers`, `ticks`, `axis`, `grid` funcionan también fuera de
 un `plot`, con su propio bloque de coordenadas.
 
 > ⚠️ **Bajo escala log**, colocar structs dentro del contenido es error (su matriz no compone
@@ -542,7 +542,7 @@ un `plot`, con su propio bloque de coordenadas.
 
 ## 12. Bibliotecas
 
-Una **biblioteca es un `.mg` de structs** que se trae con `include` (§15):
+Una **biblioteca es un `.mg` de structs** que se trae con `include`:
 
 ```octave
 include "pseudo3d.mg"      % relativo al archivo que lo incluye

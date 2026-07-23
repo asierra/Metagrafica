@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="425.196850pt" height="212.598425pt" viewBox="0 -212.598425 425.196850 212.598425" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="-212.598425" width="425.196850" height="212.598425" fill="#ffffff"/>
+<g transform="scale(1, -1)">
+<path d="M 125.058 47.522 C 141.732 89.208, 158.017 172.258, 175.081 172.58 C 191.399 172.888, 208.43 60.0278, 225.104 60.0278 C 241.779 60.0278, 262.402 173.685, 275.127 172.58 C 286.771 171.569, 291.802 105.882, 300.139 72.5336 " fill="none" stroke-width="1.2" stroke="#000000" />
+<circle cx="125.057897" cy="47.522001" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="141.922535" cy="90.178237" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="150.751769" cy="135.206684" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="166.144391" cy="172.411341" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="194.476769" cy="152.491757" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="201.323557" cy="107.119543" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="208.170346" cy="61.747328" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="243.706494" cy="70.652423" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="251.898943" cy="115.801068" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="260.091392" cy="160.949713" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="287.418899" cy="163.111453" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="290.922787" cy="117.359522" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="300.138953" cy="72.533580" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<circle cx="125.057897" cy="47.522001" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="138.083365" cy="86.511606" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="150.019915" cy="125.860142" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="165.272240" cy="163.956390" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="189.320712" cy="150.093730" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="201.616687" cy="110.861118" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="214.975484" cy="72.004504" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="238.913639" cy="79.636767" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="252.167311" cy="118.549313" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="265.125883" cy="157.563951" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="284.995239" cy="153.345636" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="292.558040" cy="112.937794" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<circle cx="300.138953" cy="72.533580" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<path d="M 214.975 72.0045 L 214.215 91.1174 L 209.598 83.0173 L 200.371 84.3568 Z " fill="#0000FF" stroke="none" />
+<polyline points="165.272,163.956 162.011,160.49 158.354,157.271 153.905,154.546 160.334,156.037 161.825,149.607 162.314,154.802 163.595,159.503 165.272,163.956 " fill="none" stroke="#800080" stroke-width="1.200000" />
+<circle cx="115.053265" cy="205.094951" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
+<text x="122.556739" y="-202.694951" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">curve=true — punto sobre la curva</tspan></text>
+<circle cx="115.053265" cy="190.088004" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />
+<text x="122.556739" y="-187.688004" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">default — punto sobre la envolvente</tspan></text>
+<path d="M 115.053 175.081 L 97.5452 182.785 L 102.798 175.081 L 97.5452 167.377 Z " fill="#0000FF" stroke="none" />
+<text x="122.556739" y="-172.681056" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">point_at + angle_at en t=0.5</tspan></text>
+</g>
+</svg>

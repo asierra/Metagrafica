@@ -1,22 +1,24 @@
-% ═════════════════════════════════════════════════════════════════════════════
-% Comportamiento de ψ según la energía: oscilatoria donde E > V, exponencial
-% donde E < V, y los puntos de retorno clásicos como frontera entre ambas.
+% Comportamiento de ψ según la energía — los puntos de retorno clásicos.
 %
-% Figura PARAMÉTRICA: nada está medido. Se dan las asíntotas del potencial, su
-% mínimo, los tres puntos de retorno y las tres energías; de ahí salen en forma
-% cerrada la curva V(x), y por WKB las longitudes de onda, las amplitudes y las
-% colas. Contraparte de la Fig. 4.5 de «Quantum Mechanics» (Cambridge, 2025),
-% p. 80, que ilustra lo mismo con las ondas dibujadas a mano.
+% Oscilatoria donde E > V, exponencial donde E < V, y los puntos de retorno como
+% frontera entre ambas. Figura PARAMÉTRICA: se dan las asíntotas del potencial,
+% su mínimo, los tres retornos y las tres energías, y de ahí salen en forma
+% cerrada la curva V(x) y, por WKB, las longitudes de onda, las amplitudes y las
+% colas.
 %
-% POR QUÉ NO ES UN PORT FIEL (medido sobre la figura publicada, 2026-07-20):
-% las tres ondas de la figura del libro NO pueden ser la misma partícula. La
-% fase ∫k dx por lóbulo varía hasta 3× dentro de una misma onda (cada región se
-% dibujó repitiendo un ciclo a escala elegida a ojo), y no existe constante de
-% fase que reproduzca a la vez sus tres densidades: con ψ_c de 4 antinodos —los
-% que tiene— la misma partícula exige ψ_a≈24 y ψ_b≈13 lóbulos, contra 13 y 8
-% dibujados. Aquí las tres COMPARTEN constante, que es la afirmación fuerte.
+% NOTAS --------------------------------------------------------------------
+% Contraparte de la Fig. 4.5 de «Quantum Mechanics» (Cambridge, 2025), p. 80, que
+% ilustra lo mismo con las ondas dibujadas a mano. NO lleva número de figura
+% porque NO es un port fiel, y no puede serlo (medido sobre la figura publicada,
+% 2026-07-20): las tres ondas del libro no pueden ser la misma partícula. La fase
+% ∫k dx por lóbulo varía hasta 3× dentro de una misma onda —cada región se dibujó
+% repitiendo un ciclo a escala elegida a ojo— y no existe constante de fase que
+% reproduzca a la vez sus tres densidades: con ψ_c de 4 antinodos, los que tiene,
+% la misma partícula exige ψ_a≈24 y ψ_b≈13 lóbulos, contra 13 y 8 dibujados. Aquí
+% las tres COMPARTEN constante, que es la afirmación fuerte. El número de figura
+% es una promesa de fidelidad, y por eso este archivo no lo usa.
 %
-% CÓMO RE-MEDIR LA FIGURA PUBLICADA. Es VECTORIAL en el PDF de Cambridge (sin
+% CÓMO RE-MEDIR LA FIGURA PUBLICADA. Es VECTORIAL en el PDF de Cambridge (no hay
 % imágenes en la página), así que se extrae con
 %     mutool draw -F trace -o - Quantum_Mechanics.pdf 94      (pág. 80 del libro)
 % Su sistema de coordenadas se deduce de las tres verticales y las ocho
@@ -24,17 +26,16 @@
 %     x = 0 → 245.89 pt,  x = 1 → 308.25 pt   (62.360 pt/unidad)
 %     y = 5.2 → 77.99 pt, y = 4.9 →  85.67 pt (25.600 pt/unidad, hacia abajo)
 % De ahí la anisotropía publicada, 62.360/25.600 = 2.4359, que es exactamente el
-% aspecto de la ventana (9.5/3.9) y es el `kx` de abajo. La figura de Cambridge
-% resultó ser el MISMO dibujo que el EPS original de 1998 —mismos conteos de
-% segmentos (ψ_a=13, ψ_b=9, ψ_c=5) y mismos extremos dentro de 0.002 unidades—,
-% así que ese EPS se borró: éste es mejor oráculo y es público.
+% aspecto de la ventana (9.5/3.9) y es el `kx` de abajo. Esa figura resultó ser el
+% MISMO dibujo que el EPS original de 1998 —mismos conteos de segmentos
+% (ψ_a=13, ψ_b=9, ψ_c=5) y mismos extremos dentro de 0.002 unidades—, así que el
+% EPS se borró: éste es mejor oráculo, y es público.
 %
 % Los nodos con que se dibujaba V(x) a mano eran, por si hicieran falta:
 %   -1.3 4.9  -1 4.9  -0.6 4.8  -0.35 4.5  0 3.7  0.25 3.3  0.576 3.25
 %   0.7 3.35  1 3.7  1.15 3.85  1.36 4.075  1.6 4.225  2 4.35  2.3 4.4
-% El V(x) analítico de abajo los reproduce con 0.9 pt de error máximo, por
-% debajo del ruido de digitalización, y además clava los retornos en −0.35, 0 y 1.
-% ═════════════════════════════════════════════════════════════════════════════
+% El V(x) analítico de abajo los reproduce con 0.9 pt de error máximo, por debajo
+% del ruido de digitalización, y además clava los retornos en −0.35, 0 y 1.
 
 display_size 8.5 8.5
 font_size 8
@@ -73,7 +74,7 @@ wr = (x2-xm) / ((0-ln((Vr-Ec)/(Vr-Vm)))^(1/qr))
 
 % ── encuadre ─────────────────────────────────────────────────────────────────
 % La ventana tiene aspecto 3.9:9.5 y el lienzo es cuadrado. V3 es isométrico
-% (§3.1), así que sin corregir letterboxearía a un buzón angosto. Se ensancha la
+%, así que sin corregir letterboxearía a un buzón angosto. Se ensancha la
 % ventana en x por el mismo factor y se dibuja bajo un `scale` anisótropo. Es
 % seguro para los rótulos: bajo un transform V3 mueve el ANCLA del texto, no los
 % glifos (verificado: el `scalefont` del EPS sale idéntico).
@@ -101,7 +102,7 @@ for i = 1 to NQ {
 C = (nodos+0.5)*pi/Sq
 
 % ── la curva del potencial ───────────────────────────────────────────────────
-% Se acumula como segmentos rectos con `path +=` (§9): cada pieza es RELATIVA,
+% Se acumula como segmentos rectos con `path +=`: cada pieza es RELATIVA,
 % y el empalme de concat (inicio de la siguiente = final de la anterior) las
 % encadena en la curva absoluta. Es la vía para dibujar una función cuando el
 % nº de puntos depende de una variable — un bloque de coordenadas no lleva `for`.
@@ -140,7 +141,7 @@ tvx = xmin   tvy = Vini
 { translate tvx tvy   polyline(&curvaV) }
 
 % ── las tres funciones de onda ───────────────────────────────────────────────
-% Un solo lazo para las tres (listas §5.1), así la construcción WKB aparece UNA
+% Un solo lazo para las tres (listas), así la construcción WKB aparece UNA
 % vez. Cada onda marcha en x acumulando la fase ∫k dx; cada vez que la fase
 % avanza π hay un extremo, y entre extremos consecutivos se emite un medio ciclo
 % de `sine` con `path +=` — pendiente cero en la unión, luego empalme liso.

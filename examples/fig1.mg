@@ -1,8 +1,16 @@
-% Fig. 1. The H₂O content in the atmosphere (−u_A_x) as a function of height (z).
-% The continuous line corresponds to the computed values using formulas (15) and
-% (18). The encircle dots and crosses correspond to the Houghton (1979) - Holton
-% (1979) and Peixóto and Oort (1984)- Holton (1979) observed values, respectively. 
-% From Garduño, Atmosfera, Vol. 1, 1988. DOI: https://doi.org/10.20937/ATM.25946 
+% Contenido de H₂O en la atmósfera como función de la altura.
+%
+% La línea continua son los valores calculados; los círculos y las cruces, dos
+% conjuntos de valores observados. Marcadores sobre datos, con rótulos de ejes en
+% notación matemática.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 1 de R. Garduño, Atmósfera 1, 1988 — https://doi.org/10.20937/ATM.25946
+% Pie original: «The H₂O content in the atmosphere (−u_A_x) as a function of
+% height (z). The continuous line corresponds to the computed values using
+% formulas (15) and (18). The encircled dots and crosses correspond to the
+% Houghton (1979) - Holton (1979) and Peixóto and Oort (1984) - Holton (1979)
+% observed values, respectively.»
 
 display_size 12 8
 

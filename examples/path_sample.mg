@@ -1,19 +1,20 @@
-% ─────────────────────────────────────────────────────────────────────────────
-% Muestreo de un path por longitud de arco: sample / point_at / angle_at (§9).
+% Muestreo de un trayecto: sample, point_at y angle_at.
 %
-% La familia LEE geometría de una curva en un parámetro t∈[0,1] recorrido por
-% LONGITUD DE ARCO — así t=0.5 es el medio GEOMÉTRICO, no la mitad de los
-% segmentos. El flag `curve` fija la interpretación del path (que es neutro):
-%   curve=false (default) — puntos como VÉRTICES → toca la ENVOLVENTE (verde)
-%   curve=true            — controles bézier, evalúa la cúbica → toca la CURVA (rojo)
+% Esta familia LEE la geometría de una curva en un parámetro t entre 0 y 1
+% recorrido por LONGITUD DE ARCO, así que t=0.5 es el medio GEOMÉTRICO y no la
+% mitad de los segmentos. El flag `curve` fija cómo se interpreta el trayecto,
+% que es neutro: en verde los puntos como vértices (toca la envolvente), en rojo
+% como controles bézier (toca la curva).
 %
-% point_at devuelve un punto [x,y], que se usa de dos formas: colocando una STRUCT
-% con at= (flecha AZUL, t=0.5), o metiéndolo DIRECTO en el bloque {} de una
-% primitiva (flecha MORADA = marker suelto, t=0.25) — el bloque acepta un punto,
-% no solo pares de escalares. Las dos se orientan con rotate=angle_at(...).
+% NOTAS --------------------------------------------------------------------
+% point_at devuelve un punto [x,y], que se usa de dos formas: colocando una
+% struct con at= (flecha AZUL, t=0.5), o metiéndolo DIRECTO en el bloque {} de
+% una primitiva (flecha MORADA, un marker suelto en t=0.25) — el bloque acepta un
+% punto, no solo pares de escalares. Las dos se orientan con rotate=angle_at(…).
 %
-% Único ejemplo del corpus que ejercita sample/point_at/angle_at.
-% ─────────────────────────────────────────────────────────────────────────────
+% ⚠ COBERTURA EXCLUSIVA: es el único ejemplo que ejercita sample, point_at y
+% angle_at.
+
 display_size 15 7.5
 world_window -0.4 8.4 -0.9 7.6
 

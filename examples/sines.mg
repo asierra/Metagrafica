@@ -1,14 +1,14 @@
-% Showcase de la primitiva `sine` (§4.13).
+% Ondas — la primitiva `sine`.
 %
-% Inspirado en examples/v1/bzsinepaths-examples.mg, pero SIN incluir bzsinepaths:
-% en V3 `sine` genera las curvas bezier por dentro (una línea por onda) en vez de
-% ensamblar a mano `&sinpi`/`&sin2pi`/`&cos2pi` con RPPT y la pila de matrices de
-% path (IDPT/TLPT/SCPT). Cada `sine` recibe base (2 puntos), nº de medios ciclos y
-% amplitud; la onda oscila perpendicular a la base.
+% Cada `sine` recibe una base de dos puntos, un número de medios ciclos y una
+% amplitud, y genera por dentro las curvas bézier: la onda oscila perpendicular a
+% su base, sea cual sea su orientación. Aquí se ven la fase 0 y la variante
+% cuadrada.
 %
-% phase (múltiplos de 90°: coseno etc.) está implementado por cuartos de ciclo;
-% este ejemplo muestra phase=0 y squared. `sine` también puede usarse como
-% expresión de path del álgebra §9 (ver franck_condon.mg).
+% NOTAS --------------------------------------------------------------------
+% `phase` (múltiplos de 90°: coseno, etc.) está implementado por cuartos de
+% ciclo. `sine` sirve también como expresión del álgebra de trayectos, no solo
+% como primitiva que dibuja — ver franck_condon.mg.
 
 display_size 12 10
 font_size 9

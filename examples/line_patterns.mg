@@ -1,6 +1,8 @@
-% Patrones y anchos de línea — traducción V3 de examples/v1/line_patterns.mg
+% Patrones y anchos de línea — lámina de referencia.
 %
-
+% Los seis estilos de `dash` a la izquierda y una escala de `line_width` en
+% puntos tipográficos a la derecha, generados con un `for` sobre una lista.
+% Hermana de primitives.mg y fill_styles.mg.
 
 display_size 14 7
 font_size 8
@@ -9,7 +11,7 @@ world_window -1 13 -0.5 6.5
 % marco
 rectangle { -0.95 -0.45  12.95 6.45 }
 
-% Patrones de línea (V1 LPATRN 0..5 → alias de dash, §4.10).
+% Patrones de línea: los alias de dash.
 % dash por primitiva: cada línea usa uno distinto; line_width compartido como estado.
 
 text("Line Patterns with dash") { 1 6.0 }

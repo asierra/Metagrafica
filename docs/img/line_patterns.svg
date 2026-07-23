@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="396.850394pt" height="198.425197pt" viewBox="0 -198.425197 396.850394 198.425197" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="-198.425197" width="396.850394" height="198.425197" fill="#ffffff"/>
+<g transform="scale(1, -1)">
+<path d="M 1.41732 1.41732 L 395.433 1.41732 L 395.433 197.008 L 1.41732 197.008 Z " fill="none" stroke-width="1" stroke="#000000" />
+<text x="56.692913" y="-184.251969" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Line Patterns with dash</tspan></text>
+<text x="216.291339" y="-184.251969" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Line Widths with </tspan></text>
+<text x="274.291339" y="-184.251969" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Courier New', Courier, 'Liberation Mono', 'Nimbus Mono', monospace" font-style="normal" font-weight="normal">line_width</tspan></text>
+<text x="269.291339" y="-175.748031" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="6.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">(units of typographic points)</tspan></text>
+<path d="M 28.3465 14.1732 L 170.079 14.1732 " fill="none" stroke-width="0.2" stroke="#000000" />
+<text x="28.346457" y="-17.007874" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Pattern solid</tspan></text>
+<path d="M 198.425 14.1732 L 340.157 14.1732 " fill="none" stroke-width="0.5" stroke="#000000" />
+<text x="198.425197" y="-17.007874" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Width 0.0</tspan></text>
+<path d="M 28.3465 42.5197 L 170.079 42.5197 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="8,2" />
+<text x="28.346457" y="-45.354331" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Pattern longdashed</tspan></text>
+<path d="M 198.425 42.5197 L 340.157 42.5197 " fill="none" stroke-width="0.2" stroke="#000000" />
+<text x="198.425197" y="-45.354331" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Width 0.2</tspan></text>
+<path d="M 28.3465 70.8661 L 170.079 70.8661 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="4,2" />
+<text x="28.346457" y="-73.700787" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Pattern dashed</tspan></text>
+<path d="M 198.425 70.8661 L 340.157 70.8661 " fill="none" stroke-width="0.4" stroke="#000000" />
+<text x="198.425197" y="-73.700787" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Width 0.4</tspan></text>
+<path d="M 28.3465 99.2126 L 170.079 99.2126 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="1,1" />
+<text x="28.346457" y="-102.047244" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Pattern dotted</tspan></text>
+<path d="M 198.425 99.2126 L 340.157 99.2126 " fill="none" stroke-width="0.6" stroke="#000000" />
+<text x="198.425197" y="-102.047244" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Width 0.6</tspan></text>
+<path d="M 28.3465 127.559 L 170.079 127.559 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="4,2,1,2" />
+<text x="28.346457" y="-130.393701" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Pattern dashdot</tspan></text>
+<path d="M 198.425 127.559 L 340.157 127.559 " fill="none" stroke-width="0.8" stroke="#000000" />
+<text x="198.425197" y="-130.393701" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Width 0.8</tspan></text>
+<path d="M 28.3465 155.906 L 170.079 155.906 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="4,2,1,2,1,2" />
+<text x="28.346457" y="-158.740157" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Pattern dashdotdot</tspan></text>
+<path d="M 198.425 155.906 L 340.157 155.906 " fill="none" stroke-width="1" stroke="#000000" />
+<text x="198.425197" y="-158.740157" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">Width 1.0</tspan></text>
+</g>
+</svg>

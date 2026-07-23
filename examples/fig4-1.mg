@@ -1,19 +1,21 @@
-% Fig 2.1 de IMQ (difracción de electrones) — 4 paneles a) b) c) d).
-% Render objetivo: examples/v1/reference/fig4-1.svg.
+% Difracción de electrones — cuatro paneles, de una y de dos rendijas.
 %
-% Reescritura V3 declarativa (sin el truco V1 `rotate 90`): las curvas de
-% difracción viven en curvas3.mg como DATOS naturales (x=posición t, y=intensidad,
-% §9); aquí se TRANSPONEN (`transpose`, intensidad horizontal) y se colocan con
-% `fit` directo en su rectángulo, sin rotar ni `at`. La base común (pantallas +
-% haz) se factoriza en `Aparato`. Paneles en el orden del oráculo: aparato+
-% detectores ARRIBA (a,b), aparato+curvas ABAJO (c,d).
+% Las curvas de intensidad viven en curvas3.mg como datos naturales (posición
+% contra intensidad); aquí se TRANSPONEN para que la intensidad quede horizontal
+% y se colocan con `fit` en su rectángulo, sin rotar nada. La base común
+% —pantallas y haz— se factoriza en una struct.
+%
+% NOTAS --------------------------------------------------------------------
+% Fig. 2.1 de «Introducción a la mecánica cuántica», L. de la Peña (FCE/UNAM).
+% Orden de los paneles: aparato con detectores arriba (a, b), aparato con curvas
+% abajo (c, d).
 
 display_size 11 7.7
 font_size 8
 
 include "curvas3.mg"     % curvas de onda TRANSPUESTAS: SenDeriv2Sym / SenCosDeriv2Sym
 
-% ── Aparato: pantallas con rendijas (fiel al V1) ─────────────────────────────
+% ── Aparato: pantallas con rendijas ──────────────────────────────────────────
 struct Marco() {
     world_window 0 2.2 0 1
     line_width 0.1

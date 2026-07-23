@@ -1,26 +1,22 @@
-% ─────────────────────────────────────────────────────────────────────────────
 % Tiro parabólico — una trayectoria muestreada punto a punto.
 %
-% Ilustra tres cosas del lenguaje a la vez:
-%   · `path +=` construye la curva punto a punto en un `for` (§9), y las mismas
-%     coordenadas alimentan las proyecciones a cada eje.
-%   · la malla NO es un `grid` regular ni una escala log: en x el paso es
-%     constante, pero en y los puntos caen donde la física los pone (Δy CRECE).
-%     Una escala log ni siquiera existiría —la trayectoria llega a y<0—. Las
-%     líneas guía se dibujan en el mismo lazo, ajustadas a los datos.
-%   · el cañón es una `struct` con la BOCA en su origen local (0,0): se ensambla
-%     solo y se coloca con `at=(x0,y0)`, la misma variable que fija el origen de
-%     la trayectoria. Mover `y0` mueve cañón y curva JUNTOS.
+% Tres cosas a la vez: `path +=` construye la curva dentro de un `for`, y las
+% mismas coordenadas alimentan las proyecciones a cada eje; la malla no es
+% regular ni logarítmica, sino que cae donde la física pone los puntos; y el
+% cañón es una struct con la BOCA en su origen local, colocada con la misma
+% variable que fija el origen de la trayectoria, así que mover y0 mueve el cañón
+% y la curva JUNTOS.
 %
+% NOTAS --------------------------------------------------------------------
 % Y ES UNA PARÁBOLA DE VERDAD, no la ilustración de una. La trayectoria sale de
-% y = y0 − k·(x−x0)² (física: y ∝ x²), así que k = (y0−y)/(x−x0)² es CONSTANTE en
-% los siete puntos (0.06838) — verificado. La figura de referencia que inspiró
-% este ejemplo dibujaba un arco que se PARECE a una trayectoria; medido, es un
-% semicírculo, que se desvía ~4 unidades de la parábola en el punto medio. No es
-% que se parezca menos: es una curva cualitativamente distinta. Ilustrar y calcular
+% y = y0 − k·(x−x0)², así que k = (y0−y)/(x−x0)² es CONSTANTE en los siete puntos
+% (0.06838) — verificado. La figura de referencia que inspiró este ejemplo
+% dibujaba un arco que se PARECE a una trayectoria; medido, es un semicírculo,
+% que se desvía unas 4 unidades de la parábola en el punto medio. No es que se
+% parezca menos: es una curva cualitativamente distinta. Ilustrar y calcular
 % producen curvas diferentes, y solo la calculada es correcta — la tesis de
 % docs/calcular_en_vez_de_medir.md, en pequeño.
-% ─────────────────────────────────────────────────────────────────────────────
+
 display_size 13 7
 world_window -2 11 2 9
 

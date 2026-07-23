@@ -1,18 +1,14 @@
-% ═════════════════════════════════════════════════════════════════════════════
-% Catálogo de los símbolos matemáticos que se escriben `\comando` (§14).
+% Catálogo de los símbolos matemáticos que se escriben \comando.
 %
-% Showcase, como `markers-demo` o `line_patterns`: su trabajo es que la tabla de
-% símbolos no pueda romperse en silencio. Son los 69 nombres de
-% `map_symbol` que salen por el font **Symbol**; los ~38 griegos de esa misma
-% tabla NO están aquí porque `get_symbol_code` los desvía antes a `map_tex_cmmi`
-% (ya en Latin Modern Math) y el corpus ya los ejercita —`turning_points`,
-% `franck_condon`.
+% Los 69 nombres de la tabla de símbolos, compuestos en Latin Modern Math. Las
+% letras griegas no están aquí: viajan por otra tabla, y las ejercitan
+% turning_points.mg y franck_condon.mg.
 %
-% Es la referencia de la migración P1 de `plan_lmmath.md` (Symbol → LM Math):
-% el golden por bytes NO puede validar ese cambio —todos los símbolos cambian de
-% fuente, así que los bytes se mueven por diseño— y lo único que distingue
-% "arreglado" de "roto" es comparar estos 69 glifos antes y después.
-% ═════════════════════════════════════════════════════════════════════════════
+% NOTAS --------------------------------------------------------------------
+% Su trabajo es que la tabla de símbolos no pueda romperse en silencio. El golden
+% por bytes NO pudo validar la migración a Latin Modern Math —todos los símbolos
+% cambian de fuente, así que los bytes se mueven por diseño— y lo único que
+% distinguía «arreglado» de «roto» fue comparar estos 69 glifos antes y después.
 
 display_size 17 12
 world_window 0 7 0 10.6

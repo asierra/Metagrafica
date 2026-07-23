@@ -1,7 +1,8 @@
-% Curvas de difracción para fig4-1 — DATOS puros (§9), sin structs.
-% (t = posición en la pantalla, I = intensidad), verbatim del V1. fig4-1 las
-% TRANSPONE (intensidad horizontal) y las coloca con fit; aquí solo viven los datos
-% y su derivación simétrica.
+% Curvas de difracción de electrones — BIBLIOTECA DE DATOS, no dibuja nada.
+%
+% Intensidad contra posición en la pantalla, para una y dos rendijas. Este archivo
+% solo define trayectos: los usa fig4-1, que los transpone y los coloca con fit.
+% Compilarlo por sí solo produce una página en blanco, y eso es correcto.
 
 % Media curva y(t) = (sin(pi*t)/t)^2  — patrón de UNA rendija, 0 <= t <= 2.
 path SenDeriv2 = {
@@ -45,8 +46,8 @@ path SenCosDeriv2 = {
 
 % Perfil simétrico: el espejo de la media curva (reorientado con reverse, para
 % que TERMINE en el pico) + la media curva, soldados por el pico central con
-% concat (§9: cada operando pega su INICIO al final del anterior, sin
-% auto-reversión). Sustituye los dos `fit` reflejados del V1.
+% concat (cada operando pega su INICIO al final del anterior, sin
+% auto-reversión).
 path SenDeriv2Sym    = concat(reverse(flip_x(&SenDeriv2)),    &SenDeriv2)
 path SenCosDeriv2Sym = concat(reverse(flip_x(&SenCosDeriv2)), &SenCosDeriv2)
 

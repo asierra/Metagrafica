@@ -16,6 +16,9 @@ parameterized and regenerated.
 It was created for the figures of scientific publications — among them Ana María Cetto and
 Luis de la Peña's quantum mechanics textbooks — and has been in use for nearly four decades.
 
+**→ [See the gallery](https://asierra.github.io/Metagrafica/docs/galeria.html)** — the 21
+example figures, each one next to the source that draws it.
+
 ## Quick start
 
 Nothing beats an example for a first impression of the language.
@@ -223,6 +226,9 @@ bin/mg figure.mg out.pdf      # → PDF
 | `-v` | version |
 
 ## Examples
+
+The **[gallery](https://asierra.github.io/Metagrafica/docs/galeria.html)** shows every one
+of them rendered, with its source.
 
 [`examples/`](examples/) holds the working corpus, where you can see the different
 features in action — every file there compiles with the current binary and is checked on
