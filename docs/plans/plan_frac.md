@@ -7,9 +7,10 @@ del fuente e insertarlos por clase de átomo, como TeX). Las dos van en este pla
 el mismo esfuerzo —"que `$…$` componga como TeX"— y la figura que pide una pide la otra.
 
 Estado: **`\frac` con SPIKE hecho (2026-07-23), producción DIFERIDA por decisión de
-Alejandro.** El código del spike de `\frac` queda en el árbol **sin commitear** como base
-(opción "c"); este plan guarda lo aprendido para retomarlo sin re-descubrirlo. El espaciado
-automático (2) está **diagnosticado, no empezado**.
+Alejandro.** El código del spike de `\frac` queda **committeado en `main` como base WIP**
+(dormante: `ok=66`, ningún ejemplo lo usa; standalone anda en EPS/PDF, con un bug de centrado
+en SVG e inline sin implementar); este plan guarda lo aprendido para retomarlo sin
+re-descubrirlo. El espaciado automático (2) está **diagnosticado, no empezado**.
 
 Lo destapó `local/gravitacion_orbita.mg`: sus fórmulas (`F = G m₁m₂/r²`) fingen una fracción
 con `/n` (salto de línea) + `align="center"`, y se amontonan — el numerador mete `F =` en la

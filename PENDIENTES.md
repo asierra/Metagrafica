@@ -219,7 +219,8 @@ orden de la lista es la ejecución.
       compone). El spike probó la composición 2-D con **cero métodos nuevos en backends**
       (EPS/PDF centran bien; SVG con un bug de centrado acotado) en ~118 líneas; el costo real
       (~1 semana) está en generalizar `TextLine` a un contenedor de items para el caso INLINE,
-      no en los backends. Código del spike **sin commitear** como base. **(2) Espaciado
+      no en los backends. Código del spike **committeado en `main` como base WIP** (dormante,
+      `ok=66`). **(2) Espaciado
       automático estilo TeX** — diagnosticado 2026-07-23: hoy los espacios de `$…$` se imprimen
       literales; quitarlos a secas rompe 12 goldens (cramps `=`, funciones, comas). El arreglo
       correcto es ignorar el espacio del fuente **e insertar** por clase de átomo (relación /
