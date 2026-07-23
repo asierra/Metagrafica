@@ -160,6 +160,9 @@ bin/mg examples/fig6-4.mg sal.svg
 | `fractal_tree.mg` | **recursión**: una estructura que se contiene a sí misma |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | láminas de referencia |
 
+Si quieres trabajar en el compilador, [`CONTRIBUTING.md`](CONTRIBUTING.md) tiene las reglas
+y las compuertas de prueba.
+
 **[Calcular en vez de medir](docs/calcular_en_vez_de_medir.md)** desarrolla ese último caso:
 figuras cuya geometría sale de las fórmulas y no de medir un dibujo. Cambias un número —la
 anarmonicidad de un potencial, el número de nodos de un estado— y la figura entera se

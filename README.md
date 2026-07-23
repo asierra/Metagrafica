@@ -193,6 +193,9 @@ bin/mg examples/fig6-4.mg out.svg
 | `fractal_tree.mg` | **recursion**: a structure that contains itself |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | reference sheets |
 
+If you want to work on the compiler itself, [`CONTRIBUTING.md`](CONTRIBUTING.md) has the
+rules and the test gates.
+
 **[Computing instead of measuring](docs/computing_instead_of_measuring.md)** develops that
 last case: figures whose geometry comes out of the formulas rather than out of measuring a
 drawing. Change one number —the anharmonicity of a potential, the node count of a state— and
