@@ -56,8 +56,25 @@ investigar resultó ser **dos problemas con una causa común**.
   math queda bien posicionada (verificado el render). Re-bendecir con `capture` + `images`.
 - Salió en pocas horas, como se estimó. **Con esto la fundación que `\frac` necesita está.**
 
-### Parte B — espaciado automático estilo TeX. **Diseñada, no lista (falta un pase).**
-La pieza grande. Requiere **átomos homogéneos con clase**:
+### Parte B — espaciado automático estilo TeX. ✅ **HECHA 2026-07-23.**
+Ejecutada tras cerrar el pase de decisiones con Alejandro (las tres, como se
+recomendaba): **puro TeX** (consumir todos los espacios del fuente), **anular** el
+espaciado dentro de sub/superíndices, y **regla TeX** para el unario. Implementación:
+- `text_parser.cpp`: enum `MathClass` + `mathClassOfByte`/`mathClassOfName` +
+  `mathGlue` (tabla TeX thin=3/18, med=4/18, thick=5/18) + `mathAtomSpace` (reclasa el
+  unario, anula en índices, suma los overrides). El espacio viaja como `pre_space` (em)
+  en `TextState`; `mathSeal()` sella el run previo para que dos entradillas no se
+  fusionen. Un `case ' '` consume los espacios del fuente en math.
+- `text.h`/`text.cpp`: `TextState::pre_space` (en `operator==`); `TextLine::width()` lo
+  suma y `TextLine::draw()` lo aplica (rmoveto). `textflush()` lo resetea tras hornearlo.
+- Overrides `\,` `\;` `\!` `\quad` (aditivos, en el `case '\\'`).
+- **Churn: 6 ejemplos** (quickstart, sines, franck_condon, texto, fig6-4, fig_polybar),
+  los 3 backends, **verificados a ojo uno por uno** (rasterizados vs. el golden limpio):
+  todos mejoran a tipografía TeX-correcta. `fig1` quedó byte-idéntico (el unario hizo
+  `-U_A` igual que antes). **c3fail=0** (paridad intacta) y **psfail=0** en todo. Smoke
+  test aparte de overrides/unario/binario/consumo de espacios: correcto.
+
+Lo que resta como diseño previo (histórico), para referencia:
 1. Al descargar cada trozo en `parse_text`, clasificarlo (Ord / Rel / Bin / Op(función) /
    Open / Close / Punct). La info casi está: los símbolos entran por `\name` con código, `=`
    `<` `>` son caracteres conocidos, `math_functions[]` ya lista `sin`/`cos`/…
@@ -93,5 +110,7 @@ La pieza grande. Requiere **átomos homogéneos con clase**:
 ## Veredicto de madurez
 
 - **Parte A: ✅ HECHA 2026-07-23** (churn = `sines.svg`, una corrección; `find()` sin churn extra).
-- **Parte B: diseño firme, ejecución NO lista** hasta cerrar unario/subíndice/overrides y
-  enumerar el churn. Es su propio pase, como fue el spike de `\frac`.
+- **Parte B: ✅ HECHA 2026-07-23** (churn = 6 ejemplos verificados; decisiones puro-TeX /
+  anular-índices / regla-unario, confirmadas con Alejandro). Con esto el espaciado math del
+  corpus queda TeX-correcto. Lo que queda para `gravitacion_orbita` es solo `\frac`
+  inline (`plan_frac.md`), que ya hereda la medición (Parte A) y el espaciado (Parte B).

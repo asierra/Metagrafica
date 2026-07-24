@@ -63,25 +63,34 @@ using FontMetricsMap = std::map<unsigned char, int>;
 
 
 struct TextState {
-  TextState() { font_face = FN_DEFAULT; font_size = 1; script = 0; }
+  TextState() { font_face = FN_DEFAULT; font_size = 1; script = 0; pre_space = 0; }
 
   FontFace font_face;
 
-  // This is a relative font size, the real size is property of the 
+  // This is a relative font size, the real size is property of the
   // external device
   double font_size;
 
   // 0 no script, upper > 0 , down < 0
   int script;
-  
+
+  // Espacio matemático ANTES de este run, en em (plan_text_space, Parte B): lo pone
+  // la tabla de clases TeX (Ord/Rel/Bin/…) en parse-time. Es propiedad del RUN, no
+  // del glifo: TextLine::width() lo suma y TextLine::draw() lo aplica (rmoveto) antes
+  // de dibujar el run. Entra en operator== para que dos runs con espaciado distinto
+  // NO se fusionen al acumular (colapsaría dos espacios en uno).
+  double pre_space;
+
   bool operator==( const TextState& other ) const {
         return font_face == other.font_face &&
                font_size    == other.font_size    &&
-               script    == other.script;
+               script    == other.script &&
+               pre_space == other.pre_space;
   }
   std::string str() { return "Face " + std::to_string(font_face) +
     " Size " + std::to_string(font_size) +
-    " Script " + std::to_string(script); }
+    " Script " + std::to_string(script) +
+    " Pre " + std::to_string(pre_space); }
 };
 
 // Ancho de una cadena en unidades em relativas (multiplicar por el tamaño de

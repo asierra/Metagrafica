@@ -1196,3 +1196,44 @@ que la imprecisión **solo mordía al SVG**; el beneficiario real de medir bien 
 aparte y **no agregó churn**. **No** se movió la partición al parser (el supuesto que daba miedo):
 se arregló `text_width` para que CUADRE con lo que los backends ya hacen, dejando la partición
 donde está. Falta la Parte B (espaciado automático) y bendecir `sines.svg` (`capture`+`images`).
+
+### Cerrado en la sesión del 2026-07-23 (espaciado math automático estilo TeX — `plan_text_space` Parte B)
+
+**El modo math ya no imprime los espacios del fuente: los pone la tabla de clases.** Motivado
+por `gravitacion_orbita` (`$F = G m_1 m_2$` con espacios de más). Ahora, dentro de `$…$`, los
+espacios del fuente se **consumen** (puro TeX) y el espaciado sale de clasificar cada átomo
+—Ord/Op/Bin/Rel/Open/Close/Punct— e insertar entre pares el glue de TeX (thin=3/18,
+med=4/18, thick=5/18 em). El espacio viaja como `pre_space` (em) en `TextState`;
+`TextLine::width()` lo suma y `TextLine::draw()` lo aplica con un `rmoveto`.
+
+🔎 **Tres decisiones de diseño, cerradas con Alejandro antes de escribir** (la política de
+"discutir el lenguaje antes de implementar"): **(1)** puro TeX —consumir todos los espacios—,
+con la consecuencia asumida de que las variables yuxtapuestas quedan pegadas (`G m_1 m_2` →
+`Gm₁m₂`, tipografía matemática estándar); **(2)** anular el espaciado dentro de sub/super-
+índices (como TeX en script style: `x^{a=b}` sin thick interno); **(3)** regla TeX del unario
+—un `+/−` al inicio o tras Bin/Op/Rel/Open/Punct es Ord— así `-U_A` queda pegado y `a-b` con
+med a ambos lados.
+
+🔧 **Piezas nuevas** (`text_parser.cpp`): `mathClassOfByte`/`mathClassOfName`, la tabla
+`mathGlue`, y `mathAtomSpace` (reclasa el unario, anula en índices, suma los overrides,
+avanza `math_prev_class`). `mathSeal()` sella el run previo para que **dos entradillas no se
+fusionen** —`=` y la `y` que le sigue, ambas con thick, colapsarían en `=y` perdiendo un
+espacio—. `textflush()` **resetea `pre_space` tras hornearlo** (si no, el siguiente run lo
+heredaba: un espacio espurio tras un símbolo). Overrides explícitos `\,` `\;` `\!` `\quad`
+(aditivos). `add_symbol`/`add_word` reciben el `pre_space`.
+
+**Churn: 6 ejemplos** (quickstart, sines, franck_condon, texto, fig6-4, fig_polybar), los 3
+backends, **verificados a ojo uno por uno** (rasterizados vs. el golden limpio): todos mejoran
+a espaciado TeX-correcto —`y = x²`, `φ = sin(nπx), n = 1..4`, `v' ≈ 6`, `λ⁻¹(s)`—. `fig1`
+quedó **byte-idéntico** (el unario hizo `-U_A` igual que antes) y `symbols`/`turning_points`
+tampoco se movieron (átomos sueltos). **c3fail=0** en todo (la paridad de operaciones de texto
+entre backends aguantó) y **psfail=0**. Smoke test aparte —overrides, unario/binario en
+todas las posiciones, consumo de espacios, varios `$…$` en un `text()`— correcto.
+
+⚠️ **Trampa de método anotada:** el golden LOCAL estaba **rancio** (8 fallos de base antes de
+tocar nada: `fill_styles`, `fig1.svg`… por ediciones de fuente posteriores a su última
+captura). No se puede medir el churn contra una red rancia: hubo que **capturar un baseline
+limpio** (con el árbol stasheado) y recién entonces diferenciar. Bendecido con `capture` +
+`images` (los 6 renders públicos y la galería regenerados). Con A y B hechas, lo único que le
+falta a `gravitacion_orbita` para entrar al golden es `\frac` inline (`plan_frac.md`), que ya
+hereda medición (A) y espaciado (B).

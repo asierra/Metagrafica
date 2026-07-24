@@ -514,6 +514,11 @@ void TextLine::draw(Display &g) {
   for (const auto &text : textline) {
     TextState ts = text->getState();
     //printf("text <%s> state %s\n", text->getText().c_str(), ts.str().c_str());
+    // Espaciado math del run (plan_text_space, Parte B): rmoveto horizontal antes de
+    // dibujar. En unidades de dispositivo (pre_space em · relsize · tamaño de fuente),
+    // igual que el desplazamiento vertical de sub/superíndices de abajo — no transforma.
+    if (ts.pre_space != 0)
+      g.rmoveto(ts.pre_space * ts.font_size * g.getFontSize(), 0);
     if (ts.script != 0) {
       vdesp = (ts.script < 0) ? -g.getFontSize() * 0.14 : g.getFontSize() * 0.56;
       g.rmoveto(0, vdesp);
@@ -578,6 +583,7 @@ double TextLine::width() {
   double w = 0;
   for (const auto &text : textline) {
     TextState ts = text->getState();
+    w += ts.pre_space * ts.font_size;          // espaciado math del run (Parte B)
     w += text_width(ts, text->getText());
   }
   return w;

@@ -2,6 +2,7 @@
 #include "text_parser.h"   // sus propias declaraciones: sin esto podian divergir
 #include <algorithm>
 #include <memory>
+#include <set>
 #include <stack>
 using std::stack;
 using std::string;
@@ -229,6 +230,71 @@ string math_functions[] = {
   "cos", "cot", "csc", "sec", "sin", "tan"
 };
 
+// ---------------------------------------------------------------------------
+// Espaciado matemático automático estilo TeX (plan_text_space, Parte B).
+//
+// En modo math los espacios del fuente se IGNORAN (se consumen sin imprimir): el
+// espaciado lo pone la clase de cada átomo. Se clasifica cada átomo (Ord/Op/Bin/
+// Rel/Open/Close/Punct) al descargarlo y se inserta, ANTES del run, el espacio que
+// pide el par (clase previa, clase actual) según la tabla de TeX. Ese espacio viaja
+// como pre_space (em) en el TextState del run; el motor lo mide y lo aplica.
+enum MathClass { MC_NONE = 0, MC_ORD, MC_OP, MC_BIN, MC_REL, MC_OPEN, MC_CLOSE, MC_PUNCT };
+
+// Estado de la máquina, entre átomos de UNA fórmula. Se reinicia en cada '$' (y en
+// cada '/n', que abre renglón nuevo). No es reentrante, como el resto del parser.
+static int    math_prev_class    = MC_NONE;
+static double math_pending_space = 0;   // overrides \, \; \! \quad, aditivos al auto
+
+static int mathClassOfByte(unsigned char c) {
+  switch (c) {
+  case '=': case '<': case '>':  return MC_REL;
+  case '+': case '-':            return MC_BIN;   // unario se reclasifica en mathAtomSpace
+  case ',': case ';':            return MC_PUNCT;
+  case '(': case '[':            return MC_OPEN;
+  case ')': case ']':            return MC_CLOSE;
+  default:                       return MC_ORD;   // letras, dígitos, '.', '|', prima…
+  }
+}
+
+// Clase de un símbolo \nombre. La mayoría (griego, \infty, \partial, \nabla, \prime…)
+// son Ord; solo las relaciones, binarios, delimitadores y grandes operadores difieren.
+static int mathClassOfName(const string &n) {
+  static const std::set<string> rel = {
+    "approx","neq","leq","geq","equiv","sim","in","ni","subset","supset","subseteq",
+    "supseteq","propto","cong","mid","leftarrow","rightarrow","leftrightarrow",
+    "Leftarrow","Rightarrow","Leftrightarrow","uparrow","downarrow","Uparrow","Downarrow" };
+  static const std::set<string> bin = {
+    "pm","cdot","times","div","cap","cup","vee","wedge","oplus","otimes","oslash",
+    "diamond","bullet" };
+  static const std::set<string> open  = { "langle","lceil","lfloor" };
+  static const std::set<string> close = { "rangle","rceil","rfloor" };
+  static const std::set<string> op    = { "sum","int","prod" };
+  if (rel.count(n))   return MC_REL;
+  if (bin.count(n))   return MC_BIN;
+  if (open.count(n))  return MC_OPEN;
+  if (close.count(n)) return MC_CLOSE;
+  if (op.count(n))    return MC_OP;
+  return MC_ORD;
+}
+
+// Espacio (em) entre un átomo de clase prev y uno de clase cur, tabla de TeX:
+// thin=3/18, med=4/18, thick=5/18. Las combinaciones "imposibles" en fórmula válida
+// (marcadas * en el TeXbook) devuelven 0.
+static double mathGlue(int prev, int cur) {
+  const double THIN = 3.0/18, MED = 4.0/18, THICK = 5.0/18;
+  if (prev == MC_NONE || cur == MC_NONE) return 0;
+  switch (prev) {
+  case MC_ORD:   return cur==MC_OP?THIN : cur==MC_BIN?MED : cur==MC_REL?THICK : 0;
+  case MC_OP:    return cur==MC_REL?THICK : (cur==MC_ORD||cur==MC_OP)?THIN : 0;
+  case MC_BIN:   return (cur==MC_ORD||cur==MC_OP||cur==MC_OPEN)?MED : 0;
+  case MC_REL:   return (cur==MC_ORD||cur==MC_OP||cur==MC_OPEN)?THICK : 0;
+  case MC_OPEN:  return 0;
+  case MC_CLOSE: return cur==MC_OP?THIN : cur==MC_BIN?MED : cur==MC_REL?THICK : 0;
+  case MC_PUNCT: return THIN;
+  default:       return 0;
+  }
+}
+
 // Reservado para futuros generadores de composición matemática (frac/int/prod/
 // sum) que armarían una fórmula a partir de varios trozos de texto — requeriría
 // una estructura de composición de texto. NO prioritario; y probablemente se
@@ -434,6 +500,27 @@ void tspop()
   //printf("poping %s\n", text_state.str().c_str());
 }
 
+// Descarga un átomo de clase cur: devuelve el espacio (em) que va ANTES y avanza el
+// estado de la máquina de espaciado (plan_text_space, Parte B). Reglas:
+//  - Dentro de sub/superíndices (text_state.script != 0) NO hay espaciado inter-átomo
+//    y NO se toca el estado: la base y su índice forman UN átomo (como TeX en script
+//    style). Así `x^{a=b}` queda pegado y el `=` interno no abre thick.
+//  - Un Bin al inicio o tras Bin/Op/Rel/Open/Punct es unario → se reclasifica a Ord
+//    (regla de TeX): `-U` pegado, `a-b` con med a ambos lados.
+//  - Los overrides (\, \; \! \quad) se acumulan en math_pending_space y se suman aquí.
+static double mathAtomSpace(int cur) {
+  if (text_state.script != 0) { math_pending_space = 0; return 0; }
+  if (cur == MC_BIN &&
+      (math_prev_class == MC_NONE  || math_prev_class == MC_BIN ||
+       math_prev_class == MC_OP    || math_prev_class == MC_REL ||
+       math_prev_class == MC_OPEN  || math_prev_class == MC_PUNCT))
+    cur = MC_ORD;
+  double sp = mathGlue(math_prev_class, cur) + math_pending_space;
+  math_pending_space = 0;
+  math_prev_class = cur;
+  return sp;
+}
+
 // text flush creates new Text with full font state and add it to list
 void textflush()
 {
@@ -466,13 +553,36 @@ void textflush()
       text = nullptr;
     }
   }
+  // El pre_space es la ENTRADILLA de UN run: una vez horneado en su Text (arriba), no
+  // debe quedar colgado en text_state, o el siguiente run lo heredaría por error
+  // (dos espacios colapsados, o un espacio espurio tras un símbolo). Se pone a 0 aquí;
+  // el próximo átomo con espacio lo vuelve a fijar (plan_text_space, Parte B).
+  text_state.pre_space = 0;
 }
 
-void add_symbol(unsigned char symbol_code, FontFace font_face)
+// Cierra el run en curso SELLÁNDOLO en el renglón: mueve el `text` pendiente a
+// text_line para que el siguiente átomo NO se fusione con él (plan_text_space,
+// Parte B). Sin esto, dos runs consecutivos con el MISMO estado y pre_space —p.ej.
+// `=` y la `y` que le sigue, ambos con thick— se colapsarían en uno solo (`=y`) y se
+// perdería el segundo espacio. Se usa en los límites de espaciado del modo math.
+static void mathSeal()
+{
+  textflush();
+  if (text && text->length() > 0) {
+    if (!text_line)
+      text_line = std::make_unique<TextLine>();
+    text_line->addText(std::move(text));
+    text = nullptr;
+  }
+}
+
+void add_symbol(unsigned char symbol_code, FontFace font_face, double pre_space = 0)
 {
   if (symbol_code > 0) {
+    textflush();                       // cierra el run pendiente: no mezcla su cara con la del símbolo
     tspush();
     text_state.font_face = font_face;
+    text_state.pre_space = pre_space;  // espaciado math del símbolo (Parte B)
     accum.push_back(symbol_code);
     textflush();
     tspop();
@@ -481,11 +591,13 @@ void add_symbol(unsigned char symbol_code, FontFace font_face)
   }
 }
 
-void add_word(string word, FontFace font_face)
+void add_word(string word, FontFace font_face, double pre_space = 0)
 {
+  textflush();
   tspush();
   text_state.font_face = font_face;
-  for(char& c : word) 
+  text_state.pre_space = pre_space;
+  for(char& c : word)
     accum.push_back(c);
   textflush();
   tspop();
@@ -565,6 +677,8 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   // (entrada malformada), hay que limpiarlos para no arrastrar estado a esta.
   accum.clear();
   while (!tstack.empty()) tstack.pop();
+  math_prev_class = MC_NONE;   // máquina de espaciado math (Parte B): sin arrastre
+  math_pending_space = 0;
   string input = UTF8toISO8859_1(input_utf8.c_str());
   // La codificacion propia hace falta tanto por los acentos (byte >= 0x80, que
   // ISOLatin1Encoding resuelve) como por las RANURAS 1..31 de kExtraTextGlyphs,
@@ -643,10 +757,10 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         //printf("cerrando\n");
         break;
     case '<':
-        add_symbol(0x3C, FN_TEX_CMMI);
+        add_symbol(0x3C, FN_TEX_CMMI, math_mode ? mathAtomSpace(MC_REL) : 0);
         break;
     case '>':
-        add_symbol(0x3E, FN_TEX_CMMI);
+        add_symbol(0x3E, FN_TEX_CMMI, math_mode ? mathAtomSpace(MC_REL) : 0);
         break;
     case '\'':
       // En modo math `'` es una PRIMA (v′, y'' ), como en TeX — no un apostrofo.
@@ -658,7 +772,11 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       // El textflush() previo NO sobra: add_symbol acumula sobre el MISMO buffer y
       // lo vuelca con la cara del SIMBOLO, asi que sin vaciar antes, la `v` de
       // `v'` salia por LMMathSym —donde su byte no esta codificado— y desaparecia.
-      if (math_mode) { textflush(); add_symbol(map_symbol["prime"], FN_SYMBOL); }
+      if (math_mode) {
+        double sp = mathAtomSpace(MC_ORD);   // la prima se pega a su base (Ord)
+        textflush();
+        add_symbol(map_symbol["prime"], FN_SYMBOL, sp);
+      }
       else           accum.push_back(c);
       break;
     case '$':
@@ -686,9 +804,12 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         // por una fuente cualquiera (el byte 162 salia como ¢).
         using_fontcmmi = true;
         math_mode = true;
+        math_prev_class = MC_NONE;   // fórmula nueva: el 1er átomo no lleva entradilla
+        math_pending_space = 0;
       } else {
         textflush();
         math_mode = false;
+        math_pending_space = 0;      // suelta un override colgante al salir del math
         tspop();
       }
       break;
@@ -700,6 +821,7 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
       if (input[it+1] == 'n') {
         it++;
         flush_line();
+        math_prev_class = MC_NONE;   // renglón nuevo: el 1er átomo arranca sin entradilla
         break;
       }
       std::size_t found = font_style_codes.find(input[it+1]);
@@ -713,7 +835,21 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         accum.push_back(c);
       }
       break;
-    case '\\': 
+    case '\\': {
+      // Overrides de espaciado explícito (§ TeX): \, thin, \; thick, \! thin negativo,
+      // \quad 1em. Se suman a lo automático (aditivos) y aplican al PRÓXIMO átomo. Van
+      // antes del escaneo alfabético porque `,;!` no son letras y el escaneo los ignora.
+      unsigned char nx = input[it+1];
+      if (math_mode && (nx == ',' || nx == ';' || nx == '!')) {
+        math_pending_space += (nx == ',') ? 3.0/18 : (nx == ';') ? 5.0/18 : -3.0/18;
+        it++;                 // consume el carácter del override (el `\` ya está en it)
+        break;
+      }
+      if (math_mode && input.compare(it+1, 4, "quad") == 0) {
+        math_pending_space += 1.0;
+        it += 4;
+        break;
+      }
       textflush();
       v_end = input.find_first_not_of(ALFABETIC, ++it);
       if (v_end == string::npos) // Last word in string
@@ -722,20 +858,36 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         string variable = input.substr(it, v_end - it);
         unsigned char code = get_symbol_code(variable, font_face, using_fontcmmi);
         if (code > 0)
-          add_symbol(code, font_face);
+          add_symbol(code, font_face, math_mode ? mathAtomSpace(mathClassOfName(variable)) : 0);
         else {
           string *f = std::find(math_functions, math_functions+6, variable);
           if (f!=math_functions+6)
-            add_word(variable,  FN_SERIF);
+            add_word(variable, FN_SERIF, math_mode ? mathAtomSpace(MC_OP) : 0);
           else
             fprintf(stderr, "Warning: symbol name unknown %s\n", variable.c_str());
         }
         it = v_end-1;
       }
       break;
+    }
+    case ' ':
+      // Modo math: los espacios del fuente se CONSUMEN (puro TeX) — el espaciado lo
+      // pone la tabla de clases, no el que escribió el usuario. No tocan prev_class:
+      // los átomos vecinos se espacian entre sí. Fuera de math, un espacio normal.
+      if (math_mode) break;
+      accum.push_back(c);
+      break;
     case '-': // Best - in Latin1
       using_reencode = true;
     default:
+      // Modo math: el carácter es un átomo. Se calcula el espacio que va ANTES según
+      // su clase (Ord/Bin/Rel/…); si no es cero, se sella el run previo y se marca la
+      // entradilla del nuevo. Ord–Ord (letras, dígitos) da 0 → sigue acumulando en el
+      // mismo run (plan_text_space, Parte B).
+      if (math_mode) {
+        double sp = mathAtomSpace(mathClassOfByte(c));
+        if (sp != 0) { mathSeal(); text_state.pre_space = sp; }
+      }
       accum.push_back(c);
     }
     it++;

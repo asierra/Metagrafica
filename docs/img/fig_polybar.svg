@@ -78,7 +78,8 @@
 <text x="5.982513" y="-123.561648" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="6.300000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝐵</tspan></text>
 </g>
 </g>
-<text x="373.424788" y="-5.012196" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="9.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">λ(μ</tspan></text>
+<text x="373.424788" y="-5.012196" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="9.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">λ(</tspan></text>
+<text x="381.758788" y="-5.012196" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="9.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">μ</tspan></text>
 <text x="386.528788" y="-5.012196" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="9.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">m)</tspan></text>
 </g>
 </svg>
