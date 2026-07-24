@@ -1,5 +1,6 @@
 #include "text.h"
 #include "Display.h"
+#include "text_parser.h"   // cmmiUnicode(): partir un run math al MEDIR (plan_text_space, Parte A)
 
 using std::string;
 
@@ -392,8 +393,24 @@ FontMetricsMap cmmi_metrics_map = {
     {196, 277}, {199, 576}};
 
 double text_width(TextState ts, string s) {
-  if (ts.font_face==FN_COURIER) 
+  if (ts.font_face==FN_COURIER)
     return s.length() * 600 * ts.font_size / 1000;
+
+  // Un run FN_TEX_CMMI se DIBUJA partido: el griego (∈ cmmiUnicode) va en LM Math y
+  // el no-griego (E, dígitos, =, espacio) en Times-Italic. Antes se MEDÍA todo con
+  // cmmi_metrics_map, así que la medida no cuadraba con el render y el centrado/fit/
+  // frac se iban a la deriva. Se mide cada byte con el mapa de la fuente REAL, con la
+  // MISMA partición que los backends (plan_text_space.md, Parte A).
+  if (ts.font_face == FN_TEX_CMMI) {
+    const std::map<unsigned char, unsigned int> &gm = cmmiUnicode();
+    double w = 0;
+    for (unsigned char ch : s) {
+      const FontMetricsMap &m = gm.count(ch) ? cmmi_metrics_map : serifitalic_metrics_map;
+      auto it = m.find(ch);
+      w += (it != m.end() ? it->second : 500) * ts.font_size / 1000;
+    }
+    return w;
+  }
 
   double width = 0;
   FontMetricsMap fmmap;
@@ -427,7 +444,8 @@ double text_width(TextState ts, string s) {
     break;
   }
   for (auto &ch : s) {
-    width += fmmap[ch] * ts.font_size / 1000;
+    auto it = fmmap.find((unsigned char)ch);
+    width += (it != fmmap.end() ? it->second : 500) * ts.font_size / 1000;   // find, no [ ]: sin 0 mudo
   }
   return width;
 }

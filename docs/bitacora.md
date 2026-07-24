@@ -1176,3 +1176,23 @@ override (una copia local gana). El mensaje de `include` perdido ahora **lista d
 (mejor diagnóstico); se actualizó su fixture (`include_perdido`, la 5ª compuerta lo cazó al
 cambiar el texto). Cero churn en el golden (`ok=66`); la resolución de includes no toca la
 salida. Cierra la 3ª de las tres necesidades que destapó `gravitacion_orbita`.
+
+### Cerrado en la sesión del 2026-07-23 (medición precisa de `Text` — `plan_text_space` Parte A)
+
+**`text_width` mide ahora lo que se dibuja.** Un run `FN_TEX_CMMI` se DIBUJA partido —griego
+(∈ `cmmiUnicode`) en LM Math, no-griego (`E`, dígitos, `=`, espacio) en Times-Italic— pero se
+MEDÍA todo con `cmmi_metrics_map`. La medida no cuadraba con el render y el centrado/`fit`/
+`\frac` se iban a la deriva. Ahora `text_width` parte por `cmmiUnicode` y mide cada byte con el
+mapa de su fuente real (`text.cpp` alcanza `cmmiUnicode()` con `#include "text_parser.h"`).
+
+🔎 **Requisito de Alejandro** («los `Text` deben dar sus medidas precisas»): es **la fundación
+de `\frac`**, que dimensiona la fracción con `TextLine::width()`. El spike (mismo día) corrigió
+mi diagnóstico —el respaldo es Times-Italic (`=`=675), no Times-Roman (564), así que sobrestimé
+el error ~2×— y reveló que **EPS/PDF centran con operadores de fuente**, no con `text_width`, así
+que la imprecisión **solo mordía al SVG**; el beneficiario real de medir bien es `\frac`.
+
+**Churn: solo `sines.svg`** (una corrección; la math queda bien posicionada). El cambio de
+`fmmap[ch]` por `find()`+fallback —endurecimiento contra el 0 mudo de un glifo ausente— se midió
+aparte y **no agregó churn**. **No** se movió la partición al parser (el supuesto que daba miedo):
+se arregló `text_width` para que CUADRE con lo que los backends ya hacen, dejando la partición
+donde está. Falta la Parte B (espaciado automático) y bendecir `sines.svg` (`capture`+`images`).
