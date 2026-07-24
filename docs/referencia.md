@@ -1,16 +1,6 @@
 # MetaGráfica — referencia del lenguaje
 
-> ⚠️ **BORRADOR** — para revisión.
->
-> **Convención mientras dure:** Alejandro edita la prosa directamente y deja lo estructural
-> como `[[AS: ...]]`. Antes de darlo por terminado hay que barrer que no quede ninguna
-> (`grep -n '\[\[AS:' docs/*.md`) y quitar este bloque.
-
-Este documento describe **lo que el compilador hace hoy**, completo y sin historia. Para el
-porqué de las decisiones está [`especificacion_mg.md`](../especificacion_mg.md), que además
-describe cosas que aún no existen; para las opciones del binario, `man mg`.
-
-Está pensado para leerse **de corrido una vez** y consultarse después. Las tablas del final
+Esta referencia puede leerse **de corrido una vez** o consultarse mientras se construye una nueva figura. Las tablas del final
 son el resumen.
 
 ---
@@ -24,14 +14,14 @@ mg figura.mg              # → figura.eps
 mg figura.mg salida.svg   # el formato lo elige la extensión: .eps .svg .pdf
 ```
 
-Un archivo mínimo no necesita preámbulo:
+Un archivo mínimo genera salida sin necesitar preámbulo:
 
 ```octave
 circle(1) { 0 0 }
 polyline { 0 0  2 1 }
 ```
 
-**Lo que MG no es, a propósito.** No es un lenguaje de programación de propósito general:
+**Lo que MG no es.** No es un lenguaje de programación de propósito general:
 tiene variables, expresiones, `for`, `if` y poco más. No analiza datos — `polybar` recibe
 intervalos ya contados, no observaciones; para llegar de una hoja de cálculo a un `.mg` está
 `tools/hist2mg.py`. No hace 3D. No compone párrafos.
@@ -227,6 +217,8 @@ Argumentos: `align` (`"left"`/`"center"`/`"right"`), `valign`
 | `\alpha`, `\nabla`, … | símbolo (dentro o fuera de math) |
 | `_x`  `^x`  `_{xy}`  `^{xy}` | sub y superíndice — **solo dentro de `$…$`** |
 | `'` | prima (dentro de math) |
+| `\frac{a}{b}` | fracción (numerador sobre denominador) — dentro de `$…$` |
+| `\,` `\;` `\!` `\quad` | ajuste fino de espacio math (fino, grueso, fino negativo, 1 em) |
 
 ```octave
 text("$\Delta T_1$/n(BT 10.3 - 12.3 $\mu/rm$)", align="center") { 5 1 }
@@ -239,6 +231,25 @@ figura se ve igual en cualquier máquina, sin fuentes ni TeX instalados.
 > leen `\alpha` y `\nabla`—, así que `"uno\ndos"` buscaría un símbolo llamado `ndos`.
 
 En un texto multilínea, `valign` alinea **el bloque entero**, no cada renglón.
+
+### Espaciado matemático y fracciones
+
+Dentro de `$…$` **el espaciado lo pone `mg`, no tú**: los espacios que escribas se ignoran y el
+hueco entre símbolos sale de su papel —relación, operador binario, función—, como en TeX. Así
+`$F = ma$` y `$F=ma$` se ven idénticos (el `=` recibe su espacio a ambos lados) y `$a + b$` separa
+el `+` como binario, mientras que un `-` inicial (`$-x$`) va pegado por ser unario. Para el ajuste
+fino que la regla no acierte hay cuatro comandos: `\,` (fino), `\;` (grueso), `\!` (fino negativo)
+y `\quad` (un cuadratín).
+
+**Fracciones.** `\frac{numerador}{denominador}` compone la fracción en dos dimensiones —traza la
+raya y centra numerador y denominador sobre ella—. Se **anidan** (`\frac{1}{1+\frac{1}{x}}`) y
+colocan sus partes según la **altura real** del contenido, de modo que los subíndices del
+numerador y los superíndices del denominador libran la raya. Van a tamaño pleno (display) y se
+componen inline dentro de una fórmula mayor:
+
+```octave
+text("$F = G \frac{m_1 m_2}{r^2}$", size=12) { 1 7 }
+```
 
 ### Los símbolos que se escriben `\comando`
 
