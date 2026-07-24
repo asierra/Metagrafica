@@ -11,12 +11,20 @@ que, tras A+B, el numerador de `$\frac{G m_1 m_2}{r^2}$` compone **tight** (`Gm�
 espacios literales) y `$\frac{a+b}{c}$` trae el `+` binario bien espaciado (`a + b`). La
 fundación que `\frac` necesitaba ya no es futuro.
 
-Estado: **SPIKE hecho (2026-07-23), producción DIFERIDA por decisión de
-Alejandro.** El código del spike de `\frac` queda **committeado en `main` como base WIP**
-(dormante: `ok=66`, ningún ejemplo lo usa; standalone compone bien en EPS/PDF salvo métricas,
-SVG con placement/centrado rotos, inline sin implementar); este plan guarda lo aprendido para
-retomarlo sin re-descubrirlo. **El espaciado automático (2) ya NO es de este plan: es la Parte
-B de `plan_text_space`, hecha.**
+Estado: **COMPLETA (2026-07-24) — `\frac` inline compone en los tres backends, con extent
+vertical medido.** Superó al spike: es **inline** (dentro de fórmulas mayores), **anidado**, con
+espaciado binario correcto; el **placement/centrado del SVG quedó arreglado**, y las **métricas
+verticales se colocan por la altura/profundidad REAL** del contenido (`runVExtent`/`childVExtent`/
+`vExtent`) — el punto 3 de este plan, cerrado: `\frac{m_1 m_2}{r^2}` ya no roza la raya (subíndices
+sobre ella, superíndices debajo). Golden **`ok=66` intacto** (aditivo). Detalle en la bitácora,
+sesiones 2026-07-24. **Lo único que resta** (de commit, no de motor): meter `gravitacion_orbita`
+al golden —ya reescrita con `\frac` por Alejandro— añadiéndola a `test/run.sh` y bendiciendo golden
++ `docs/img` + galería. Lo de abajo se conserva como registro de lo aprendido.
+
+**Antes (histórico):** SPIKE hecho (2026-07-23), producción diferida. El código del spike
+componía bien standalone en EPS/PDF salvo métricas; SVG con placement/centrado rotos; inline sin
+implementar. **El espaciado automático (2) ya NO es de este plan: es la Parte B de
+`plan_text_space`, hecha.**
 
 Lo destapó `examples/gravitacion_orbita.mg`: sus fórmulas (`F = G m₁m₂/r²`) fingen una fracción
 con `/n` (salto de línea) + `align="center"`, y se amontonan — el numerador mete `F =` en la

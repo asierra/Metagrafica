@@ -165,6 +165,12 @@ void Attribute::draw(Display &g) {
   case AT_FCOLOR:
     g.setFillColor(value);
     break;
+  case AT_FCOLOR_FROM_LINE:
+    // El relleno toma el color de LÍNEA vigente (el marcador es parte de la línea).
+    // Se resuelve en draw-time para heredar el color de línea AMBIENTE cuando la
+    // primitiva no trajo `color=` propio (§4.11, wrapMarkers).
+    g.setFillColor(g.getLineColor());
+    break;
   case AT_THEIGHT:
     g.setFontSize((double)value);
     break;

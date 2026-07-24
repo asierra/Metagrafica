@@ -16,15 +16,15 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería: ok=66 … galfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería: ok=69 … galfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg + docs/galeria.html (PUBLICADO; capture NO los toca)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (22 `.mg` × EPS/SVG/**PDF** = 66 goldens) y compara contra la red golden
+de `examples/` (23 `.mg` × EPS/SVG/**PDF** = 69 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=66 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=69 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -84,10 +84,9 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (22 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, fractal_tree, franck_condon, line_patterns, markers-demo, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **`gravitacion_orbita.mg` (2026-07-23) es exactamente ese caso:** el 23º `.mg` de `examples/`, **FUERA del golden a propósito** —no está en `test/run.sh`— hasta que exista `\frac` (sus fórmulas fingen la fracción con `/n`; ver `plan_frac.md`). Es la primera figura del corpus que **compone con una biblioteca** (`include "../lib/satellite.mg"`, §15) y la que motiva `\frac`, `rectangle(w,h,at)` y la búsqueda `include` local→lib. **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (23 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, fractal_tree, franck_condon, gravitacion_orbita, line_patterns, markers-demo, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **`gravitacion_orbita.mg` ENTRÓ al golden el 2026-07-24** (estuvo fuera a propósito hasta que `\frac` quedó completo): es la única figura que ejercita **`\frac`** (fracción math 2-D, inline y con extent vertical medido), **`include` de una biblioteca** (`include "../lib/satellite.mg"`, §15), **`rectangle(w,h,at)`**, la búsqueda `include` local→lib y el **default de marcador-hereda-color-de-línea** (flechas roja/verde sin `marker_color`). **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
-**Encabezado de un ejemplo — convención (2026-07-23).** Los 23 `.mg` de `examples/` (22 del
-golden + `gravitacion_orbita`) abren
+**Encabezado de un ejemplo — convención (2026-07-23).** Los 23 `.mg` del golden de `examples/` abren
 con: **primera línea = título**, párrafo siguiente = **descripción** (2-5 líneas de qué es y
 qué enseña del lenguaje), y a partir de `% NOTAS ———` todo lo que le sirve a **quien
 mantiene** (procedencia bibliográfica, mediciones, verificadores, avisos de cobertura
@@ -104,7 +103,7 @@ Symbol de `symbols`, los «21 ejemplos» de `primitives` y la anécdota del man 
 
 **Galería (2026-07-23):** `docs/galeria.html`, generada por `tools/galeria.py`, publicada en
 GitHub Pages (fuente: `main`, raíz) → <https://asierra.github.io/Metagrafica/docs/galeria.html>.
-21 tarjetas con figura, título, descripción y el código completo en un desplegable; enlazada
+22 tarjetas con figura, título, descripción y el código completo en un desplegable; enlazada
 desde ambos README. ⚠️ **Qué entra NO es la misma regla que `imgfail`:** la galería itera
 sobre `examples/*.mg` que tengan `docs/img/X.svg`, mientras que la compuerta itera al revés
 —sobre `docs/img`— y por eso vigila además las tres variantes que existen solo para los
@@ -136,30 +135,27 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 1. `GI_*` enum + subclass in `include/primitives.h`; 2. despacho por nombre en `parserv3.cpp` (`isPrim()` + `PrimStmt`, o un `Stmt`/`parse*` propio para sintaxis con bloque, p. ej. `axis`/`compound`/`plot`); 3. `draw(Display&)` calling `Display` virtuals; 4. implement those in the three backends. *(V3 despacha las primitivas por su nombre-cadena en `parseStatement`, no por token del lexer; solo hace falta tocar `src/lexer.l` para símbolos/operadores nuevos, no para comandos.)*
 
-## Roadmap state (act. 2026-07-23)
+## Roadmap state (act. 2026-07-24)
 
-El parser V3 (`src/parserv3.cpp`) compila los 22 ejemplos del golden de `examples/` a
+El parser V3 (`src/parserv3.cpp`) compila los 23 ejemplos del golden de `examples/` a
 EPS/SVG/PDF. Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
 (§8/§10/§17), generadores §13 (numbers/ticks/axis/grid), primitivas geométricas+bezier+
 sine, texto con markup, estado color/fill/line_width/dash/font/align/valign + atributos
 por-primitiva (§7.5) con alcance correcto (gsave/grestore en EPS/PDF), transform §11.1.
 
-**Añadido 2026-07-23** (todo con cero churn en el golden, salvo lo que se nota): **`hatch_angle`**
-(orientación de trama desacoplada del tipo; `crosshatch` enderezable a rejilla recta),
-**`rectangle(w,h,at)`** (forma centro+tamaño alterna a las dos esquinas), **`lib/` instalable**
-con búsqueda de `include` **local→lib** (§15; `make install` copia `lib/*.mg`, la ruta se hornea
-con `-DMG_LIBDIR`), un fix de **`xml:space` en SVG** (el espacio inicial de un `<text>` tras
-`{/i…}` ya no se recorta; SVG cuadra con EPS/PDF) y la **medición precisa de `Text`**
-(`text_width` parte los runs math cmmi/Times-Italic para medir lo que dibuja).
+**Tipografía math — CERRADA (2026-07-24).** `plan_text_space` (medición precisa de `Text`,
+Parte A + espaciado automático estilo TeX, Parte B) y `plan_frac` (**`\frac` COMPLETO**: inline
+en fórmulas mayores, anidado, con **colocación vertical por extent MEDIDO** —num/den según su
+altura/profundidad real, ya no rozan la raya— a **tamaño display** y con el espacio Ord→Inner)
+están **hechos**. `\frac` estrenó la primitiva `Display::fracRule` (la raya, en los 3 backends)
+y generalizó `TextLine` a contenedor de `GraphicsItem`. Con eso **`gravitacion_orbita` entró al
+golden** (`ok=69`), la figura que motivó todo esto.
 
-⏳ **WIP de tipografía math — DOS planes** (léelos antes de seguir): **`plan_text_space.md`** es
-la fundación —**Parte A (medición precisa): HECHA**; **Parte B (espaciado automático estilo
-TeX): diseñada, NO empezada**, falta un pase de decisiones—; **`plan_frac.md`** es la
-composición 2-D de fracciones (**SPIKE hecho, committeado como base WIP**, depende de la Parte A,
-que ya está). El obsoleto `plan_text_struct.md` se borró (su análisis útil se salvó a
-`plan_frac.md`). Todo esto es lo que falta para que `examples/gravitacion_orbita.mg` entre al
-golden. **Siguiente paso sugerido: cerrar el diseño de la Parte B (unario/subíndice/overrides) y
-ejecutarla.**
+**Añadido 2026-07-24** (cero churn salvo lo que se nota): **marcador hereda el color de su línea**
+por default (`marker_color` pasa a ser override; antes el relleno salía negro) — modo nuevo
+`AT_FCOLOR_FROM_LINE` + accesor `Display::getLineColor()`. **Añadido 2026-07-23:** `hatch_angle`,
+`rectangle(w,h,at)`, `lib/` instalable con `include` **local→lib** (§15, `-DMG_LIBDIR`), fix de
+`xml:space` en SVG.
 
 Cerrado en cada sesión: **[`docs/bitacora.md`](docs/bitacora.md)** — el registro de qué se
 cambió y por qué, sesión por sesión (24 y subiendo). ⚠️ **Léelo antes de tocar el motor o de
@@ -190,7 +186,7 @@ inspiración pero describía mal lo que el código hace):
   cadenas** (`std::ostringstream` en `SVGDisplay` para atributos y listas de puntos), nunca
   para escribir el archivo: son dos capas, no una mezcla. Revisado en 2026-07-22 al preguntarse
   si convenía convertir: no — reescribiría todos los números de los tres backends (`%f` = 6
-  decimales fijos vs `<<` = 6 cifras significativas) y movería los 66 goldens a cambio de nada.
+  decimales fijos vs `<<` = 6 cifras significativas) y movería los 69 goldens a cambio de nada.
   En C++14 tampoco está `std::format`, que sería la respuesta moderna a las dos opciones.
 - **Locale:** `main` fija `setlocale(LC_NUMERIC, "C")`. `printf` respeta `LC_NUMERIC`, así que
   una coma decimal corrompería EPS, SVG y PDF a la vez; el entorno no puede provocarlo (un

@@ -142,14 +142,31 @@ public:
 
   void draw(Display &) override;
 
+  // Un renglón es una secuencia de items INLINE: hoy trozos de Text (una cara,
+  // un pre_space), y —desde \frac inline (plan_frac.md)— también composiciones 2-D
+  // como Fraction. El contenedor es de GraphicsItem genérico para que un átomo no
+  // homogéneo (fracción) conviva en la línea entre trozos de texto; addText sigue
+  // aceptando Text (upcast implícito) para no tocar los cientos de sitios que ya
+  // empujan trozos, y addItem entra para lo demás.
   void addText(std::unique_ptr<Text> t) { textline.push_back(std::move(t)); }
+  void addItem(std::unique_ptr<GraphicsItem> g) { textline.push_back(std::move(g)); }
 
   size_t length() const { return textline.size(); }
 
   double width();
 
+  // Extensión vertical (em, relativa al tamaño base): cuánto sube (ascent) y baja
+  // (descent) el renglón de su línea base, contando el corrimiento de sub/superíndice.
+  // Lo usa Fraction para colocar num/den con holgura sobre su altura/profundidad REAL
+  // (plan_frac.md punto 3), en vez de holguras fijas que ignoran los scripts.
+  void vExtent(double &ascent, double &descent);
+
 private:
-  std::vector<std::unique_ptr<Text>> textline;
+  // Ancho em de un item de línea: por getType() (sin RTTI, -fno-rtti). Text mide con
+  // su TextState; Fraction reporta el suyo. Compartido por width() y draw().
+  static double itemWidth(GraphicsItem *g);
+
+  std::vector<std::unique_ptr<GraphicsItem>> textline;
 };
 
 
@@ -198,8 +215,24 @@ public:
   void setNum(std::unique_ptr<GraphicsItem> n) { num = std::move(n); }
   void setDen(std::unique_ptr<GraphicsItem> d) { den = std::move(d); }
 
+  // Ancho em de la fracción = el del hijo más ancho (num/den centrados sobre él).
+  // Lo consulta TextLine para medir y avanzar la pluma cuando la fracción va inline.
+  double width();
+
+  // Extensión vertical (em) de la fracción completa: del tope del numerador al fondo
+  // del denominador. Permite anidar (\frac dentro de \frac) midiendo su altura real.
+  void vExtent(double &ascent, double &descent);
+
+  // Entradilla math (em) que va ANTES de la fracción cuando es un átomo inline de un
+  // renglón (una fracción es Inner ≈ Ord — plan_frac.md). La pone la tabla de clases
+  // TeX en parse-time; TextLine la suma en width() y la aplica (rmoveto) en draw(),
+  // igual que el pre_space de un Text.
+  void setPreSpace(double p) { pre_space = p; }
+  double preSpace() const { return pre_space; }
+
 private:
   std::unique_ptr<GraphicsItem> num, den;
+  double pre_space = 0;
   static double childWidth(GraphicsItem *g);   // ancho em del hijo (Text/TextLine)
 };
 

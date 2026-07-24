@@ -50,6 +50,7 @@ protected:
   void rlineto(double, double) override;
   void line(double, double, double, double) override;
   void rect(double, double, double, double) override;
+  void fracRule(double dy, double len, double lw) override;
   void curveto(double, double, double, double, double, double) override;
   void text(std::string) override;
   void setFontSize(double p) override;

@@ -114,6 +114,14 @@ public:
 
   virtual void rect(double x1, double y1, double x2, double y2)=0;
 
+  // Raya horizontal para composición de fórmulas (la barra de \frac). Desde la pluma
+  // actual, con desplazamiento vertical `dy` (device, positivo = arriba), longitud
+  // `len` y grosor `lw` (device). NO altera la pluma. Existe como primitiva propia
+  // porque el path-builder del SVG no compone con la pluma simulada por movimientos
+  // relativos (rmoveto/rlineto): cada backend la resuelve en su modelo nativo — el
+  // currentpoint de PS, cur_x/cur_y en PDF/SVG. (plan_frac.md, Paso 4.)
+  virtual void fracRule(double dy, double len, double lw)=0;
+
   virtual void curveto(double x1, double y1, double x2, double y2, double x3, double y3)=0;
 
   virtual void structureDefBegin(std::string name)=0;
@@ -206,6 +214,7 @@ public:
   virtual void setLineWidth(double lw)=0;
   void setLineGray(double lg) { dspstate.linegray = lg; }
   virtual void setLineColor(int lc) { dspstate.linecolor = lc; }
+  int getLineColor() const { return dspstate.linecolor; }
 
   // Nota: estos setters ya NO tocan outlinefill. En V1 un valor de relleno
   // negativo activaba el contorno; en V3 el contorno es estado explícito

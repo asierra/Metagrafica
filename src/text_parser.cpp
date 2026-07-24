@@ -238,7 +238,7 @@ string math_functions[] = {
 // Rel/Open/Close/Punct) al descargarlo y se inserta, ANTES del run, el espacio que
 // pide el par (clase previa, clase actual) según la tabla de TeX. Ese espacio viaja
 // como pre_space (em) en el TextState del run; el motor lo mide y lo aplica.
-enum MathClass { MC_NONE = 0, MC_ORD, MC_OP, MC_BIN, MC_REL, MC_OPEN, MC_CLOSE, MC_PUNCT };
+enum MathClass { MC_NONE = 0, MC_ORD, MC_OP, MC_BIN, MC_REL, MC_OPEN, MC_CLOSE, MC_PUNCT, MC_INNER };
 
 // Estado de la máquina, entre átomos de UNA fórmula. Se reinicia en cada '$' (y en
 // cada '/n', que abre renglón nuevo). No es reentrante, como el resto del parser.
@@ -283,14 +283,19 @@ static int mathClassOfName(const string &n) {
 static double mathGlue(int prev, int cur) {
   const double THIN = 3.0/18, MED = 4.0/18, THICK = 5.0/18;
   if (prev == MC_NONE || cur == MC_NONE) return 0;
+  // Inner (una fracción, `\frac`) se comporta como Ord salvo que Ord/Close/Punct/Inner
+  // le ponen un thin ANTES (Ord-Inner = «1» del TeXbook), y él pone thin antes de
+  // Ord/Op/Open/Punct/Inner — por eso `G\frac…` lleva un fino y no queda pegado.
   switch (prev) {
-  case MC_ORD:   return cur==MC_OP?THIN : cur==MC_BIN?MED : cur==MC_REL?THICK : 0;
-  case MC_OP:    return cur==MC_REL?THICK : (cur==MC_ORD||cur==MC_OP)?THIN : 0;
-  case MC_BIN:   return (cur==MC_ORD||cur==MC_OP||cur==MC_OPEN)?MED : 0;
-  case MC_REL:   return (cur==MC_ORD||cur==MC_OP||cur==MC_OPEN)?THICK : 0;
+  case MC_ORD:   return cur==MC_OP?THIN : cur==MC_BIN?MED : cur==MC_REL?THICK : cur==MC_INNER?THIN : 0;
+  case MC_OP:    return cur==MC_REL?THICK : (cur==MC_ORD||cur==MC_OP||cur==MC_INNER)?THIN : 0;
+  case MC_BIN:   return (cur==MC_ORD||cur==MC_OP||cur==MC_OPEN||cur==MC_INNER)?MED : 0;
+  case MC_REL:   return (cur==MC_ORD||cur==MC_OP||cur==MC_OPEN||cur==MC_INNER)?THICK : 0;
   case MC_OPEN:  return 0;
-  case MC_CLOSE: return cur==MC_OP?THIN : cur==MC_BIN?MED : cur==MC_REL?THICK : 0;
+  case MC_CLOSE: return cur==MC_OP?THIN : cur==MC_BIN?MED : cur==MC_REL?THICK : cur==MC_INNER?THIN : 0;
   case MC_PUNCT: return THIN;
+  case MC_INNER: return cur==MC_BIN?MED : cur==MC_REL?THICK : cur==MC_CLOSE?0 :
+                        (cur==MC_OP||cur==MC_ORD||cur==MC_OPEN||cur==MC_PUNCT||cur==MC_INNER)?THIN : 0;
   default:       return 0;
   }
 }
@@ -623,49 +628,74 @@ static void flush_line()
   text_line = nullptr;
 }
 
+// Extrae un grupo {..} balanceado de `s` (ya codificado) empezando en pos, saltando
+// espacios/tabs iniciales. Devuelve el contenido en out y deja pos justo TRAS el `}`.
+// false si no hay grupo o queda sin cerrar. Lo usa el \frac inline.
+static bool extractGroup(const string &s, int n, int &pos, string &out)
+{
+  while (pos < n && (s[pos] == ' ' || s[pos] == '\t')) pos++;
+  if (pos >= n || s[pos] != '{') return false;
+  int depth = 0, start = pos + 1;
+  for (; pos < n; pos++) {
+    if (s[pos] == '{') depth++;
+    else if (s[pos] == '}') {
+      if (--depth == 0) { out = s.substr(start, pos - start); pos++; return true; }
+    }
+  }
+  return false;   // grupo sin cierre
+}
+
+// Núcleo de parse_text: opera sobre input YA codificado (ISO-8859-1 + ranuras 1..31).
+static std::unique_ptr<GraphicsItem>
+parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &using_fontcmmi);
+
+// Parsea un sub-fragmento math (numerador/denominador de \frac) SIN destruir el renglón
+// en curso. parse_text_core usa estado global de archivo (accum, text, text_line, la
+// máquina de espaciado…) y lo REINICIA al entrar: se salva antes y se restaura después.
+// El cuerpo ya viene codificado (subcadena de `input`), así que se procesa como math
+// envuelto en $…$ (ASCII) SIN volver a codificar — evita la doble codificación de
+// acentos/ranuras que daría re-pasar UTF8toISO8859_1 sobre bytes ya codificados.
+static std::unique_ptr<GraphicsItem>
+parse_sub(const string &enc_body, FontFace ff, bool &using_reencode, bool &using_fontcmmi)
+{
+  string                s_accum = std::move(accum);
+  TextState             s_state = text_state;
+  std::stack<TextState> s_stack; s_stack.swap(tstack);
+  std::unique_ptr<Text>      s_text  = std::move(text);
+  std::unique_ptr<TextLine>  s_line  = std::move(text_line);
+  std::unique_ptr<TextBlock> s_block = std::move(text_block);
+  int    s_prev = math_prev_class;
+  double s_pend = math_pending_space;
+
+  auto item = parse_text_core("$" + enc_body + "$", ff, using_reencode, using_fontcmmi);
+
+  accum       = std::move(s_accum);
+  text_state  = s_state;
+  tstack.swap(s_stack);
+  text        = std::move(s_text);
+  text_line   = std::move(s_line);
+  text_block  = std::move(s_block);
+  math_prev_class    = s_prev;
+  math_pending_space = s_pend;
+  return item;
+}
+
 std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& using_reencode, bool& using_fontcmmi)
 {
   if (input_utf8.size()==0) {
     fprintf(stderr, "Error: void text.\n");
     return nullptr;
   }
+  // La codificación propia (acentos byte>=0x80 vía ISOLatin1Encoding + RANURAS 1..31 de
+  // kExtraTextGlyphs que solo existen en el /Encoding que emite EPS, §14.4) se hace UNA
+  // vez aquí; el núcleo y las recursiones de \frac trabajan ya sobre lo codificado.
+  string input = UTF8toISO8859_1(input_utf8.c_str());
+  return parse_text_core(input, ff, using_reencode, using_fontcmmi);
+}
 
-  // SPIKE \frac: si el text() es (opcionalmente entre $…$) un solo \frac{A}{B},
-  // devuelve una Fraction con A y B parseados como math. Standalone, no inline.
-  {
-    string s = input_utf8;
-    bool wrapped = s.size() >= 2 && s.front() == '$' && s.back() == '$';
-    string body = wrapped ? s.substr(1, s.size() - 2) : s;
-    size_t a = body.find_first_not_of(" \t");
-    if (a != string::npos && body.compare(a, 5, "\\frac") == 0) {
-      // extrae dos grupos {…} balanceados tras \frac
-      size_t i = a + 5, g1s = 0, g1e = 0, g2s = 0, g2e = 0;
-      int depth = 0;
-      for (; i < body.size(); i++) {
-        if (body[i] == '{') { if (depth == 0) g1s = i + 1; depth++; }
-        else if (body[i] == '}') { if (--depth == 0) { g1e = i; i++; break; } }
-      }
-      if (g1e && i < body.size() && body[i] == '{') {
-        depth = 0;
-        for (; i < body.size(); i++) {
-          if (body[i] == '{') { if (depth == 0) g2s = i + 1; depth++; }
-          else if (body[i] == '}') { if (--depth == 0) { g2e = i; break; } }
-        }
-        if (g2e) {
-          string A = body.substr(g1s, g1e - g1s);
-          string B = body.substr(g2s, g2e - g2s);
-          auto frac = std::make_unique<Fraction>();
-          bool r1 = false, r2 = false, c1 = false, c2 = false;
-          frac->setNum(parse_text("$" + A + "$", ff, r1, c1));
-          frac->setDen(parse_text("$" + B + "$", ff, r2, c2));
-          using_reencode = using_reencode || r1 || r2;
-          using_fontcmmi = using_fontcmmi || c1 || c2;
-          return std::move(frac);
-        }
-      }
-    }
-  }
-
+static std::unique_ptr<GraphicsItem>
+parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &using_fontcmmi)
+{
   FontFace font_face = ff;
   text = nullptr;
   text_line = nullptr;
@@ -679,11 +709,9 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
   while (!tstack.empty()) tstack.pop();
   math_prev_class = MC_NONE;   // máquina de espaciado math (Parte B): sin arrastre
   math_pending_space = 0;
-  string input = UTF8toISO8859_1(input_utf8.c_str());
-  // La codificacion propia hace falta tanto por los acentos (byte >= 0x80, que
-  // ISOLatin1Encoding resuelve) como por las RANURAS 1..31 de kExtraTextGlyphs,
-  // que solo existen en el /Encoding que emite EPS (§14.4).
-  for (char & c : input)
+  // Detección de reencode sobre el input ya codificado: acentos (byte<0) o ranuras
+  // 1..31 obligan a EPS a emitir su /Encoding propio (§14.4).
+  for (char c : input)
     if (c < 0 || (c > 0 && c < 32)) {
       using_reencode = true;
       break;
@@ -856,6 +884,32 @@ std::unique_ptr<GraphicsItem> parse_text(string input_utf8, FontFace ff, bool& u
         v_end = iend;
       if (v_end > it && v_end <= iend) {
         string variable = input.substr(it, v_end - it);
+        // \frac{A}{B} inline (plan_frac.md): átomo 2-D en medio de la fórmula. Se
+        // extraen los dos grupos {..} balanceados y se recursan como math con parse_sub
+        // (que preserva el renglón en curso). Una fracción es Inner ≈ Ord para el
+        // espaciado: mathAtomSpace(MC_INNER) da su entradilla y avanza la máquina de clases.
+        if (math_mode && variable == "frac") {
+          double sp = mathAtomSpace(MC_INNER);
+          int j = v_end;
+          string A, B;
+          bool ok = extractGroup(input, iend, j, A) &&
+                    extractGroup(input, iend, j, B);
+          if (ok) {
+            auto frac = std::make_unique<Fraction>();
+            frac->setNum(parse_sub(A, font_face, using_reencode, using_fontcmmi));
+            frac->setDen(parse_sub(B, font_face, using_reencode, using_fontcmmi));
+            frac->setPreSpace(sp);
+            mathSeal();                    // sella el run de texto previo como item aparte
+            if (!text_line)
+              text_line = std::make_unique<TextLine>();
+            text_line->addItem(std::move(frac));
+            it = j - 1;                    // el it++ del bucle deja it en el char siguiente
+          } else {
+            fprintf(stderr, "Error: \\frac requiere dos grupos {..}{..}.\n");
+            it = v_end - 1;
+          }
+          break;
+        }
         unsigned char code = get_symbol_code(variable, font_face, using_fontcmmi);
         if (code > 0)
           add_symbol(code, font_face, math_mode ? mathAtomSpace(mathClassOfName(variable)) : 0);

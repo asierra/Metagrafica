@@ -479,6 +479,17 @@ void SVGDisplay::rect(double x1, double y1, double x2, double y2) {
     stroke();
 }
 
+void SVGDisplay::fracRule(double dy, double len, double lw) {
+    // Raya de \frac (plan_frac.md). cur_x/cur_y están en coords de dispositivo Y-UP; el
+    // <g scale(1,-1)> global las voltea al pintar, igual que cualquier path. Se emite un
+    // <path> directo (M abs, l relativo) SIN pasar por path_builder ni por rmoveto/rlineto
+    // —cuya pluma simulada no compone con el M/L absoluto del builder— y sin tocar la pluma.
+    char colorBuf[10];
+    sprintf(colorBuf, "#%06X", dspstate.linecolor);
+    fprintf(file, "<path d=\"M %f %f l %f 0\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\"/>\n",
+            cur_x, cur_y + dy, len, colorBuf, lw);
+}
+
 void SVGDisplay::dot(double x, double y, double r) {
     // r = RADIO del marcador en unidades de dispositivo (§4.6). La posición la
     // transforma el marco; el tamaño NO (físico). Relleno (disco) o contorno

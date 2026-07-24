@@ -1,21 +1,15 @@
 % Órbita circular — gravitación y fuerza centrípeta
 %
-% Un satélite en órbita circular alrededor de un planeta: la atracción
-% gravitacional que lo curva hacia el centro y su velocidad tangente, con las
-% dos fórmulas. Primera figura del corpus que COMPONE con una biblioteca —
-% `include` del icono reutilizable `lib/satellite.mg`, colocado con `scale`/`at`—;
-% dibuja las dos flechas como subtrayectos disjuntos de UNA polilínea (`;`, misma
-% punta), va en aspecto 16:9 y rotula con texto matemático `$…$`.
+% Un satélite en órbita circular alrededor de un planeta: la fuerza gravitacional que lo
+% curva hacia el centro (roja) y su velocidad tangente (verde), con las dos fórmulas
+% compuestas matemáticamente. Estrena tres cosas del lenguaje: `\frac` para las
+% fracciones, `include` de una biblioteca —el icono reutilizable `lib/satellite.mg`,
+% colocado con `scale`/`at`— y flechas cuya punta HEREDA el color de su línea. Va en
+% aspecto 16:9 y rotula con texto matemático `$…$`.
 %
 % NOTAS --------------------------------------------------------------------
 % FIGURA ORIGINAL (didáctica): no reproduce una publicación, así que lleva nombre
 % de física, como franck_condon/turning_points.
-%
-% ⚠️ FUERA DEL GOLDEN A PROPÓSITO: todavía NO está en la lista de `test/run.sh`.
-% Sus fórmulas FINGEN la fracción con `/n` (salto de línea) porque `\frac` aún no
-% existe; cuando entre —ver `plan_frac.md`, junto con el espaciado math tipo TeX—
-% se reescriben `F = \frac{G m_1 m_2}{r^2}` y `F_c = \frac{m v^2}{r}`, y ENTONCES
-% la figura entra a la red golden. Es la figura que MOTIVA `\frac` y estrena `include`.
 %
 % ESCALA DEL ICONO: `Satellite` (lib/satellite.mg) no declara `world_window`, así
 % que se coloca 1:1 —sus coordenadas son unidades de mundo— y `scale=0.8` es un
@@ -29,22 +23,25 @@ world_window 0 16  0 9
 
 include "../lib/satellite.mg"
 
+text("/bFuerza de atracción gravitacional") { 1 8 }
+text("$F = G \frac{m_1 m_2}{r^2}$", size=12) { 1 7 }
+
+text("/bFuerza centrípeta") { 1 5 }
+text("$F_c = \frac{m v^2}{r}$", size=12) { 1 4 }
+
 % orbit
-circle(4, dash="dashed", line_width=0) { 9 4.5 }
+circle(4, dash="dashed", line_width=0) { 10 4.5 }
 
 % planet
-circle(1, fill="midnightblue", color="black") { 9 4.5 }
+circle(1, fill="midnightblue", color="black") { 10 4.5 }
 
 % satellite
-%rectangle { 12.5 4  13.5 5 }
-%fit(Satellite) { 13 4.5  13.5 5 }
-Satellite(scale=0.8,at=(13, 4.6))
+%fit(Satellite) { 14 4.5  14.5 5 }
+Satellite(scale=0.8,at=(14, 4.6))
 
-polyline(marker_end="arrow", marker_size=3) { 12.24 4.5  10.5 4.5 ; 13 5.075 13 7 }
+polyline(marker_end="arrow", marker_size=3, color="red") { 13.24 4.5  11.5 4.5 }
+polyline(marker_end="arrow", marker_size=3, color="green") { 14 5.075 14 7 }
 
-text("$F = G m_1 m_2 /n r^2$", size=12, align="center") { 3 7 }
-text("$F_c = m v^2 /n r$", size=12, align="center") { 3 5 }
-
-text("Órbita", size=8, align="right") { 5 3 }
-text("Velocidad", align="center", size=8) { 13 7.25 }
-text("Fuerza/ngravitacional/n de atracción", align="center", size=8) { 11.2 4 }
+text("Órbita", size=8, align="right") { 6 3 }
+text("Velocidad", align="center", size=8) { 14 7.25 }
+text("Atracción", align="center", size=8) { 12.5 4 }

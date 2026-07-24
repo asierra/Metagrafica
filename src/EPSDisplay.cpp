@@ -304,6 +304,17 @@ void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
     fprintf(file, "%sstroke\n", quad);
 }
 
+void EPSDisplay::fracRule(double dy, double len, double lw) {
+  // Raya de \frac (plan_frac.md). gsave/grestore preserva el currentpoint (la pluma)
+  // y el grosor de línea de afuera; la raya se traza relativa al currentpoint. En PS
+  // `currentpoint newpath moveto` re-establece el punto tras limpiar el path. El color
+  // vigente es el del texto (en PS fill y stroke comparten color), así que la raya sale
+  // del color correcto sin fijarlo.
+  fprintf(file,
+          "gsave %f setlinewidth currentpoint newpath moveto 0 %f rmoveto %f 0 rlineto stroke grestore\n",
+          lw, dy, len);
+}
+
 // §4.11 fase 2: barrido genérico por ángulo (mismo método que
 // PDFDisplay::hatchCurrentPath, no 4 procs PS fijos): centro + diagonal del
 // bbox del path activo (xmin..ymax, ya en dispositivo), líneas paralelas cada

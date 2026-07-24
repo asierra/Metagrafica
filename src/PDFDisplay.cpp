@@ -421,6 +421,19 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
     HPDF_Page_Stroke(page);
 }
 
+void PDFDisplay::fracRule(double dy, double len, double lw) {
+  // Raya de \frac (plan_frac.md). cur_x/cur_y ya están en coords de dispositivo
+  // (variables propias, no las toca GSave/GRestore), así que la pluma se preserva sin
+  // más. Se traza con el color de TRAZO = color del texto (linecolor), igual que EPS.
+  HPDF_Page_GSave(page);
+  HPDF_Page_SetLineWidth(page, lw);
+  applyStrokeColor();
+  HPDF_Page_MoveTo(page, cur_x, cur_y + dy);
+  HPDF_Page_LineTo(page, cur_x + len, cur_y + dy);
+  HPDF_Page_Stroke(page);
+  HPDF_Page_GRestore(page);
+}
+
 void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
   double sa = startAng, ea = endAng;

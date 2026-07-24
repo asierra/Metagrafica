@@ -65,6 +65,7 @@ enum AttributeType {
   AT_LCOLOR,
   AT_LGRAY,
   AT_FCOLOR,
+  AT_FCOLOR_FROM_LINE,   // relleno = color de línea VIGENTE en draw-time (default de marcador)
   AT_FGRAY,
   AT_THEIGHT,
   AT_TALIGN,

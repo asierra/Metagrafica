@@ -2111,21 +2111,28 @@ struct PrimStmt : Stmt {
     wrapMarkers(s, out, mk);
   }
 
-  // Envuelve los Dots de marcador (mk) en su alcance de estado (§B.4): marker_color
-  // fija trazo+relleno (un valor sirve para formas rellenas y para cruz/x);
-  // marker_fill sobreescribe solo el relleno ("none" = abierto). Sin ninguno:
-  // relleno negro por default (como dot); el trazo (cruz/x) hereda el ambiente.
-  // Compartido por los marcadores de polyline (emitMarkers) y de arco (emitArcMarkers).
+  // Envuelve los Dots de marcador (mk) en su alcance de estado (§B.4). El marcador es
+  // parte de la LÍNEA, así que por DEFAULT toma SU color (trazo y relleno): un marcador
+  // sobre línea roja sale rojo sin pedir nada. `marker_color` es el OVERRIDE explícito
+  // (para un marcador de otro color); `marker_fill` sobreescribe solo el relleno
+  // ("none" = abierto). Sutileza de orden: el `color=` por-primitiva (§7.5) se envuelve
+  // en push/pop alrededor del TRAZO y ya se hizo pop antes de estos marcadores, así que
+  // NO está vigente en el dispositivo — se reusa `named["color"]` aquí explícitamente.
+  // Sin `color=` propio, el trazo hereda el color de línea ambiente y el relleno lo
+  // SIGUE en draw-time (AT_FCOLOR_FROM_LINE). Compartido por polyline (emitMarkers) y
+  // arco (emitArcMarkers).
   void wrapMarkers(Scope &s, GraphicsItemList &out, GraphicsItemList &mk) const {
     if (mk.empty()) return;
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     bool haveFill = named.count("marker_fill") != 0;
-    if (named.count("marker_color")) {
-      int c = colorFromValue(named.at("marker_color")->eval(s));
+    const Expr *mc = named.count("marker_color") ? named.at("marker_color").get()
+                   : named.count("color")        ? named.at("color").get() : nullptr;
+    if (mc) {
+      int c = colorFromValue(mc->eval(s));
       auto lc = std::make_unique<Attribute>(); lc->set(AT_LCOLOR, c); out.push_back(std::move(lc));
       auto fc = std::make_unique<Attribute>(); fc->set(AT_FCOLOR, c); out.push_back(std::move(fc));
     } else if (!haveFill) {
-      auto fc = std::make_unique<Attribute>(); fc->set(AT_FCOLOR, 0); out.push_back(std::move(fc));   // negro por default
+      auto fc = std::make_unique<Attribute>(); fc->set(AT_FCOLOR_FROM_LINE, 0); out.push_back(std::move(fc));
     }
     bool open = false;
     if (haveFill) {

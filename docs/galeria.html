@@ -2200,6 +2200,66 @@ text(&quot;base diagonal / vertical&quot;) { 0.3 0.05 }</pre></details>
         </div>
       </article>
     </div>
+    <h2>Más ejemplos</h2>
+    <div class="rejilla">
+      <article class="tarjeta">
+        <div class="lienzo"><img src="img/gravitacion_orbita.svg" alt="Órbita circular — gravitación y fuerza centrípeta" loading="lazy"></div>
+        <div class="cuerpo">
+          <h3>Órbita circular — gravitación y fuerza centrípeta</h3>
+          <p>Un satélite en órbita circular alrededor de un planeta: la fuerza gravitacional que lo curva hacia el centro (roja) y su velocidad tangente (verde), con las dos fórmulas compuestas matemáticamente. Estrena tres cosas del lenguaje: <code>\frac</code> para las fracciones, <code>include</code> de una biblioteca —el icono reutilizable <code>lib/satellite.mg</code>, colocado con <code>scale</code>/<code>at</code>— y flechas cuya punta HEREDA el color de su línea. Va en aspecto 16:9 y rotula con texto matemático <code>$…$</code>.</p>
+          <div class="pie"><code>gravitacion_orbita.mg</code>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/gravitacion_orbita.mg">ver en GitHub</a></div>
+          <details><summary>Ver el código que la dibuja</summary>
+            <pre>% Órbita circular — gravitación y fuerza centrípeta
+%
+% Un satélite en órbita circular alrededor de un planeta: la fuerza gravitacional que lo
+% curva hacia el centro (roja) y su velocidad tangente (verde), con las dos fórmulas
+% compuestas matemáticamente. Estrena tres cosas del lenguaje: `\frac` para las
+% fracciones, `include` de una biblioteca —el icono reutilizable `lib/satellite.mg`,
+% colocado con `scale`/`at`— y flechas cuya punta HEREDA el color de su línea. Va en
+% aspecto 16:9 y rotula con texto matemático `$…$`.
+%
+% NOTAS --------------------------------------------------------------------
+% FIGURA ORIGINAL (didáctica): no reproduce una publicación, así que lleva nombre
+% de física, como franck_condon/turning_points.
+%
+% ESCALA DEL ICONO: `Satellite` (lib/satellite.mg) no declara `world_window`, así
+% que se coloca 1:1 —sus coordenadas son unidades de mundo— y `scale=0.8` es un
+% MULTIPLICADOR de su tamaño natural (~1.8 u de ancho), no un tamaño absoluto; el
+% aspecto se preserva (declarar un `world_window` lo volvería absoluto pero lo
+% estiraría, porque la normalización struct→caja es anisotrópica).
+
+display_size 16 9
+
+world_window 0 16  0 9
+
+include &quot;../lib/satellite.mg&quot;
+
+text(&quot;/bFuerza de atracción gravitacional&quot;) { 1 8 }
+text(&quot;$F = G \frac{m_1 m_2}{r^2}$&quot;, size=12) { 1 7 }
+
+text(&quot;/bFuerza centrípeta&quot;) { 1 5 }
+text(&quot;$F_c = \frac{m v^2}{r}$&quot;, size=12) { 1 4 }
+
+% orbit
+circle(4, dash=&quot;dashed&quot;, line_width=0) { 10 4.5 }
+
+% planet
+circle(1, fill=&quot;midnightblue&quot;, color=&quot;black&quot;) { 10 4.5 }
+
+% satellite
+%fit(Satellite) { 14 4.5  14.5 5 }
+Satellite(scale=0.8,at=(14, 4.6))
+
+polyline(marker_end=&quot;arrow&quot;, marker_size=3, color=&quot;red&quot;) { 13.24 4.5  11.5 4.5 }
+polyline(marker_end=&quot;arrow&quot;, marker_size=3, color=&quot;green&quot;) { 14 5.075 14 7 }
+
+text(&quot;Órbita&quot;, size=8, align=&quot;right&quot;) { 6 3 }
+text(&quot;Velocidad&quot;, align=&quot;center&quot;, size=8) { 14 7.25 }
+text(&quot;Atracción&quot;, align=&quot;center&quot;, size=8) { 12.5 4 }</pre></details>
+        </div>
+      </article>
+    </div>
 <footer>
   Página generada por <code>tools/galeria.py</code> a partir de
   <code>examples/</code> y <code>docs/img/</code>. El título y la descripción de

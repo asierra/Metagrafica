@@ -1237,3 +1237,145 @@ limpio** (con el árbol stasheado) y recién entonces diferenciar. Bendecido con
 `images` (los 6 renders públicos y la galería regenerados). Con A y B hechas, lo único que le
 falta a `gravitacion_orbita` para entrar al golden es `\frac` inline (`plan_frac.md`), que ya
 hereda medición (A) y espaciado (B).
+
+### Cerrado en la sesión del 2026-07-24 (`\frac` inline en producción — `plan_frac.md`)
+
+**El `\frac` del spike pasó de standalone a INLINE y compone igual en los tres backends.** El
+spike (2026-07-23) solo detectaba `\frac` cuando era *todo* el `text()`; ahora vive **dentro**
+de una fórmula (`$F = \frac{G m_1 m_2}{r^2}$`), se anida (`$\frac{1}{1+\frac{1}{x}}$`) y lleva
+espaciado binario correcto alrededor (`$x + \frac{a}{b} - y$`). Golden **`ok=66` intacto** en
+todo momento (ningún ejemplo usa `\frac` todavía → es puramente aditivo).
+
+🧱 **Paso 1 — `TextLine` generalizado** de `vector<unique_ptr<Text>>` a
+`vector<unique_ptr<GraphicsItem>>`, para que un `Fraction` conviva como átomo inline entre
+trozos de texto. Refactor **puro**: la ruta `GI_TEXT` de `width()`/`draw()` quedó idéntica y el
+golden salió byte-idéntico. `addText` sigue aceptando `Text` (upcast); `addItem` entra para lo
+demás. El ancho por item se despacha por `getType()` (sin RTTI) en `TextLine::itemWidth`.
+
+🧩 **Paso 2 — detección inline** en el bucle math (`case '\\'`, junto a los símbolos): al ver
+`\frac` se extraen los dos `{..}` balanceados y se recursa cada uno como math. Dos trampas que
+el standalone esquivaba y el inline no podía: **(a) reentrancia** —`parse_text` usa estado
+global de archivo y una llamada recursiva lo reinicia—, resuelta partiéndolo en *wrapper
+(codifica UTF-8 una vez)* + `parse_text_core` (ya-codificado) y un `parse_sub` que **salva y
+restaura** todo el estado global alrededor de la recursión; **(b) doble codificación** —extraer
+`A/B` del `input` ya-codificado y re-pasarlos por `UTF8toISO8859_1` corrompería los acentos—,
+evitada porque `parse_sub` procesa el cuerpo ya codificado sin re-codificar. La fracción se
+clasifica **Inner** (`mathAtomSpace(MC_INNER)`) para heredar el glue de la Parte B; su
+entradilla viaja como `Fraction::pre_space`, que `TextLine` suma en `width()` y aplica en
+`draw()`, igual que el `pre_space` de un `Text`. El bloque standalone del spike se **eliminó**:
+`$\frac{1}{2}$` es ahora un `TextLine` de un solo `Fraction`, y el centrado pasa por `width()`.
+
+🎯 **Paso 4 — avance de pluma y la primitiva `fracRule`.** `Fraction::draw` se reescribió para
+inline: arranca en la pluma actual (que `TextLine` ya colocó, alineación incluida) y la deja
+**avanzada por `W`**, con movimientos device-relativos de **neto cero** alrededor de cada parte.
+La razón de que sean neto-cero y no `gsave/grestore`: **el SVG no salva la pluma simulada
+(`cur_x/cur_y`) en push/popDrawState**, a diferencia del `currentpoint` nativo de PS/PDF —
+apoyarse en `gsave` divergía entre backends (era la raíz del "SVG roto" del spike). La **raya**
+no se puede trazar con `rmoveto`/`rlineto` en SVG (su `rmoveto` no escribe al path-builder, a
+propósito, así que el path empezaría con `l` sin `M`): se añadió una **primitiva `fracRule(dy,
+len, lw)`** a `Display` + los 3 backends, que cada uno resuelve en su modelo nativo (`currentpoint`
+en PS; `cur_x/cur_y` en PDF/SVG) sin tocar la pluma. Es un método nuevo en los backends —el
+spike presumía "cero"— pero es la resolución limpia del subproblema que el plan reconocía como
+propio del SVG.
+
+✅ **Verificación visual (EPS/SVG/PDF rasterizados y comparados):** composición estructural
+correcta y **idéntica en los tres** —centrado, avance, anidado, espaciado binario—; el
+**placement/centrado del SVG quedó ARREGLADO** (el subproblema abierto del plan), porque al
+unificar bajo `TextLine` el `dx` de alineación ya cuenta el ancho real de la línea.
+
+📐 **Métricas verticales, primera pasada "barata".** Las constantes del spike descolgaban mal
+el denominador (`axis - denRaise` = 0.02·fs → **atravesaba la raya** incluso en `1/2`). Un ajuste
+intermedio (`axis=0.30`, `numDrop=0.35`, `denRaise=0.70·fs`) limpió las fracciones sin scripts,
+pero las holguras fijas **no miran el extent real**, así que `\frac{m_1 m_2}{r^2}` seguía
+rozando: el superíndice `²` del denominador subía 0.65·fs y cruzaba la barra. Se dejó anotado y
+se atacó a continuación.
+
+### Cerrado en la sesión del 2026-07-24 (`\frac`: extensión vertical MEDIDA — cierra el punto 3)
+
+**El numerador y el denominador se colocan ahora según su altura/profundidad REAL, no con
+holguras fijas.** Motivado por `gravitacion_orbita` reescrita con `\frac` (la dejó Alejandro):
+`$F = G \frac{m_1 m_2}{r^2}$` mostraba el `²` de `r²` atravesando la raya, porque las holguras
+fijas ignoran que el denominador lleva un superíndice alto. Ahora `Fraction::draw` **mide** cuánto
+baja el numerador de su línea base (incluyendo subíndices) y cuánto sube el denominador
+(incluyendo superíndices), y coloca cada uno para que su borde hacia la raya la libre por
+`kFracGap`.
+
+🔧 **Piezas** (`text.cpp`/`text.h`): `runVExtent` (extensión de UN run: corrimiento de script
+—los MISMOS 0.56/0.14 que aplica `TextLine::draw`— + altura de mayúscula / profundidad de
+descendente aproximadas), `childVExtent` (despacha Text/TextLine/Fraction, **mutuamente
+recursiva** con `Fraction::vExtent` → fracciones anidadas miden su altura real), `TextLine::vExtent`
+y `Fraction::vExtent`. Constantes compartidas `kFracAxis/kFracGap/kGlyphAscent/kGlyphDescent`
+para que medir (vExtent) y dibujar (draw) concuerden. **No hay métricas verticales por glifo**
+(los mapas solo dan ancho): la altura de mayúscula (0.70) y la profundidad (0.18) son aproximadas,
+así que en glifos sin ascendente/descendente plenos la holgura es un pelo generosa — pero **ya no
+hay colisión**, que era el defecto.
+
+✅ **Verificado a ojo (EPS+SVG, rasterizados):** `\frac{m_1 m_2}{r^2}` con subíndices sobre la
+raya y superíndice debajo; el anidado `\frac{1}{1+\frac{1}{x}}` se descuelga para librar la raya
+externa; `gravitacion_orbita` (ambas fórmulas) queda **limpia y con paridad EPS/SVG**. Cambio solo
+visual (ningún ejemplo del golden usa `\frac`): **golden `ok=66` intacto**.
+
+🔤 **Espacio antes de la fracción (Ord→Inner).** Comparando contra las referencias que dejó
+Alejandro (`Fuerza_gravitacion.png`, y las de alta resolución `gravitacional.png`/`centripeta.png`),
+faltaba el fino entre `G` y la fracción: `G\frac…` salía pegado. Se añadió **`MC_INNER`** al enum
+de clases math y a `mathGlue` con las reglas del TeXbook (Ord/Close/Punct/Inner ponen thin ANTES
+de un Inner; Inner pone thin/med/thick según el vecino), y la fracción se reclasificó de `MC_ORD`
+a `MC_INNER`. `G \frac{…}` ya lleva su fino.
+
+📏 **Tamaño: display style (pleno), NO scriptstyle.** Se probó encoger num/den a scriptstyle
+(≈0.75, reduciendo el tamaño del DISPOSITIVO —no cada run— para que el corrimiento de script
+`0.56·getFontSize()` escalara solo y el anidamiento cayera en scriptscript). Pero las referencias
+de alta resolución muestran num/den **a tamaño pleno** (display style, como en `\[…\]` de LaTeX,
+no inline). Se **revirtió** a `kFracScript = 1.0`; la maquinaria de escala queda como knob (un
+constexpr) por si algún día se quiere la variante text-style inline. Con pleno, las dos fórmulas
+de `gravitacion_orbita` **cuadran con las referencias** (tamaño, espacio y estructura; el `mv^2`
+con el `²` alto y `r`/`r^2` bajo la raya). El denominador con superíndice cuelga un pelín más que
+LaTeX porque el corrimiento de superíndice (`0.56·getFontSize()`) es constante GLOBAL del motor
+—la comparten todos los `x²`/`λ⁻¹` del corpus— y bajarla los movería a todos: no se tocó.
+
+⏭️ **Lo que falta para cerrar `gravitacion_orbita`:** ya solo es meterla en `test/run.sh` y
+bendecir golden + `docs/img` + galería (decisión de commit consciente — toca ejemplo publicado y
+red golden). La composición de `\frac` (inline + SVG + extent vertical + espacio Inner +
+tamaño display) está **completa**.
+
+### Cerrado en la sesión del 2026-07-24 (marcador hereda el color de la línea por default)
+
+**Un marcador sobre una línea toma AHORA el color de esa línea sin pedir nada.** Lo destapó
+`gravitacion_orbita` en clase: para una flecha roja había que escribir `color="red",
+marker_color="red"` —redundante—, y la intuición (bien planteada por Alejandro) es que
+`marker_color` debería ser el OVERRIDE, no un requisito para lo esperable. Antes, en `wrapMarkers`,
+el relleno del marcador salía **negro por default** (heredado de `dot` suelto) y el trazo heredaba
+el ambiente.
+
+🔎 **Sutileza de orden que corrigió el diagnóstico:** el `color=` por-primitiva (§7.5) se envuelve
+en push/**pop alrededor del TRAZO**, y `emitMarkers` corre DESPUÉS del pop — así que al dibujarse
+el marcador ese color ya NO está vigente en el dispositivo. Por eso el marcador ni siquiera
+heredaba el `color=` de su polyline (salía negro entero, no solo el relleno). El «general de
+draw-time» ingenuo (leer `dspstate.linecolor`) habría leído el AMBIENTE, no el rojo.
+
+🔧 **Solución (dos rutas, la correcta):** en `wrapMarkers`, sin `marker_color` el color del
+marcador (trazo+relleno) sale de **`named["color"]`** (el `color=` por-primitiva, reusado
+explícitamente porque ya se popeó); y si no hay `color=` propio, el relleno **sigue al color de
+línea AMBIENTE en draw-time** vía un modo nuevo `AT_FCOLOR_FROM_LINE` (`Attribute::draw` →
+`g.setFillColor(g.getLineColor())`; se añadió el accesor `Display::getLineColor()`). El trazo ya
+heredaba el ambiente. `marker_color`/`marker_fill` siguen igual como overrides.
+
+**Churn: CERO** (golden `ok=66`). Las flechas del corpus van sobre líneas negras (relleno negro =
+color de línea, idéntico) o traen `marker_color` explícito. Verificado en los 3 backends: la
+figura da flechas roja («Atracción») y verde («Velocidad») sin `marker_color`, y un smoke test del
+caso ambiente (`color "blue"` → flecha azul; negra → negra) cuadra EPS=SVG. **`gravitacion_orbita`
+quedó más limpia**: se cae el `marker_color="red"` redundante.
+
+### Cerrado en la sesión del 2026-07-24 (`gravitacion_orbita` ENTRA al golden — corpus a 23)
+
+**La figura que motivó `\frac` ya es parte de la red golden.** Con `\frac` completo (inline +
+extent vertical + display + Inner) y el marcador heredando el color de línea, se integró
+`gravitacion_orbita` al corpus: se añadió a la lista explícita de `test/run.sh` (23 ejemplos ×
+EPS/SVG/PDF = **69 goldens**), se limpió su encabezado (fuera el aviso «FUERA DEL GOLDEN / `\frac`
+no existe»; la descripción dice ahora fuerza roja / velocidad verde y estrena `\frac`+`include`+
+marcador-hereda-color), se creó `docs/img/gravitacion_orbita.svg` (la presencia del archivo es la
+declaración de la compuerta `imgfail`) y se bendijo con `capture` + `images` (galería incluida →
+22 tarjetas). **`check` → `ok=69 fail=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0`.** CLAUDE.md
+al día (conteos 22→23 / 66→69, narrativa de `gravitacion_orbita`, roadmap de tipografía cerrado).
+La figura va a una clase real de Alejandro; los tres PNG de referencia que dejó (`gravitacional.png`,
+`centripeta.png`, `Fuerza_gravitacion.png`) eran solo de la sesión.

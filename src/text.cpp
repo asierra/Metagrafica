@@ -511,7 +511,24 @@ void TextLine::draw(Display &g) {
   // que es justo donde vive el bug (los rótulos de axis/legend nacen con FN_NOFACE).
   { FontFace amb = g.getFontFace();
     g.setInheritedFace(amb != FN_NOFACE ? amb : FN_TIMES_ROMAN); }
-  for (const auto &text : textline) {
+  for (const auto &item : textline) {
+    // Item inline no-Text (Fraction, \frac inline): se compone a sí mismo en la pluma
+    // actual y la avanza por su ancho. Su ÚNICA mecánica de run es la entradilla math
+    // (pre_space, tamaño pleno → sin factor de script); la composición 2-D la resuelve
+    // Fraction::draw. En el corpus sin \frac esta rama no se toca → el refactor a
+    // contenedor genérico es byte-idéntico (plan_frac.md, Paso 1).
+    if (item->getType() == GI_FRACTION) {
+      double ps = static_cast<Fraction *>(item.get())->preSpace();
+      if (ps != 0)
+        g.rmoveto(ps * g.getFontSize(), 0);
+      item->draw(g);
+      continue;
+    }
+    if (item->getType() != GI_TEXT) {   // otros tipos futuros: se dibujan tal cual
+      item->draw(g);
+      continue;
+    }
+    Text *text = static_cast<Text *>(item.get());
     TextState ts = text->getState();
     //printf("text <%s> state %s\n", text->getText().c_str(), ts.str().c_str());
     // Espaciado math del run (plan_text_space, Parte B): rmoveto horizontal antes de
@@ -579,17 +596,92 @@ void TextBlock::draw(Display &g) {
   }
 }
 
+// Ancho em de un item de línea. Sin RTTI (-fno-rtti): despacho por getType() + cast.
+// Text mide con su TextState (incluye la entradilla pre_space, Parte B); un Fraction
+// reporta el suyo. La misma tabla la usan width() y draw() para no divergir.
+double TextLine::itemWidth(GraphicsItem *g) {
+  if (g->getType() == GI_TEXT) {
+    Text *t = static_cast<Text *>(g);
+    TextState ts = t->getState();
+    return ts.pre_space * ts.font_size + text_width(ts, t->getText());
+  }
+  if (g->getType() == GI_FRACTION) {
+    Fraction *f = static_cast<Fraction *>(g);
+    return f->preSpace() + f->width();     // entradilla math + ancho de la fracción
+  }
+  return 0;   // otros tipos: fuera del modelo de línea
+}
+
 double TextLine::width() {
   double w = 0;
-  for (const auto &text : textline) {
-    TextState ts = text->getState();
-    w += ts.pre_space * ts.font_size;          // espaciado math del run (Parte B)
-    w += text_width(ts, text->getText());
-  }
+  for (const auto &item : textline)
+    w += itemWidth(item.get());
   return w;
 }
 
-// SPIKE \frac ---------------------------------------------------------------
+// Composición \frac ---------------------------------------------------------
+// Métricas verticales de la fracción (em, relativas al tamaño base). El eje = la altura
+// de la raya; la holgura = el hueco que se deja entre la raya y el contenido. Los
+// corrimientos de sub/superíndice son los MISMOS que aplica TextLine::draw (0.56 arriba,
+// 0.14 abajo): así medir y dibujar concuerdan. No hay métricas verticales POR GLIFO (los
+// mapas solo dan ancho), así que la altura de mayúscula y la profundidad de descendente
+// son aproximadas — el numerador con subíndices y el denominador con superíndices ya no
+// chocan con la raya, a costa de una holgura un pelo generosa en glifos sin ascendente
+// o descendente plenos (plan_frac.md punto 3).
+static constexpr double kFracAxis    = 0.30;   // altura de la raya sobre la línea base (em)
+static constexpr double kFracGap     = 0.06;   // holgura raya ↔ contenido (em)
+static constexpr double kFracScript  = 1.0;    // num/den a tamaño pleno (display style, como la referencia)
+static constexpr double kGlyphAscent = 0.70;   // altura de mayúscula aprox. (em)
+static constexpr double kGlyphDescent= 0.18;   // profundidad de descendente aprox. (em)
+static constexpr double kSupShift    = 0.56;   // corrimiento de superíndice (= TextLine::draw)
+static constexpr double kSubShift    = 0.14;   // corrimiento de subíndice   (= TextLine::draw)
+
+// Extensión vertical de UN run según su estado: tope y fondo (em) respecto de la línea
+// base del renglón, contando el corrimiento del script y el tamaño reducido del glifo.
+static void runVExtent(const TextState &ts, double &top, double &bot) {
+  double shift = (ts.script > 0) ? kSupShift : (ts.script < 0) ? -kSubShift : 0.0;
+  top = shift + kGlyphAscent  * ts.font_size;
+  bot = shift - kGlyphDescent * ts.font_size;
+}
+
+// Extensión vertical de un hijo (Text/TextLine/Fraction). Mutuamente recursiva con
+// Fraction::vExtent para fracciones anidadas. Sin RTTI: despacho por getType().
+static void childVExtent(GraphicsItem *g, double &ascent, double &descent) {
+  ascent = 0; descent = 0;
+  if (!g) return;
+  if (g->getType() == GI_TEXT) {
+    double top, bot; runVExtent(static_cast<Text *>(g)->getState(), top, bot);
+    ascent = top; descent = -bot;
+  } else if (g->getType() == GI_TEXTLINE) {
+    static_cast<TextLine *>(g)->vExtent(ascent, descent);
+  } else if (g->getType() == GI_FRACTION) {
+    static_cast<Fraction *>(g)->vExtent(ascent, descent);
+  }
+}
+
+void TextLine::vExtent(double &ascent, double &descent) {
+  ascent = 0; descent = 0;
+  for (const auto &item : textline) {
+    double a = 0, d = 0;
+    childVExtent(item.get(), a, d);
+    if (a > ascent) ascent = a;
+    if (d > descent) descent = d;
+  }
+}
+
+// vExtent de la fracción: num/den se dibujan a kFracScript del tamaño (scriptstyle), así
+// que sus extents em escalan por ese factor; el eje y la holgura van al tamaño base (la
+// raya se sitúa en el eje del texto que rodea la fracción). Permite anidar.
+void Fraction::vExtent(double &ascent, double &descent) {
+  double numAsc, numDesc, denAsc, denDesc;
+  childVExtent(num.get(), numAsc, numDesc);
+  childVExtent(den.get(), denAsc, denDesc);
+  double numBase = kFracAxis + kFracGap + kFracScript * numDesc;   // base del numerador (em)
+  double denBase = kFracAxis - kFracGap - kFracScript * denAsc;    // base del denominador (em)
+  ascent  = numBase + kFracScript * numAsc;        // tope del numerador
+  descent = -(denBase - kFracScript * denDesc);    // fondo del denominador
+}
+
 // Ancho em de un hijo. Sin RTTI (-fno-rtti): se decide por getType() + cast.
 double Fraction::childWidth(GraphicsItem *g) {
   if (!g) return 0;
@@ -601,48 +693,63 @@ double Fraction::childWidth(GraphicsItem *g) {
   return 0;   // TextBlock u otros: fuera del spike
 }
 
+// Ancho em de la fracción = el del hijo más ancho, EN scriptstyle (num/den se dibujan a
+// kFracScript del tamaño, así que su ancho real es ese factor del hijo más ancho).
+double Fraction::width() {
+  double wn = childWidth(num.get());
+  double wd = childWidth(den.get());
+  return kFracScript * ((wn > wd) ? wn : wd);
+}
+
+// La fracción se compone INLINE: arranca en la pluma actual (que TextLine ya colocó,
+// incluida la alineación del renglón y el pre_space) y la deja AVANZADA por su ancho W,
+// lista para el siguiente elemento. Toda la geometría es device-relativa con movimientos
+// de NETO CERO alrededor de cada parte: no se apoya en gsave/grestore para restaurar la
+// pluma, porque el SVG no la salva en push/popDrawState (a diferencia del currentpoint
+// nativo de PS/PDF). La alineación y el valign los maneja TextLine::draw ANTES de llegar
+// aquí (pone align/valign a 0 para los hijos), así que la fracción no los toca.
 void Fraction::draw(Display &g) {
-  point anchor;
-  g.getPlumePosition(anchor);            // coord de mundo del text() (como TextBlock)
-  double fs = g.getFontSize();
-  double wn = childWidth(num.get()) * fs;   // a puntos de dispositivo
+  double baseFs = g.getFontSize();
+  double fs = baseFs * kFracScript;         // num/den en scriptstyle (más chicos que el texto)
+  double wn = childWidth(num.get()) * fs;   // a puntos de dispositivo, ya al tamaño reducido
   double wd = childWidth(den.get()) * fs;
   double W  = (wn > wd) ? wn : wd;
+  double dxn = (W - wn) / 2.0;              // centra el más angosto sobre W
+  double dxd = (W - wd) / 2.0;
 
-  // La fracción se ancla según el align del text(): center (1) = -W/2, right (2) = -W.
-  int al = g.getTextAlign();
-  double alignShift = (al == 1) ? -W / 2.0 : (al == 2 ? -W : 0.0);
+  // Colocación por EXTENSIÓN VERTICAL MEDIDA (plan_frac.md punto 3): se mide cuánto baja
+  // el numerador de su línea base (numDesc, incluye subíndices) y cuánto sube el
+  // denominador (denAsc, incluye superíndices) y se coloca cada uno para que su borde
+  // hacia la raya la libre por `kFracGap`. Los extents se miden en em y se llevan a
+  // dispositivo con `fs` (el tamaño reducido al que se dibujan); la raya y la holgura van
+  // al tamaño BASE (la raya se sitúa en el eje del texto que rodea la fracción). Reducir
+  // el tamaño del dispositivo —y no cada run— hace que el corrimiento de super/subíndice
+  // (0.56/0.14·getFontSize() en TextLine::draw) escale solo, y que un \frac anidado caiga
+  // en scriptscript sin código extra.
+  double numAsc, numDesc, denAsc, denDesc;
+  childVExtent(num.get(), numAsc, numDesc);
+  childVExtent(den.get(), denAsc, denDesc);
+  double axis    = kFracAxis * baseFs;                       // altura de la raya (tamaño base)
+  double numBase = (kFracAxis + kFracGap) * baseFs + numDesc * fs;   // base del numerador
+  double denBase = (kFracAxis - kFracGap) * baseFs - denAsc * fs;    // base del denominador
 
-  // Métricas TeX-simplificadas, relativas al tamaño de fuente.
-  double axis     = 0.32 * fs;   // altura de la raya sobre la línea base
-  double numDrop  = 0.55 * fs;   // base del numerador por ENCIMA de la raya
-  double denRaise = 0.30 * fs;   // base del denominador por DEBAJO de la raya
+  g.setFontSize(fs);   // num/den se dibujan reducidos; se restaura antes de la raya
 
-  g.setTextAlign(0);             // yo coloco cada parte; los hijos no re-centran
-  g.setTextValign(0);
-
-  // Numerador (centrado sobre W).
-  g.pushDrawState();
-  g.moveto_nopath(anchor.x, anchor.y);
-  g.rmoveto(alignShift + (W - wn) / 2.0, axis + numDrop);
+  // Numerador: sube y centra, dibuja (la pluma avanza wn), y REGRESA con neto cero.
+  g.rmoveto(dxn, numBase);
   if (num) num->draw(g);
-  g.popDrawState();
+  g.rmoveto(-(dxn + wn), -numBase);
 
-  // Denominador (centrado sobre W).
-  g.pushDrawState();
-  g.moveto_nopath(anchor.x, anchor.y);
-  g.rmoveto(alignShift + (W - wd) / 2.0, axis - denRaise);
+  // Denominador: baja y centra, dibuja (avanza wd), y regresa.
+  g.rmoveto(dxd, denBase);
   if (den) den->draw(g);
-  g.popDrawState();
+  g.rmoveto(-(dxd + wd), -denBase);
 
-  // Raya: path device-relativo (rmoveto/rlineto no transforman).
-  g.pushDrawState();
-  g.setLineWidth(fs * 0.045);
-  g.moveto(anchor.x, anchor.y);          // newpath + moveto (transforma el ancla)
-  g.rmoveto(alignShift, axis);
-  g.rlineto(W, 0);
-  g.stroke();
-  g.popDrawState();
+  g.setFontSize(baseFs);   // raya y avance al tamaño base
 
-  g.setTextAlign(al);                    // align es persistente: restaurar
+  // Raya al ancho W, a la altura del eje. Primitiva dedicada (no altera la pluma).
+  g.fracRule(axis, W, baseFs * 0.045);
+
+  // Átomo inline: deja la pluma avanzada por W para el siguiente elemento del renglón.
+  g.rmoveto(W, 0);
 }
