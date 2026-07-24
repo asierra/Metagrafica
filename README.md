@@ -192,10 +192,11 @@ for i = 0 to 11 {
 }
 ```
 
-The full language is specified in [`especificacion_mg.md`](especificacion_mg.md) *(in
-Spanish)*; `man mg` is the reference in English. MetaGráfica is deliberately **not** a
-general-purpose programming language: it has variables, expressions, `for` and `if`,
-logical expressions, and not much more.
+The language reference is **[`docs/reference.md`](docs/reference.md)** — read it straight
+through, or dip in while building a figure. `man mg` is a shorter terminal version, and the
+exhaustive design spec (in Spanish) is [`especificacion_mg.md`](especificacion_mg.md).
+MetaGráfica is deliberately **not** a general-purpose programming language: it has variables,
+expressions, `for` and `if`, logical expressions, and not much more.
 
 ## Building
 

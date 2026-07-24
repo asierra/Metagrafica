@@ -165,7 +165,7 @@ for i = 0 to 11 {
 }
 ```
 
-El lenguaje completo está en [`especificacion_mg.md`](especificacion_mg.md), y `man mg` es la referencia. MetaGráfica **no** pretende ser un lenguaje de programación de
+La referencia del lenguaje es **[`docs/referencia.md`](docs/referencia.md)** — se lee de corrido o se consulta mientras construyes una figura. `man mg` es la versión de terminal, y la especificación de diseño exhaustiva (interna) es [`especificacion_mg.md`](especificacion_mg.md). MetaGráfica **no** pretende ser un lenguaje de programación de
 propósito general: tiene variables, expresiones, `for` e `if`, expresiones lógicas y no mucho más.
 
 ## Compilación
