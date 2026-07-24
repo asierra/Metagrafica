@@ -144,13 +144,22 @@ EPS/SVG/PDF. Grande hecho: expresiones+control de flujo (§5-6), structs+invocac
 sine, texto con markup, estado color/fill/line_width/dash/font/align/valign + atributos
 por-primitiva (§7.5) con alcance correcto (gsave/grestore en EPS/PDF), transform §11.1.
 
-**Añadido 2026-07-23** (todo con cero churn en el golden): **`hatch_angle`** (orientación de
-trama desacoplada del tipo; `crosshatch` enderezable a rejilla recta), **`rectangle(w,h,at)`**
-(forma centro+tamaño alterna a las dos esquinas), y **`lib/` instalable** con búsqueda de
-`include` **local→lib** (§15; `make install` copia `lib/*.mg`, la ruta se hornea con
-`-DMG_LIBDIR`). ⏳ **WIP sin terminar:** el paquete de **tipografía math** (`plan_frac.md`) —
-`\frac` (SPIKE hecho, en el árbol como base) + espaciado automático estilo TeX (diagnosticado).
-Es lo que falta para que `examples/gravitacion_orbita.mg` entre al golden.
+**Añadido 2026-07-23** (todo con cero churn en el golden, salvo lo que se nota): **`hatch_angle`**
+(orientación de trama desacoplada del tipo; `crosshatch` enderezable a rejilla recta),
+**`rectangle(w,h,at)`** (forma centro+tamaño alterna a las dos esquinas), **`lib/` instalable**
+con búsqueda de `include` **local→lib** (§15; `make install` copia `lib/*.mg`, la ruta se hornea
+con `-DMG_LIBDIR`), un fix de **`xml:space` en SVG** (el espacio inicial de un `<text>` tras
+`{/i…}` ya no se recorta; SVG cuadra con EPS/PDF) y la **medición precisa de `Text`**
+(`text_width` parte los runs math cmmi/Times-Italic para medir lo que dibuja).
+
+⏳ **WIP de tipografía math — DOS planes** (léelos antes de seguir): **`plan_text_space.md`** es
+la fundación —**Parte A (medición precisa): HECHA**; **Parte B (espaciado automático estilo
+TeX): diseñada, NO empezada**, falta un pase de decisiones—; **`plan_frac.md`** es la
+composición 2-D de fracciones (**SPIKE hecho, committeado como base WIP**, depende de la Parte A,
+que ya está). El obsoleto `plan_text_struct.md` se borró (su análisis útil se salvó a
+`plan_frac.md`). Todo esto es lo que falta para que `examples/gravitacion_orbita.mg` entre al
+golden. **Siguiente paso sugerido: cerrar el diseño de la Parte B (unario/subíndice/overrides) y
+ejecutarla.**
 
 Cerrado en cada sesión: **[`docs/bitacora.md`](docs/bitacora.md)** — el registro de qué se
 cambió y por qué, sesión por sesión (24 y subiendo). ⚠️ **Léelo antes de tocar el motor o de

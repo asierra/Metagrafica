@@ -213,18 +213,17 @@ orden de la lista es la ejecución.
       el font Symbol y el markup `/g` desaparecen. Dígitos, operadores y puntuación
       de `$…$` entraron el mismo día (rectos, como en TeX; el `-` es el signo menos
       U+2212). Una fórmula ya no mezcla tipografías.
-- [~] **Tipografía math: `\frac` + espaciado automático** (`plan_frac.md`; un paquete, lo pide
-      `examples/gravitacion_orbita`). **(1) `\frac`** — SPIKE hecho 2026-07-23, producción
-      diferida: las fórmulas de la figura fingen fracción con `/n` (apila renglones, no
-      compone). El spike probó la composición 2-D con **cero métodos nuevos en backends**
-      (EPS/PDF centran bien; SVG con un bug de centrado acotado) en ~118 líneas; el costo real
-      (~1 semana) está en generalizar `TextLine` a un contenedor de items para el caso INLINE,
-      no en los backends. Código del spike **committeado en `main` como base WIP** (dormante,
-      `ok=66`). **(2) Espaciado
-      automático estilo TeX** — diagnosticado 2026-07-23: hoy los espacios de `$…$` se imprimen
-      literales; quitarlos a secas rompe 12 goldens (cramps `=`, funciones, comas). El arreglo
-      correcto es ignorar el espacio del fuente **e insertar** por clase de átomo (relación /
-      función / operador / puntuación), ~2 días. Detalle y plan de ambos en `plan_frac.md`.
+- [~] **Tipografía math — DOS planes, lo pide `examples/gravitacion_orbita`.**
+      **`plan_text_space.md`** es la FUNDACIÓN: **Parte A — medición precisa** de `Text` (hoy un
+      run math mide todo con `cmmi_metrics_map` pero se dibuja partido cmmi/Times-Italic; spike
+      2026-07-23: arreglo LOCALIZADO en `text_width` de ~15 líneas, churn = **solo `sines.svg`**
+      —EPS/PDF centran con operadores de fuente, la imprecisión solo mordía al SVG—, **lista
+      para ejecutar**); **Parte B — espaciado automático** estilo TeX (ignorar el espacio del
+      fuente e insertar por clase de átomo; diseñada, falta el pase de unario/subíndice/churn).
+      **`plan_frac.md`** — composición 2-D de fracciones: SPIKE hecho, **committeado en `main`
+      como base WIP** (dormante, `ok=66`; EPS/PDF centran, SVG con bug acotado, inline sin
+      hacer). ⚠️ **`\frac` DEPENDE de la Parte A** (usa `TextLine::width()` para dimensionar la
+      fracción). Orden: Parte A → (`\frac` y/o Parte B). Detalle en ambos planes.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo

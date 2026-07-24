@@ -1,12 +1,14 @@
-# Plan: tipografía matemática — `\frac` + espaciado automático estilo TeX
+# Plan: `\frac` — composición 2-D de fracciones en el modo math
 
-**Paquete** de dos mejoras al modo math que motiva la MISMA figura
-(`examples/gravitacion_orbita.mg`) y que conviene hacer juntas: **(1)** `\frac`
-(composición 2-D de fracciones) y **(2)** el espaciado automático (ignorar los espacios
-del fuente e insertarlos por clase de átomo, como TeX). Las dos van en este plan porque son
-el mismo esfuerzo —"que `$…$` componga como TeX"— y la figura que pide una pide la otra.
+Motivado por `examples/gravitacion_orbita.mg`, cuyas fórmulas fingen la fracción con `/n`.
 
-Estado: **`\frac` con SPIKE hecho (2026-07-23), producción DIFERIDA por decisión de
+⚠️ **Depende de `plan_text_space.md` (medición precisa de `Text`).** `\frac` dimensiona la
+fracción con `TextLine::width()` —centra numerador/denominador y traza la raya al ancho del más
+ancho—; si `Text` no mide lo que dibuja, sale torcido. La **Parte A** de `plan_text_space`
+(medición precisa, lista para ejecutar) es su prerrequisito. El **espaciado automático**
+(antes "(2)" de este plan) también se mudó allí: son el mismo esfuerzo de fundación.
+
+Estado: **SPIKE hecho (2026-07-23), producción DIFERIDA por decisión de
 Alejandro.** El código del spike de `\frac` queda **committeado en `main` como base WIP**
 (dormante: `ok=66`, ningún ejemplo lo usa; standalone anda en EPS/PDF, con un bug de centrado
 en SVG e inline sin implementar); este plan guarda lo aprendido para retomarlo sin
@@ -112,44 +114,13 @@ composición ya está probado end-to-end.
    sus fórmulas dejan de fingir con `/n` y la figura queda lista para `examples/` (regla del
    proyecto: no se construye sin una figura que lo pida; ya la hay).
 
-## (2) Espaciado automático estilo TeX
+## El espaciado automático se mudó a `plan_text_space.md`
 
-**Diagnosticado el 2026-07-23** al notar que `$F = G m_1 m_2$` sale con espacios de más.
-Hoy un espacio dentro de `$…$` cae al `default` del bucle de `parse_text` (`text_parser.cpp`)
-y se **imprime literal**, igual que en prosa.
-
-**El arreglo NO es "quitar los espacios".** Se probó (una rama `case ' '` que los descarta si
-`math_mode`) y es demasiado bruto: rompe **12 goldens** del corpus y cramps las fórmulas que
-usan los espacios a propósito —`$\phi = sin(n \pi x),  n = 1..4$` → `φ=sin(nπx),n=1..4`,
-ilegible: el `=` pegado, `sin` contra el paréntesis, la coma contra la `n`. Revertido.
-
-La razón es que **TeX hace DOS cosas**: ignora los espacios del fuente **e inserta** espaciado
-por **clase de átomo**:
-- espacio **medio** alrededor de RELACIONES (`=`, `<`, `>`, `≈`…),
-- espacio **medio** alrededor de OPERADORES binarios (`+`, `−`, `×`… — dependiente de contexto),
-- espacio tras NOMBRES DE FUNCIÓN (`sin`, `cos`, `log`, `tan`…),
-- espacio **fino** tras PUNTUACIÓN (`,` `;`),
-- nada entre átomos ORDINARIOS (`G m_1 m_2` → adyacentes, solo corrección itálica).
-
-**Propuesta:**
-1. Un **clasificador de átomos** en el bucle math: cada trozo emitido lleva su clase
-   (ordinario / relación / operador / función / puntuación / apertura / cierre). Ya casi está
-   la información —los símbolos entran por `\name` con su código, los operadores y relaciones
-   son caracteres conocidos, `math_functions[]` ya lista `sin`/`cos`/…—.
-2. Al descargar cada trozo, **insertar el espacio** que corresponde según la clase del trozo
-   anterior y el actual (tabla de pares, como la de TeX). El espacio del FUENTE se **ignora**
-   (se consume sin imprimir), como pedía la intuición original.
-3. **Comandos explícitos** para forzar/anular: `\,` (fino), `\;` (medio), `\quad`, y quizá `\!`
-   (negativo), para los casos que la tabla no acierta.
-4. **Churn de goldens ESPERADO y para bien**: las 12 fórmulas del corpus cambian a su forma
-   correcta. Re-bendecir con `capture`/`images` tras revisar que cada una mejora.
-
-**Costo**: moderado —una tabla de espaciado por pares de clases + el clasificador—, del orden
-de un par de días. Menor que `\frac`, y comparte la infraestructura de trozos del text_parser.
-
-**Orden sugerido dentro del paquete**: el espaciado (2) es independiente de `\frac` y más
-barato; puede ir primero y dejar el corpus math ya bien espaciado, y luego `\frac` (1) monta
-encima. O juntos, si se re-bendice una sola vez.
+Lo que aquí era la sección "(2)" —ignorar los espacios del fuente e insertarlos por clase de
+átomo, como TeX— es ahora la **Parte B** de `plan_text_space.md`, junto con la **medición
+precisa** (Parte A), que es la fundación que `\frac` necesita (ver la nota de dependencia
+arriba). El spike del 2026-07-23 mostró que la medición y el espaciado comparten la misma
+causa (runs no homogéneos) y merecen su propio plan.
 
 ## Decisión de futuro pendiente (no del spike)
 
@@ -159,3 +130,28 @@ standalone/inline es el caso **ligero** (sin motor de layout completo); `int`/`p
 límites, radicales y matrices es donde embeber TeX gana. `\frac` no compromete esa decisión:
 es la composición 2-D mínima y la más pedida, y el resto puede esperar a que una figura lo
 exija.
+
+## Contexto de tipografía math (salvado de `plan_text_struct.md`, jul-2019, ya borrado)
+
+Aquel plan planteó la decisión antes de que hubiera figura; hoy `gravitacion_orbita` la exige,
+pero su análisis sigue vigente y aclara la frontera del trabajo:
+
+- **MG coloca glifos de LM Math por CODEPOINT pero NO lee la tabla MATH de OpenType.** De ahí
+  **dos gradas**, y hay que elegir la 1:
+  1. **Formas fijas + métricas HORNEADAS** (eje matemático ≈ media altura, barra de grosor
+     fijo, script ≈ 0.7): cubre `\frac`, `√` sobre radicando chico, `∫` con límites inline. Es
+     factible con lo que hay (glifos + anchos por `fmmap` + una regla) y es **justo lo que hace
+     el spike** (métricas TeX-simplificadas de arriba). ← el camino elegido.
+  2. **Tabla MATH** (operadores display, radicales altos, delimitadores elásticos que estiran):
+     trabajo grande, casi ninguna figura lo pide. Diferido indefinido (coincide con la decisión
+     de arriba sobre embeber TeX).
+- **"Formas gratis, layout no":** `∫ ∑ ∏` ya están mapeados (`\int`→0x222B…) y salen hoy a
+  tamaño fijo inline; `√ ∮` serían triviales de agregar al mapa. Lo caro nunca son las formas,
+  es el **layout** (dónde centrar, grosor de barra, ensamblados extensibles).
+- **El contenedor es UNO, no dos.** La pila de renglones que `\frac` necesita **ya existe**:
+  es `TextBlock` (multilínea §14.1, implementado 2026-07-21). `\frac` = ese apilado
+  (numerador/denominador) **+** la raya **+** la colocación inline sobre el eje; la raya y el
+  "medir y avanzar la pluma" son del **cliente `\frac`**, no del contenedor. `√`/`∫`-con-límites
+  seguirían el mismo patrón. ⚠️ La **`struct` de usuario NO encaja para lo inline**: su
+  semántica es colocación por matriz en caja unitaria, que pelea con el eje matemático y el
+  avance de pluma a media línea (por eso `GI_TEXTSTRUCT` quedó reservado y no se usó).
