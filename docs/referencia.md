@@ -324,11 +324,15 @@ if r > 2 and n < 100 { text("grande") { 0 0 } } else { text("chica") { 0 0 } }
 
 `for` acepta `step`: `for t = 0 to 1 step 0.05 { … }`.
 
-> ⚠️ **En un bloque `{ }` los valores se separan por espacios**, así que `{ 12 y-11 }` son
-> **tres** términos, no dos. Regla: o parentizas todas las coordenadas o ninguna ([detalle](#14-errores-comunes)).
+> ⚠️ **En un bloque `{ }` los valores se separan por espacios**, así que un `+` o un `-` dentro de
+> una coordenada la parte en dos: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`); lo que
+> quieres es `{ 12 (y-11) }`. **Encierra en `( )` toda coordenada que sume o reste**; productos,
+> cocientes, potencias y un menos inicial van sueltos (`x*2`, `x/n`, `x^2`, `-x`). Mezclar variables
+> sueltas con coordenadas entre paréntesis es correcto: `{ x y (x+1) (y+1) }` ([detalle](#14-errores-comunes)).
 
-> ⚠️ **Un identificador seguido de `(` es una llamada.** En coordenadas, `dx (h+dy)` se lee
-> como `dx(h+dy)`. Parentiza: `(dx) (h+dy)`.
+> ⚠️ **Una llamada a función va PEGADA al paréntesis: `f(x)`.** Con un espacio de por medio —`f (x)`—
+> el `(` es un término aparte, no una llamada; por eso en `{ x y (x+1) }` la `y` no se traga el
+> paréntesis siguiente. Escribe siempre las llamadas sin espacio: `sqrt(n)`, `point_at(&p, 0.5)`.
 
 > ⚠️ **Un literal de lista no se puede indexar.** `[10,20,30][1]` es error de sintaxis; hay
 > que pasar por una variable (`xs = [10,20,30]` y luego `xs[1]`).
@@ -730,12 +734,14 @@ vacía, un EPS casi en blanco). Antes de sospechar del motor, comprueba que el r
 datos quepa en la ventana. Le pasa hasta a quien conoce el lenguaje.
 
 **Un `{ }` de coordenadas se queja de un número impar, o la figura sale deformada.** Dentro
-de un bloque los valores se separan por **espacios**, así que los signos y los paréntesis
-interactúan con esa separación: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`), no
-dos. La regla práctica es **o parentizas todas las coordenadas o ninguna**: `{ (12) (y-11) }`.
-El conteo impar sí es error de compilación, con línea y columna, así que al menos no falla
-en silencio. Emparentado: un identificador pegado a un paréntesis es una **llamada**, de modo
-que `dx (h+dy)` se lee `dx(h+dy)`.
+de un bloque los valores se separan por **espacios**, así que un `+` o un `-` dentro de una
+coordenada la parte en dos: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`), no dos —
+lo que quieres es `{ 12 (y-11) }`. La regla: **encierra en `( )` toda coordenada que sume o
+reste**; productos, cocientes y potencias van sueltos (`x*2`, `x/n`, `x^2`), y las variables
+sueltas conviven con coordenadas entre paréntesis (`{ x y (x+1) (y+1) }`). El conteo impar es
+error de compilación, con línea y columna, así que al menos no falla en silencio. Y una
+**llamada a función va pegada** (`f(x)`): con un espacio, `f (x)`, el `(` es un término aparte,
+no una llamada.
 
 **`dot(2, &p)` no compila y el error habla de una expresión inesperada.** El trayecto va
 **siempre como primer argumento** y el resto nombrado detrás: `dot(&p, size=2)`,

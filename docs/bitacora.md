@@ -1379,3 +1379,34 @@ declaración de la compuerta `imgfail`) y se bendijo con `capture` + `images` (g
 al día (conteos 22→23 / 66→69, narrativa de `gravitacion_orbita`, roadmap de tipografía cerrado).
 La figura va a una clase real de Alejandro; los tres PNG de referencia que dejó (`gravitacional.png`,
 `centripeta.png`, `Fuerza_gravitacion.png`) eran solo de la sesión.
+
+### Cerrado en la sesión del 2026-07-24 (llamada = `nombre(` PEGADO — se acaba el footgun del paréntesis en coordenadas)
+
+**Una variable pegada a un `(` ya NO se traga el término siguiente como llamada.** Lo levantó
+Alejandro mejorando `fill_styles`: en un bloque de coordenadas `{ a b (c) (d) }`, la `b` seguida
+de `(c)` se parseaba como `b(c)` («llamada inválida a función b»), obligando a parentizar TAMBIÉN
+las variables sueltas (`{ (a) (b) (c) (d) }`) aunque no fueran expresiones. Choca con el objetivo
+de que el lenguaje sea intuitivo.
+
+🔎 **Causa:** `parseAtom`, al leer un identificador, aceptaba con avidez el `(` siguiente como
+llamada (`if (lx.accept(T_LPAREN))`) **ignorando el espacio**. Y en este lenguaje el espacio
+SEPARA (config, coordenadas). El propio `fig4-4` traía dos comentarios documentando el workaround
+a mano (`% sin paréntesis: pondrían u (1/v) = llamada`) — prueba de que la molestia era real y
+recurrente.
+
+🔧 **Arreglo (decisión de Alejandro, confirmada en el hilo):** una llamada es `nombre(` **pegado**;
+con un espacio, `nombre (…)`, el `(` es un término aparte y —donde no quepa— error. Es
+**adyacencia por columnas del token**: `lx.peek().col == idt.col + name.length()` (mismo renglón).
+Los tokens ya llevaban `line`/`col`. Cambio contenido a `parseAtom` (case `T_IDENTIFIER`), **sin
+plumbing de contexto** — vale igual en expresiones (`sqrt (n)` con espacio deja de ser llamada y
+da error, que es prohibirla, como se quería).
+
+**Churn: CERO** (golden `ok=69`). Se verificó que el corpus no tiene ni una llamada con espacio
+(los hits del grep eran comentarios/cadenas). **Prueba concreta:** `fill_styles` reescrito con la
+sintaxis natural (`{ x yp (x+0.13) (yp+0.1) }` en vez de `{ (x) (yp) … }`) da EPS **byte-idéntico**
+salvo el `%%Title`. `fill_styles` (Alejandro) y `fig4-4` (comentarios corregidos + `(1/u)`→`1/u`)
+quedaron más limpios; galería regenerada (incrusta el fuente). La referencia (ES+EN, §7 y §14) se
+corrigió: el aviso viejo «un identificador seguido de `(` es una llamada / `dx (h+dy)` = `dx(h+dy)`»
+era ahora FALSO; la regla nueva deja claro el uso correcto de paréntesis (encerrar solo lo que suma
+o resta; las llamadas van pegadas; variables sueltas conviven con coordenadas entre paréntesis).
+El `+`/`-` binario sigue necesitando `( )` (inherente al modelo de «el espacio separa»); no se tocó.

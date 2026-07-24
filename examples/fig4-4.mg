@@ -66,7 +66,7 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     for i = 0 to n-1 {
         u = btop - i*((btop-bend)/n)
         v = btop - (i+1)*((btop-bend)/n)
-        polyline { 1/u  u   1/v  v }       % sin paréntesis: pondrían `u (1/v)` = llamada
+        polyline { 1/u  u   1/v  v }       % coords sueltas: divisiones y variables, sin paréntesis
     }
     line_width 0
     polyline { b1 Eb  36 Eb }              % nivel de energía
@@ -100,9 +100,9 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     for i = 0 to n-1 {
         u = ctop - i*((ctop-cend)/n)
         v = ctop - (i+1)*((ctop-cend)/n)
-        % La resta exige paréntesis, y por eso el 1/u de al lado también los
-        % lleva: `1/u (…)` leería `u` como llamada a función.
-        polyline { (1/u)  (u*u/2-u)   (1/v)  (v*v/2-v) }
+        % La resta dentro de una coord exige paréntesis; el 1/u de al lado NO
+        % (una división va suelta, y una variable con un espacio antes de `(` ya no es llamada).
+        polyline { 1/u  (u*u/2-u)   1/v  (v*v/2-v) }
     }
     line_width 0
     polyline { c0 Ec1  6.3 Ec1 }           % niveles de energía

@@ -319,11 +319,15 @@ if r > 2 and n < 100 { text("large") { 0 0 } } else { text("small") { 0 0 } }
 
 `for` accepts `step`: `for t = 0 to 1 step 0.05 { … }`.
 
-> ⚠️ **In a `{ }` block values are separated by spaces**, so `{ 12 y-11 }` is **three** terms, not two.
-> Rule: either you parenthesize all coordinates or none ([details](#14-common-mistakes)).
+> ⚠️ **In a `{ }` block values are separated by spaces**, so a `+` or `-` inside a coordinate splits it
+> in two: `{ 12 y-11 }` is **three** terms (`12`, `y`, `-11`); what you want is `{ 12 (y-11) }`.
+> **Parenthesize any coordinate that adds or subtracts**; products, quotients, powers and a leading minus
+> go bare (`x*2`, `x/n`, `x^2`, `-x`). Mixing bare variables with parenthesized coordinates is fine:
+> `{ x y (x+1) (y+1) }` ([details](#14-common-mistakes)).
 
-> ⚠️ **An identifier followed by `(` is a call.** In coordinates, `dx (h+dy)` is read as `dx(h+dy)`.
-> Parenthesize: `(dx) (h+dy)`.
+> ⚠️ **A function call is GLUED to its parenthesis: `f(x)`.** With a space in between —`f (x)`— the `(`
+> is a separate term, not a call; that's why in `{ x y (x+1) }` the `y` doesn't swallow the following
+> parenthesis. Always write calls without a space: `sqrt(n)`, `point_at(&p, 0.5)`.
 
 > ⚠️ **A list literal cannot be indexed.** `[10,20,30][1]` is a syntax error; you must go through a variable
 > (`xs = [10,20,30]` and then `xs[1]`).
@@ -711,11 +715,12 @@ that's why the symptom looks like an engine bug (an empty figure, an almost-blan
 engine, check that your data range fits in the window. It happens even to those who know the language.
 
 **A coordinate `{ }` complains about an odd number, or the figure comes out distorted.** Inside a block
-values are separated by **spaces**, so signs and parentheses interact with that separation: `{ 12 y-11 }` is
-**three** terms (`12`, `y`, `-11`), not two. The practical rule is **either you parenthesize all coordinates
-or none**: `{ (12) (y-11) }`. The odd count is a compilation error, with line and column, so at least it
-doesn't fail silently. Related: an identifier stuck to a parenthesis is a **call**, so `dx (h+dy)` reads
-`dx(h+dy)`.
+values are separated by **spaces**, so a `+` or a `-` inside a coordinate splits it in two: `{ 12 y-11 }` is
+**three** terms (`12`, `y`, `-11`), not two — what you want is `{ 12 (y-11) }`. The rule: **parenthesize any
+coordinate that adds or subtracts**; products, quotients and powers go bare (`x*2`, `x/n`, `x^2`), and bare
+variables coexist with parenthesized coordinates (`{ x y (x+1) (y+1) }`). The odd count is a compilation
+error, with line and column, so at least it doesn't fail silently. And a **function call is glued** (`f(x)`):
+with a space, `f (x)`, the `(` is a separate term, not a call.
 
 **`dot(2, &p)` doesn't compile and the error talks about an unexpected expression.** The path goes **always
 as the first argument** and the rest named after: `dot(&p, size=2)`, `marker(&p, shape="x")`,

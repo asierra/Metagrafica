@@ -247,8 +247,19 @@ static ExprPtr parseAtom(Lexer &lx) {
       return first;
     }
     case T_IDENTIFIER: {
-      std::string name = lx.next().str;
-      if (lx.accept(T_LPAREN)) {              // llamada a función
+      const Tok idt = lx.next();
+      const std::string &name = idt.str;
+      // Una llamada es `nombre(` PEGADO. En este lenguaje el espacio SEPARA (config,
+      // coordenadas), así que un espacio entre el nombre y el `(` —`nombre (…)`— NO es
+      // una llamada: `{ a b (c) (d) }` son cuatro términos y no `b(c)`. La adyacencia se
+      // mide por columnas del token (mismo renglón, el `(` arranca justo tras el nombre).
+      // Sin esto, una variable pegada a un paréntesis se tragaba el término siguiente como
+      // llamada — el footgun de los bloques de coordenadas (ver checkCoordPairs).
+      bool glued = lx.peek().type == T_LPAREN &&
+                   lx.peek().line == idt.line &&
+                   lx.peek().col == idt.col + (int)name.length();
+      if (glued) {
+        lx.next();                            // consume '(' pegado
         // path_width(&p) (§8.x/§9): reducción path→número, no una función de
         // CallExpr (su argumento es un PathExpr, no un Expr). Antes de armar
         // el CallExpr genérico para que no lo intercepte como nombre desconocido.

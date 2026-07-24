@@ -275,7 +275,7 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     for i = 0 to n-1 {
         u = btop - i*((btop-bend)/n)
         v = btop - (i+1)*((btop-bend)/n)
-        polyline { 1/u  u   1/v  v }       % sin paréntesis: pondrían `u (1/v)` = llamada
+        polyline { 1/u  u   1/v  v }       % coords sueltas: divisiones y variables, sin paréntesis
     }
     line_width 0
     polyline { b1 Eb  36 Eb }              % nivel de energía
@@ -309,9 +309,9 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     for i = 0 to n-1 {
         u = ctop - i*((ctop-cend)/n)
         v = ctop - (i+1)*((ctop-cend)/n)
-        % La resta exige paréntesis, y por eso el 1/u de al lado también los
-        % lleva: `1/u (…)` leería `u` como llamada a función.
-        polyline { (1/u)  (u*u/2-u)   (1/v)  (v*v/2-v) }
+        % La resta dentro de una coord exige paréntesis; el 1/u de al lado NO
+        % (una división va suelta, y una variable con un espacio antes de `(` ya no es llamada).
+        polyline { 1/u  (u*u/2-u)   1/v  (v*v/2-v) }
     }
     line_width 0
     polyline { c0 Ec1  6.3 Ec1 }           % niveles de energía
@@ -1690,8 +1690,8 @@ labels = [&quot;hatch&quot;, &quot;hatchback&quot;, &quot;crosshatch&quot;, &quo
 font_size 6
 for i = 0 to 3 {
     x = i * 0.25
-    rectangle(hatch=styles[i], hatch_gap=4, hatch_angle=angles[i]) { (x) (yp)  (x+0.13) (yp+0.1) }
-    text(labels[i], font_size=6) { (x) (yp-0.055) }
+    rectangle(hatch=styles[i], hatch_gap=4, hatch_angle=angles[i]) { x yp  (x+0.13) (yp+0.1) }
+    text(labels[i], font_size=6) { x (yp-0.055) }
 }
 
 % --- Grises con gray(x), de 0 (negro) a 1 (blanco) ---
@@ -1703,9 +1703,9 @@ font_size 9
 text(&quot;For grays use gray(0.0) to gray(1.0)&quot;)  { 0 (yg+0.13) }
 for i = 0 to 8 {
     x = i * 0.1
-    rectangle(fill = gray(i*0.1)) { (x) (yg)  (x+0.1) (yg+0.1) }   % gray(0.1)..gray(0.9)
+    rectangle(fill = gray(i*0.1)) { x yg  (x+0.1) (yg+0.1) }   % gray(0.1)..gray(0.9)
 }
-rectangle(fill=&quot;white&quot;, color=gray(0)) { .9 (yg)  1 (yg+0.1) }       % blanco, contorneado en negro
+rectangle(fill=&quot;white&quot;, color=gray(0)) { .9 yg  1 (yg+0.1) }       % blanco, contorneado en negro
 
 % --- Colores con nombre; el contorno se pide con color= ---
 % Los colores son una lista; el índice da la posición.
@@ -1718,11 +1718,11 @@ for i = 0 to 9 {
     x = i * 0.1
     % el blanco (i=8) se contornea para que se vea sobre el fondo
     if i == 8 { 
-        rectangle(fill=&quot;white&quot;, color=&quot;black&quot;) { (x) (y)  (x+0.1) (y+0.1) }
+        rectangle(fill=&quot;white&quot;, color=&quot;black&quot;) { x y  (x+0.1) (y+0.1) }
         text(&quot;white&quot;) { 0.8 (y-0.05) }
     }    
     else { 
-        rectangle(fill=fills[i]) { (x) (y)  (x+0.1) (y+0.1) }
+        rectangle(fill=fills[i]) { x y  (x+0.1) (y+0.1) }
         text(fills[i])   { (0.1*i) (y-0.05) }
     }
 }

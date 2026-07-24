@@ -34,8 +34,8 @@ labels = ["hatch", "hatchback", "crosshatch", "hatch_angle=0"]
 font_size 6
 for i = 0 to 3 {
     x = i * 0.25
-    rectangle(hatch=styles[i], hatch_gap=4, hatch_angle=angles[i]) { (x) (yp)  (x+0.13) (yp+0.1) }
-    text(labels[i], font_size=6) { (x) (yp-0.055) }
+    rectangle(hatch=styles[i], hatch_gap=4, hatch_angle=angles[i]) { x yp  (x+0.13) (yp+0.1) }
+    text(labels[i], font_size=6) { x (yp-0.055) }
 }
 
 % --- Grises con gray(x), de 0 (negro) a 1 (blanco) ---
@@ -47,9 +47,9 @@ font_size 9
 text("For grays use gray(0.0) to gray(1.0)")  { 0 (yg+0.13) }
 for i = 0 to 8 {
     x = i * 0.1
-    rectangle(fill = gray(i*0.1)) { (x) (yg)  (x+0.1) (yg+0.1) }   % gray(0.1)..gray(0.9)
+    rectangle(fill = gray(i*0.1)) { x yg  (x+0.1) (yg+0.1) }   % gray(0.1)..gray(0.9)
 }
-rectangle(fill="white", color=gray(0)) { .9 (yg)  1 (yg+0.1) }       % blanco, contorneado en negro
+rectangle(fill="white", color=gray(0)) { .9 yg  1 (yg+0.1) }       % blanco, contorneado en negro
 
 % --- Colores con nombre; el contorno se pide con color= ---
 % Los colores son una lista; el índice da la posición.
@@ -62,11 +62,11 @@ for i = 0 to 9 {
     x = i * 0.1
     % el blanco (i=8) se contornea para que se vea sobre el fondo
     if i == 8 { 
-        rectangle(fill="white", color="black") { (x) (y)  (x+0.1) (y+0.1) }
+        rectangle(fill="white", color="black") { x y  (x+0.1) (y+0.1) }
         text("white") { 0.8 (y-0.05) }
     }    
     else { 
-        rectangle(fill=fills[i]) { (x) (y)  (x+0.1) (y+0.1) }
+        rectangle(fill=fills[i]) { x y  (x+0.1) (y+0.1) }
         text(fills[i])   { (0.1*i) (y-0.05) }
     }
 }
