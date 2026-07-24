@@ -726,10 +726,20 @@ void SVGDisplay::text(string s) {
     double ang = atan2(uy - oy, ux - ox) * 180.0 / M_PI;
     bool rot = fabs(ang) > 0.01;
     if (rot) fprintf(file, "<g transform=\"rotate(%f, %f, %f)\">\n", ang, cur_x, cur_y);
+    // xml:space="preserve" SOLO cuando hace falta: el renderizador SVG recorta el
+    // espacio INICIAL del contenido de un <text> (y colapsa los dobles). Pasa cuando
+    // un run separado —tras un grupo `{/i…}`— empieza con espacio: " or…" salía pegado
+    // ("colornameor"). EPS/PDF nunca lo sufren (el espacio va en el literal). Se pone
+    // condicional para NO churnear los ~38 SVG del corpus que no tienen ese caso; los
+    // espacios INTERNOS de un run (p.ej. math "E = m c", un solo <text>) ya se
+    // preservan sin el atributo. (§14.4.)
+    const char *wsattr =
+        (!s.empty() && (s.front() == ' ' || s.find("  ") != std::string::npos))
+            ? " xml:space=\"preserve\"" : "";
     fprintf(file,
             "<text x=\"%f\" y=\"%f\" transform=\"scale(1, -1)\" text-anchor=\"%s\" "
-            "fill=\"%s\" font-size=\"%f\">",
-            cur_x, -cur_y, anchor, colorBuf, size);
+            "fill=\"%s\" font-size=\"%f\"%s>",
+            cur_x, -cur_y, anchor, colorBuf, size, wsattr);
     // Un <tspan> por segmento homogéneo. SIEMPRE al menos uno, aunque no haya nada
     // que partir: así el nº de tspans es comparable 1:1 con los `show` de EPS y los
     // `Tj` de PDF, que es el invariante de texto de la Capa 3 del harness.
