@@ -2,19 +2,23 @@
 
 Motivado por `examples/gravitacion_orbita.mg`, cuyas fórmulas fingen la fracción con `/n`.
 
-⚠️ **Depende de `plan_text_space.md` (medición precisa de `Text`).** `\frac` dimensiona la
-fracción con `TextLine::width()` —centra numerador/denominador y traza la raya al ancho del más
-ancho—; si `Text` no mide lo que dibuja, sale torcido. La **Parte A** de `plan_text_space`
-(medición precisa, lista para ejecutar) es su prerrequisito. El **espaciado automático**
-(antes "(2)" de este plan) también se mudó allí: son el mismo esfuerzo de fundación.
+✅ **Dependencia SATISFECHA (2026-07-23): `plan_text_space` Partes A y B HECHAS.** `\frac`
+dimensiona la fracción con `TextLine::width()` —centra numerador/denominador y traza la raya al
+ancho del más ancho—; si `Text` no mide lo que dibuja, sale torcido. La **Parte A** (medición
+precisa) era el prerrequisito y ya está; la **Parte B** (espaciado automático estilo TeX, antes
+la sección "(2)" de este plan) también, y **ambas ALIMENTAN `\frac`**: verificado el mismo día
+que, tras A+B, el numerador de `$\frac{G m_1 m_2}{r^2}$` compone **tight** (`Gm₁m₂`, sin los
+espacios literales) y `$\frac{a+b}{c}$` trae el `+` binario bien espaciado (`a + b`). La
+fundación que `\frac` necesitaba ya no es futuro.
 
 Estado: **SPIKE hecho (2026-07-23), producción DIFERIDA por decisión de
 Alejandro.** El código del spike de `\frac` queda **committeado en `main` como base WIP**
-(dormante: `ok=66`, ningún ejemplo lo usa; standalone anda en EPS/PDF, con un bug de centrado
-en SVG e inline sin implementar); este plan guarda lo aprendido para retomarlo sin
-re-descubrirlo. El espaciado automático (2) está **diagnosticado, no empezado**.
+(dormante: `ok=66`, ningún ejemplo lo usa; standalone compone bien en EPS/PDF salvo métricas,
+SVG con placement/centrado rotos, inline sin implementar); este plan guarda lo aprendido para
+retomarlo sin re-descubrirlo. **El espaciado automático (2) ya NO es de este plan: es la Parte
+B de `plan_text_space`, hecha.**
 
-Lo destapó `local/gravitacion_orbita.mg`: sus fórmulas (`F = G m₁m₂/r²`) fingen una fracción
+Lo destapó `examples/gravitacion_orbita.mg`: sus fórmulas (`F = G m₁m₂/r²`) fingen una fracción
 con `/n` (salto de línea) + `align="center"`, y se amontonan — el numerador mete `F =` en la
 parte de arriba, así que `r²` queda centrado bajo `= G m₁` y los subíndices chocan con el
 denominador. `/n` **apila renglones**, no **compone** una fracción. `\frac` es el arreglo.
@@ -24,8 +28,10 @@ denominador. `/n` **apila renglones**, no **compone** una fracción. `\frac` es 
 `\frac{A}{B}` **standalone** (cuando es todo el `text()`): mide numerador y denominador,
 centra el angosto sobre el ancho, traza la raya, y —en EPS/PDF— avanza y ancla bien.
 
-- **EPS y PDF: correcto**, centrado e izquierdo. La fracción `G m₁m₂/r²` sale bien compuesta.
-- **SVG: izquierdo bien, centrado con bug** (ver abajo).
+- **EPS y PDF: composición correcta**, centrado e izquierdo (métricas verticales con roce en
+  contenido con sub/superíndices — ver el re-test más abajo, que lo agravó a defecto visible).
+- **SVG: con bugs de placement y centrado** (el re-test tras A+B mostró que es más que el
+  centrado; ver abajo).
 - **~118 líneas, 4 archivos, CERO métodos nuevos en los backends.** La clave arquitectónica
   se validó: la composición 2-D vive en `Fraction::draw` usando solo virtuals que ya existen
   (`moveto`/`moveto_nopath`/`rmoveto`/`rlineto`/`stroke`/`text`), igual que `TextBlock`. El
@@ -48,6 +54,28 @@ centra el angosto sobre el ancho, traza la raya, y —en EPS/PDF— avanza y anc
 `axis = 0.32·fs` (alto de la raya), `numDrop = 0.55·fs` (base del numerador sobre la raya),
 `denRaise = 0.30·fs` (base del denominador bajo la raya), raya de `0.045·fs` de grueso.
 
+### Re-test tras Partes A y B (2026-07-23) — lo que cambió y lo que quedó al descubierto
+
+Con A (medición precisa) y B (espaciado automático) hechas, se volvió a rasterizar el spike
+standalone (`\frac{G m_1 m_2}{r^2}`, `\frac{a+b}{c}` centrado, `\frac{1}{2}`):
+
+- ✅ **La composición INTERNA mejoró sola:** el numerador ya no arrastra los espacios del
+  fuente (`Gm₁m₂`) y los operadores se espacian por clase (`a + b`). Es la prueba directa de
+  que `Fraction::childWidth` → `TextLine::width()` hereda A+B (incluido el `pre_space` de B, que
+  `width()` ya suma). No hubo que tocar `\frac` para esto: cayó por la fundación.
+- ⚠️ **Las MÉTRICAS verticales son ahora el defecto visible** (punto 3, ascendido de "fino" a
+  "hay que hacerlo"): con contenido real, el subíndice del numerador (`m₁`) y el superíndice del
+  denominador (`r²`) **chocan con la raya**. `numDrop`/`denRaise` son constantes fijas que no
+  miran la altura/profundidad real del contenido. En EPS/PDF se nota; hay que subir los huecos o
+  medir extent vertical.
+- 🔴 **SVG peor que "centrado con bug":** el denominador queda **demasiado alto** (pegado al
+  numerador, con la raya por debajo de ambos), el centrado no coloca el denominador bajo el
+  numerador, y en `align="left"` la raya casi no se ve. El modelo de posicionamiento de texto
+  del SVG (pluma SIMULADA `cur_x` + `text-anchor="start"` siempre) no coopera con la composición
+  manual por `rmoveto` como sí lo hace el `currentpoint` nativo de PS/PDF. Es la misma raíz que
+  el "bug de centrado" del punto 2, pero afecta también la colocación VERTICAL — más grande de lo
+  que decía el spike. **Al retomar, tratar el SVG como su propio subproblema.**
+
 ## Qué NO está (el costo real)
 
 1. **INLINE — el grueso.** `F = \frac{...}{...}` **no se apila**: el spike solo detecta `\frac`
@@ -55,37 +83,53 @@ centra el angosto sobre el ancho, traza la raya, y —en EPS/PDF— avanza y anc
    que:
    - **Generalizar `TextLine`** de `std::vector<std::unique_ptr<Text>>` a un contenedor de
      `GraphicsItem` genéricos, para que un `Fraction` sea un hijo inline entre trozos de texto.
+     ⚠️ **Conservar el `pre_space` por run que introdujo la Parte B:** hoy `TextLine::width()`
+     lo suma y `draw()` lo aplica sobre `Text`; el contenedor genérico tiene que seguir
+     haciéndolo (o el espaciado math se pierde al generalizar).
    - Enganchar la detección de `\frac` **dentro del bucle char-a-char** del modo math
-     (`text_parser.cpp`), no solo al inicio.
+     (`text_parser.cpp`), no solo al inicio — **en la rama `case '\\'`, junto a los símbolos**.
+   - **Integrar con la máquina de espaciado de la Parte B:** un `Fraction` inline es un ÁTOMO y
+     necesita su clase para el glue con los vecinos (en TeX una fracción es **Inner**, que se
+     comporta ≈ Ord). Al empujar el `Fraction` al `TextLine`, llamar a `mathAtomSpace(MC_ORD)`
+     (o añadir `MC_INNER` a `mathGlue` si se quiere fidelidad) y guardarle su `pre_space`, igual
+     que hacen `add_symbol`/`add_word`. Sin esto, `x+\frac{a}{b}` no pondría el med del `+`.
    - Que `TextLine::width()` y `TextLine::draw` **cuenten la fracción** como un elemento de
      ancho `W` (avanzar la pluma por `W` tras dibujarla, dejándola en la línea base a
      `anchor.x + W`).
    - Que `Fraction::draw` **avance la pluma** (hoy no lo hace: es standalone).
 
    Esta generalización de `TextLine` es la que ripplea (width, draw, medición) y se lleva los
-   días. **Es la pieza que decide el costo.**
+   días. **Es la pieza que decide el costo.** La Parte B ya dejó parte del camino: la lógica de
+   "sellar un run para que no se fusione" (`mathSeal`) y el `pre_space` en `TextState` son el
+   molde de cómo un item no-`Text` entra a la línea.
 
-2. **Bug de centrado en SVG** (acotado). En `align="center"` el numerador recibe un `dx` de
-   más (medido: 39.06 px = W/2 sobre un fs=20). EPS/PDF centran bien con el mismo código, así
-   que es específico del SVG: su pluma **simulada** (`cur_x`) + `text-anchor` no cooperan con
-   el centrado manual como sí lo hace el `currentpoint` nativo. Hipótesis a verificar al
-   retomar: `TextLine::draw` aplica su `dx` de alineación (`width·fs/(3-align)`) porque ve
-   `align≠0` pese al `setTextAlign(0)` de `Fraction::draw` — revisar cómo el SVG propaga
-   `text_align` a través de `pushDrawState`/`text()`. Nota: la "cero cambios en backends" vale
-   para el *mecanismo* (no hacen falta virtuals nuevos), pero el modelo de posicionamiento de
-   texto del SVG **sí necesita atención** para el centrado.
+2. **SVG roto en composición 2-D** (más que "centrado", ver el re-test de arriba). Además del
+   `dx` de centrado de más (`align="center"`, medido 39.06 px = W/2 sobre fs=20), el re-test del
+   2026-07-23 mostró que en SVG el **denominador queda mal colocado en vertical** y la **raya no
+   siempre se ve**. EPS/PDF componen bien con el mismo código → es el modelo de posicionamiento
+   del SVG (pluma **simulada** `cur_x` + `text-anchor="start"` fijo) el que no coopera con la
+   composición manual por `rmoveto` como sí lo hace el `currentpoint` nativo. Hipótesis del
+   centrado a verificar: `TextLine::draw` aplica su `dx` de alineación (`width·fs/(3-align)`)
+   porque ve `align≠0` pese al `setTextAlign(0)` de `Fraction::draw` — revisar cómo el SVG
+   propaga `text_align` por `pushDrawState`/`text()`. La "cero cambios en backends" vale para el
+   *mecanismo* (no hacen falta virtuals nuevos), pero el **posicionamiento de texto del SVG es su
+   propio subproblema** y hay que resolverlo con su propia batería de casos.
 
-3. **Métricas finas.** El subíndice `m₁` roza la raya; el hueco del denominador en `a/b` es
-   chico. Ajuste de las constantes de arriba.
+3. **Métricas verticales** (ascendido de "fino": el re-test lo volvió el defecto más visible en
+   EPS/PDF). El subíndice del numerador y el superíndice del denominador **chocan con la raya**
+   porque `numDrop`/`denRaise` son constantes que no miran la altura/profundidad real del
+   contenido. Opciones: subir los huecos (barato, aproximado) o medir el extent vertical del
+   hijo (correcto, más trabajo — hoy solo se mide el ancho).
 
 ## Costo estimado (medido, no adivinado)
 
 | Pieza | Costo |
 |---|---|
 | `\frac` standalone (compuesto + raya + EPS/PDF) | **hecho en el spike** (~½ día) |
-| Fix centrado SVG | ~pocas horas |
+| Fix SVG (placement vertical + centrado + raya) | ~1 día (el re-test lo agrandó: es más que el `dx`) |
 | **Inline + generalizar `TextLine`** | **2–4 días** (el grueso; toca width/draw/medición) |
-| Métricas | ~pocas horas |
+| Métricas verticales (roce con la raya) | ~pocas horas (subir huecos) — o +1 día si se mide extent |
+| Espaciado interno de num/den | **0: lo dio `plan_text_space` A+B** |
 | **Total producción** | **~1 semana**, dominado por la generalización de `TextLine` |
 
 Sigue siendo la más cara de las tres necesidades que destapó la órbita (vs. `rectangle
@@ -114,13 +158,16 @@ composición ya está probado end-to-end.
    sus fórmulas dejan de fingir con `/n` y la figura queda lista para `examples/` (regla del
    proyecto: no se construye sin una figura que lo pida; ya la hay).
 
-## El espaciado automático se mudó a `plan_text_space.md`
+## El espaciado automático es la Parte B de `plan_text_space` — HECHA (2026-07-23)
 
 Lo que aquí era la sección "(2)" —ignorar los espacios del fuente e insertarlos por clase de
-átomo, como TeX— es ahora la **Parte B** de `plan_text_space.md`, junto con la **medición
-precisa** (Parte A), que es la fundación que `\frac` necesita (ver la nota de dependencia
-arriba). El spike del 2026-07-23 mostró que la medición y el espaciado comparten la misma
-causa (runs no homogéneos) y merecen su propio plan.
+átomo, como TeX— se ejecutó como la **Parte B** de `plan_text_space.md`, junto con la
+**medición precisa** (Parte A). Ambas están **hechas y committeadas**. El spike del 2026-07-23
+mostró que la medición y el espaciado comparten la misma causa (runs no homogéneos) y merecían
+su propio plan; ahí quedaron. Para `\frac` esto significa dos cosas: (a) el numerador/denominador
+ya componen con el espaciado correcto **sin trabajo extra** (verificado), y (b) cuando `\frac`
+vaya **inline**, tiene que **usar** esa máquina (clasificarse como átomo Inner≈Ord — ver el
+punto 1 de "Qué NO está"), no reimplementarla.
 
 ## Decisión de futuro pendiente (no del spike)
 
