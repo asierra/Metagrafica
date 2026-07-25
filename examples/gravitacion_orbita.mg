@@ -1,11 +1,12 @@
 % Órbita circular — gravitación y fuerza centrípeta
 %
-% Un satélite en órbita circular alrededor de un planeta: la fuerza gravitacional que lo
-% curva hacia el centro (roja) y su velocidad tangente (verde), con las dos fórmulas
-% compuestas matemáticamente. Estrena tres cosas del lenguaje: `\frac` para las
-% fracciones, `include` de una biblioteca —el icono reutilizable `lib/satellite.mg`,
-% colocado con `scale`/`at`— y flechas cuya punta HEREDA el color de su línea. Va en
-% aspecto 16:9 y rotula con texto matemático `$…$`.
+% Un satélite en órbita circular alrededor de la Tierra —vista desde el polo norte, un
+% mapa vectorial REAL— con la fuerza gravitacional que lo curva hacia el centro (roja) y
+% su velocidad tangente (verde), y las dos fórmulas compuestas matemáticamente. Estrena
+% varias cosas del lenguaje: `\frac` para las fracciones, DOS bibliotecas por `include`
+% (`lib/satellite.mg` y `lib/polar_map.mg`, un mapa icónico generado de datos Natural
+% Earth con `tools/geo2mg.py`) colocadas con `scale`/`rotate`/`at`, y flechas cuya punta
+% HEREDA el color de su línea. Va en aspecto 16:9 y rotula con texto matemático `$…$`.
 %
 % NOTAS --------------------------------------------------------------------
 % FIGURA ORIGINAL (didáctica): no reproduce una publicación, así que lleva nombre
@@ -21,6 +22,7 @@ display_size 16 9
 
 world_window 0 16  0 9
 
+include "../lib/polar_map.mg"
 include "../lib/satellite.mg"
 
 text("/bFuerza de atracción gravitacional") { 1 8 }
@@ -33,7 +35,8 @@ text("$F_c = \frac{m v^2}{r}$", size=12) { 1 4 }
 circle(4, dash="dashed", line_width=0) { 10 4.5 }
 
 % planet
-circle(1, fill="midnightblue", color="black") { 10 4.5 }
+%circle(1, fill="midnightblue", color="black") { 10 4.5 }
+PolarMap(rotate=100,at=(10, 4.5))
 
 % satellite
 %fit(Satellite) { 14 4.5  14.5 5 }
