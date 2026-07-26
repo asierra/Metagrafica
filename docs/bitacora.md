@@ -1410,3 +1410,13 @@ corrigió: el aviso viejo «un identificador seguido de `(` es una llamada / `dx
 era ahora FALSO; la regla nueva deja claro el uso correcto de paréntesis (encerrar solo lo que suma
 o resta; las llamadas van pegadas; variables sueltas conviven con coordenadas entre paréntesis).
 El `+`/`-` binario sigue necesitando `( )` (inherente al modelo de «el espacio separa»); no se tocó.
+
+### Cerrado en la sesión del 2026-07-26 (rotación en elipses y arcos)
+
+**Rotación de elipses y arcos CORRECTA y alineada con la transformación global.** Las primitivas ahora responden de manera natural a las directivas como `rotate`, manteniendo el principio agnóstico de que los ejes y dimensiones originales se deforman según la matriz afín para todos los tipos de formas. La rotación se extrae limpiamente y se resuelve por backend:
+* **Motor (`matrix.cpp` / `matrix.h`)**: Se agregó `Matrix::get_rotation()` para extraer el ángulo directamente de la matriz global usando `atan2(M[1][0], M[0][0])`. El proyecto compila limpio tras ajustar la privacidad de este miembro.
+* **EPS (`EPSDisplay.cpp`)**: Se modificó el diccionario y el procedimiento PostScript `/ellipse` para que lea y aplique el ángulo en tiempo de pintado. `EPSDisplay::arc` extrae este valor con `get_rotation()` y lo imprime en el macro.
+* **SVG (`SVGDisplay.cpp`)**: Transformación exacta de los puntos de control. Las coordenadas de inicio y fin se calculan primero sobre los ejes originales alineados y luego pasan por `mt.transform()` (reaccionando bien bajo reflexión y sesgo). El ángulo resultante se emite en la propiedad nativa `x-axis-rotation` (tercer parámetro) del comando `A`.
+* **PDF (`PDFDisplay.cpp`)**: Se reescribió `arc_bezier` para que la aproximación de libharu acepte la matriz global `mt`. La curva se calcula en el espacio base y cada punto de control se transforma limpiamente antes de enviarlo al PDF, garantizando deformaciones arbitrarias exactas.
+**Churn masivo esperado y bendecido (corpus intacto a `ok=69`).** Al tocar el prólogo de EPS y las coordenadas resultantes de PDF y SVG, hubo que regenerar la red. Se ejecutó `test/run.sh capture` para los goldens y `test/run.sh images` para los renders de prueba. La validación corrió sin errores.
+**Cobertura visual:** Verificado con `examples/elipse.mg`; al inyectar un `rotate 90`, la elipse obedece a la directiva global y se alinea de forma exacta con primitivas envolventes como `rectangle`. Ese ejemplo era de prueba y se eliminó pero se agregó una elipse al ejemplo rpstest que ahora ilustra la rotación de elipses.
