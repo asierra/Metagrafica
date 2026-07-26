@@ -58,11 +58,11 @@ polyline { (x0) (y1) (x0) (y0)  (10) (y0) }
 canon(at=(x0, y0))
 
 % plataforma
-rectangle(fill="green") { -1.75 (y1) 0.75 6.75  }
+rectangle(fill="lime") { -1.75 (y1) 0.75 6.75  }
  
 % trayectoria y puntos, encima de todo
 line_width 1.5   color "black"   dash "dashed"   smooth(&tray)
 dash "solid"
-dot(&tray,  size=2.6, color="lime")
-dot(&proyx, size=2.6, color="orange")
-dot(&proyy, size=2.6, color="blue")
+dot(&tray,  size=2.6, color="gray")
+dot(&proyx, size=2.6, color="red")
+dot(&proyy, size=2.6, color="green")
