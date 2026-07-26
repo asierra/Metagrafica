@@ -4,7 +4,7 @@
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
 Copyright (c) 1988-2026 Alejandro Aguilar Sierra (algsierra@gmail.com)
-    Version:  2026
+    Version:  3.0.0-beta 2026
 Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper. 
 			 Version 1.0 1991 C, first published book.
 			 Version 2.0 1999-2024 C++ STL, EPS only, three published books. 
@@ -123,8 +123,6 @@ public:
   void setFontFace(FontFace face) { textstate.font_face = face; }
 
   size_t length() const { return text.length(); }
-
-  //int width();
 
 private:
   std::string text;

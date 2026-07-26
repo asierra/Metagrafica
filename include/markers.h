@@ -6,7 +6,7 @@
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript.
 Copyright (c) 1988-2026 Alejandro Aguilar Sierra (algsierra@gmail.com)
-    Version:  2026
+    Version:  3.0.0-beta 2026
  This file is part of MetaGrafica.
  Licensed under the GNU General Public License v3.0 (see LICENSE file).
 */

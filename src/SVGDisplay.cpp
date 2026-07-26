@@ -390,6 +390,17 @@ void SVGDisplay::curveto(double x1, double y1, double x2, double y2, double x3, 
 
 void SVGDisplay::arc(double x, double y, double w, double h, double startAng, double endAng) {
     double sa = startAng, ea = endAng;
+    double orig_startX = x + w * cos(startAng * M_PI / 180.0);
+    double orig_startY = y + h * sin(startAng * M_PI / 180.0);
+    double orig_endX = x + w * cos(endAng * M_PI / 180.0);
+    double orig_endY = y + h * sin(endAng * M_PI / 180.0);
+    double orig_midX = x + w * cos(startAng * M_PI / 180.0 + M_PI);
+    double orig_midY = y + h * sin(startAng * M_PI / 180.0 + M_PI);
+
+    mt.transform(orig_startX, orig_startY);
+    mt.transform(orig_endX, orig_endY);
+    mt.transform(orig_midX, orig_midY);
+
     mt.transform(x, y);
     // Radios por norma de columna, igual que EPS/PDF: círculo sigue círculo
     // bajo isometría+rotación.
@@ -409,27 +420,19 @@ void SVGDisplay::arc(double x, double y, double w, double h, double startAng, do
         ea = sa + endAng;
     }
 
-    double startRad = sa * M_PI / 180.0;
-    double endRad = ea * M_PI / 180.0;
     double rx = fabs(w), ry = fabs(h);
-
-    double startX = x + rx * cos(startRad);
-    double startY = y + ry * sin(startRad);
-    double endX = x + rx * cos(endRad);
-    double endY = y + ry * sin(endRad);
+    double rot_deg = atan2(mt.M[1][0], mt.M[0][0]) * 180.0 / M_PI;
 
     if (path_builder.tellp() == 0)
-        path_builder << "M " << startX << " " << startY << " ";
+        path_builder << "M " << orig_startX << " " << orig_startY << " ";
     else
-        path_builder << "L " << startX << " " << startY << " ";
+        path_builder << "L " << orig_startX << " " << orig_startY << " ";
 
     if (fabs(ea - sa) >= 360.0) {
         // SVG no permite un arco de 360°: se parte en dos mitades.
-        double midX = x - rx * cos(startRad);
-        double midY = y - ry * sin(startRad);
-        path_builder << "A " << rx << " " << ry << " 0 1 1 " << midX << " " << midY << " "
-                     << "A " << rx << " " << ry << " 0 1 1 " << startX << " " << startY << " ";
-        cur_x = startX; cur_y = startY;
+        path_builder << "A " << rx << " " << ry << " " << rot_deg << " 1 1 " << orig_midX << " " << orig_midY << " "
+                     << "A " << rx << " " << ry << " " << rot_deg << " 1 1 " << orig_startX << " " << orig_startY << " ";
+        cur_x = orig_startX; cur_y = orig_startY;
         stroke();
         return;
     }
@@ -437,10 +440,10 @@ void SVGDisplay::arc(double x, double y, double w, double h, double startAng, do
     int largeArcFlag = fabs(ea - sa) <= 180.0 ? 0 : 1;
     int sweepFlag = (ea > sa) ? 1 : 0;
 
-    path_builder << "A " << rx << " " << ry << " 0 "
+    path_builder << "A " << rx << " " << ry << " " << rot_deg << " "
                  << largeArcFlag << " " << sweepFlag << " "
-                 << endX << " " << endY << " ";
-    cur_x = endX; cur_y = endY;
+                 << orig_endX << " " << orig_endY << " ";
+    cur_x = orig_endX; cur_y = orig_endY;
     stroke();
 }
 

@@ -17,6 +17,7 @@ static const char *ps_ellipse = R"(
 ellipsedict /mtrx matrix put
 /ellipse
         { ellipsedict begin
+          /rotangle exch def
           /endangle exch def
           /startangle exch def
           /yrad exch def
@@ -25,6 +26,7 @@ ellipsedict /mtrx matrix put
           /x exch def
           /savematrix mtrx currentmatrix def
           x y translate
+          rotangle rotate
           xrad yrad scale
           startangle endangle lt
           { 0 0 1 startangle endangle arc }
@@ -556,7 +558,8 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
       fprintf(file, "%s", ps_ellipse);
       ellipse_defined = true;
     }
-    fprintf(file, "%g %g %g %g %g %g ellipse\n", x, y, w, h, sa, ea);
+    double rot_deg = atan2(mt.M[1][0], mt.M[0][0]) * 180.0 / M_PI;
+    fprintf(file, "%g %g %g %g %g %g %g ellipse\n", x, y, w, h, sa, ea, rot_deg);
   }
   stroke();
 }
