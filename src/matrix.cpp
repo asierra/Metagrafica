@@ -115,6 +115,10 @@ void Matrix::print() {
   printf("%6g %6g %6g\n", M[2][0], M[2][1], M[2][2]);
 }
 
+double Matrix::get_rotation() const {
+  return atan2(M[1][0], M[0][0]) * 180.0 / M_PI;
+}
+
 bool Matrix::is_identity() {
   int result = memcmp(M, MATIDEN, sizeof(M));
   return (result==0);

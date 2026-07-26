@@ -48,7 +48,7 @@ static void int2rgb(int c, double &r, double &g, double &b) {
 // fig2-1 eso tapaba con una recta la entrada del cuerpo negro, que es justo el
 // hueco que la figura ilustra. Con el arco unido, el cierre va del final del arco
 // al inicio de la polilinea, como en EPS.
-static void arc_bezier(HPDF_Page page,
+static void arc_bezier(HPDF_Page page, Matrix &mt,
                        double cx, double cy, double rx, double ry,
                        double startDeg, double endDeg, bool continuePath = false) {
   const double PI = (double)M_PI;
@@ -66,8 +66,10 @@ static void arc_bezier(HPDF_Page page,
   double curAngle = startRad;
   double x0 = cx + rx * cos(curAngle);
   double y0 = cy + ry * sin(curAngle);
-  if (continuePath) HPDF_Page_LineTo(page, x0, y0);
-  else              HPDF_Page_MoveTo(page, x0, y0);
+  double px0 = x0, py0 = y0;
+  mt.transform(px0, py0);
+  if (continuePath) HPDF_Page_LineTo(page, px0, py0);
+  else              HPDF_Page_MoveTo(page, px0, py0);
 
   for (int i = 0; i < numSegs; i++) {
     double nextAngle = curAngle + segSweep;
@@ -77,7 +79,13 @@ static void arc_bezier(HPDF_Page page,
     double y1 = y0 + alpha * ry * cos(curAngle);
     double x2 = x3 + alpha * rx * sin(nextAngle);
     double y2 = y3 - alpha * ry * cos(nextAngle);
-    HPDF_Page_CurveTo(page, x1, y1, x2, y2, x3, y3);
+    
+    double px1 = x1, py1 = y1, px2 = x2, py2 = y2, px3 = x3, py3 = y3;
+    mt.transform(px1, py1);
+    mt.transform(px2, py2);
+    mt.transform(px3, py3);
+    
+    HPDF_Page_CurveTo(page, px1, py1, px2, py2, px3, py3);
     curAngle = nextAngle;
     x0 = x3; y0 = y3;
   }
@@ -437,6 +445,7 @@ void PDFDisplay::fracRule(double dy, double len, double lw) {
 void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
   double sa = startAng, ea = endAng;
+  double orig_x = x, orig_y = y, orig_w = w, orig_h = h;
   // continúa el path solo si YA hay un punto: un compound cuyo PRIMER trazo es el
   // arco tiene openpath=true pero ningún cursor todavía, así que hay que abrir con
   // MoveTo (no LineTo) o libharu da INVALID_GMODE.
@@ -467,7 +476,7 @@ void PDFDisplay::arc(double x, double y, double w, double h,
     prepareDraw();
   } else
     adjust_limits(x - aw, y - ah, x + aw, y + ah);
-  arc_bezier(page, x, y, aw, ah, sa, ea, continuePath);
+  arc_bezier(page, mt, orig_x, orig_y, orig_w, orig_h, startAng, endAng, continuePath);
   stroke();
 }
 

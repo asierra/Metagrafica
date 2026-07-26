@@ -421,7 +421,7 @@ void SVGDisplay::arc(double x, double y, double w, double h, double startAng, do
     }
 
     double rx = fabs(w), ry = fabs(h);
-    double rot_deg = atan2(mt.M[1][0], mt.M[0][0]) * 180.0 / M_PI;
+    double rot_deg = mt.get_rotation();
 
     if (path_builder.tellp() == 0)
         path_builder << "M " << orig_startX << " " << orig_startY << " ";

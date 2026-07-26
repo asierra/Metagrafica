@@ -82,6 +82,8 @@ public:
   //void getAfinData();
   void matmat(const DataMatrix b);
 
+  double get_rotation() const;
+
   void print();
 
 private:

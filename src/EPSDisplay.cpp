@@ -558,7 +558,7 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
       fprintf(file, "%s", ps_ellipse);
       ellipse_defined = true;
     }
-    double rot_deg = atan2(mt.M[1][0], mt.M[0][0]) * 180.0 / M_PI;
+    double rot_deg = mt.get_rotation();
     fprintf(file, "%g %g %g %g %g %g %g ellipse\n", x, y, w, h, sa, ea, rot_deg);
   }
   stroke();

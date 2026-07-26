@@ -12,6 +12,7 @@
 struct Cuadro() {
     % rectangle ya es transformable (rota/deforma como SVG) → uso directo
     rectangle { 0 0  1 1 }
+    ellipse(.5, .25) { .5 .5 }
 }
 
 % 1) Repetición simple: 3 copias avanzando en x. Posición y avance en la propia
