@@ -1,0 +1,30 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%Title: elipse90.eps
+%%BoundingBox: 0 0 283 283
+%%EndComments
+
+/ellipsedict 8 dict def
+ellipsedict /mtrx matrix put
+/ellipse
+        { ellipsedict begin
+          /endangle exch def
+          /startangle exch def
+          /yrad exch def
+          /xrad exch def
+          /y exch def
+          /x exch def
+          /savematrix mtrx currentmatrix def
+          x y translate
+          xrad yrad scale
+          startangle endangle lt
+          { 0 0 1 startangle endangle arc }
+          { 0 0 1 startangle endangle arcn }
+          ifelse 
+          savematrix setmatrix
+          end
+} def
+newpath 177.165354 70.866142 moveto 177.165354 212.598425 lineto 106.299213 212.598425 lineto 106.299213 70.866142 lineto closepath
+stroke
+newpath
+141.732 141.732 70.8661 35.4331 0 360 ellipse
+stroke
