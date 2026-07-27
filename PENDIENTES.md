@@ -21,11 +21,14 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=66 … galfail=0** (6 compuertas: la
-> 5ª son 36 pruebas NEGATIVAS en `test/errors/`; la 6ª, nueva el 2026-07-23, vigila que
+> Build/test: `make` + `bash test/run.sh check` → **ok=69 … galfail=0** (6 compuertas: la
+> 5ª son 38 pruebas NEGATIVAS en `test/errors/`; la 6ª, nueva el 2026-07-23, vigila que
 > `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva incrustado el
 > código de cada ejemplo, así que **editar un comentario la desactualiza** y ninguna de
-> las otras cinco puede verlo).
+> las otras cinco puede verlo). La Capa 3 ganó el 2026-07-27 una **tercera** invariante:
+> paridad **geométrica** de arcos entre los tres backends (`tools/arcparity.py`) — la
+> única sin escapatoria por bendición, porque no compara contra un golden sino un backend
+> contra otro. Ver `plan_anisotropia.md`.
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -200,6 +203,30 @@ orden de la lista es la ejecución.
        leer ahí la ventaja con agentes, la leerá.
 
 ---
+
+## 🔭 En curso — arcos, anisotropía y `orbita_polar` (abierto 2026-07-27)
+
+Hilo vivo; **es el tema que hay que cerrar antes de tocar `docs/referencia.md`** (decisión de
+Alejandro: la referencia se actualiza al cerrar, no durante). Fuentes: `plan_orbita_polar.md`
+y `plan_anisotropia.md`; bitácora 2026-07-27 y 2026-07-27 (bis).
+
+- [ ] **Ocultar la mitad trasera de la órbita.** Receta **ya verificada** en
+      `plan_orbita_polar.md` (forma cerrada, `arc(a,b,from=(180+tc),to=(540-tc))`). NO hace
+      falta motor booleano ni tocar el compilador: el evaluador ya tiene trigonometría.
+      Lo que queda **no es matemática**: elegir cuál mitad va detrás en cada una de las dos
+      órbitas y mirarlo; y reponer los `marker_at` al pasar de `ellipse` a `arc`.
+- [ ] **¿`orbita_polar` entra al corpus?** Hoy no la vigila ninguna compuerta, y es el
+      **único cliente** de `arc(rx,ry)`, `marker_at` y `place(rx/ry, at=)` — sin ella esas
+      tres características quedan sin cobertura.
+- [ ] **Dos decisiones de semántica** de la familia anisótropa (`plan_anisotropia.md`): el
+      radio de un arco en la ruta **log** de `plot`, y si la dirección «out» de las marcas
+      de eje es perpendicular en mundo o en papel. **Son decisiones, no defectos**; ninguna
+      la alcanza el corpus, ninguna tiene respuesta obviamente correcta. Mínimo: documentar.
+- [ ] **`examples/test_sat.mg`** sin trackear; su cobertura ya vive en `rpstest`. Por la
+      política de efímeros toca borrarlo — decisión de Alejandro.
+- [ ] *(opcional)* Constantes de **Mortensen** en `arc_bezier` (~5× menos deriva radial) y
+      subir la precisión de impresión del SVG. Ambas con contraindicación anotada en
+      `plan_orbita_polar.md`; ninguna es defecto.
 
 ## 📌 Importa, pero NO bloquea 1.0
 

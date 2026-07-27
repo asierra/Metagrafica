@@ -168,11 +168,27 @@ por default (`marker_color` pasa a ser override; antes el relleno salía negro) 
 `rectangle(w,h,at)`, `lib/` instalable con `include` **local→lib** (§15, `-DMG_LIBDIR`), fix de
 `xml:space` en SVG.
 
+**Arcos y elipses — reconstruidos 2026-07-27.** La rotación de arcos y elipses era incorrecta
+en EPS y SVG (correcta solo en PDF): tres bugs con **una causa raíz**, los backends recibían el
+arco *descompuesto* (centro, radios, ángulos) y reparaban esa descomposición con reglas ad-hoc
+que no son cerradas bajo afinidad. Ahora EPS recibe la **matriz** (`concat`) y traza el arco
+unitario con los ángulos intactos; SVG —único que no admite matriz en `A`— decide los ejes con
+un SVD 2×2 en forma cerrada; PDF ya transformaba puntos de control. `arc` acepta por fin
+`rx`/`ry` (§4.5), y llegaron `marker_at` (marcadores en ángulos paramétricos de
+`arc`/`ellipse`/`circle`) y `place(..., rx/ry, at=)` (struct completa sobre un arco elíptico).
+⚠️ **Antes de tocar geometría lee `plan_anisotropia.md`**: describe la familia de bugs
+«fórmula isótropa aplicada al caso anisótropo», sus cuatro tics reconocibles, las tres
+instancias cerradas, dos abiertas *por decisión de semántica*, y lo ya verificado limpio.
+
 Cerrado en cada sesión: **[`docs/bitacora.md`](docs/bitacora.md)** — el registro de qué se
-cambió y por qué, sesión por sesión (24 y subiendo). ⚠️ **Léelo antes de tocar el motor o de
+cambió y por qué, sesión por sesión (26 y subiendo). ⚠️ **Léelo antes de tocar el motor o de
 cambiar una decisión de diseño:** muchas entradas traen la medición que la sostiene, y varias
 registran el camino que se probó primero y no funcionó. Vivía aquí dentro hasta el
 2026-07-22; se mudó porque también le sirve a un colaborador humano.
+
+⚠️ **Hilo ABIERTO (2026-07-27):** `plan_orbita_polar.md` + `plan_anisotropia.md`. Por decisión
+de Alejandro, **`docs/referencia.md` no se actualiza hasta cerrar ese tema**. Estado y siguiente
+paso, en `PENDIENTES.md` § «En curso».
 
 ## Code style
 
