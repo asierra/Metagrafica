@@ -112,6 +112,7 @@ rectangle(w=4, h=3, at=(2, 1.5))           % …o centro + tamaño (at = centro;
 circle(2) { 5 5  9 5 }                     % un círculo por punto; 2 = radio (mundo)
 ellipse(3, 1.5) { 5 5 }                    % radios x, y
 arc(2, from=0, to=120) { 0 0 }             % grados, positivo = antihorario
+arc(4, 2, from=270, to=450) { 0 0 }        % arco ELÍPTICO (rx, ry); también rx=, ry=
 dot(2) { 1 1  2 3 }                        % disco de radio FÍSICO 2 pt
 marker(3, shape="cross") { 1 1 }           % símbolo de radio físico
 bezier { 0 0  1 2  3 2  4 0 }              % p0 c1 c2 p1 [c1 c2 p2 …]  (3k+1 puntos)

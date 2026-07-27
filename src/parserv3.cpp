@@ -504,6 +504,7 @@ static bool isKnownPrimAttr(const std::string &k) {
     // forma
     "closed",                                   // polyline/polygon §4.1
     "w", "h", "at",                             // rectangle(w,h,at) §4.4 (centro+tamaño)
+    "r", "rx", "ry",                            // circle §4.3 / ellipse §4.9 / arc §4.5
     "from", "to",                               // arc §4.5
     "width", "dir",                             // polybar §4.12
     "shape", "size",                            // marker/dot §4.6
@@ -1776,6 +1777,36 @@ struct PrimStmt : Stmt {
     return i < pos.size() ? pos[i]->eval(s).num : def;
   }
 
+  // §4.5/§4.9 — radios de circle/ellipse/arc. La magnitud que define la forma va
+  // posicional y primero, con el nombre opcional (§4.1): `r` la circular, el par
+  // `rx, ry` la elíptica.
+  //
+  // Un radio ausente es ERROR, no un default. El default silencioso de 1 convertía
+  // `arc(rx=4, ry=2)` —la forma que §4.5 documenta desde siempre— en un círculo
+  // unitario sin una sola queja: `arc` leía un único posicional y hacía
+  // setRadius(r, r), y como PrimStmt no pasa por checkKnownArgs, los `rx=`/`ry=`
+  // se descartaban en silencio. Un radio no tiene default sensato; el 1 solo servía
+  // para que la figura saliera mal en vez de no salir.
+  void resolveRadii(Scope &s, bool circular, double &rx, double &ry) const {
+    auto namedNum = [&](const char *k, double &out) {
+      auto it = named.find(k);
+      if (it == named.end()) return false;
+      out = it->second->eval(s).num;
+      return true;
+    };
+    if (circular && named.count("ry"))
+      evalError((name + ": `ry=` no aplica a una forma circular; usa ellipse o arc").c_str());
+    if (!pos.empty())
+      rx = pos[0]->eval(s).num;
+    else if (!namedNum("r", rx) && !namedNum("rx", rx))
+      evalError((name + " requiere un radio: " +
+                 (circular ? "(r) o (r=…)" : "(r), (rx, ry) o (rx=…, ry=…)")).c_str());
+    ry = rx;
+    if (circular) return;
+    if (pos.size() > 1) ry = pos[1]->eval(s).num;
+    else namedNum("ry", ry);
+  }
+
   // Evalúa las coords [from, to) a un Path. Cada término es un ESCALAR (que se
   // empareja con el siguiente para formar un punto x-y) o un PUNTO ya hecho —una
   // lista de 2, como devuelve point_at(&p,t) o un literal [x,y]—, que aporta el par
@@ -1960,9 +1991,9 @@ struct PrimStmt : Stmt {
         p->setOrient(orient);
         p->setPath(path); item = std::move(p);
       }
-      else if (name == "circle") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
-      else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx = posOr(s, 0, 1), ry = posOr(s, 1, rx); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
-      else if (name == "arc") { auto p = std::make_unique<Arc>(); double r = posOr(s, 0, 1); p->setRadius(r, r); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
+      else if (name == "circle") { auto p = std::make_unique<Arc>(); double rx, ry; resolveRadii(s, true, rx, ry); p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
+      else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx, ry; resolveRadii(s, false, rx, ry); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
+      else if (name == "arc") { auto p = std::make_unique<Arc>(); double rx, ry; resolveRadii(s, false, rx, ry); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
       else if (name == "polybar") {
         // §4.12: cada coord es el centro superior de una barra; Polybar::draw la
         // expande a un rect() desde la base común 0. `width` va en unidades de la
@@ -2011,8 +2042,8 @@ struct PrimStmt : Stmt {
     // §4.11 en arco: marcador en el extremo, con el punto y la tangente derivados
     // de los parámetros del arco (no del path, que son centros). Solo start/end.
     if (name == "arc") {
-      double r = posOr(s, 0, 1);
-      emitArcMarkers(s, mg, out, evalPath(s, 0, coords.size()), r, r,
+      double rx, ry; resolveRadii(s, false, rx, ry);
+      emitArcMarkers(s, mg, out, evalPath(s, 0, coords.size()), rx, ry,
                      namedOr(s, "from", 0), namedOr(s, "to", 360));
     }
   }

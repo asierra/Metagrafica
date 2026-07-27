@@ -65,11 +65,31 @@ public:
 
   void transf2d(double&, double&);
 
-  // Transforma un par de semiejes (w,h) al dispositivo: cada uno escala con
-  // la norma de la columna correspondiente (signo del elemento diagonal, para
-  // reflejos). Bajo isometría+rotación un círculo sigue siendo círculo, cosa
-  // que transf2d no garantiza (rota el vector (w,h) y mezcla componentes).
-  void transform_radii(double&, double&);
+  // §4.5/§4.9 — marco de la elipse de dispositivo. Mapea la elipse local de
+  // semiejes (rx,ry) centrada en (cx,cy) y devuelve su centro C y los dos
+  // SEMIDIÁMETROS CONJUGADOS u,v (las imágenes de (rx,0) y (0,ry)):
+  //
+  //     P(t) = C + u·cos t + v·sin t
+  //
+  // Esta forma SÍ es cerrada bajo afinidad —vale igual para rotación, reflejo,
+  // escala anisótropa y shear—, y por eso sustituyó al par
+  // `transform_radii`+`get_rotation`, que solo acertaba cuando la matriz era
+  // (escala uniforme)·(rotación)·(escala alineada a ejes). Se entrega tal cual
+  // como matriz [ux uy vx vy Cx Cy] a PostScript (`concat`) y a las Béziers del
+  // PDF, que son invariantes afines.
+  void ellipse_frame(double cx, double cy, double rx, double ry,
+                     double &Cx, double &Cy,
+                     double &ux, double &uy, double &vx, double &vy) const;
+
+  // Ejes y ángulo VERDADEROS de esa elipse (forma cerrada del SVD 2×2), para el
+  // formato que no acepta una matriz y exige rx/ry/rotación: el comando `A` de SVG.
+  //
+  // ⚠️ NO son |u| y |v|. Esos son los semidiámetros CONJUGADOS, y solo coinciden
+  // con los ejes cuando u⊥v. Confundirlos era el bug: en rpstest la elipse medía
+  // 20.888×13.049 cuando la verdadera es 21.757×11.541 (13% de error en el eje
+  // menor, 10.5° en el ángulo).
+  static void ellipse_axes(double ux, double uy, double vx, double vy,
+                           double &rx, double &ry, double &angDeg);
 
   void set(DataMatrix m);
 
@@ -81,8 +101,6 @@ public:
 
   //void getAfinData();
   void matmat(const DataMatrix b);
-
-  double get_rotation() const;
 
   void print();
 

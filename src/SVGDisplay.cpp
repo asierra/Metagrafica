@@ -389,61 +389,57 @@ void SVGDisplay::curveto(double x1, double y1, double x2, double y2, double x3, 
 }
 
 void SVGDisplay::arc(double x, double y, double w, double h, double startAng, double endAng) {
-    double sa = startAng, ea = endAng;
-    double orig_startX = x + w * cos(startAng * M_PI / 180.0);
-    double orig_startY = y + h * sin(startAng * M_PI / 180.0);
-    double orig_endX = x + w * cos(endAng * M_PI / 180.0);
-    double orig_endY = y + h * sin(endAng * M_PI / 180.0);
-    double orig_midX = x + w * cos(startAng * M_PI / 180.0 + M_PI);
-    double orig_midY = y + h * sin(startAng * M_PI / 180.0 + M_PI);
-
-    mt.transform(orig_startX, orig_startY);
-    mt.transform(orig_endX, orig_endY);
-    mt.transform(orig_midX, orig_midY);
-
-    mt.transform(x, y);
-    // Radios por norma de columna, igual que EPS/PDF: círculo sigue círculo
-    // bajo isometría+rotación.
-    mt.transform_radii(w, h);
     if (h == 0) h = w;
+    // §4.5/§4.9 — centro y semidiámetros conjugados de la elipse imagen. SVG es el
+    // único backend que no puede recibir la matriz (el comando `A` exige
+    // rx/ry/rotación), así que aquí sí hay que DECIDIR los ejes verdaderos, con el
+    // SVD en forma cerrada. Antes se usaban |u| y |v| —los conjugados— como si
+    // fueran los ejes, que solo coincide cuando u⊥v.
+    double Cx, Cy, ux, uy, vx, vy;
+    mt.ellipse_frame(x, y, w, h, Cx, Cy, ux, uy, vx, vy);
+    double rx, ry, rot_deg;
+    Matrix::ellipse_axes(ux, uy, vx, vy, rx, ry, rot_deg);
 
-    // Misma corrección de signos que EPSDisplay/PDFDisplay cuando la matriz
-    // acumulada invierte uno o ambos ejes (estructuras reflejadas).
-    if (w < 0 && h >= 0) {
-        ea = 180 - startAng;
-        sa = ea - endAng;
-    } else if (w >= 0 && h < 0) {
-        ea = 360 - startAng;
-        sa = ea - endAng;
-    } else if (w < 0 && h < 0) {
-        sa = startAng + 180;
-        ea = sa + endAng;
-    }
+    // Los extremos se evalúan en el espacio LOCAL y se mapean con el marco, así
+    // que valen para cualquier afín sin tocar los ángulos.
+    auto pointAt = [&](double deg, double &px, double &py) {
+        const double t = deg * M_PI / 180.0;
+        px = Cx + ux * cos(t) + vx * sin(t);
+        py = Cy + uy * cos(t) + vy * sin(t);
+    };
+    double startX, startY, endX, endY, midX, midY;
+    pointAt(startAng, startX, startY);
+    pointAt(endAng,   endX,   endY);
+    pointAt(startAng + 180.0, midX, midY);
 
-    double rx = fabs(w), ry = fabs(h);
-    double rot_deg = mt.get_rotation();
+    // Barrido: lo fija el sentido en el espacio LOCAL, invertido si la matriz
+    // refleja (determinante negativo). Antes salía de unos ángulos "corregidos"
+    // que trataban el ángulo final como si fuera el barrido, y por eso un arco de
+    // 190°→350° (160°) se dibujaba de 350°: casi el disco completo.
+    const double sweep = endAng - startAng;
+    const double det = ux * vy - uy * vx;
+    const int sweepFlag = ((sweep >= 0) == (det >= 0)) ? 1 : 0;
 
     if (path_builder.tellp() == 0)
-        path_builder << "M " << orig_startX << " " << orig_startY << " ";
+        path_builder << "M " << startX << " " << startY << " ";
     else
-        path_builder << "L " << orig_startX << " " << orig_startY << " ";
+        path_builder << "L " << startX << " " << startY << " ";
 
-    if (fabs(ea - sa) >= 360.0) {
-        // SVG no permite un arco de 360°: se parte en dos mitades.
-        path_builder << "A " << rx << " " << ry << " " << rot_deg << " 1 1 " << orig_midX << " " << orig_midY << " "
-                     << "A " << rx << " " << ry << " " << rot_deg << " 1 1 " << orig_startX << " " << orig_startY << " ";
-        cur_x = orig_startX; cur_y = orig_startY;
+    if (fabs(sweep) >= 360.0) {
+        // SVG no admite un arco de 360°: se parte en dos mitades.
+        path_builder << "A " << rx << " " << ry << " " << rot_deg << " 0 " << sweepFlag << " " << midX << " " << midY << " "
+                     << "A " << rx << " " << ry << " " << rot_deg << " 0 " << sweepFlag << " " << startX << " " << startY << " ";
+        cur_x = startX; cur_y = startY;
         stroke();
         return;
     }
 
-    int largeArcFlag = fabs(ea - sa) <= 180.0 ? 0 : 1;
-    int sweepFlag = (ea > sa) ? 1 : 0;
+    const int largeArcFlag = fabs(sweep) > 180.0 ? 1 : 0;
 
     path_builder << "A " << rx << " " << ry << " " << rot_deg << " "
                  << largeArcFlag << " " << sweepFlag << " "
-                 << orig_endX << " " << orig_endY << " ";
-    cur_x = orig_endX; cur_y = orig_endY;
+                 << endX << " " << endY << " ";
+    cur_x = endX; cur_y = endY;
     stroke();
 }
 

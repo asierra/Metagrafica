@@ -48,46 +48,48 @@ static void int2rgb(int c, double &r, double &g, double &b) {
 // fig2-1 eso tapaba con una recta la entrada del cuerpo negro, que es justo el
 // hueco que la figura ilustra. Con el arco unido, el cierre va del final del arco
 // al inicio de la polilinea, como en EPS.
-static void arc_bezier(HPDF_Page page, Matrix &mt,
-                       double cx, double cy, double rx, double ry,
+//
+// Recibe el MARCO de la elipse imagen (centro + semidiámetros conjugados, §4.5):
+// el arco se calcula sobre el CÍRCULO unitario y cada punto de control se mapea
+// con P(a,b) = C + u·a + v·b. Como las Béziers son invariantes afines, eso es
+// exacto para rotación, reflejo, escala anisótropa y shear — sin decidir ejes ni
+// ángulos, que es de donde salían los bugs de los otros dos backends.
+static void arc_bezier(HPDF_Page page,
+                       double Cx, double Cy, double ux, double uy, double vx, double vy,
                        double startDeg, double endDeg, bool continuePath = false) {
   const double PI = (double)M_PI;
-  double startRad = startDeg * PI / 180.0f;
-  double endRad   = endDeg   * PI / 180.0f;
+  double startRad = startDeg * PI / 180.0;
+  double endRad   = endDeg   * PI / 180.0;
   double sweep    = endRad - startRad;
 
-  if (sweep == 0.0f) return;
+  if (sweep == 0.0) return;
 
-  int numSegs = (int)ceil(fabs(sweep) / (PI * 0.5f));
+  int numSegs = (int)ceil(fabs(sweep) / (PI * 0.5));
   if (numSegs < 1) numSegs = 1;
   double segSweep = sweep / numSegs;
-  double alpha = (4.0f / 3.0f) * tan(segSweep / 4.0f);
+  double alpha = (4.0 / 3.0) * tan(segSweep / 4.0);
 
-  double curAngle = startRad;
-  double x0 = cx + rx * cos(curAngle);
-  double y0 = cy + ry * sin(curAngle);
-  double px0 = x0, py0 = y0;
-  mt.transform(px0, py0);
-  if (continuePath) HPDF_Page_LineTo(page, px0, py0);
-  else              HPDF_Page_MoveTo(page, px0, py0);
+  auto map = [&](double a, double b, double &px, double &py) {
+    px = Cx + ux * a + vx * b;
+    py = Cy + uy * a + vy * b;
+  };
+
+  double t = startRad;
+  double ax = cos(t), ay = sin(t);
+  double px, py;
+  map(ax, ay, px, py);
+  if (continuePath) HPDF_Page_LineTo(page, px, py);
+  else              HPDF_Page_MoveTo(page, px, py);
 
   for (int i = 0; i < numSegs; i++) {
-    double nextAngle = curAngle + segSweep;
-    double x3 = cx + rx * cos(nextAngle);
-    double y3 = cy + ry * sin(nextAngle);
-    double x1 = x0 - alpha * rx * sin(curAngle);
-    double y1 = y0 + alpha * ry * cos(curAngle);
-    double x2 = x3 + alpha * rx * sin(nextAngle);
-    double y2 = y3 - alpha * ry * cos(nextAngle);
-    
-    double px1 = x1, py1 = y1, px2 = x2, py2 = y2, px3 = x3, py3 = y3;
-    mt.transform(px1, py1);
-    mt.transform(px2, py2);
-    mt.transform(px3, py3);
-    
-    HPDF_Page_CurveTo(page, px1, py1, px2, py2, px3, py3);
-    curAngle = nextAngle;
-    x0 = x3; y0 = y3;
+    double tn = t + segSweep;
+    double bx = cos(tn), by = sin(tn);
+    double p1x, p1y, p2x, p2y, p3x, p3y;
+    map(ax - alpha * ay, ay + alpha * ax, p1x, p1y);
+    map(bx + alpha * by, by - alpha * bx, p2x, p2y);
+    map(bx, by, p3x, p3y);
+    HPDF_Page_CurveTo(page, p1x, p1y, p2x, p2y, p3x, p3y);
+    t = tn; ax = bx; ay = by;
   }
 }
 
@@ -444,39 +446,26 @@ void PDFDisplay::fracRule(double dy, double len, double lw) {
 
 void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
-  double sa = startAng, ea = endAng;
-  double orig_x = x, orig_y = y, orig_w = w, orig_h = h;
+  if (h == 0) h = w;
   // continúa el path solo si YA hay un punto: un compound cuyo PRIMER trazo es el
   // arco tiene openpath=true pero ningún cursor todavía, así que hay que abrir con
   // MoveTo (no LineTo) o libharu da INVALID_GMODE.
   const bool continuePath = dspstate.openpath && !openpath_empty;
   openpath_empty = false;
-  mt.transform(x, y);
-  // Radios por norma de columna: círculo se conserva bajo isometría+rotación;
-  // sin forzado w=h (compensación V1).
-  mt.transform_radii(w, h);
-  if (h == 0) h = w;
 
-  // Misma corrección de signos que EPSDisplay para reflejos matriciales
-  if (w < 0 && h >= 0) {
-    ea = 180 - startAng;
-    sa = ea - endAng;
-  } else if (w >= 0 && h < 0) {
-    ea = 360 - startAng;
-    sa = ea - endAng;
-  } else if (w < 0 && h < 0) {
-    sa = startAng + 180;
-    ea = sa + endAng;
-  }
+  double Cx, Cy, ux, uy, vx, vy;
+  mt.ellipse_frame(x, y, w, h, Cx, Cy, ux, uy, vx, vy);
 
-  double aw = fabs(w), ah = fabs(h);
+  // Bounding box EXACTO de la elipse completa (antes eran las normas de columna,
+  // que bajo shear o rotación con escala anisótropa quedaban cortas).
+  const double hw = hypot(ux, vx), hh = hypot(uy, vy);
   if (!dspstate.openpath) {
-    set_limits(x - aw, y - ah, x + aw, y + ah);
+    set_limits(Cx - hw, Cy - hh, Cx + hw, Cy + hh);
     ensurePatternGSave();
     prepareDraw();
   } else
-    adjust_limits(x - aw, y - ah, x + aw, y + ah);
-  arc_bezier(page, mt, orig_x, orig_y, orig_w, orig_h, startAng, endAng, continuePath);
+    adjust_limits(Cx - hw, Cy - hh, Cx + hw, Cy + hh);
+  arc_bezier(page, Cx, Cy, ux, uy, vx, vy, startAng, endAng, continuePath);
   stroke();
 }
 

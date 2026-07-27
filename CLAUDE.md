@@ -41,13 +41,24 @@ files (`test/golden/`) **no están en git** (se regeneran con `capture`).
   omite con aviso si no hay `gs` instalado. Corre también en `capture`, para no
   bendecir un EPS que no interpreta.
 - **Paridad entre backends** (`c3fail`, "Capa 3", nueva 2026-07-15) — caza bugs
-  **preexistentes** que el golden bendice porque un backend omite algo en silencio. Dos
-  invariantes robustos (cero falsos positivos en el corpus, **sin herramientas externas**:
-  el PDF de libharu no está comprimido → sus operadores son grepables): **(a)** nº de
+  **preexistentes** que el golden bendice porque un backend omite algo en silencio. Tres
+  invariantes robustos (cero falsos positivos en el corpus; el PDF de libharu no está
+  comprimido → sus operadores son parseables directo): **(a)** nº de
   operaciones de texto `EPS(show) == SVG(<text>) == PDF(Tj)` (caza rótulos en blanco); **(b)**
   ningún path SVG de un solo segmento (`M..L..`) puede ir `fill=color stroke=none` = línea
-  de área nula invisible (caza ejes sin trazo por fuga de fill, Lección 6). Corre también en
+  de área nula invisible (caza ejes sin trazo por fuga de fill, Lección 6); **(c)** la
+  **geometría** de arcos y elipses coincide en los tres (`tools/arcparity.py`, 2026-07-27:
+  muestrea cada arco del EPS y exige que SVG y PDF contengan esa curva, más el conteo de
+  comandos `A`; se omite con aviso si no hay `python3`). Corre también en
   `capture`. Es la única capa que caza un bug preexistente; las otras dos lo bendecen.
+
+  ⚠️ **(c) es la única invariante SIN ESCAPATORIA POR BENDICIÓN**, y por eso existe: las demás
+  compuertas comparan contra un golden, pero el flujo normal tras tocar el motor es
+  **re-bendecir**, así que un cambio equivocado se bendice solo. Eso pasó entre el 2026-07-26 y
+  el 2026-07-27 (elipses y arcos girados mal en EPS y SVG, `ok=69` todo el tiempo). (c) compara
+  backend contra backend: no hay nada que bendecir. **Y entran los TRES, no dos:** durante todo
+  ese bug EPS y SVG coincidían *entre sí* y ambos estaban mal — el PDF es la tercera opinión
+  independiente porque no decide ejes ni ángulos, transforma puntos de control de Bézier.
 - **`docs/img` al día** (`imgfail`, nueva 2026-07-21) — caza que la salida **publicada** se
   quede RANCIA. Esos `.svg` **sí están en git** (GitHub los muestra en la portada del README)
   y se regeneran a mano; nada los vigilaba, y entre el 2026-07-17 y el 2026-07-21 la portada
@@ -78,7 +89,7 @@ Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regener
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23) y el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`). Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar). Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
 
 **Política V1 (2026-07-15, endurecida 2026-07-20):** todo el trabajo actual es desarrollo de **V3**; **no se trackea material V1 nuevo**. Los `.mg` crudos de V1 y sus traducciones literales se quedaban en el árbol sin commitear; desde el 2026-07-20 **se borran** en cuanto el port V3 está cerrado (así se fueron `fig4-8.mg`, `exp.mg`, `fp3i2dat.mg` y el `fig4-8.eps` de 1998). No estaban en git en **ninguna** rama —`origin/v1-legacy` incluida—, así que el borrado es definitivo: antes de borrar, lo que debe sobrevivir son las **medidas**, transcritas al `.mg` o a un `plan_*.md`, no el archivo (ver el encabezado de `turning_points.mg`, que conserva cómo re-medir el PDF vectorial de Cambridge y los nodos del V(x) manual). Lo ya trackeado en `examples/v1/` (31 archivos: corpus congelado + oráculo) **se queda como está**.
 
@@ -119,7 +130,7 @@ Pipeline (V3, post-cutover): `.mg` → **lexer** (`src/lexer.l` → `src/lexv3.c
 - **`GraphicsItem`** (`include/primitives.h`) — abstract base of every drawable; hierarchy is non-copyable (use-count bookkeeping in `StructureUser`). `Path` = `std::vector<point>`.
 - **`Structure` / `MetaGrafica`** (`include/structures.h`) — named reusable groups; `MetaGrafica` is the document (dimensions `$D` in cm, world window `WW`, font size). `StructureLine/Arc/Path/Rectangle` place structs geometrically.
 - **`Display`** (`include/Display.h`) — abstract backend + device-independent state machine. Implementations: `EPSDisplay`, `SVGDisplay`, `PDFDisplay`.
-- **`Matrix`** (`include/matrix.h`) — 3×3 homogeneous transforms; post-multiplies (`translate(); scale();` ⇒ `T·S`). `transform_radii()` maps radii by column norms (circles survive rotation).
+- **`Matrix`** (`include/matrix.h`) — 3×3 homogeneous transforms; post-multiplies (`translate(); scale();` ⇒ `T·S`). `ellipse_frame()` maps an arc/ellipse to its **device frame** (center + conjugate semi-diameters `u,v`, i.e. `P(t)=C+u·cos t+v·sin t`) — the only form closed under affinity, and what all three backends consume; `ellipse_axes()` is the closed-form 2×2 SVD that turns that frame into true axes+angle, needed **only** by SVG (its `A` command can't take a matrix). ⚠️ Do **not** reintroduce radii-by-column-norm (`transform_radii`, deleted 2026-07-27): column norms are the *conjugate* semi-diameters, not the axes, and they only coincide when `u⊥v` — see `docs/bitacora.md` 2026-07-27.
 
 ### Coordinate system (implemented 2026-07-05, spec §3.1)
 

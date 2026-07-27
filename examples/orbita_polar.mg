@@ -11,15 +11,14 @@ text("S", align="center", valign="midle") { 0 -7.5 }
 arrow_rx = 1.25
 arrow_ry = 0.15
 text("Rotación de la Tierra", size=8, align="right") { -arrow_rx -6.5 }
-% Implementar: arcos elípticos, ya están en la especificación pero no había cliente, ahora lo hay
-%arc(rx=arrow_rx, ry=arrow_ry, line_width=2, color="gray", from=270, to=450,
-%    marker_end="arrow", marker_size=3) { (0.5*arrow_rx) -6.5 }
-polyline(line_width=2, color="gray", marker_end="arrow", marker_size=3) { (-0.5*arrow_rx) -6.5 (0.5*arrow_rx) -6.5 }
+arc(rx=arrow_rx, ry=arrow_ry, line_width=2, color="gray", from=90, to=270,
+    marker_end="arrow", marker_size=3) { (0.5*arrow_rx) -6.5 }
 
 % planet
+earth_radius = 5
 earth_y = .5
-%circle(5, fill="steelblue") { 0 earth_y }
-Mapa(scale=5, at=(0, earth_y), grid=false)
+%circle(earth_radius, fill="steelblue") { 0 earth_y }
+Mapa(scale=earth_radius, at=(0, earth_y), grid=false)
 
 
 % orbits

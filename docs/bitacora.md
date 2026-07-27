@@ -1420,3 +1420,113 @@ El `+`/`-` binario sigue necesitando `( )` (inherente al modelo de «el espacio 
 * **PDF (`PDFDisplay.cpp`)**: Se reescribió `arc_bezier` para que la aproximación de libharu acepte la matriz global `mt`. La curva se calcula en el espacio base y cada punto de control se transforma limpiamente antes de enviarlo al PDF, garantizando deformaciones arbitrarias exactas.
 **Churn masivo esperado y bendecido (corpus intacto a `ok=69`).** Al tocar el prólogo de EPS y las coordenadas resultantes de PDF y SVG, hubo que regenerar la red. Se ejecutó `test/run.sh capture` para los goldens y `test/run.sh images` para los renders de prueba. La validación corrió sin errores.
 **Cobertura visual:** Verificado con `examples/elipse.mg`; al inyectar un `rotate 90`, la elipse obedece a la directiva global y se alinea de forma exacta con primitivas envolventes como `rectangle`. Ese ejemplo era de prueba y se eliminó pero se agregó una elipse al ejemplo rpstest que ahora ilustra la rotación de elipses.
+
+### Cerrado en la sesión del 2026-07-27 (arcos elípticos, y la rotación de arcos/elipses de verdad)
+
+⚠️ **Corrige la entrada anterior.** La sesión del 2026-07-26 dio la rotación por «CORRECTA y
+alineada» en los tres backends. Lo era **solo en PDF**. En EPS y SVG el cambio fue un refactor
+puro —`atan2(mt.M[1][0], mt.M[0][0])*180/M_PI` → `mt.get_rotation()`, matemática byte-idéntica—,
+así que PDF quedó exacto y los otros dos con la aproximación vieja: **los backends discrepaban**,
+y el golden lo bendijo porque es autorreferencial y la Capa 3 solo mira conteo de texto y paths
+de un segmento. Ninguna compuerta compara *geometría* entre backends.
+
+🔎 **Una sola causa raíz para tres síntomas.** Los backends recibían el arco DESCOMPUESTO (centro,
+radios, `from`/`to`) y reparaban esa descomposición en dispositivo con reglas ad-hoc. Esa
+descomposición **no es cerrada bajo afinidad**. De ahí salían:
+
+1. **Elipse rotada mal.** `transform_radii` daba las normas de columna, que son los semidiámetros
+   **conjugados**, no los **ejes** — solo coinciden cuando u⊥v. Medido en `rpstest` (copia 1 del
+   caso 3): EPS/SVG decían `20.888 × 13.049 @ 47.27°` cuando la verdad es `21.757 × 11.541 @ 36.77°`
+   (13% de error en el eje menor, 10.5° en el ángulo). Caso extremo: con `scale 2 1` seguido de
+   `rotate 45` sobre un círculo unitario, las dos normas salen iguales y EPS dibujaba **un círculo
+   donde va una elipse 2:1**.
+2. **Arco circular girado perdía el giro.** Con `w==h` se tomaba la rama del operador `arc` nativo
+   de PostScript, que **no tiene parámetro de rotación**. La antena de `lib/satellite.mg` no giraba.
+3. **Arco reflejado se volvía disco.** Los tres bloques de «corrección de signo» hacían
+   `ea = sa + endAng`, tratando el ángulo final ABSOLUTO como si fuera el BARRIDO: la antena
+   (`from=190, to=350`, barrido 160°) salía `370 720` = **350°**, casi el círculo entero. Nunca se
+   había visto porque **todo el corpus eran círculos completos**, donde 360 = 360 por ambos caminos.
+
+🔧 **Arreglo: dejar de reparar la descomposición.** `Matrix::ellipse_frame` devuelve el centro y los
+dos semidiámetros conjugados u,v — la forma `P(t) = C + u·cos t + v·sin t`, que **sí** es cerrada
+bajo afinidad. Con eso:
+
+* **EPS** — el proc del prólogo pasa a recibir la **matriz** (`[ux uy vx vy Cx Cy] mgarc`) y traza el
+  arco UNITARIO con los ángulos **originales, intactos**; `concat` hace el resto. Los tres bloques de
+  signo **desaparecen** en vez de arreglarse. `savematrix setmatrix` ya protegía el grosor de línea.
+  Se conserva un atajo al `arc` nativo cuando la matriz es escala uniforme sin rotación ni reflejo
+  (casi todos los círculos del corpus no mueven un byte).
+* **SVG** — único que no puede recibir una matriz (`A` exige rx/ry/rotación), así que aquí sí se
+  DECIDEN los ejes, con el SVD 2×2 en forma cerrada (`Matrix::ellipse_axes`). Las banderas salen del
+  barrido real y del signo del determinante, no de ángulos «corregidos».
+* **PDF** — ya era correcto; se unificó `arc_bezier` al mismo marco y se arregló el **bounding box**
+  (eran las normas de columna; ahora `hypot(ux,vx)`, `hypot(uy,vy)`, exacto).
+* Mueren `transform_radii` y `get_rotation`: sin usos, y su comentario («un círculo sigue siendo
+  círculo bajo isometría+rotación») era precisamente la premisa falsa.
+
+**`arc` acepta por fin `rx`/`ry`** (§4.5 los documentaba desde siempre; no había cliente hasta
+`orbita_polar`). Un resolvedor compartido `resolveRadii` atiende `circle`/`ellipse`/`arc`, con el
+nombre del radio opcional como promete §4.1, y **un radio ausente es error** en vez de default 1.
+`emitArcMarkers` pasaba `r, r`; su cuerpo ya sabía de elipses (la tangente es la derivada
+paramétrica), solo el sitio de llamada lo estrangulaba.
+
+📐 **Cómo se verificó, que es la parte que faltó la vez pasada.** Se rasterizó el corpus entero
+(25 ejemplos × 3 backends) ANTES y DESPUÉS y se comparó píxel a píxel con `compare -metric AE`:
+* **PDF: cero cambios en los 25** — el refactor es exactamente equivalente, y PDF sigue de referencia.
+* Cambian 4 EPS y 6 SVG. De ellos, `primitives` y `tiro_parabolico` solo mueven `largeArcFlag` de 1
+  a 0 en arcos de **exactamente 180°**, donde esa bandera es indiferente: se muestrearon los puntos
+  medios de los arcos y son idénticos. `orbita_polar` y `gravitacion_orbita` cambian a la forma
+  canónica (`96.378 175.748 @ 15` → `175.748 96.378 @ -75`, con el eje mayor primero): se muestrearon
+  ambas parametrizaciones y la desviación máxima es **0.000000 pt**. Lo demás son `rpstest` y el
+  satélite, que estaban rotos.
+* Y el número que cierra el caso: SVG emite hoy `21.757 11.5411 @ 36.7585` para la elipse de
+  `rpstest`, **exactamente** lo que se había extraído de las Béziers del PDF. Los tres coinciden.
+
+🕸️ **Cobertura nueva.** El corpus no ejercitaba ni un arco **parcial** girado, que es el hueco por el
+que se coló el bug del barrido; solo lo hacía un `test_sat.mg` efímero. Se dobló en `rpstest`
+(`arc(.3, .15, from=200, to=340)` dentro de `Cuadro`), que ya hace el giro acumulado y llega a
+matrices que reflejan: los 13 arcos conservan `200 340`, antes las copias reflejadas salían `380 720`.
+**`check` → `ok=69 fail=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0`**; re-bendecido y
+`images` regenerado (4 SVG publicados + galería).
+
+**Pendiente propuesto, NO hecho:** una «Capa 4» que rasterice EPS y PDF con `gs` y los compare. Es la
+única que caza esta clase —discrepancia de geometría entre backends— y en esta sesión se usó a mano.
+
+**Añadido en la misma sesión: la invariante (c) de Capa 3 — paridad GEOMÉTRICA de arcos.**
+`tools/arcparity.py`, invocada desde `test/run.sh`. Muestrea cada arco del EPS y exige que SVG
+y PDF contengan una curva que pase por esos puntos, más el conteo de comandos `A` del SVG (un
+arco de 360° son DOS, porque SVG no admite el completo). Los tres backends comparten espacio de
+dispositivo —el volteo de SVG vive en el `<g transform="scale(1,-1)">`, fuera de las coordenadas
+del path—, así que se comparan coordenadas directas sin normalizar.
+
+⚠️ **Es la única compuerta sin escapatoria por bendición, y esa es toda su razón de ser.** Las
+demás comparan contra un golden, pero el flujo normal tras tocar el motor es **re-bendecir**, y
+ahí un cambio equivocado se bendice solo — que es exactamente lo que pasó esta vez. Verificado
+reintroduciendo el bug a propósito (`ellipse_axes` devolviendo normas de columna): tras
+`capture`, el golden da **`ok=69 fail=0`** —el bug queda bendecido e invisible— mientras
+arcparity reporta **12.540 pt** de desviación en SVG contra 0.006 del PDF. Cableada, `capture`
+da `c3fail=1`.
+
+⚠️ **Entran los TRES backends, no dos.** Durante todo el bug EPS y SVG **coincidían entre sí** y
+los dos estaban mal (ambos derivaban los ejes de las normas de columna). El PDF es la tercera
+opinión independiente porque no decide ejes ni ángulos: transforma puntos de control de Bézier.
+Una compuerta EPS-vs-SVG habría dado verde de principio a fin.
+
+**Dos tolerancias, ninguna a ojo** (se calibraron midiendo, y el primer intento dio 4 falsos
+positivos que resultaron ser cosas reales):
+* El PDF **no dibuja arcos**, los aproxima con Béziers cúbicas de 90°, cuyo error radial máximo
+  conocido es ≈2.7e-4·R. Medido en el corpus: 0.029 pt para R=113 y 0.041 para R=176 — justo esa
+  cota. Por eso la tolerancia **escala con el radio** (`max(0.02, 1e-3·R)`); una constante o se
+  pasa de laxa en las figuras grandes o da falsos positivos en ellas.
+* Los 4 falsos positivos restantes eran todos arcos de **exactamente 180°** (las mitades en que
+  SVG parte un arco de 360°). Ahí la conversión extremos→centro está malísimamente condicionada:
+  `SVGDisplay` imprime 6 cifras significativas, así que un extremo real de 155.9055 sale
+  155.906, y ese error de 5e-4 pt se **amplifica ~150×** hasta correr el centro 0.075 pt. Es
+  artefacto de precisión de impresión, no desacuerdo entre backends, así que en la vecindad
+  degenerada (`lam > 0.999`) el centro se fija en el punto medio de la cuerda. Resultado: **cero
+  falsos positivos en los 25 ejemplos**. *(Subir la precisión de impresión del SVG lo quitaría de
+  raíz, pero movería TODOS los goldens SVG y todo `docs/img` por 0.075 pt invisibles — no se hizo.)*
+
+**Alcance declarado:** solo arcos y elipses, que es donde vivió el bug. **No** cubre texto ni
+tramado (los dos pendientes de `PENDIENTES.md`), a propósito: una compuerta que promete más de
+lo que mide es peor que ninguna. Coste: la red completa sigue en ~3 s.

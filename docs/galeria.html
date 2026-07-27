@@ -1503,6 +1503,11 @@ struct Cuadro() {
     % rectangle ya es transformable (rota/deforma como SVG) → uso directo
     rectangle { 0 0  1 1 }
     ellipse(.5, .25) { .5 .5 }
+    % Arco PARCIAL y elíptico. Bajo el giro acumulado del caso 3 atraviesa
+    % matrices que reflejan, que es donde el barrido se corrompía: un arco de
+    % 140° salía de 220°, casi el disco entero. Es la única cobertura del corpus
+    % para arco parcial girado — no quitarlo sin mudarla a otro ejemplo.
+    arc(.3, .15, from=200, to=340) { .5 .5 }
 }
 
 % 1) Repetición simple: 3 copias avanzando en x. Posición y avance en la propia

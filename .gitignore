@@ -30,3 +30,7 @@ man/mg.1
 # confidencialidad. El generador que produce estos .mg sí se versiona
 # (tools/hist2mg.py); los datos y la figura, no.
 local/
+
+# Cachés de las herramientas Python de tools/
+__pycache__/
+*.pyc

@@ -27,6 +27,26 @@
 #       (b) LÍNEAS RELLENAS: un path SVG de un solo segmento (M..L..) con fill=color
 #           y stroke=none es una línea de área nula = invisible → caza "ejes sin
 #           trazo en PDF/SVG" (fuga de fill del contenido, Lección 6).
+#       (c) GEOMETRÍA de arcos y elipses (tools/arcparity.py, 2026-07-27): los tres
+#           backends deben dibujar la MISMA curva. Se muestrea cada arco del EPS y
+#           se exige que SVG y PDF contengan una curva que pase por esos puntos, más
+#           el conteo de comandos `A` del SVG (un arco de 360° son DOS, porque SVG no
+#           admite el completo). Los tres comparten espacio de dispositivo —el volteo
+#           de SVG vive en el <g transform="scale(1,-1)">—, así que se comparan
+#           coordenadas directas. Se omite con aviso si no hay python3.
+#
+#           ⚠️ ES LA ÚNICA SIN ESCAPATORIA POR BENDICIÓN. Las demás comparan contra un
+#           golden, y el flujo normal tras tocar el motor es re-bendecir: un cambio
+#           equivocado se bendice solo. Pasó entre el 2026-07-26 y el 2026-07-27 —EPS
+#           y SVG dibujaban la elipse de rpstest 20.888×13.049 cuando la verdadera es
+#           21.757×11.541— y el golden daba ok=69. Esta compara backend contra backend:
+#           no hay nada que bendecir. Verificada reintroduciendo el bug: `capture` da
+#           c3fail=1 mientras el golden dice ok=69 fail=0.
+#
+#           ⚠️ Y POR ESO ENTRAN LOS TRES, no dos: durante todo el bug EPS y SVG
+#           COINCIDÍAN ENTRE SÍ y ambos estaban mal. El PDF es la tercera opinión
+#           independiente porque no decide ejes ni ángulos — transforma los puntos de
+#           control de la Bézier. Una compuerta EPS-vs-SVG habría dado verde.
 #   - docs/img al día (imgfail): caza que la salida PUBLICADA se quede RANCIA. Los
 #     .svg de docs/img están EN GIT (GitHub los muestra en la portada del README) y
 #     se regeneran a mano; nada los vigilaba, y entre 2026-07-17 y 2026-07-21 la
@@ -172,6 +192,13 @@ if [ -z "$GS_BIN" ]; then
     echo "aviso: 'gs' no encontrado; se omite la validación PostScript de los EPS" >&2
 fi
 
+# Igual de opcional: sin python3 se omiten la compuerta de la galería y la
+# invariante de geometría de Capa 3, con aviso, pero el harness sigue usable.
+PY_BIN="$(command -v python3 2>/dev/null || true)"
+if [ -z "$PY_BIN" ]; then
+    echo "aviso: 'python3' no encontrado; se omite la paridad geométrica de arcos" >&2
+fi
+
 mkdir -p "$GOLD"
 
 # normalize <fmt> <archivo>
@@ -222,6 +249,9 @@ for example in $EXAMPLES; do
     # Capa 3 (paridad entre backends): acumuladores por ejemplo. Se llenan al vuelo
     # dentro del loop de formatos (antes de borrar el tmpdir) y se comparan al salir.
     c3_text_eps=""; c3_text_svg=""; c3_text_pdf=""; c3_filled_lines=0
+    # La invariante de GEOMETRÍA necesita las TRES salidas a la vez, así que se
+    # copian aquí (el tmpdir de cada formato muere al final de su vuelta).
+    c3dir="$(mktemp -d)"
     for fmt in $FORMATS; do
         base="$example.$fmt"
         tmpdir="$(mktemp -d)"
@@ -274,6 +304,7 @@ for example in $EXAMPLES; do
                  c3_filled_lines=$(grep -oE '<path d="M [-0-9.e ]+ L [-0-9.e ]+ " fill="#[0-9a-fA-F]{6}"[^>]*>' "$outfile" | grep -c 'stroke="none"') ;;
             pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile") ;;
         esac
+        cp "$outfile" "$c3dir/$base"
 
         rm -rf "$tmpdir"
     done
@@ -290,7 +321,20 @@ for example in $EXAMPLES; do
             echo "C3FAIL $example (SVG: $c3_filled_lines línea(s) rellena(s) sin trazo → stroke perdido)"
             c3fail_count=$((c3fail_count + 1))
         fi
+        # Invariante (c): GEOMETRÍA de arcos y elipses igual en los tres backends.
+        # Es la única que no tiene escapatoria por bendición: no compara contra un
+        # golden sino un backend contra otro, así que `capture` no puede callarla.
+        # Se omite con aviso si no hay python3, igual que la galería.
+        if [ -n "$PY_BIN" ]; then
+            if ! arcout="$("$PY_BIN" "$ROOT/tools/arcparity.py" \
+                    "$c3dir/$example.eps" "$c3dir/$example.svg" "$c3dir/$example.pdf" 2>&1)"; then
+                echo "C3FAIL $example (geometría de arcos difiere entre backends):"
+                echo "$arcout" | sed 's/^/         /'
+                c3fail_count=$((c3fail_count + 1))
+            fi
+        fi
     fi
+    rm -rf "$c3dir"
 done
 
 # --- Compuerta 4: docs/img al día -------------------------------------------

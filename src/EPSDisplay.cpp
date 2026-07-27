@@ -12,26 +12,40 @@ using std::string;
 string ps_creator = R"(%%Creator: MetaGrafica v4.0 2023
 "%%CreationDate: DATE)";
 
+// §4.5/§4.9 — arco o elipse bajo una matriz ARBITRARIA. En vez de reparar la
+// descomposición (radios + ángulos) en espacio de dispositivo, se le entrega la
+// matriz a PostScript y se traza el arco UNITARIO con los ángulos ORIGINALES,
+// intactos. Es exacto para rotación, reflejo, escala anisótropa y shear, sin un
+// solo caso especial — el mismo movimiento que ya usa el PDF con sus Béziers.
+//
+// El proc anterior recibía `rotangle` y hacía `rotate` + `scale xrad yrad`, que
+// solo describe la elipse cuando la matriz es (escala uniforme)·(rotación)·(escala
+// alineada a ejes); con `scale` fuera de la rotación, o con shear, mentía. Y como
+// la rama circular del operador `arc` nativo no tiene parámetro de rotación, un
+// arco circular girado perdía el giro por completo.
+//
+// `savematrix setmatrix` restaura la CTM ANTES de volver: el path ya quedó
+// construido en coordenadas de dispositivo, así que la `concat` no escala el
+// grosor de línea ni el guionado del `stroke` posterior, ni el tramado.
+//
+// El sentido lo decide `sa < ea` en el espacio LOCAL. Si la matriz refleja, el
+// trazo sale invertido en dispositivo, que es exactamente lo correcto: antes eso
+// lo intentaban tres bloques de corrección de signo que confundían el ángulo
+// final con el barrido (un arco de 190°→350°, de 160°, salía de 350°).
 static const char *ps_ellipse = R"(
-/ellipsedict 8 dict def
-ellipsedict /mtrx matrix put
-/ellipse
-        { ellipsedict begin
-          /rotangle exch def
-          /endangle exch def
-          /startangle exch def
-          /yrad exch def
-          /xrad exch def
-          /y exch def
-          /x exch def
+/mgarcdict 8 dict def
+mgarcdict /mtrx matrix put
+/mgarc
+        { mgarcdict begin
+          /m exch def
+          /ea exch def
+          /sa exch def
           /savematrix mtrx currentmatrix def
-          x y translate
-          rotangle rotate
-          xrad yrad scale
-          startangle endangle lt
-          { 0 0 1 startangle endangle arc }
-          { 0 0 1 startangle endangle arcn }
-          ifelse 
+          m concat
+          sa ea lt
+          { 0 0 1 sa ea arc }
+          { 0 0 1 sa ea arcn }
+          ifelse
           savematrix setmatrix
           end
 } def
@@ -515,51 +529,46 @@ void EPSDisplay::setFontFace(FontFace face) {
 
 void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
                      double endAng) {
-  double sa = startAng, ea = endAng;
-  mt.transform(x, y);
-  // Radios por norma de columna: un círculo sigue siendo círculo bajo
-  // isometría+rotación; ya no se fuerza w=h (compensación V1 de la
-  // normalización por eje). Una deformación explícita (SCST anisotrópico,
-  // stretch) produce elipse, que es lo honesto.
-  mt.transform_radii(w, h);
   if (h == 0)
     h = w;
+  // La elipse imagen, en la única forma cerrada bajo afinidad: centro y
+  // semidiámetros conjugados (§4.5/§4.9, Matrix::ellipse_frame).
+  double Cx, Cy, ux, uy, vx, vy;
+  mt.ellipse_frame(x, y, w, h, Cx, Cy, ux, uy, vx, vy);
 
-  // To prevent sillyness of some EPS interpreters
-  if (w < 0 && h >= 0) {
-    ea = 180 - startAng;
-    sa = ea - endAng;
-  } else if (w >= 0 && h < 0) {
-    ea = 360 - startAng;
-    sa = ea - endAng;
-  } else if (w < 0 && h < 0) {
-    sa = startAng + 180;
-    ea = sa + endAng;
-  }
+  // Bounding box EXACTO de la elipse completa: el extremo en x de
+  // C + u·cos t + v·sin t es |(ux,vx)|, y el de y es |(uy,vy)|.
+  const double hw = hypot(ux, vx), hh = hypot(uy, vy);
   if (!dspstate.openpath) {
     fprintf(file, "newpath\n");
-    set_limits(x - w, y - h, x + w, y + h);
-  } else 
-    adjust_limits(x - w, y - h, x + w, y + h);
-  
-  // Igualdad con tolerancia relativa: las normas de columna de un círculo
-  // rotado difieren solo por redondeo flotante.
-  if (fabs(fabs(w) - fabs(h)) <= 1e-9 * (fabs(w) + fabs(h))) {
+    set_limits(Cx - hw, Cy - hh, Cx + hw, Cy + hh);
+  } else
+    adjust_limits(Cx - hw, Cy - hh, Cx + hw, Cy + hh);
+
+  // Atajo al operador `arc` nativo cuando la matriz es una escala uniforme SIN
+  // rotación, reflejo ni shear (u ∥ +x, v ∥ +y, |u| = |v|): ahí describe la
+  // figura exactamente y sale más compacto. Es el caso de casi todos los
+  // círculos del corpus, cuya salida no se mueve un byte. Cualquier otra cosa
+  // —incluido un arco circular GIRADO, que antes perdía el giro aquí— va al proc.
+  const double s = fabs(ux) + fabs(uy) + fabs(vx) + fabs(vy);
+  const bool plain = fabs(uy) <= 1e-12 * s && fabs(vx) <= 1e-12 * s &&
+                     fabs(ux - vy) <= 1e-9 * s && ux > 0;
+  if (plain) {
     if (endAng < startAng)
-      fprintf(file, "%f %f %f %f %f arcn\n", x, y, w, sa, ea);
+      fprintf(file, "%f %f %f %f %f arcn\n", Cx, Cy, ux, startAng, endAng);
     else
-      fprintf(file, "%f %f %f %f %f arc\n", x, y, w, sa, ea);
+      fprintf(file, "%f %f %f %f %f arc\n", Cx, Cy, ux, startAng, endAng);
   } else {
-    // Define el proc /ellipse en su primer uso si el prólogo no lo emitió (la
-    // bandera de parse-time no cubre p. ej. fit(stretch=true) sobre círculos).
-    // `def` afecta el diccionario actual, no el estado gráfico: sobrevive a
-    // gsave/grestore, así que definirlo aquí (dentro de cualquier contexto) basta.
+    // Define el proc en su primer uso si el prólogo no lo emitió: la bandera es
+    // de parse-time y no puede saber qué matriz habrá en runtime (un `rotate`
+    // sobre un círculo, un fit(stretch=true)). `def` afecta el diccionario, no el
+    // estado gráfico: sobrevive a gsave/grestore, así que definirlo aquí basta.
     if (!ellipse_defined) {
       fprintf(file, "%s", ps_ellipse);
       ellipse_defined = true;
     }
-    double rot_deg = mt.get_rotation();
-    fprintf(file, "%g %g %g %g %g %g %g ellipse\n", x, y, w, h, sa, ea, rot_deg);
+    fprintf(file, "%g %g [%g %g %g %g %g %g] mgarc\n",
+            startAng, endAng, ux, uy, vx, vy, Cx, Cy);
   }
   stroke();
 }
