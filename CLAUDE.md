@@ -16,15 +16,15 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería: ok=69 … galfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería: ok=72 … galfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg + docs/galeria.html (PUBLICADO; capture NO los toca)
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (23 `.mg` × EPS/SVG/**PDF** = 69 goldens) y compara contra la red golden
+de `examples/` (24 `.mg` × EPS/SVG/**PDF** = 72 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=69 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=72 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -95,9 +95,9 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (23 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, fractal_tree, franck_condon, gravitacion_orbita, line_patterns, markers-demo, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **`gravitacion_orbita.mg` ENTRÓ al golden el 2026-07-24** (estuvo fuera a propósito hasta que `\frac` quedó completo): es la única figura que ejercita **`\frac`** (fracción math 2-D, inline y con extent vertical medido), **`include` de una biblioteca** (`include "../lib/satellite.mg"`, §15), **`rectangle(w,h,at)`**, la búsqueda `include` local→lib y el **default de marcador-hereda-color-de-línea** (flechas roja/verde sin `marker_color`). **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (24 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, fractal_tree, franck_condon, gravitacion_orbita, line_patterns, markers-demo, orbita_polar, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **`gravitacion_orbita.mg` ENTRÓ al golden el 2026-07-24** (estuvo fuera a propósito hasta que `\frac` quedó completo): es la única figura que ejercita **`\frac`** (fracción math 2-D, inline y con extent vertical medido), **`include` de una biblioteca** (`include "../lib/satellite.mg"`, §15), **`rectangle(w,h,at)`**, la búsqueda `include` local→lib y el **default de marcador-hereda-color-de-línea** (flechas roja/verde sin `marker_color`). **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **`orbita_polar.mg` ENTRÓ el 2026-07-27**, al cerrarse la oclusión de la mitad trasera de la órbita: es el único que ejercita **`arc(rx, ry)`**, **`marker_at`** (marcadores en ángulos paramétricos) y **`place(..., rx/ry, at=)`** (struct posada sobre un arco elíptico) — sin él esas tres se quedan sin pruebas —, y el primero con arcos elípticos **girados** en el corpus, que es justo lo que vigila la invariante (c) de la Capa 3. **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
-**Encabezado de un ejemplo — convención (2026-07-23).** Los 23 `.mg` del golden de `examples/` abren
+**Encabezado de un ejemplo — convención (2026-07-23).** Los 24 `.mg` del golden de `examples/` abren
 con: **primera línea = título**, párrafo siguiente = **descripción** (2-5 líneas de qué es y
 qué enseña del lenguaje), y a partir de `% NOTAS ———` todo lo que le sirve a **quien
 mantiene** (procedencia bibliográfica, mediciones, verificadores, avisos de cobertura
@@ -114,7 +114,7 @@ Symbol de `symbols`, los «21 ejemplos» de `primitives` y la anécdota del man 
 
 **Galería (2026-07-23):** `docs/galeria.html`, generada por `tools/galeria.py`, publicada en
 GitHub Pages (fuente: `main`, raíz) → <https://asierra.github.io/Metagrafica/docs/galeria.html>.
-22 tarjetas con figura, título, descripción y el código completo en un desplegable; enlazada
+23 tarjetas con figura, título, descripción y el código completo en un desplegable; enlazada
 desde ambos README. ⚠️ **Qué entra NO es la misma regla que `imgfail`:** la galería itera
 sobre `examples/*.mg` que tengan `docs/img/X.svg`, mientras que la compuerta itera al revés
 —sobre `docs/img`— y por eso vigila además las tres variantes que existen solo para los
@@ -148,7 +148,7 @@ The engine is **isometric by construction**: `Display::pushWorldMatrix()` builds
 
 ## Roadmap state (act. 2026-07-24)
 
-El parser V3 (`src/parserv3.cpp`) compila los 23 ejemplos del golden de `examples/` a
+El parser V3 (`src/parserv3.cpp`) compila los 24 ejemplos del golden de `examples/` a
 EPS/SVG/PDF. Grande hecho: expresiones+control de flujo (§5-6), structs+invocación+place/fit/repeat
 (§8/§10/§17), generadores §13 (numbers/ticks/axis/grid), primitivas geométricas+bezier+
 sine, texto con markup, estado color/fill/line_width/dash/font/align/valign + atributos
@@ -180,15 +180,27 @@ un SVD 2×2 en forma cerrada; PDF ya transformaba puntos de control. `arc` acept
 «fórmula isótropa aplicada al caso anisótropo», sus cuatro tics reconocibles, las tres
 instancias cerradas, dos abiertas *por decisión de semántica*, y lo ya verificado limpio.
 
+**`orbita_polar` — CERRADA y EN EL CORPUS (2026-07-27).** La figura que pidió todo lo
+anterior. La oclusión de la mitad trasera de la órbita **no necesitó motor booleano**: es
+profundidad, no conjuntos en 2-D, y con órbita y globo concéntricos sale en forma cerrada
+(`sin t = √((R²−a²)/(b²−a²))`) evaluada **en el propio `.mg`** con la trigonometría que el
+evaluador ya tenía. Cada órbita es un `arc` cuyo barrido salta el tramo oculto; los cortes
+caen sobre el limbo por construcción. Cuál mitad va detrás **es modelado**, no geometría:
+se eligieron opuestas para que se lean como planos que se cruzan.
+
 Cerrado en cada sesión: **[`docs/bitacora.md`](docs/bitacora.md)** — el registro de qué se
 cambió y por qué, sesión por sesión (26 y subiendo). ⚠️ **Léelo antes de tocar el motor o de
 cambiar una decisión de diseño:** muchas entradas traen la medición que la sostiene, y varias
 registran el camino que se probó primero y no funcionó. Vivía aquí dentro hasta el
 2026-07-22; se mudó porque también le sirve a un colaborador humano.
 
-⚠️ **Hilo ABIERTO (2026-07-27):** `plan_orbita_polar.md` + `plan_anisotropia.md`. Por decisión
-de Alejandro, **`docs/referencia.md` no se actualiza hasta cerrar ese tema**. Estado y siguiente
-paso, en `PENDIENTES.md` § «En curso».
+⚠️ **Hilo casi cerrado (act. 2026-07-27):** `plan_orbita_polar.md` está **cerrado** (figura
+terminada y en el corpus) y **`docs/referencia.md` ya se actualizó** con lo que destapó —el
+congelamiento que pedía Alejandro se levantó el mismo día—. De `plan_anisotropia.md` quedan
+**dos decisiones de semántica** —el radio de un arco en la ruta log de `plot`, y si la
+dirección «out» de las marcas de eje es perpendicular en mundo o en papel—: son decisiones,
+no defectos, y ninguna la alcanza el corpus. Estado y siguiente paso, en `PENDIENTES.md`
+§ «En curso».
 
 ## Code style
 

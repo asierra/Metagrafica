@@ -1,9 +1,9 @@
 # plan_orbita_polar — la figura y lo que destapó
 
-> **Estado (2026-07-27):** tres de cuatro problemas CERRADOS. Queda la oclusión, con la
-> receta ya **verificada** abajo. `examples/orbita_polar.mg` **no está en el corpus**
-> (`test/run.sh`) ni tiene `docs/img`: hoy no lo vigila ninguna compuerta. Ver
-> `docs/bitacora.md` 2026-07-27 y 2026-07-27 (bis), y `plan_anisotropia.md`.
+> **Estado (2026-07-27): CERRADO.** Los cuatro problemas resueltos y la figura **en el
+> corpus** (`ok=72`, 24 ejemplos), con `docs/img/orbita_polar.svg` y tarjeta en la galería:
+> hoy la vigilan las seis compuertas. Ver `docs/bitacora.md` 2026-07-27 y
+> `plan_anisotropia.md`, que es el hilo que sigue vivo.
 
 Órbitas polares alrededor de la Tierra en proyección ortográfica, con satélite. Es la figura
 que pidió los arcos elípticos y, de paso, destapó tres bugs de motor.
@@ -19,12 +19,13 @@ que pidió los arcos elípticos y, de paso, destapó tres bugs de motor.
    ~2.6 mm hacia lados opuestos. Se lleva el origen al centro con `translate`.
 4. **Flechas de sentido** (`marker_at`) y **satélite sobre la órbita** (`place(..., rx/ry, at=)`).
 
-## Pendiente 1 — ocultar la mitad trasera de la órbita
+## Cerrado — ocultar la mitad trasera de la órbita
 
-**No hace falta motor booleano.** El comentario original proponía usar intersección de paths,
+**No hizo falta motor booleano.** El comentario original proponía intersección de paths,
 pero la oclusión es una cuestión de **profundidad**, no de conjuntos en 2-D: una intersección
 de contornos no sabe qué mitad está detrás. Y como órbita y globo son **concéntricos**, el
-problema tiene forma cerrada.
+problema tiene forma cerrada, evaluable en el propio `.mg` con la trigonometría que el
+lenguaje ya tenía.
 
 **La geometría.** La órbita es la proyección de un círculo 3-D de radio `b` inclinado; su eje
 **mayor** es la línea de nodos (z = 0), así que en el marco propio de la elipse
@@ -34,47 +35,49 @@ sale de `|P(t)|² = R²`:
     a² + (b² − a²)·sin²t = R²   →   sin t = ±√((R² − a²)/(b² − a²))
 
 Oculto = lejano ∩ dentro del disco = `t ∈ (180−tc, 180+tc)` con `tc = asin(√(…))`.
-Con `a=3.4, b=6.2, R=5` da `tc = 45°`, o sea oculto `t ∈ (135°, 225°)` y visible el resto.
-
-**La receta, ya verificada** (emite `225 495 mgarc`, barrido de 270°, y el render es correcto —
-los tramos lejanos que caen FUERA del disco siguen dibujados, que es lo que debe pasar):
+Con `a=3.4, b=6.2, R=5` la raíz da `√½` y `tc = 45°` exacto: oculto `t ∈ (135°, 225°)`.
 
 ```
-a = 3.4
-b = 6.2
-R = earth_radius
 s  = sqrt((R*R - a*a)/(b*b - a*a))
 tc = atan2(s, sqrt(1 - s*s)) * 180/pi        % = asin(s) en grados; no hay asin, atan2 lo da
 arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % en vez de ellipse(a, b)
 ```
 
-⚠️ **Cuál de las dos mitades está detrás es una decisión de modelado**, no la dicta la
-geometría 2-D: la otra convención es `from=tc, to=(360-tc)`. Hay **dos** órbitas (±15°) y hay
-que elegir para cada una y **mirarlo**. Ese es el trabajo que queda: no es matemática, es
-decidir cómo se lee la figura.
+**Los cortes caen sobre el limbo por construcción**, no por ajuste: el disco del mapa es un
+`circle(1)` escalado por `scale=earth_radius`, o sea el mismo `R` y el mismo centro que la
+ecuación. Verificado a 1600 px: el trazo termina dentro del ancho de línea del limbo.
 
-⚠️ Al pasar de `ellipse` a `arc` hay que reponer `marker_at` (los ángulos siguen siendo los
-mismos; el marcador en 180° cae en la parte oculta y hay que moverlo o quitarlo).
+**Cuál de las dos mitades está detrás resultó ser una decisión de modelado**, no la dicta la
+geometría 2-D. Se eligieron **opuestas** —la de +15° esconde su izquierda (`from=180+tc`),
+la de −15° su derecha (`from=tc`)— para que se lean como dos planos que se cruzan y no como
+copias de uno solo. Con media órbita oculta queda **una** flecha por órbita, en lados
+opuestos: `marker_at=[360]` en la primera (360 = 0, pero dentro del barrido 225→495) y
+`[180]` en la segunda.
 
-**El lenguaje ya alcanza.** `sin`, `cos`, `tan`, `sqrt`, `abs`, `atan2`, `exp`, `ln`, `mod` y la
+**El lenguaje alcanzó.** `sin`, `cos`, `tan`, `sqrt`, `abs`, `atan2`, `exp`, `ln`, `mod` y la
 constante `pi` están en `include/ast.h:137,228-243`. **No hay `asin`/`acos`** — `atan2` los
 expresa, como arriba. Si esto se repite en otra figura, valdría añadirlos (y quizá `deg`/`rad`),
 pero por la política de demanda: hasta que una segunda figura lo pida.
 
-## Pendiente 2 — decidir si la figura entra al corpus
+## Cerrado — la figura entró al corpus
 
-Hoy no la vigila nada. Si entra a `EXAMPLES` de `test/run.sh` gana goldens en tres backends y
-paridad geométrica; si además se le hace `docs/img/orbita_polar.svg`, entra a `imgfail` y a la
-galería. Requisitos: encabezado con la convención de 2026-07-23 (1ª línea = título, párrafo =
-descripción, `% NOTAS ———` para lo demás) y que `lib/mapa_p30_n55.mg` siga en el árbol.
+`orbita_polar` está en `EXAMPLES` de `test/run.sh` (`ok=72`, 24 ejemplos × 3 backends), tiene
+`docs/img/orbita_polar.svg` —así que entra a `imgfail`— y tarjeta en la galería. Es el
+**único cliente** de `arc(rx, ry)`, `marker_at` y `place(..., rx/ry, at=)`, y el primer
+ejemplo del corpus con arcos elípticos **girados**, que es lo que vigila la invariante (c)
+de la Capa 3. Encabezado a la convención de 2026-07-23.
 
-⚠️ Es también el único cliente de `arc(rx,ry)`, `marker_at` y `place(rx/ry, at=)`: si no entra,
-esas tres características quedan **sin cobertura de pruebas**.
+**Segundo satélite (2026-07-27).** En la órbita de atrás, a `at=[270]`: el extremo inferior
+del eje mayor, que cae a 2° de la dirección en que se proyecta Bolivia (lat −17, lon −65) en
+la vista lat 30, lon −55 del mapa —`(−0.83, −3.62)` desde el centro, o sea −102.9°—, así que
+sobrevuela Sudamérica. Por ser extremo del eje mayor su tangente es horizontal y queda
+acostado, en contrapunto al de arriba. Se compararon 215/240/250/270 sobre el render; 215
+—delante del globo, a la altura de Bolivia— quedó como la alternativa descartada.
 
 ## Suelto relacionado
 
-- **`examples/test_sat.mg`** sigue sin trackear. Su cobertura (arco parcial girado y reflejado)
-  ya vive en `rpstest`; según la política de efímeros toca borrarlo. Decisión de Alejandro.
+- **`examples/test_sat.mg`** ya no está en el árbol; su cobertura (arco parcial girado y
+  reflejado) vive en `rpstest`.
 - **Constantes de Mortensen para `arc_bezier`** (referencia en `plan_boolean_paths.md`):
   reducirían ~5× la deriva radial de la aproximación Bézier del PDF (hoy ≈2.7e-4·R, la cota de
   Van Aken, que es la que fija la tolerancia de `tools/arcparity.py`). ⚠️ Su método **no** pasa

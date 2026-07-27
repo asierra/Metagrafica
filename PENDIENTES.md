@@ -21,7 +21,7 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=69 … galfail=0** (6 compuertas: la
+> Build/test: `make` + `bash test/run.sh check` → **ok=72 … galfail=0** (6 compuertas: la
 > 5ª son 38 pruebas NEGATIVAS en `test/errors/`; la 6ª, nueva el 2026-07-23, vigila que
 > `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva incrustado el
 > código de cada ejemplo, así que **editar un comentario la desactualiza** y ninguna de
@@ -204,26 +204,34 @@ orden de la lista es la ejecución.
 
 ---
 
-## 🔭 En curso — arcos, anisotropía y `orbita_polar` (abierto 2026-07-27)
+## 🔭 En curso — anisotropía (abierto 2026-07-27; `orbita_polar` cerrada el mismo día)
 
-Hilo vivo; **es el tema que hay que cerrar antes de tocar `docs/referencia.md`** (decisión de
-Alejandro: la referencia se actualiza al cerrar, no durante). Fuentes: `plan_orbita_polar.md`
-y `plan_anisotropia.md`; bitácora 2026-07-27 y 2026-07-27 (bis).
+Lo que queda son **dos decisiones de semántica**; la figura que abrió el hilo ya cerró.
+`docs/referencia.md` estuvo congelada mientras duró (decisión de Alejandro: se actualiza al
+cerrar, no durante) y **se actualizó el 2026-07-27** con lo destapado: recortar un arco por
+una condición geométrica calculada en el `.mg`, `asin`/`acos` vía `atan2`, arcos y elipses
+bajo transformación, `rotate` gira el plano y no la figura, y los mapas de `lib/`. Fuentes:
+`plan_orbita_polar.md` y `plan_anisotropia.md`; bitácora 2026-07-27, (bis) y (ter).
 
-- [ ] **Ocultar la mitad trasera de la órbita.** Receta **ya verificada** en
-      `plan_orbita_polar.md` (forma cerrada, `arc(a,b,from=(180+tc),to=(540-tc))`). NO hace
-      falta motor booleano ni tocar el compilador: el evaluador ya tiene trigonometría.
-      Lo que queda **no es matemática**: elegir cuál mitad va detrás en cada una de las dos
-      órbitas y mirarlo; y reponer los `marker_at` al pasar de `ellipse` a `arc`.
-- [ ] **¿`orbita_polar` entra al corpus?** Hoy no la vigila ninguna compuerta, y es el
-      **único cliente** de `arc(rx,ry)`, `marker_at` y `place(rx/ry, at=)` — sin ella esas
-      tres características quedan sin cobertura.
+- [x] ~~**Ocultar la mitad trasera de la órbita**~~ — HECHO 2026-07-27, sin tocar el
+      compilador: la forma cerrada se evalúa en el propio `.mg`. Cada órbita esconde una
+      mitad DISTINTA (decisión de modelado, verificada mirando el render), y los cortes
+      caen sobre el limbo por construcción, porque el disco del mapa es un `circle(1)`
+      escalado por el mismo `R` y con el mismo centro que la ecuación.
+- [x] ~~**`orbita_polar` entra al corpus**~~ — HECHO 2026-07-27: `ok=72` (24 ejemplos),
+      `docs/img/orbita_polar.svg` y tarjeta 23 de la galería. Con eso `arc(rx,ry)`,
+      `marker_at` y `place(rx/ry, at=)` dejan de estar sin pruebas. Encabezado a la
+      convención de 2026-07-23 y comentarios limpiados de arqueología.
+- [x] ~~**Segundo satélite**~~ — añadido en la órbita de atrás a `at=[270]`, el extremo
+      inferior del eje mayor, que cae a 2° de la dirección en que se proyecta Bolivia en
+      la vista del mapa (lat 30, lon −55). La tangente ahí es horizontal, así que queda
+      acostado, en contrapunto al de arriba.
 - [ ] **Dos decisiones de semántica** de la familia anisótropa (`plan_anisotropia.md`): el
       radio de un arco en la ruta **log** de `plot`, y si la dirección «out» de las marcas
       de eje es perpendicular en mundo o en papel. **Son decisiones, no defectos**; ninguna
       la alcanza el corpus, ninguna tiene respuesta obviamente correcta. Mínimo: documentar.
-- [ ] **`examples/test_sat.mg`** sin trackear; su cobertura ya vive en `rpstest`. Por la
-      política de efímeros toca borrarlo — decisión de Alejandro.
+- [x] ~~**`examples/test_sat.mg`**~~ — ya no está en el árbol; su cobertura vive en
+      `rpstest`.
 - [ ] *(opcional)* Constantes de **Mortensen** en `arc_bezier` (~5× menos deriva radial) y
       subir la precisión de impresión del SVG. Ambas con contraindicación anotada en
       `plan_orbita_polar.md`; ninguna es defecto.

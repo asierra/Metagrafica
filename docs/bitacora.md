@@ -1584,3 +1584,63 @@ elipse. Vale la pena buscar más casos de esta familia antes de que los encuentr
 —órbita y globo son concéntricos, así que los cruces con el limbo salen de `|u·cosθ + v·sinθ|² = R²`
 en forma cerrada—, pero el lenguaje **no tiene trigonometría**: no hay `sin`, `cos` ni `sqrt` en
 el evaluador. O lo calcula el compilador, o el evaluador gana funciones matemáticas.
+
+### Cerrado en la sesión del 2026-07-27 (ter) — `orbita_polar` terminada y EN EL CORPUS
+
+La figura que motivó todo el trabajo de arcos queda cerrada, y con ella el `plan_orbita_polar`.
+
+**1. Oclusión de la mitad trasera — cero compilador.** La entrada anterior cerró diciendo que
+el lenguaje «no tiene trigonometría». Es falso: `sin`, `cos`, `tan`, `sqrt`, `abs`, `atan2`,
+`exp`, `ln`, `mod` y `pi` llevan tiempo en `include/ast.h:137,228-243`. Con eso la oclusión se
+resuelve **dentro del `.mg`**, sin tocar `bin/mg` y sin motor booleano: es profundidad, no
+conjuntos en 2-D —una intersección de contornos no sabe qué mitad está detrás—, y con órbita y
+globo concéntricos sale en forma cerrada. En el marco propio `P(t) = (a·cos t, b·sin t)` la
+mitad lejana es `t ∈ (90°, 270°)`, y el cruce con el limbo sale de `|P(t)|² = R²`:
+
+    a² + (b² − a²)·sin²t = R²   →   sin t = √((R² − a²)/(b² − a²))
+
+Oculto = lejano ∩ dentro del disco = `t ∈ (180−tc, 180+tc)`. Con `a=3.4, b=6.2, R=5` la raíz da
+`√½` y **`tc = 45°` exacto**. No hay `asin`, pero `atan2(s, √(1−s²))` lo expresa. Cada órbita
+pasa de `ellipse` a `arc` con el barrido recortado.
+
+📐 **Los cortes caen sobre el limbo por CONSTRUCCIÓN, no por ajuste**: el disco del mapa es un
+`circle(1)` de `lib/mapa_p30_n55.mg` escalado por `scale=earth_radius`, o sea exactamente el
+mismo `R` y el mismo centro que la ecuación. Verificado rasterizando a 1600 px: el trazo termina
+dentro del ancho de línea del limbo, sin muñón.
+
+**2. Cuál mitad va detrás es MODELADO, no geometría.** La 2-D admite las dos; hay que elegir y
+**mirarlo**. Se eligieron opuestas —la de +15° esconde su izquierda, la de −15° su derecha— para
+que se lean como dos planos que se cruzan y no como copias de uno solo. Al recortar el barrido
+hay que reponer los `marker_at`: el de 180° caía en la zona oculta, así que queda **una** flecha
+por órbita y en lados opuestos (`[360]` y `[180]`). `marker_at` no valida rango, solo evalúa
+`cos`/`sin`, por eso 360 es legítimo dentro del barrido 225→495.
+
+**3. Segundo satélite, a `at=[270]`.** Se pidió «abajo, mirando a Bolivia». Proyectando Bolivia
+(lat −17, lon −65) en la ortográfica del mapa (vista lat 30, lon −55) cae en `(−0.83, −3.62)`
+desde el centro del globo, o sea **−102.9°**; el punto `t=270` de esa órbita está a **−105°**.
+Es además el extremo inferior del eje mayor, así que su tangente es horizontal y el satélite
+queda acostado, en contrapunto al de arriba. Se compararon 215/240/250/270 sobre el render:
+`250` se va 10° al suroeste y `240` monta sobre el limbo. La descartada interesante es `215`
+—delante del globo, a la altura de Bolivia—, que exhibe que la mitad cercana pasa por DELANTE.
+
+**4. La figura entra al corpus: `ok=72`** (24 ejemplos × 3 backends). Hasta hoy no la vigilaba
+ninguna compuerta pese a ser el **único cliente** de `arc(rx, ry)`, `marker_at` y
+`place(..., rx/ry, at=)`; y es el primer ejemplo con arcos elípticos **girados**, justo lo que
+mira la invariante (c) de la Capa 3. Se le hizo `docs/img/orbita_polar.svg` (entra a `imgfail`)
+y tarjeta 23 de la galería. Encabezado a la convención de 2026-07-23, y comentarios reescritos:
+explican lo que hace la figura, sin arqueología de versiones anteriores ni referencias `§n`.
+La limpieza se verificó **byte a byte** contra el render aprobado, y regenerar `docs/img`
+entero no movió ninguno de los otros 25 SVG publicados.
+
+**Churn: CERO en el motor** — no se tocó una línea de C++ en toda la entrada.
+
+**Addendum (misma sesión) — `docs/referencia.md` descongelada.** Alejandro levantó el freno
+en cuanto la figura cerró. Lo que se le añadió es lo que hoy quedó *usable*, no una lista de
+cambios: **recortar un arco** por una condición geométrica calculada en el propio `.mg` (§4,
+con la receta de la órbita y la nota de que esto NO es álgebra de trayectos: la oclusión es
+profundidad); **`asin`/`acos` vía `atan2`** (§7); **arcos y elipses bajo transformación**, que
+ahora dan la elipse girada correcta en los tres backends, y el aviso de que **`rotate` gira el
+plano, no la figura** —con el `translate`-al-centro como receta— (§9); y los **tres mapas del
+mundo de `lib/`**, que estaban sin documentar desde el 2026-07-24 (§12). Los cuatro fragmentos
+nuevos se compilaron antes de escribirlos, para que la referencia no publique código que no
+corre.

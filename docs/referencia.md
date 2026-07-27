@@ -155,6 +155,27 @@ presente, `marker=` es solo la **forma**: los extremos hay que pedirlos aparte c
 equiespaciados sobre la curva. Un marcador es de tamaño **físico** y de un solo color; para
 estampar una struct completa con sus colores, sobre el mismo arco, va `place(..., at=)`.
 
+**Recortar un arco: dibujar solo el tramo que se ve.** `from`/`to` no se normalizan —el
+barrido es `to − from`, puede pasar de 360° y empezar donde sea—, así que un `arc` es la
+manera de trazar *parte* de una elipse: por ejemplo la mitad de una órbita que no queda
+tapada por el planeta. Y los ángulos del corte se calculan **en el propio `.mg`**, porque el
+evaluador trae trigonometría ([§7](#7-expresiones-y-control-de-flujo)): no hay que medir
+sobre el dibujo ni partir la curva a mano.
+
+```octave
+% Órbita de semiejes a, b concéntrica con un globo de radio R. El tramo oculto es el
+% que va por detrás Y cae dentro del disco; los cruces salen de |P(t)|² = R².
+s  = sqrt((R*R - a*a)/(b*b - a*a))
+tc = atan2(s, sqrt(1 - s*s)) * 180/pi           % = asin(s), en grados
+arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % barrido de 270°: se salta t ∈ (135°, 225°)
+```
+
+Los extremos del trazo caen sobre el limbo **por construcción**, sin ajustar nada, porque el
+círculo del globo y la ecuación comparten centro y radio. Nótese que esto no es un problema
+de intersección de contornos —el álgebra de trayectos ([§10](#10-álgebra-de-trayectos)) no
+ayudaría—: la oclusión es cuestión de profundidad, y en 2-D hay que decidir **cuál** mitad va
+detrás. Figura completa en [`examples/orbita_polar.mg`](../examples/orbita_polar.mg).
+
 **`compound`** une varias primitivas en **un solo** trazo relleno:
 
 ```octave
@@ -328,6 +349,11 @@ primero = xs[0]
 `str(x)` `str(x,decimales)` `gray(g)`. Los ángulos van en **radianes** (`cos(a*pi/180)`).
 Constantes: `pi`, `true`, `false`.
 
+> **No hay `asin` ni `acos`**, pero `atan2` los expresa: el arcoseno de `s` es
+> `atan2(s, sqrt(1-s*s))`, y el arcocoseno, `atan2(sqrt(1-s*s), s)`. Con eso se resuelven en
+> el `.mg` los ángulos de una construcción geométrica —por ejemplo dónde recortar un arco
+> ([§4](#4-primitivas))— en vez de medirlos sobre el dibujo.
+
 **Operadores:** `+ - * / ^`, comparación `== != < <= > >=`, lógicos `and` `or` `not`.
 
 ```octave
@@ -481,6 +507,15 @@ También como argumento por-primitiva o de colocación: `polyline(transform=rota
 
 > Bajo un `transform`, el texto mueve su **ancla**; los glifos no se deforman (salvo
 > `rotate`, que sí los gira).
+
+Un `rotate`, un `scale` con factores distintos en x e y o un `shear` sobre un `circle`, un
+`arc` o una `ellipse` dan la elipse **girada** que corresponde, con sus ángulos intactos: se
+transforma la figura entera, no sus radios por separado. Vale en los tres formatos de salida.
+
+> ⚠️ **`rotate` gira el plano, no la figura alrededor de su centro.** Si el centro no está en
+> el origen, girar lo desplaza. Para girar en el sitio, lleva el origen al centro primero y
+> dibuja ahí: `{ translate 0 cy   rotate 15   ellipse(a, b) { 0 0 } }`. Es el tropiezo que
+> descentra dos elipses concéntricas hacia lados opuestos.
 
 ---
 
@@ -701,7 +736,19 @@ prisma(2, 1, 1.5)               % ancho, alto, profundidad
 
 El `include` debe preceder al uso, y **falla el compilado** si el archivo no resuelve. En
 `lib/` vienen `pseudo3d.mg` (volumen simulado por proyección oblicua, sin z-buffer: el orden
-de pintado es el de escritura) y `satellite.mg` (un icono, `struct Satellite`).
+de pintado es el de escritura), `satellite.mg` (un icono, `struct Satellite`) y tres **mapas
+del mundo** en proyección ortográfica, generados de datos reales (Natural Earth) con
+`tools/geo2mg.py`: `polar_map.mg` (`PolarMap`, vista desde el polo norte),
+`fulldisk_map.mg` (`FullDiskMap`, ecuatorial) y `mapa_p30_n55.mg` (`Mapa`, lat 30, lon −55).
+
+Los tres son structs normales, normalizados a **radio 1**, así que se colocan como cualquier
+otra —`scale` es el radio del globo en unidades de mundo— y aceptan `grid=false` para quitar
+la retícula, más `ocean=`/`land=`/`grid_color=`/`grid_width=`:
+
+```octave
+include "../lib/mapa_p30_n55.mg"
+Mapa(scale=5, at=(0, 0.5), grid=false)      % globo de radio 5 centrado en (0, 0.5)
+```
 
 **Dónde busca el `include`:** primero **junto a tu archivo** (ruta relativa), y luego en la
 **biblioteca instalada** (`make install` copia `lib/*.mg` a `$PREFIX/share/metagrafica/lib`).
