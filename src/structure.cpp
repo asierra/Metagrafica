@@ -119,34 +119,31 @@ void StructureLine::draw(Display &g) {
 }
 
 void StructureArc::draw_side(Display &g, bool side) {
-  Matrix mtar;
-  double angi, angf, rt = 0.0;
-  point stpos;
+  double angi = side ? ai : af;
+  double angf = side ? af : ai;
+  if (shift != 1.0)
+    angf = angi + (angf - angi) * shift;
+  place_at(g, angf, (angi < angf) ? 1.0 : -1.0);
+}
 
-  if (side) {
-    angi = ai;
-    angf = af;
-  } else {
-    angf = ai;
-    angi = af;
-  }
-  if (shift!=1.0) {
-    double da = (angf - angi)*shift;
-    angf = angi + da;
-  }
-  if (angi < angf)
-    rt = angf + 90;
-  else
-    rt = angf - 90;
-  stpos.x = r*cos(angf*M_PI/180);
-  stpos.y = r*sin(angf*M_PI/180);
-  stpos.x += pos.x;
-  stpos.y += pos.y;
-  mtar.translate(stpos.x, stpos.y);
+// Coloca UNA instancia en el ángulo paramétrico `ang`, orientada a la tangente.
+//
+// La tangente de P(θ) = (rx·cosθ, ry·sinθ) es (−rx·sinθ, ry·cosθ), NO el radio más
+// 90°: eso solo vale en el círculo. Antes se hacía `angf ± 90`, que sobre una
+// elipse deja el struct torcido — misma clase de error que las normas de columna en
+// los arcos (ver bitácora 2026-07-27). `dir` es el sentido del barrido.
+void StructureArc::place_at(Display &g, double ang, double dir) {
+  Matrix mtar;
+  const double th = ang * M_PI / 180.0;
+  const double px = pos.x + rx * cos(th);
+  const double py = pos.y + ry * sin(th);
+  const double rt = atan2(dir * ry * cos(th), dir * (-rx) * sin(th)) * 180.0 / M_PI;
+
+  mtar.translate(px, py);
   mtar.scale(scale.x, scale.y);
-  if (rt!=0.0)
+  if (rt != 0.0)
     mtar.rotate(rt);
-  
+
   g.save();
   g.pushMatrix(mtar);
   g.structure(structure->getName());
@@ -155,7 +152,13 @@ void StructureArc::draw_side(Display &g, bool side) {
 }
 
 void StructureArc::draw(Display &g) {
-  g.arc(pos.x, pos.y, r, r, ai, af);
+  if (!stops.empty()) {                 // `at=`: solo estampa, el locus ya existe
+    const double dir = (ai < af) ? 1.0 : -1.0;
+    for (double a : stops)
+      place_at(g, a, dir);
+    return;
+  }
+  g.arc(pos.x, pos.y, rx, ry, ai, af);
   draw_side(g, true);
   if (both_sides)
     draw_side(g, false);

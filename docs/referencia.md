@@ -139,6 +139,22 @@ polyline { 0 0  (p)  5 5 }                     % escalares y un punto p mezclado
 `circle-dot`. También el nombre de un `struct` propio. `dot(r)` es el atajo del disco y no
 lleva `shape=`.
 
+**Marcadores sobre un arco o una elipse (`marker_at`).** `arc`, `ellipse` y `circle` aceptan
+marcadores en posiciones **paramétricas**, no solo en los extremos, cada uno orientado a la
+tangente local:
+
+```octave
+ellipse(3, 5, marker="arrow", marker_at=[0, 180]) { 0 0 }   % flechas de sentido
+arc(2, from=0, to=180, marker="arrow", marker_at=45) { 0 0 } % un solo ángulo, sin lista
+```
+
+Los valores van en **grados**, el mismo parámetro que `from`/`to` de la propia primitiva (no
+son `t ∈ [0,1]` como en `point_at`/`sample`, que recorren por longitud de arco). Con `marker_at`
+presente, `marker=` es solo la **forma**: los extremos hay que pedirlos aparte con
+`marker_start`/`marker_end`. ⚠️ En una elipse los ángulos paramétricos **no** quedan
+equiespaciados sobre la curva. Un marcador es de tamaño **físico** y de un solo color; para
+estampar una struct completa con sus colores, sobre el mismo arco, va `place(..., at=)`.
+
 **`compound`** une varias primitivas en **un solo** trazo relleno:
 
 ```octave
@@ -413,6 +429,9 @@ Nivel(&pw3)
 place(Cuadro) { 0 0  3 0  3 3 }            % 3+ puntos: una instancia por punto
 place(Cuadro, count=5) { 0 0  4 0 }        % 2 puntos: 5 repartidas por igual
 place(Cuadro, gap=0.5) { 0 0  4 0 }        % 2 puntos: línea guía CON hueco, 1 instancia
+place(Cuadro, r=5, from=0, to=90) { 5 5 }  % locus ARCO: lo dibuja y pone la struct al final
+place(Sat, rx=3, ry=6, at=[30, 210]) { 0 0 }  % locus ELÍPTICO; at= son GRADOS, y con at
+                                           % el locus NO se dibuja (ya está trazado aparte)
 fit(Cuadro) { 1 1  4 3 }                   % ajustado a ese rectángulo
 fit(Cuadro, stretch=true) { 1 1  4 3 }     % deformando (si no, MEET centrado)
 repeat(Cuadro, count=6, at=(0,0), advance=(1.2,0), rotate=15)

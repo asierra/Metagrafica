@@ -25,17 +25,26 @@ Mapa(scale=earth_radius, at=(0, earth_y), grid=false)
 {
   axis_x = 3.4
   axis_y = 6.2
+  % El giro tiene que ser ALREDEDOR DEL CENTRO DE LA TIERRA, no del origen del
+  % mundo: `rotate` gira el plano entero, así que con el centro en {0 earth_y} el
+  % propio centro se desplazaba y las dos órbitas quedaban descentradas 2.6 mm
+  % hacia lados opuestos. Se lleva el origen al centro con `translate` y las
+  % elipses se colocan ya en {0 0}. Como las sentencias componen en el orden
+  % escrito (§11.1), esto es T·R: primero rota, luego traslada.
+  translate 0 earth_y
   rotate 15
-  % Problema: colocar flechas sobre nodos de la curva en la misma dirección
+  % marker_at pone los marcadores en ÁNGULOS del arco (el mismo parámetro que
+  % from/to), no solo en los extremos, y cada uno se orienta a la tangente. 0 y 180
+  % son los extremos del eje menor: los puntos más anchos, donde la flecha de
+  % sentido se lee mejor.
   % Problema: usar las funciones de intersección o algebra booleana de paths para no trazar la
   % parte oculta de la órbita.
-  ellipse(axis_x, axis_y) { 0 earth_y }
+  ellipse(axis_x, axis_y, marker="arrow", marker_at=[0, 180], marker_size=4) { 0 0 }
+  % El satélite se coloca SOBRE la órbita por su ángulo, alineado a la tangente: ya
+  % no hay que calcular la posición a mano. Va dentro del bloque para que le toque
+  % la misma matriz que a la elipse, así que basta el mismo centro { 0 0 }.
+  place(Satellite, rx=axis_x, ry=axis_y, at=[30], scale=0.8) { 0 0 }
   rotate -30
-  ellipse(axis_x, axis_y) { 0 earth_y }
+  ellipse(axis_x, axis_y, marker="arrow", marker_at=[0, 180], marker_size=4) { 0 0 }
 }
 text("800 Km", align="right") { -3.5 5.5 }
-
-% Problema: usar una de las nuevas funciones path para obtener un punto sobre la órbita y
-% colocar ahí el satélite y así no tener el usuario que calcular su posición.
-% Problema: el arco de la antena no rota bien, tal vez mismo problema que tenía la elipse
-Satellite(scale=0.8,rotate=10,at=(3.5, 5.5))

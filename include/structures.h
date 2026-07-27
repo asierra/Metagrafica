@@ -128,21 +128,30 @@ private:
 class StructureArc : public StructureUser {
 public:
   StructureArc() { both_sides = false; shift = 1; }
-  void setScale(double sx, double sy) { scale.x = sx; scale.y = sy; }  
-  void setRadius(double rr) { r = rr; }
+  void setScale(double sx, double sy) { scale.x = sx; scale.y = sy; }
+  void setRadius(double rr) { rx = ry = rr; }
+  // §10.1 — locus ELÍPTICO: `r` era un solo radio, así que un struct solo se podía
+  // colocar sobre un arco circular. Misma carencia que tenía `arc` (§4.5).
+  void setRadii(double rrx, double rry) { rx = rrx; ry = rry; }
   void setAngles(double x, double y) { ai = x; af = y; }
   void setPoint(point q1) {  pos = q1; }
   void setShift(double p) {  shift = p; }
   void setBothSides(bool both=true) { both_sides = both; }
+  // Ángulos PARAMÉTRICOS donde va una instancia (§10.1, `at=`). Si la lista no está
+  // vacía manda ella y NO se dibuja el locus: el arco ya está trazado en otro lado
+  // (mismo trato que el locus de path, que tampoco dibuja el path).
+  void setStops(const std::vector<double> &a) { stops = a; }
   void draw(Display &) override;
 private:
   void draw_side(Display &g, bool side);
+  void place_at(Display &g, double ang, double dir);
   point scale;
-  double r;
+  double rx, ry;
   double ai, af;
   point pos;
   double shift;
   bool both_sides;
+  std::vector<double> stops;
 };
 
 

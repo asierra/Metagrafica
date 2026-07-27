@@ -1530,3 +1530,57 @@ positivos que resultaron ser cosas reales):
 **Alcance declarado:** solo arcos y elipses, que es donde vivió el bug. **No** cubre texto ni
 tramado (los dos pendientes de `PENDIENTES.md`), a propósito: una compuerta que promete más de
 lo que mide es peor que ninguna. Coste: la red completa sigue en ~3 s.
+
+### Cerrado en la sesión del 2026-07-27 (bis) — marcadores paramétricos y `place` sobre elipse
+
+Tres cosas de `orbita_polar`, la figura que motivó todo el trabajo de arcos de esta sesión.
+
+**1. Las órbitas no eran concéntricas con la Tierra.** `rotate` gira el plano entero, así que
+con el centro en `{0 earth_y}` el propio centro se desplazaba: las dos elipses quedaban
+descentradas ~2.6 mm hacia lados opuestos (centros en x = 166.41 y 173.75 con la Tierra en
+170.08). Se lleva el origen al centro con `translate 0 earth_y` y las elipses se colocan en
+`{0 0}`. Ahora ambas comparten centro exacto con el globo.
+
+**2. `marker_at`: marcadores en posiciones PARAMÉTRICAS de `arc`/`ellipse`/`circle`.** Resuelve
+«flechas de sentido sobre la órbita». La maquinaria ya existía y solo estaba atada a los
+extremos: `emitArcMarkers` calcula `centro + (rx·cosθ, ry·sinθ)` con la tangente paramétrica
+correcta —y esta misma sesión se le arregló el `rx≠ry`—, pero solo se le llamaba con `from`/`to`.
+Además `ellipse` y `circle` no admitían marcador alguno (§4.5 lo decía: «esperan una figura que
+los pida»; ya la hay).
+
+Los ángulos van en **grados**, el mismo espacio que `from`/`to` de la primitiva. Se descartó
+`t ∈ [0,1]`: `point_at`/`sample` lo recorren por LONGITUD DE ARCO, y tener dos parametrizaciones
+en un mismo comando confunde. ⚠️ El costo aceptado: en una elipse los ángulos paramétricos no
+quedan equiespaciados, así que repartir marcadores «parejos» pedirá un `marker_count` por
+longitud de arco cuando una figura lo pida. Con `marker_at` presente, `marker=` pasa a ser solo
+la FORMA (si no, pedir una flecha a media órbita daría dos más en las puntas sin haberlas pedido).
+
+**3. `place` sobre elipse, con `at=`: la struct COMPLETA sobre la órbita.** Resuelve «colocar el
+satélite sin calcular la posición a mano».
+
+🔎 **Se probó primero el marcador y NO sirve** —vale la pena registrarlo—: un marcador es
+**monocromo por construcción** (recibe `marker_color`/`marker_fill` y estampa *una* forma), y el
+satélite es un ícono de varios colores. Además `markerShapeFromStruct` solo extrae `GI_POLYLINE`
+y `GI_POLYGON`, y `Satellite` está hecho de `rectangle` y `arc` → «marcador desconocido». Aunque
+se arreglara la extracción, saldría aplastado a un color. El primitivo correcto es `place`, que
+emite `g.structure()` y conserva todo.
+
+`place` ya colocaba structs sobre un arco (el `ARCST` de V1), pero **solo circular**: `r` era un
+único radio — exactamente la carencia que tenía `arc` (§4.5) hasta esta mañana. Se añadió
+`rx`/`ry`, y `at=[…]` con los ángulos. Con `at` presente el locus **NO se dibuja**, siguiendo el
+precedente del locus de path (que tampoco dibuja el path); el locus de línea y el de arco sí lo
+dibujan, así que la regla ya estaba dividida.
+
+🐛 **Bug encontrado de paso en `StructureArc`:** orientaba con `angf ± 90`, que es la tangente de
+un **círculo**. Sobre una elipse deja la struct torcida. Ahora usa la tangente paramétrica real,
+`atan2(dir·ry·cosθ, −dir·rx·sinθ)` (idéntica a la de `emitArcMarkers`). **Es la misma clase de
+error que las normas de columna de la entrada anterior**: una fórmula válida solo en el caso
+isótropo, aplicada al anisótropo. No se veía porque nadie había puesto una struct sobre una
+elipse. Vale la pena buscar más casos de esta familia antes de que los encuentre una figura.
+
+**Churn: CERO** (`ok=69`, atributos nuevos; ninguna salida existente se mueve).
+
+**Pendiente en la figura:** ocultar la mitad trasera de la órbita. NO hace falta motor booleano
+—órbita y globo son concéntricos, así que los cruces con el limbo salen de `|u·cosθ + v·sinθ|² = R²`
+en forma cerrada—, pero el lenguaje **no tiene trigonometría**: no hay `sin`, `cos` ni `sqrt` en
+el evaluador. O lo calcula el compilador, o el evaluador gana funciones matemáticas.

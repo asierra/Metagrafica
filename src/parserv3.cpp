@@ -509,7 +509,7 @@ static bool isKnownPrimAttr(const std::string &k) {
     "width", "dir",                             // polybar §4.12
     "shape", "size",                            // marker/dot §4.6
     // marcadores sobre la ruta (§B)
-    "marker", "marker_orient", "marker_size", "marker_color", "marker_fill",
+    "marker", "marker_at", "marker_orient", "marker_size", "marker_color", "marker_fill",
     "marker_start", "marker_mid", "marker_end",
     "marker_start_shift", "marker_end_shift",
     "marker_start_orient", "marker_end_orient",   // §4.5/§B: sobreescriben el global
@@ -587,7 +587,7 @@ static const char *const kTableArgs[]  = {
 // `place(P, count=6)` — se aceptaban y no hacían nada, que es justo el bug que esta
 // compuerta cierra. Un locus de onda para `place` no existe.
 static const char *const kPlaceArgs[]  = {
-  "scale", "shift", "count", "gap", "both_sides", "r", "from", "to",
+  "scale", "shift", "count", "gap", "both_sides", "r", "rx", "ry", "at", "from", "to",
 };
 static const char *const kRepeatArgs[] = { "count", "scale", "rotate", "at", "advance" };
 
@@ -1580,14 +1580,30 @@ struct PlaceStmt : Stmt {
     int    count = (int)namedNum(caller, named, "count", 1);
     bool   both  = named.count("both_sides") && named.at("both_sides")->eval(caller).num != 0.0;
 
-    if (named.count("r")) {                                // locus = arco
-      double r = namedNum(caller, named, "r", 1);
+    // locus = arco. `r` es el circular de siempre; `rx`/`ry` lo hacen ELÍPTICO
+    // (§10.1), como `arc` en §4.5 — el locus de una órbita no tiene por qué ser
+    // un círculo. `at=` da los ángulos PARAMÉTRICOS donde va cada instancia, en
+    // grados, el mismo parámetro que from/to; con `at` presente el locus NO se
+    // dibuja (ya está trazado en otro lado), igual que el locus de path.
+    if (named.count("r") || named.count("rx") || named.count("ry")) {
+      double rx = namedNum(caller, named, "rx", namedNum(caller, named, "r", 1));
+      double ry = namedNum(caller, named, "ry", rx);
       double from = namedNum(caller, named, "from", 0), to = namedNum(caller, named, "to", 360);
       point c(coords.size() > 1 ? coords[0]->eval(caller).num : 0,
               coords.size() > 1 ? coords[1]->eval(caller).num : 0);
       auto sr = std::make_unique<StructureArc>();
-      sr->setStructure(s); sr->setScale(scale, scale); sr->setRadius(r);
+      sr->setStructure(s); sr->setScale(scale, scale); sr->setRadii(rx, ry);
       sr->setAngles(from, to); sr->setPoint(c); sr->setShift(shift); sr->setBothSides(both);
+      auto ait = named.find("at");
+      if (ait != named.end()) {
+        Value av = ait->second->eval(caller);
+        std::vector<double> stops;
+        if (av.type == Value::LIST)
+          for (const Value &e : av.items) stops.push_back(e.num);
+        else
+          stops.push_back(av.num);
+        sr->setStops(stops);
+      }
       out.push_back(std::move(sr));
       return;
     }
@@ -2041,8 +2057,12 @@ struct PrimStmt : Stmt {
     emitMarkers(s, mg, out, markerPaths);   // §4.11: marcadores sobre la ruta (encima)
     // §4.11 en arco: marcador en el extremo, con el punto y la tangente derivados
     // de los parámetros del arco (no del path, que son centros). Solo start/end.
-    if (name == "arc") {
-      double rx, ry; resolveRadii(s, false, rx, ry);
+    // arc/ellipse/circle son el mismo Arc por dentro; los tres admiten marcador.
+    // (Antes solo `arc`, porque los marcadores nacieron para la flecha curva y
+    // sobre una forma cerrada no había dónde ponerlos más que en los extremos
+    // —que coinciden—. Con marker_at ya hay dónde.)
+    if (name == "arc" || name == "ellipse" || name == "circle") {
+      double rx, ry; resolveRadii(s, name == "circle", rx, ry);
       emitArcMarkers(s, mg, out, evalPath(s, 0, coords.size()), rx, ry,
                      namedOr(s, "from", 0), namedOr(s, "to", 360));
     }
@@ -2196,11 +2216,16 @@ struct PrimStmt : Stmt {
   // "fixed" = +x; un número = ángulo absoluto en grados.
   void emitArcMarkers(Scope &s, MetaGrafica &mg, GraphicsItemList &out,
                       const Path &centers, double rx, double ry, double a0, double a1) const {
+    // §4.5 — `marker=` significa "en ambos extremos" SOLO mientras no se diga dónde.
+    // Con `marker_at` presente pasa a ser únicamente la FORMA, y los extremos hay
+    // que pedirlos aparte con marker_start/marker_end: si no, pedir una flecha a
+    // media órbita te daría además dos en las puntas sin haberlas pedido.
+    const bool hasAt = named.count("marker_at") != 0;
     const Expr *start = named.count("marker_start") ? named.at("marker_start").get()
-                      : named.count("marker")       ? named.at("marker").get() : nullptr;
+                      : (!hasAt && named.count("marker")) ? named.at("marker").get() : nullptr;
     const Expr *end   = named.count("marker_end")   ? named.at("marker_end").get()
-                      : named.count("marker")       ? named.at("marker").get() : nullptr;
-    if (!start && !end) return;
+                      : (!hasAt && named.count("marker")) ? named.at("marker").get() : nullptr;
+    if (!start && !end && !hasAt) return;
     double msize = namedOr(s, "marker_size", 4);
     double dir = (a1 >= a0) ? 1.0 : -1.0;             // sentido del barrido
     // Override de orientación (§B.3): "auto"=tangente, "reverse"=+180°, "fixed"=+x,
@@ -2245,6 +2270,26 @@ struct PrimStmt : Stmt {
         mk.push_back(std::move(d));
       }
     };
+    // §4.5 — marcadores en posiciones PARAMÉTRICAS del arco, no solo en los
+    // extremos. La maquinaria no cambia: `add` ya sabe estampar en un ángulo
+    // cualquiera con la tangente correcta; hasta ahora solo se le pasaban from/to.
+    //
+    // Los ángulos van en GRADOS, el mismo espacio de parámetros que `from`/`to` de
+    // esta misma primitiva. NO son t∈[0,1] como en point_at/sample: ese t recorre
+    // por LONGITUD DE ARCO, y tener dos parametrizaciones en un solo comando se
+    // presta a confusión. ⚠️ En una elipse los ángulos paramétricos no quedan
+    // equiespaciados sobre la curva; repartir marcadores parejos pide un
+    // `marker_count` por longitud de arco, que espera una figura que lo pida.
+    if (hasAt) {
+      auto mit = named.find("marker");
+      if (mit == named.end())
+        evalError("marker_at necesita `marker=` (la forma que se estampa)");
+      Value av = named.at("marker_at")->eval(s);
+      if (av.type == Value::LIST)
+        for (const Value &e : av.items) add(mit->second.get(), e.num, gMode, gAbs);
+      else
+        add(mit->second.get(), av.num, gMode, gAbs);
+    }
     if (start) add(start, a0, sMode, sAbs);
     if (end)   add(end, a1, eMode, eAbs);
     wrapMarkers(s, out, mk);
