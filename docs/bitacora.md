@@ -1669,3 +1669,55 @@ escala **a propósito y declarándolo**, como hacen los libros— queda registra
 
 Único ajuste a ojo de toda la sesión: el rótulo se acercó de x=−3.5 a −2.9, porque al bajar la
 órbita se le había quedado lejos.
+
+### Cerrado en la sesión del 2026-07-27 (quater) — las dos decisiones de semántica anisótropa
+
+Cierra `plan_anisotropia.md`, y con él el hilo entero abierto esta mañana. **Cero líneas de
+C++**: lo que faltaba no era arreglar nada, era **elegir** y escribirlo. Se registran también
+las opciones descartadas, que es la parte que no sobrevive sola.
+
+**A. El radio de un arco en la ruta log de `plot`.** La ruta lineal envuelve el contenido en
+una matriz; la log no puede (el log no es afín) y remapea punto por punto, así que el radio
+—miembro del `Arc`, no punto del path— no se transforma. El mismo `circle(0.5)` medido en dos
+marcos de idénticas proporciones daba elipse de 11:1 por la ruta lineal y círculo de 14.17 pt
+por la log.
+
+**Decidido: la ruta log mapea POSICIONES, no formas.** Los tamaños quedan en coordenadas de la
+página. Lo que convenció no fue que sea lo que ya hacía, sino que es la **generalización de una
+regla existente**: esa ruta ya dejaba intactos `line_width`, la tipografía, el radio de
+`dot`/`marker` y `hatch_gap` —el propio código lo llama «invariante físico gratis»—, y el radio
+de `circle`/`arc`/`ellipse` y el `width` de `polybar` no eran la excepción sino el mismo caso
+sin enunciar. Enunciada así deja de ser un accidente y pasa a ser algo que se puede enseñar.
+
+🔎 **Las dos descartadas, con su razón:**
+- **Linealizar el radio en el centro** (dibujar la elipse de la derivada local del mapa log)
+  daba consistencia entre las dos rutas —el argumento fuerte a su favor—, pero es exacta solo
+  en el límite infinitesimal: bajo un logaritmo una circunferencia de datos no es ni círculo ni
+  elipse, es un huevo asimétrico. Habría producido una figura que *parece* calculada sin
+  estarlo, que es justo lo que este proyecto no hace.
+- **Rechazarlo como error** encajaba con la tradición de la casa (38 pruebas negativas: aquí se
+  falla fuerte y claro), pero bajo la regla elegida el resultado **sí** tiene significado —un
+  círculo trazado sobre la hoja, en la posición que le toca—, así que la guarda pagaría el
+  costo de prohibir sin el beneficio de resolver.
+
+⚠️ El footgun queda y se asume: `circle(0.5)` mide distinto según el eje sea lineal o log.
+**Avisa la documentación, no el compilador** (`especificacion_mg.md` §13.7 y
+`docs/referencia.md` §11, esta última con el ejemplo compilado y verificado por render).
+
+**B. La dirección «out» de las marcas de eje.** `px = uy, py = -ux` calcula la perpendicular en
+**mundo** y `physOut` la usa en **dispositivo**; bajo `stretch` no son la misma.
+
+**Decidido: perpendicular en el PAPEL**, y no como preferencia sino como corolario de algo ya
+decidido: `tick_size`, el grosor y la tipografía de una marca ya son físicos. Una marca de eje
+es **mobiliario** —un trazo legible que sale del eje—, no un vector con sentido en el espacio de
+datos; una longitud física en dirección derivada del mundo es un híbrido sin dueño.
+
+**Sin cambio de código, a propósito.** Para que muerda hacen falta DOS cosas a la vez:
+`world_window … stretch=true` a nivel de documento —que ningún ejemplo usa; los tres que dicen
+`stretch` lo hacen en `fit`, otro mecanismo— y un eje **diagonal**, que no existe. Cuando
+aparezca la figura, el arreglo es calcular la perpendicular después de pasar a dispositivo.
+
+📌 **Lo que queda vivo de `plan_anisotropia.md`** no es el inventario de bugs sino «La firma»
+(los cuatro tics: radio por un solo factor, ±90 para una perpendicular, atan2 sobre una
+columna, ángulo de mundo usado como de dispositivo) y «Cómo cazar más». Es el documento a leer
+antes de meter geometría nueva.

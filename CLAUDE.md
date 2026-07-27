@@ -194,13 +194,14 @@ cambiar una decisión de diseño:** muchas entradas traen la medición que la so
 registran el camino que se probó primero y no funcionó. Vivía aquí dentro hasta el
 2026-07-22; se mudó porque también le sirve a un colaborador humano.
 
-⚠️ **Hilo casi cerrado (act. 2026-07-27):** `plan_orbita_polar.md` está **cerrado** (figura
-terminada y en el corpus) y **`docs/referencia.md` ya se actualizó** con lo que destapó —el
-congelamiento que pedía Alejandro se levantó el mismo día—. De `plan_anisotropia.md` quedan
-**dos decisiones de semántica** —el radio de un arco en la ruta log de `plot`, y si la
-dirección «out» de las marcas de eje es perpendicular en mundo o en papel—: son decisiones,
-no defectos, y ninguna la alcanza el corpus. Estado y siguiente paso, en `PENDIENTES.md`
-§ «En curso».
+✅ **Hilo CERRADO (2026-07-27):** `plan_orbita_polar.md` y `plan_anisotropia.md`, los dos.
+La figura quedó terminada y en el corpus, `docs/referencia.md` se actualizó con lo que
+destapó, y las **dos decisiones de semántica** que quedaban se tomaron sin tocar código: en la
+ruta **log** de `plot` se mapean **posiciones, no formas** (los tamaños quedan en coordenadas
+de la página — `especificacion_mg.md` §13.7 y `docs/referencia.md` §11), y el «out» de las
+marcas de eje es perpendicular **en el papel**. `plan_anisotropia.md` se conserva por «La
+firma» (los cuatro tics de la familia) y «Cómo cazar más»: es el documento que hay que leer
+antes de meter geometría nueva.
 
 ## Code style
 

@@ -204,14 +204,16 @@ orden de la lista es la ejecución.
 
 ---
 
-## 🔭 En curso — anisotropía (abierto 2026-07-27; `orbita_polar` cerrada el mismo día)
+## ✅ Cerrado — arcos, anisotropía y `orbita_polar` (abierto y cerrado el 2026-07-27)
 
-Lo que queda son **dos decisiones de semántica**; la figura que abrió el hilo ya cerró.
-`docs/referencia.md` estuvo congelada mientras duró (decisión de Alejandro: se actualiza al
-cerrar, no durante) y **se actualizó el 2026-07-27** con lo destapado: recortar un arco por
-una condición geométrica calculada en el `.mg`, `asin`/`acos` vía `atan2`, arcos y elipses
-bajo transformación, `rotate` gira el plano y no la figura, y los mapas de `lib/`. Fuentes:
-`plan_orbita_polar.md` y `plan_anisotropia.md`; bitácora 2026-07-27, (bis) y (ter).
+Hilo **completo**: los tres bugs de rotación de arcos/elipses arreglados, la figura terminada
+y en el corpus, las dos decisiones de semántica tomadas y escritas. `docs/referencia.md`
+estuvo congelada mientras duró (decisión de Alejandro: se actualiza al cerrar, no durante) y
+recibió lo destapado: recortar un arco por una condición geométrica calculada en el `.mg`,
+`asin`/`acos` vía `atan2`, arcos y elipses bajo transformación, `rotate` gira el plano y no la
+figura, los mapas de `lib/`, y la regla de la ruta log. Fuentes: `plan_orbita_polar.md` y
+`plan_anisotropia.md` (ambos cerrados; el segundo se conserva por «La firma» y «Cómo cazar
+más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 - [x] ~~**Ocultar la mitad trasera de la órbita**~~ — HECHO 2026-07-27, sin tocar el
       compilador: la forma cerrada se evalúa en el propio `.mg`. Cada órbita esconde una
@@ -226,10 +228,15 @@ bajo transformación, `rotate` gira el plano y no la figura, y los mapas de `lib
       inferior del eje mayor, que cae a 2° de la dirección en que se proyecta Bolivia en
       la vista del mapa (lat 30, lon −55). La tangente ahí es horizontal, así que queda
       acostado, en contrapunto al de arriba.
-- [ ] **Dos decisiones de semántica** de la familia anisótropa (`plan_anisotropia.md`): el
-      radio de un arco en la ruta **log** de `plot`, y si la dirección «out» de las marcas
-      de eje es perpendicular en mundo o en papel. **Son decisiones, no defectos**; ninguna
-      la alcanza el corpus, ninguna tiene respuesta obviamente correcta. Mínimo: documentar.
+- [x] ~~**Dos decisiones de semántica** de la familia anisótropa~~ — TOMADAS 2026-07-27,
+      cero código. (A) En la ruta **log** de `plot`, **se mapean posiciones, no formas**: los
+      tamaños quedan en coordenadas de la página. Es la generalización de lo que esa ruta ya
+      hacía con `line_width` y `dot`; se descartaron linealizar el radio (precisión falsa) y
+      rechazarlo como error (prohíbe algo que sí significa algo). El costo —`circle(0.5)`
+      mide distinto según el eje— lo avisa la **documentación, no el compilador**. (B) El
+      «out» de las marcas de eje es perpendicular en el **papel**, corolario de que
+      `tick_size` ya es físico; sin cambio de código, porque nada lo alcanza. Escritas en
+      `especificacion_mg.md` §13.7, `docs/referencia.md` §11 y `plan_anisotropia.md`.
 - [x] ~~**`examples/test_sat.mg`**~~ — ya no está en el árbol; su cobertura vive en
       `rpstest`.
 - [ ] *(opcional)* Constantes de **Mortensen** en `arc_bezier` (~5× menos deriva radial) y

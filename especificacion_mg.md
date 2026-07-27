@@ -1679,6 +1679,27 @@ Dentro del bloque, `xaxis`/`yaxis` son `axis` (§13.5) con el lado y el rango pr
 bezier, dot, text con ancla en datos, control de flujo); `box=` omitido cubre "el plot es toda la
 figura", `box=` explícito cubre paneles (fig4-10).
 
+**Ruta log: `plot` mapea POSICIONES, no formas** (decidido 2026-07-27). Cuando algún eje es
+logarítmico no hay matriz —el log no es afín—, así que el contenido se remapea **punto por
+punto**: se transforman las coordenadas, y todo lo que no sea una coordenada se queda como se
+escribió. Ya pasaba con `line_width`, la tipografía, el radio de `dot`/`marker` y `hatch_gap`;
+la regla dice además qué ocurre con el **radio de `circle`/`arc`/`ellipse`** y con el `width`
+de `polybar` (§13.6): son miembros de la primitiva, no puntos del trayecto, así que **quedan en
+coordenadas de la página**, no de los datos.
+
+No es una carencia que haya que tapar: bajo un logaritmo, una circunferencia de datos **no es**
+ni círculo ni elipse —es un huevo asimétrico, porque el lado que va hacia los valores chicos se
+estira más—, así que cualquier forma que se dibuje es un convenio. Se descartó **linealizar el
+radio en el centro** (dibujar la elipse de la derivada local): es exacta solo en el límite
+infinitesimal y produce una figura que *parece* calculada sin estarlo. Y se descartó
+**rechazarlo** como error, porque bajo esta regla la figura resultante sí tiene un significado
+claro: un círculo trazado sobre la hoja, en la posición que le toca.
+
+> ⚠️ **El costo aceptado:** el mismo `circle(0.5)` mide cosas distintas según el eje sea lineal
+> —donde la matriz envolvente lo transforma con todo lo demás, y sale elipse en un marco
+> anisótropo— o logarítmico. Para marcar **datos** el primitivo correcto sigue siendo `dot`
+> (§4.6), que es físico y por eso inmune a las dos rutas.
+
 **`base=v` — dónde cruza el eje.** Por default cada eje corre sobre el borde de `box` (el de
 abajo para `xaxis`, el izquierdo para `yaxis`). `base=v` lo mueve al valor `v` **en unidades de
 datos del eje perpendicular**: `xaxis(base=0)` pone la abscisa sobre `y=0` aunque el rango baje a

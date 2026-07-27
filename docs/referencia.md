@@ -678,6 +678,26 @@ quererse; `to=` la corta en ese valor de datos.
 > no existe en valores ≤ 0; si tus puntos solo están mal repartidos, lo que quieres son
 > líneas guía, no una escala ([detalle](#14-errores-comunes)).
 
+**Con un eje logarítmico, `plot` mapea posiciones, no formas.** Un eje lineal envuelve el
+contenido en una matriz y lo transforma entero; el log no puede —no es una transformación
+afín—, así que remapea **coordenada por coordenada**. La consecuencia es una regla, no un
+caso raro: lo que no sea una coordenada se queda como lo escribiste, en unidades de la
+página. Eso ya valía para `line_width`, la tipografía y el radio de `dot`; vale igual para el
+**radio** de `circle`/`arc`/`ellipse` y el `width` de `polybar`.
+
+```octave
+plot(x=(1,1000), y=(0,10), xscale="log") {
+    circle(0.5) { 10 5 }     % círculo de radio 0.5 EN LA PÁGINA, centrado en el dato (10,5)
+    dot(3)      { 10 5 }     % lo correcto para marcar un dato: físico, 3 pt
+}
+```
+
+> ⚠️ **El mismo `circle(0.5)` mide cosas distintas según el eje.** Con eje lineal la matriz lo
+> transforma con todo lo demás (y en un marco anisótropo sale elipse); con eje log conserva su
+> tamaño de página. No es un descuido: bajo un logaritmo una circunferencia de datos no es ni
+> círculo ni elipse —es un huevo asimétrico—, así que no hay forma «correcta» que dibujar.
+> Para marcar datos usa `dot`, que es físico y por eso se comporta igual en las dos rutas.
+
 **`legend`** — `at=` combina `"top"`/`"center"`/`"bottom"` con `"-left"`/`"-right"`; más
 `margin`, `sample_width`, `sample_height`, `gap`, `row_gap`, `font_size` (todos en pt). Con
 bloque, cada entrada declara su muestra; **sin bloque**, las entradas las ponen los `rule`

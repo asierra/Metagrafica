@@ -1,8 +1,9 @@
 # plan_anisotropia — la familia de bugs «fórmula isótropa en caso anisótropo»
 
-> **Estado (2026-07-27):** tres instancias CERRADAS, dos ABIERTAS por decisión de
-> semántica (no por defecto). Documento de motor, de vida larga: sobrevive a la figura
-> que lo destapó. Ver `docs/bitacora.md`, entradas del 2026-07-27 y 2026-07-27 (bis).
+> **Estado (2026-07-27): CERRADO.** Tres instancias arregladas y las **dos decisiones de
+> semántica tomadas y escritas** (abajo). Documento de motor, de vida larga: sobrevive a la
+> figura que lo destapó, y su valor duradero es «La firma» y «Cómo cazar más» — el resto es
+> el registro de lo ya resuelto. Ver `docs/bitacora.md`, entradas del 2026-07-27.
 
 ## La firma
 
@@ -32,10 +33,11 @@ backends (invariante (c) de Capa 3, `tools/arcparity.py`), y solo para arcos.
 | 2 | Bloques de «corrección de signo» en `arc()` | `ea = sa + endAng`: el ángulo final absoluto tratado como **barrido**. Un arco de 190→350 (160°) salía de 350° | Desaparecieron: EPS recibe la matriz y traza el arco unitario con los ángulos intactos |
 | 3 | `StructureArc::draw_side` | `angf ± 90` como tangente. Solo vale en el **círculo** | Tangente paramétrica real, `atan2(dir·ry·cosθ, −dir·rx·sinθ)` |
 
-## Abiertas — son DECISIONES, no defectos
+## Decididas (2026-07-27) — eran DECISIONES, no defectos
 
-Ninguna la alcanza el corpus. Ninguna tiene respuesta obviamente correcta: hay que **elegir**
-la semántica y documentarla. No «arreglar» sin decidir.
+Ninguna la alcanzaba el corpus y ninguna tenía respuesta obviamente correcta, así que se
+**eligió la semántica y se escribió**, en vez de «arreglar» sin decidir. Ambas quedaron sin
+tocar una línea de C++.
 
 ### A. El radio de un arco en la ruta LOG de `plot` (`src/parserv3.cpp:3455`)
 
@@ -52,26 +54,42 @@ plot lineal → mgarc [7.08661 0 0 0.644238 …]   elipse de 11:1  (radio en uni
 plot log    → 240.94 77.95 14.173 … arc        círculo de 14.17pt (radio en unidades de MARCO)
 ```
 
-**La decisión:** en un plot log una circunferencia de datos **no puede** mapear ni a círculo ni
-a elipse (el log no es afín), así que no hay respuesta exacta. Hay que elegir entre:
-- (a) linealizar el radio en el centro → elipse aproximada, coherente con la ruta lineal;
-- (b) declarar que en la ruta log el radio es cantidad de **marco** → círculo verdadero en el
-  papel, y documentarlo como divergencia deliberada.
+✅ **DECIDIDO: (b), enunciado como regla — «en la ruta log, `plot` mapea POSICIONES, no
+formas».** Los tamaños quedan en coordenadas de la página. No es un accidente tolerado: es la
+generalización de lo que esa ruta **ya hacía** con `line_width`, la tipografía, el radio de
+`dot`/`marker` y `hatch_gap`; el radio de `circle`/`arc`/`ellipse` y el `width` de `polybar`
+(§13.6) entran a la misma regla. Escrito en `especificacion_mg.md` §13.7 y en
+`docs/referencia.md` §11, con el ejemplo compilado.
 
-Hoy hace (b) por accidente, sin decirlo. Mínimo: documentarlo. `fig6-4`, el único plot log del
-corpus, usa `dot` (físico), que es justo lo que la spec recomienda para marcos deformados.
+Se descartaron las otras dos:
+- **(a) linealizar el radio en el centro** (elipse de la derivada local) — exacta solo en el
+  límite infinitesimal: produce una figura que *parece* calculada sin estarlo. Bajo un
+  logaritmo una circunferencia de datos no es ni círculo ni elipse, es un huevo asimétrico.
+- **(c) rechazarlo como error** — bajo la regla (b) la figura resultante tiene un significado
+  claro (un círculo trazado sobre la hoja, en la posición que le toca): poner una guarda
+  pagaría el costo de prohibir sin el beneficio de resolver.
 
-### B. La dirección «out» de las marcas de eje (`src/parserv3.cpp:2622`)
+⚠️ **Costo aceptado y documentado, no oculto:** el mismo `circle(0.5)` mide distinto según el
+eje sea lineal o log. **Avisa la documentación, no el compilador.** Para marcar datos, `dot`.
+
+### B. La dirección «out» de las marcas de eje (`src/parserv3.cpp:2623`)
 
 `px = uy, py = -ux` es la perpendicular al eje calculada en **mundo**, y `physOut` la usa como
 dirección en **dispositivo**. Bajo `stretch` esas dos perpendiculares no coinciden.
 
-**Latente:** las dos líneas siguientes fuerzan el lado «out» a puramente abajo o puramente
-izquierda, y para un eje **alineado a los ejes** —los únicos que hay— ambas perpendiculares
-coinciden. Solo se rompe con un eje **diagonal bajo stretch**.
+**Latente por partida doble:** hacen falta a la vez `world_window … stretch=true` a nivel de
+documento —que **ningún ejemplo del corpus usa**; los tres que dicen `stretch` lo hacen en
+`fit`, que es otro mecanismo— y un eje **diagonal**, que hoy no existe (las dos líneas
+siguientes fuerzan «out» a abajo o a la izquierda, y para ejes alineados ambas perpendiculares
+coinciden).
 
-**La decisión:** si «out» debe ser perpendicular en el **mundo** (coherente con los datos) o en
-el **papel** (coherente con la vista). Tampoco es obvio. Sin figura que lo pida, no tocar.
+✅ **DECIDIDO: perpendicular en el PAPEL**, como corolario de una regla que ya existía. Todo lo
+demás de una marca de eje es físico —`tick_size` en puntos, grosor, tipografía—: una marca es
+mobiliario, un trazo legible que sale del eje, no un vector con sentido en el espacio de datos.
+Una longitud física en una dirección derivada del mundo es un híbrido sin dueño.
+
+**Sin cambio de código, a propósito:** no hay figura que lo alcance. Cuando aparezca, el arreglo
+es calcular la perpendicular **después** de pasar a dispositivo, no antes.
 
 ## Verificado LIMPIO — no volver a revisar
 
