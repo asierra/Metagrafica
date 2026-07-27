@@ -76,3 +76,35 @@ compound(fill="orange", mode="intersect") {
 3. **Paso 3 — Exposición en el lenguaje:** Conectar las funciones internas a la tabla de símbolos de MetaGráfica (`intersect`, `union`, `difference`, `exclude`). Crear un script de prueba exhaustivo.
 4. **Paso 4 — Compound Visual:** Implementar el caso híbrido en `compound` reutilizando el motor del Paso 2.
 5. **Paso 5 — Documentación:** Actualizar `referencia.md` en la sección 10 (Álgebra de trayectos) y 4 (Primitivas) explicando el aplanamiento de curvas.
+
+---
+
+## Referencias y Estado del Arte
+
+Para la implementación del motor booleano subyacente y la algoritmia de intersección de trayectos, el plan se apoya en la siguiente literatura y proyectos de referencia:
+
+**Teoría y Algoritmia Base**
+
+* **"Curve intersection using Bezier clipping" (Sederberg & Nishita, 1990):** El documento académico fundacional que describe matemáticamente cómo aislar las intersecciones entre curvas Bézier utilizando la propiedad de la envolvente convexa (*convex hull*) y líneas de grosor (*fat lines*).
+* **"How to implement boolean operations on bezier paths" (Andy Finnell, 2011):** Desglose práctico del algoritmo de recorte de Bézier. Aunque su código original (`VectorBoolean`) está escrito en Objective-C, su explicación detallada de las condiciones de borde es una de las guías algorítmicas más didácticas disponibles.
+
+**Bibliotecas C++ (Evaluación de dependencias)**
+
+* **lib2geom:** La biblioteca base de geometría computacional del proyecto Inkscape. Escrita íntegramente en C++ y probada extensivamente en entornos open-source enfocados a gráficos vectoriales, resulta una de las alternativas más maduras para manejar trayectos complejos.
+* **Skia PathOps:** El motor gráfico de Google. Su módulo para operaciones booleanas es el estándar actual de la industria para manejar de forma robusta los errores de precisión de punto flotante al cruzar curvas.
+
+**Discusiones de Arquitectura**
+
+* **Linebender/kurbo (Issue #277):** Hilo de discusión de referencia en el desarrollo moderno de motores gráficos 2D, útil para anticipar *edge cases* matemáticos en la intersección de curvas y la gestión de grafos de contornos cerrados.
+
+**Articulos relevantes**
+
+### 1. "Drawing ellipses and elliptical arcs with piecewise cubic Bézier curve approximations" (J.R. Van Aken)
+Este es un artículo clásico y excepcionalmente valioso por su enfoque en la implementación. 
+*   **Enfoque:** Detalla matemáticamente cómo aprovechar la invarianza afín de las curvas Bézier. Esto permite calcular un polígono de control para un arco circular y luego aplicarle una transformación (rotación, traslación o escala) para obtener el arco elipsoidal correspondiente.
+*   **Valor práctico:** Discute el error de aproximación inherente y proporciona fórmulas para calcular el error máximo posible en función del ángulo y el radio. Además, presenta las estructuras y firmas de funciones directamente pensadas para su integración, lo que simplifica mucho el desarrollo a bajo nivel.
+
+### 2. "Approximate a circle with cubic Bézier curves" (Spencer Mortensen)
+Aunque es un documento más enfocado y directo, es la referencia estándar moderna para encontrar la constante mágica y reducir la deriva radial (radial drift).
+*   **Enfoque:** En lugar del método estándar que hace coincidir el punto medio del arco y la curva, Mortensen actualiza las restricciones para minimizar matemáticamente el error a lo largo de toda la longitud del arco.
+*   **Valor práctico:** Demuestra que ajustando los parámetros de los puntos de control a los valores óptimos ($a=1.00005507808$, $b=0.55342925736$, $c=0.99873327689$), la deriva radial se reduce a $0.0055\%$, haciéndola cinco veces más precisa que la aproximación estándar y virtualmente indistinguible de un círculo real.
