@@ -11,13 +11,19 @@
 % FIGURA ORIGINAL (didáctica): reconstruye una lámina de clase sobre órbitas polares.
 % No reproduce una publicación, así que lleva nombre de física.
 %
+% ESCALA REAL, NO A OJO: el semieje mayor sale de `orbit_km` sobre `earth_km`, y el
+% rótulo se arma con esa misma variable. La lámina de la que viene dibujaba la órbita
+% mucho más alta de lo que decía su letrero (equivalía a ~1500 km, no a 800); aquí no
+% puede pasar, porque el número que gobierna la geometría es el que se imprime. A 800
+% km la órbita queda apenas 12.6% sobre la superficie: se ve rasante, que es lo que es.
+%
 % OCLUSIÓN — de dónde sale `tc`. La órbita es la proyección de un círculo 3-D de radio
 % b inclinado; su eje MAYOR es la línea de nodos, así que en el marco propio
 % P(t) = (a·cos t, b·sin t) la mitad LEJANA es t ∈ (90°, 270°). El cruce con el limbo
 % sale de |P(t)|² = R², que con órbita y globo concéntricos es forma cerrada:
 %     a² + (b² − a²)·sin²t = R²   →   sin t = √((R² − a²)/(b² − a²))
-% Oculto = lejano ∩ dentro del disco = t ∈ (180−tc, 180+tc). Con a=3.4, b=6.2, R=5 la
-% raíz da √½ y tc sale 45° exacto. Los cortes caen sobre el limbo por construcción: el
+% Oculto = lejano ∩ dentro del disco = t ∈ (180−tc, 180+tc); aquí tc ≈ 56.8°, o sea un
+% tramo oculto de 113.6°. Los cortes caen sobre el limbo por construcción: el
 % disco del mapa es un `circle(1)` escalado por `scale=earth_radius`, o sea el mismo R
 % y el mismo centro de la ecuación. No hay `asin` en el lenguaje; atan2(s, √(1−s²)) lo
 % expresa. NO hace falta álgebra booleana de paths: la oclusión es profundidad, y una
@@ -48,6 +54,10 @@ include "../lib/satellite.mg"
 
 earth_radius = 5
 earth_y = .5
+% La altura de la órbita se declara en kilómetros y de ahí sale la geometría: así el
+% dibujo no puede contradecir al rótulo.
+earth_km = 6371
+orbit_km = 800
 
 % Eje de rotación, partido para no cruzar el globo, y la flecha de giro al pie.
 polyline(dash="dashed", line_width=0.1) { 0 -7  0 (earth_y - earth_radius) }
@@ -65,10 +75,14 @@ polyline(dash="dashed", line_width=0.1) { 0 (earth_y + earth_radius - .5)  0 6.7
 
 % Las dos órbitas
 {
-  axis_x = 3.4
-  axis_y = 6.2
+  % El semieje MAYOR es el radio orbital a escala: el globo mide earth_radius, así que
+  % la órbita mide eso por (R+h)/R. El menor es su escorzo, y con él se declara la
+  % inclinación del plano orbital respecto a la dirección de vista.
+  plane_angle = 33
+  axis_y = earth_radius * (earth_km + orbit_km)/earth_km
+  axis_x = axis_y * sin(plane_angle*pi/180)
   % Semiángulo del tramo oculto: el arco entra al disco en 180−tc y sale en 180+tc.
-  % La derivación, en las NOTAS. Aquí tc = 45°.
+  % La derivación, en las NOTAS.
   s  = sqrt((earth_radius*earth_radius - axis_x*axis_x)/(axis_y*axis_y - axis_x*axis_x))
   tc = atan2(s, sqrt(1 - s*s)) * 180/pi
   % El giro es alrededor del centro de la Tierra: `rotate` gira el plano entero, así
@@ -94,4 +108,6 @@ polyline(dash="dashed", line_width=0.1) { 0 (earth_y + earth_radius - .5)  0 6.7
   % arriba, que va casi vertical.
   place(Satellite, rx=axis_x, ry=axis_y, at=[270], scale=0.8) { 0 0 }
 }
-text("800 Km", align="right") { -3.5 5.5 }
+% El rótulo se arma con el mismo número que fijó la geometría, así que no puede
+% quedar desmentido por el dibujo.
+text(str(orbit_km) + " Km", align="right") { -2.9 5.5 }

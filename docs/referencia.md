@@ -167,7 +167,7 @@ sobre el dibujo ni partir la curva a mano.
 % que va por detrás Y cae dentro del disco; los cruces salen de |P(t)|² = R².
 s  = sqrt((R*R - a*a)/(b*b - a*a))
 tc = atan2(s, sqrt(1 - s*s)) * 180/pi           % = asin(s), en grados
-arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % barrido de 270°: se salta t ∈ (135°, 225°)
+arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % se salta el tramo t ∈ (180−tc, 180+tc)
 ```
 
 Los extremos del trazo caen sobre el limbo **por construcción**, sin ajustar nada, porque el

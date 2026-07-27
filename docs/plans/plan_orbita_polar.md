@@ -35,7 +35,7 @@ sale de `|P(t)|² = R²`:
     a² + (b² − a²)·sin²t = R²   →   sin t = ±√((R² − a²)/(b² − a²))
 
 Oculto = lejano ∩ dentro del disco = `t ∈ (180−tc, 180+tc)` con `tc = asin(√(…))`.
-Con `a=3.4, b=6.2, R=5` la raíz da `√½` y `tc = 45°` exacto: oculto `t ∈ (135°, 225°)`.
+En la figura terminada `tc ≈ 56.8°`, o sea 113.6° ocultos.
 
 ```
 s  = sqrt((R*R - a*a)/(b*b - a*a))
@@ -66,6 +66,15 @@ pero por la política de demanda: hasta que una segunda figura lo pida.
 **único cliente** de `arc(rx, ry)`, `marker_at` y `place(..., rx/ry, at=)`, y el primer
 ejemplo del corpus con arcos elípticos **girados**, que es lo que vigila la invariante (c)
 de la Capa 3. Encabezado a la convención de 2026-07-23.
+
+**Escala real (2026-07-27).** El semieje mayor se dejó de escribir a mano: sale de
+`orbit_km`/`earth_km` sobre `earth_radius`, y el menor de un `plane_angle` declarado. El
+rótulo se arma con `str(orbit_km)`, así que la geometría y el letrero no pueden divergir.
+Se descubrió comparando: la lámina de origen (y nuestra primera versión, con `b=6.2`)
+dibujaba la órbita a ~1500 km mientras el letrero decía 800. Ajustarlo fue cambiar **dos
+declaraciones**; `tc`, los satélites y las flechas se recolocaron solos — que es la prueba
+de que la figura está calculada y no ilustrada. A 800 km la órbita se ve rasante (12.6%
+sobre la superficie): es honesto y se lee distinto, y se aceptó ese cambio de lectura.
 
 **Segundo satélite (2026-07-27).** En la órbita de atrás, a `at=[270]`: el extremo inferior
 del eje mayor, que cae a 2° de la dirección en que se proyecta Bolivia (lat −17, lon −65) en

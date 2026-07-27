@@ -1644,3 +1644,28 @@ plano, no la figura** —con el `translate`-al-centro como receta— (§9); y lo
 mundo de `lib/`**, que estaban sin documentar desde el 2026-07-24 (§12). Los cuatro fragmentos
 nuevos se compilaron antes de escribirlos, para que la referencia no publique código que no
 corre.
+
+**Addendum 2 (misma sesión) — la órbita ahora sale de kilómetros.** Al revisar la figura
+terminada apareció que **el rótulo no cuadraba con la geometría**: con la Tierra en 5 unidades
+(6371 km), el semieje `b=6.2` corresponde a ~1500 km de altura, no a los 800 que decía el
+letrero. Venía de la lámina de internet en que se inspira, y sobrevivió porque nadie lo
+calculó — exactamente el defecto que MG existe para no tener.
+
+Arreglado **declarando la física, no el dibujo**: `orbit_km = 800` y `earth_km = 6371` fijan
+`axis_y = earth_radius*(earth_km+orbit_km)/earth_km`, el semieje menor sale de un
+`plane_angle` explícito, y el rótulo se arma con `str(orbit_km)`. Ahora el número que
+gobierna la geometría **es** el que se imprime: no pueden divergir.
+
+📐 **La prueba de que la figura está calculada y no ilustrada**: la corrección fueron **dos
+declaraciones**. `tc` pasó solo de 45° a 56.8° (el tramo oculto de 90° a 113.6°), y los dos
+satélites, las flechas y el rótulo se recolocaron sin tocarlos. En la lámina original habría
+sido volver a borrar a mano la mitad tapada.
+
+⚠️ **Cambia la LECTURA, y se aceptó a sabiendas:** a 800 km la órbita está apenas 12.6% sobre
+la superficie, así que abraza el globo y lo que asoma fuera del disco son dos gajos cerca de
+los polos. La versión anterior comunicaba mejor «dos planos orbitales que se cruzan», pero
+mentía en la altura. Se prefirió la honesta. La alternativa que no se tomó —exagerar la
+escala **a propósito y declarándolo**, como hacen los libros— queda registrada aquí.
+
+Único ajuste a ojo de toda la sesión: el rótulo se acercó de x=−3.5 a −2.9, porque al bajar la
+órbita se le había quedado lejos.
