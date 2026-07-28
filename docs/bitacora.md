@@ -2074,3 +2074,33 @@ la polar se salva porque sus meridianos **terminan** en el antípoda en vez de a
 SE LLAMABA DESDE NINGÚN LADO.** Código muerto que hacía exactamente esto —cortar donde hay un
 salto mayor a 1500 km—. Conectado al bucle de la retícula, antes del recorte. Verificado:
 17 piezas en lat 30, 11 en lat 0, ninguna degenerada; la polar no se mueve.
+
+### Cerrado en la sesión del 2026-07-27 (decies) — el primer release con binarios
+
+`v3.0.0-beta` publicado: `mg.exe` para Windows, `.tar.gz` para Linux y macOS, cada paquete con
+`lib/`, los ejemplos y la referencia dentro. Es la primera vez que probar MetaGráfica **no
+exige compilar**, que era el filtro que se llevaba por delante a casi todo el que llegaba de la
+galería. El workflow corrió los seis trabajos en verde, incluido el que nunca se había
+ejecutado (`publicar`), y los permisos alcanzaron: el bloque `permissions: contents: write` del
+workflow **sobrescribe** el default de solo lectura del repositorio (verificado por API:
+`default_workflow_permissions: "read"`).
+
+📌 **Lo que confirmó la corrida sobre la etiqueta, y es el dato que vale:** los mismos **72
+archivos idénticos byte a byte en Linux, Windows y macOS**, dicho por un Windows y un Mac
+reales, no por la máquina de desarrollo.
+
+🔎 **Y una lección que no es de código: la bandera `prerelease` degradaba justo lo que queremos
+que la gente descargue.** Al marcar `v3.0.0-beta` como pre-release, GitHub movió el título
+«Latest» al release de 2024 —que **no tiene un solo adjunto** y cuyas propias notas dicen «this
+version is still beta»—, o sea que la portada mandaba a un tarball de código de hace dos años.
+La bandera significa «existe una versión estable, usa esa»; como no existe, solo hacía daño. Se
+invirtió: el nuevo es Latest y el viejo queda marcado como lo que siempre dijo ser.
+
+Las notas del release se reescribieron con el mismo criterio. Decían «la gramática todavía
+puede cambiar, y cambia cuando una figura nueva lo pide» —una advertencia que espanta y que
+además era inexacta: lo de esta versión fueron **adiciones** con su hueco ya en la
+especificación (`limb=`, `marker_at`, `arc(rx,ry)`, `place(rx/ry, at=)`), no cambios de
+gramática; el último renombre real fue el `title`→`label` del 2026-07-16—. Ahora dicen **qué**
+está en beta (los nombres, no la salida), que los nombres viejos fallan ruidosamente y nunca en
+silencio, y que la salida está medida en tres plataformas. La misma información, pero como
+argumento en vez de como aviso.

@@ -280,8 +280,19 @@ jobs:
             dist/**/metagrafica-*.zip
           generate_release_notes: true
           body: |
-            **MetaGráfica ${{ github.ref_name }}** — beta: la gramática todavía
-            puede cambiar, y cambia cuando una figura nueva lo pide.
+            **MetaGráfica ${{ github.ref_name }}**
+
+            Beta se refiere a los **nombres**, no a la salida. El lenguaje crece
+            añadiendo, y lo que la etiqueta reserva es poder renombrar algo antes
+            del 1.0; los nombres viejos fallan de forma **ruidosa, nunca en
+            silencio**.
+
+            La salida sí es estable, y está medida: cada cambio pasa por una red
+            de regresión sobre el corpus completo, y los mismos **72 archivos
+            salen idénticos byte a byte en Linux, Windows y macOS**.
+
+            Si escribes figuras con ella ahora, tu opinión sobre los nombres y la
+            ergonomía es exactamente lo que falta para congelar la gramática.
 
             | archivo | para |
             |---|---|
