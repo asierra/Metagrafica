@@ -2,7 +2,16 @@
 CXX = clang++
 CXXFLAGS = -g -std=c++14 -ffunction-sections -fdata-sections
 LIBS = -lm -Wmultichar
-LDFLAGS = -g -Wpedantic -Wl,--gc-sections
+# Descartar secciones muertas: GNU ld y el de MinGW usan --gc-sections; el de
+# Apple NO lo conoce y aborta el enlace («ld: unknown options: --gc-sections»),
+# ahí se llama -dead_strip. Lo destapó la primera corrida de CI en macOS: el
+# proyecto nunca se había compilado en un Mac.
+ifeq ($(shell uname -s),Darwin)
+  GC_SECTIONS = -Wl,-dead_strip
+else
+  GC_SECTIONS = -Wl,--gc-sections
+endif
+LDFLAGS = -g -Wpedantic $(GC_SECTIONS)
 # -D_USE_MATH_DEFINES: M_PI y compañía NO son de C++ estándar. glibc las da
 # siempre, pero MinGW solo si la macro está definida ANTES de <cmath> — por eso
 # va en la línea de compilación y no en un header. Sin ella el build cruzado a

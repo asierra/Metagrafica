@@ -1924,3 +1924,13 @@ cambio del compilador:
 existe el reflejo de re-bendecirlo. Es exactamente la lección de `docs/img` y de la galería, un
 escalón más afuera. Queda documentado en `CLAUDE.md` («Build and test») como paso obligatorio
 tras tocar el motor. **Si se repite, la respuesta es una séptima compuerta**, no otra nota.
+
+**Addendum 3 (misma sesión) — la primera corrida de CI: el proyecto NO compilaba en macOS.**
+La corrida en seco del workflow (`workflow_dispatch`, que valida sin publicar) dio Linux ✓ y
+el cruce a Windows ✓, y **macOS falló al enlazar**: `ld: unknown options: --gc-sections`. El
+`ld` de Apple no conoce esa opción de GNU ld —allí se llama `-dead_strip`—, así que
+`LDFLAGS` se elige ahora por `uname -s`.
+
+📌 **Es un defecto viejo que nadie podía ver**: `-Wl,--gc-sections` lleva en el Makefile desde
+antes de esta sesión, y el proyecto nunca se había compilado en un Mac. El README ofrecía
+macOS y no era cierto. La primera corrida de CI se pagó sola.
