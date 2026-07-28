@@ -513,6 +513,10 @@ void PDFDisplay::marker(double x, double y, const MarkerShape &shape, double siz
     } else {
       applyStrokeColor();
       HPDF_Page_SetLineWidth(page, dspstate.line_width_pt);
+      // Ver SVGDisplay::marker: 5.5 le da punta a la flecha sin sacarle púas a
+      // las lengüetas. Va dentro del GSave/GRestore que envuelve cada subtrayecto,
+      // así que no se escapa al resto del dibujo.
+      HPDF_Page_SetMiterLimit(page, 5.5);
     }
     bool first = true;
     for (const auto &u : sub) {
@@ -521,6 +525,7 @@ void PDFDisplay::marker(double x, double y, const MarkerShape &shape, double siz
       if (first) { HPDF_Page_MoveTo(page, dx, dy); first = false; }
       else       HPDF_Page_LineTo(page, dx, dy);
     }
+    if (markerSubpathIsLoop(sub)) HPDF_Page_ClosePath(page);
     if (doFill) HPDF_Page_Fill(page);
     else        HPDF_Page_Stroke(page);
     HPDF_Page_GRestore(page);

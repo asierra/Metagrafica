@@ -539,8 +539,21 @@ void SVGDisplay::marker(double x, double y, const MarkerShape &shape, double siz
             fprintf(file, "<polygon points=\"%s\" fill=\"%s\" />\n", pts.str().c_str(), colorBuf);
         } else {
             sprintf(colorBuf, "#%06X", dspstate.linecolor);
-            fprintf(file, "<polyline points=\"%s\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\" />\n",
-                    pts.str().c_str(), colorBuf, dspstate.line_width_pt);
+            // <polygon> es la polilínea CERRADA de SVG: con fill="none" traza el
+            // mismo contorno, pero con unión en el punto de cierre en vez de dos
+            // tapas (ver markerSubpathIsLoop). La cruz y la equis no son lazos y
+            // siguen saliendo como <polyline>.
+            // stroke-miterlimit EXPLÍCITO, y con un valor elegido, no heredado:
+            // SVG trae 4 por default y PostScript/PDF traen 10, así que el mismo
+            // marcador se dibujaba DISTINTO según el formato. Y ninguno de los dos
+            // defaults sirve: la punta de la flecha pide 5.1 (1/sen(11.3°)) y las
+            // lengüetas piden 6.25 (1/sen(9.2°)). Con 4 se bisela todo —punta
+            // chata—; con 10 se afila todo y a las lengüetas les salen PÚAS.
+            // 5.5 cae entre ambas: punta en punta, lengüetas biseladas.
+            fprintf(file, "<%s points=\"%s\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\"%s />\n",
+                    markerSubpathIsLoop(sub) ? "polygon" : "polyline",
+                    pts.str().c_str(), colorBuf, dspstate.line_width_pt,
+                    markerSubpathIsLoop(sub) ? " stroke-miterlimit=\"5.5\"" : "");
         }
     }
 }

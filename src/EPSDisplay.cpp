@@ -603,6 +603,10 @@ void EPSDisplay::marker(double x, double y, const MarkerShape &shape, double siz
   }
   bool saved_fill = dspstate.fill;
   if (!shape.fillable) dspstate.fill = false;
+  // Ver SVGDisplay::marker: 5.5 es el límite que le da punta a la flecha sin
+  // sacarle púas a las lengüetas. PostScript trae 10, así que hay que fijarlo —y
+  // devolverlo al salir, porque es estado gráfico y afectaría a lo que siga.
+  fprintf(file, "5.5 setmiterlimit\n");
   double ca = cos(angle), sa = sin(angle);
   for (const auto &sub : shape.subpaths) {
     if (sub.empty()) continue;
@@ -614,8 +618,12 @@ void EPSDisplay::marker(double x, double y, const MarkerShape &shape, double siz
       fprintf(file, "%f %f %s\n", dx, dy, first ? "moveto" : "lineto");
       first = false;
     }
+    // Un lazo se CIERRA (ver markerSubpathIsLoop): así sus dos extremos forman
+    // una unión con miter y no dos tapas planas enfrentadas.
+    if (markerSubpathIsLoop(sub)) fprintf(file, "closepath\n");
     stroke();
   }
+  fprintf(file, "10 setmiterlimit\n");        // default de PostScript
   dspstate.fill = saved_fill;
 }
 

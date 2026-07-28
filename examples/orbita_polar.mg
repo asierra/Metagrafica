@@ -60,7 +60,7 @@ earth_km = 6371
 orbit_km = 800
 
 % Eje de rotación, partido para no cruzar el globo, y la flecha de giro al pie.
-polyline(dash="dashed", line_width=0.1) { 0 -7  0 (earth_y - earth_radius) }
+polyline(dash="dashed", line_width=0.4, color="gray") { 0 -7  0 (earth_y - earth_radius) }
 text("N", align="center") { 0 7 }
 text("S", align="center") { 0 -7.5 }
 arrow_rx = 1.25
@@ -70,8 +70,8 @@ arc(rx=arrow_rx, ry=arrow_ry, line_width=2, color="gray", from=90, to=270,
     marker_end="arrow", marker_size=3) { (0.5*arrow_rx) -6.5 }
 
 % El globo: mapa vectorial de lib/, y el tramo de eje que asoma sobre el polo norte.
-Mapa(scale=earth_radius, at=(0, earth_y), grid=false)
-polyline(dash="dashed", line_width=0.1) { 0 (earth_y + earth_radius - .5)  0 6.75 }
+Mapa(scale=earth_radius, at=(0, earth_y), grid=false, limb=false)
+polyline(dash="dashed", line_width=0.4, color="gray") { 0 (earth_y + earth_radius - .5)  0 6.75 }
 
 % Las dos órbitas
 {
@@ -94,14 +94,14 @@ polyline(dash="dashed", line_width=0.1) { 0 (earth_y + earth_radius - .5)  0 6.7
   % (270° de barrido). `marker_at` estampa la flecha de sentido en un ángulo
   % paramétrico —el mismo que from/to—, orientada a la tangente; 360 es el extremo
   % derecho del eje menor, el punto más ancho, donde mejor se lee la dirección.
-  arc(axis_x, axis_y, from=(180+tc), to=(540-tc),
+  arc(axis_x, axis_y, from=(180+tc), to=(540-tc), dash="dashed", line_width=0.4,
       marker="arrow", marker_at=[360], marker_size=4) { 0 0 }
   % El satélite se posa sobre la órbita por su ángulo, alineado a la tangente. Va
   % dentro del bloque para que le toque la misma matriz, así que basta el centro.
   place(Satellite, rx=axis_x, ry=axis_y, at=[30], scale=0.8) { 0 0 }
   rotate -30
   % Segunda órbita: esconde la mitad derecha, y su flecha va en el otro extremo.
-  arc(axis_x, axis_y, from=tc, to=(360-tc),
+  arc(axis_x, axis_y, from=tc, to=(360-tc), dash="dashed", line_width=0.4,
       marker="arrow", marker_at=[180], marker_size=4) { 0 0 }
   % Su satélite, al pie de la órbita y sobre Sudamérica. Al ser el extremo del eje
   % mayor la tangente es horizontal, así que queda acostado: contrapunto del de

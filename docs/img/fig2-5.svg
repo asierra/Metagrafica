@@ -25,7 +25,7 @@
 <path d="M 91.4173 13.6063 L 91.4173 20.4094 " fill="none" stroke-width="1.6" stroke="#FF0000" />
 <path d="M 99.9213 13.6063 L 99.9213 20.4094 " fill="none" stroke-width="1.6" stroke="#FF0000" />
 <path d="M 255.118 63.7795 L 280.63 63.7795 L 232.157 26.7817 " fill="none" stroke-width="0.1" stroke="#000000" />
-<polyline points="244.276,36.0312 246.719,37.2254 249.324,38.2072 252.253,38.7652 248.515,39.267 249.017,43.0049 247.706,40.3268 246.072,38.0731 244.276,36.0312 " fill="none" stroke="#000000" stroke-width="0.100000" />
+<polygon points="244.276,36.0312 246.719,37.2254 249.324,38.2072 252.253,38.7652 248.515,39.267 249.017,43.0049 247.706,40.3268 246.072,38.0731 244.276,36.0312 " fill="none" stroke="#000000" stroke-width="0.100000" stroke-miterlimit="5.5" />
 <path d="M 49.8898 51.0236 L 56.6929 51.0236 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="2,2" />
 <path d="M 49.8898 53.8583 L 56.6929 53.8583 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="2,2" />
 <path d="M 49.8898 56.6929 L 56.6929 56.6929 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="2,2" />
@@ -37,8 +37,8 @@
 <path d="M 49.8898 73.7008 L 56.6929 73.7008 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="2,2" />
 <path d="M 49.8898 76.5354 L 56.6929 76.5354 " fill="none" stroke-width="0.2" stroke="#000000" stroke-dasharray="2,2" />
 <path d="M 215.964 43.5765 A 67.748 67.748 0 0 1 244.079 6.73691 " fill="none" stroke-width="0.1" stroke="#0000FF" />
-<polyline points="215.964,43.5765 216.179,41.5482 216.203,39.4604 215.845,37.2531 217.157,39.7586 219.663,38.446 218.112,40.0568 216.943,41.7867 215.964,43.5765 " fill="none" stroke="#0000FF" stroke-width="0.100000" />
-<polyline points="244.079,6.73691 242.611,8.15268 241.251,9.73678 240.107,11.658 240.712,8.89488 237.949,8.2899 240.172,8.05298 242.18,7.47927 244.079,6.73691 " fill="none" stroke="#0000FF" stroke-width="0.100000" />
+<polygon points="215.964,43.5765 216.179,41.5482 216.203,39.4604 215.845,37.2531 217.157,39.7586 219.663,38.446 218.112,40.0568 216.943,41.7867 215.964,43.5765 " fill="none" stroke="#0000FF" stroke-width="0.100000" stroke-miterlimit="5.5" />
+<polygon points="244.079,6.73691 242.611,8.15268 241.251,9.73678 240.107,11.658 240.712,8.89488 237.949,8.2899 240.172,8.05298 242.18,7.47927 244.079,6.73691 " fill="none" stroke="#0000FF" stroke-width="0.100000" stroke-miterlimit="5.5" />
 <path d="M 260.787 63.7795 A 19.8425 19.8425 0 0 1 264.994 51.5633 " fill="none" stroke-width="0.1" stroke="#000000" />
 <text x="31.181102" y="-104.881890" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">cathode</tspan></text>
 <text x="141.732283" y="-104.881890" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">anode</tspan></text>

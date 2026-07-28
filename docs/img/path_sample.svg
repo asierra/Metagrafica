@@ -30,7 +30,7 @@
 <circle cx="292.558040" cy="112.937794" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
 <circle cx="300.138953" cy="72.533580" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
 <path d="M 214.975 72.0045 L 214.215 91.1174 L 209.598 83.0173 L 200.371 84.3568 Z " fill="#0000FF" stroke="none" />
-<polyline points="165.272,163.956 162.011,160.49 158.354,157.271 153.905,154.546 160.334,156.037 161.825,149.607 162.314,154.802 163.595,159.503 165.272,163.956 " fill="none" stroke="#800080" stroke-width="1.200000" />
+<polygon points="165.272,163.956 162.011,160.49 158.354,157.271 153.905,154.546 160.334,156.037 161.825,149.607 162.314,154.802 163.595,159.503 165.272,163.956 " fill="none" stroke="#800080" stroke-width="1.200000" stroke-miterlimit="5.5" />
 <circle cx="115.053265" cy="205.094951" r="2.200000" fill="none" stroke="#FF0000" stroke-width="1.200000" />
 <text x="122.556739" y="-202.694951" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">curve=true — punto sobre la curva</tspan></text>
 <circle cx="115.053265" cy="190.088004" r="2.200000" fill="none" stroke="#008000" stroke-width="1.200000" />

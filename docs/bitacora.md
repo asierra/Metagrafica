@@ -2007,3 +2007,70 @@ corresponde a media vuelta— y **nada más**. Re-medido después del cambio:
 
 📌 Con esto las **tres** plataformas deberían coincidir byte a byte. Lo dirá la corrida, que es
 precisamente el punto de tener la compuerta.
+
+### Cerrado en la sesión del 2026-07-27 (octies) — la punta de la flecha, y dos bugs que destapó
+
+Alejandro vio que la flecha gorda de rotación de `orbita_polar` salía **chata** y supuso que era
+el ancla. No lo era —el ancla está en la punta, verificado en los bytes del SVG: el marcador
+arranca exactamente en el extremo del arco—. Eran **tres defectos encadenados**, ninguno visible
+a 0.2 pt y los tres obvios a 2 pt:
+
+🐛 **1. Un lazo dibujado como camino ABIERTO.** El contorno de la flecha empieza y termina en
+(0,0) (`markers.h`), pero los tres backends emitían `moveto`/`lineto` + `stroke` **sin cerrar**.
+Donde debía haber una unión había **dos tapas planas enfrentadas**: una muesca, no un vértice.
+Se cierra cuando el último punto repite el primero (`markerSubpathIsLoop`), y de paso mejora
+`square`, `diamond` y `triangle`, que tenían la misma muesca escondida bajo su relleno. En SVG
+la forma cerrada es `<polygon>` con `fill="none"`, no `<polyline>`.
+
+🐛 **2. Los tres formatos NO dibujaban el mismo marcador, y llevaba así desde siempre.** El
+`stroke-miterlimit` por default es **4 en SVG** y **10 en PostScript y PDF**. Esta flecha pide
+**5.1** en la punta (1/sen 11.3°) y **6.25** en las lengüetas (1/sen 9.2°), o sea que caía
+justo entre los dos defaults: SVG biselaba todo y EPS/PDF afilaban todo. Comprobado renderizando
+el EPS con Ghostscript: con 10 a las lengüetas les salen **púas**. Los tres fijan ahora **5.5**,
+elegido para caer entre ambas necesidades: punta en punta, lengüetas biseladas. Verificado a
+500 % en los tres backends (rsvg, gs, pdftoppm).
+
+📌 **La lección repetida:** un default heredado no es una decisión. Mientras los tres backends
+usaran el suyo, la salida dependía del formato sin que nadie lo hubiera elegido.
+
+**Y la figura, con toques de Alejandro:** órbitas `dash="dashed"` a 0.4 pt y eje en gris a 0.4.
+El dash no es decorativo — `gravitacion_orbita` **ya dibuja su órbita punteada**, así que las
+dos figuras comparten vocabulario: una órbita es un lugar geométrico, no un objeto. Se descartó
+teñirlas de verde: en la otra figura el verde **significa velocidad** y el rojo fuerza, y
+reusarlo aquí como adorno costaba esa consistencia. ⚠️ Se recomendó 0.4 pt y **no** `line_width=0`
+(el hairline de `gravitacion_orbita`): 0 significa «lo más delgado que el dispositivo pueda», y
+en una filmadora a 2400 dpi eso puede desaparecer.
+
+### Cerrado en la sesión del 2026-07-27 (novies) — `limb` opcional, y la raya que cruzaba el globo
+
+Dos cosas del generador de mapas, las dos destapadas por Alejandro afinando `orbita_polar`.
+
+**1. `limb` es ahora un parámetro, y va en el GENERADOR.** Alejandro quería el limbo opcional y
+lo había logrado metiéndolo dentro del `if grid` de `mapa_p30_n55.mg`. Tres objeciones, ninguna
+estética: (a) el limbo **no es parte de la retícula** —acoplarlos borra dos combinaciones
+legítimas, «mapa con limbo sin retícula», que es justo lo que esta figura tenía, y su recíproca—;
+(b) solo se editó **uno** de los tres mapas, así que `Mapa(grid=false)` y `PolarMap(grid=false)`
+dejaron de significar lo mismo; y (c) es un archivo **GENERADO**: el cambio moría en la siguiente
+regeneración. Ahora `geo2mg.py` emite `struct X(grid=true, limb=true, …)` en sus dos modos, y
+`orbita_polar` pide `limb=false`, que documenta la intención donde se lee. Churn cero:
+`gravitacion_orbita` invoca `PolarMap` sin argumentos y su salida es byte-idéntica.
+
+⚠️ Detalle del modo line-art: ahí el limbo se dibuja ANTES de las costas y las sentencias
+`color "black"`/`line_width 0.8` que lo preceden también gobiernan lo que sigue. Meter las tres
+en el `if` habría dejado las costas sin color con `limb=false`; solo entra el `circle(1)`.
+
+🐛 **2. Una raya recta atravesando el globo, de borde a borde.** Con `grid=true` aparecía una
+polilínea de **2 puntos** cruzando el disco. Reproduciendo el pipeline con pyproj/shapely línea
+por línea, el culpable resultó ser **el paralelo de latitud −lat₀: el único que pasa por el
+ANTÍPODA de la vista**. Y en AEQD el antípoda no es un punto, **es todo el círculo de radio πR**:
+entre dos muestras consecutivas —lon +124 y +126 en la vista lat 30— la línea **salta 39 865 km**
+de un borde al opuesto, y el segmento recto que las une cruza el disco visible. El recorte lo deja
+en una cuerda de dos puntos.
+
+Sistemático, no accidental: pasaba en la vista lat 30 (paralelo −30) y en la lat 0 (el ecuador);
+la polar se salva porque sus meridianos **terminan** en el antípoda en vez de atravesarlo.
+
+📌 **Y el arreglo ya estaba escrito: `partir_saltos()` existía en el archivo desde siempre y NO
+SE LLAMABA DESDE NINGÚN LADO.** Código muerto que hacía exactamente esto —cortar donde hay un
+salto mayor a 1500 km—. Conectado al bucle de la retícula, antes del recorte. Verificado:
+17 piezas en lat 30, 11 en lat 0, ninguna degenerada; la polar no se mueve.

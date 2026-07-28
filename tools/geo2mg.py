@@ -208,11 +208,23 @@ if args.grid:
         ga = a_aeqd(linea)
         if ga is None:
             continue
-        ga = ga.intersection(circulo)
-        for l in explotar(ga):
-            go = a_ortho(l)
-            for l2 in explotar(go):
-                grid_ml.append(list(l2.coords))
+        # ⚠️ PARTIR POR EL ANTÍPODA ANTES DE RECORTAR. En AEQD el antípoda no es un
+        # punto: es TODO el círculo de radio πR. Una línea de retícula que pase por
+        # él —el paralelo de latitud −lat_0, y solo ese— salta entre dos muestras
+        # consecutivas de un borde al opuesto (39 865 km en la vista lat 30), y el
+        # segmento recto que las une CRUZA EL DISCO VISIBLE. El recorte lo acorta a
+        # una cuerda de 2 puntos de borde a borde: una raya recta atravesando el
+        # globo, que es como se descubrió (orbita_polar con grid=true).
+        #
+        # `partir_saltos` ya existía en este archivo para esto mismo, pero no se
+        # llamaba desde ningún lado. Verificado: quita la pieza espuria en las vistas
+        # lat=30 (18→17 piezas) y lat=0 (12→11) y no toca la polar, que no tiene
+        # ninguna línea de retícula pasando por su antípoda.
+        for trozo in partir_saltos(list(ga.coords)):
+            for l in explotar(LineString(trozo).intersection(circulo)):
+                go = a_ortho(l)
+                for l2 in explotar(go):
+                    grid_ml.append(list(l2.coords))
 
 
 # ============================================================================
@@ -303,17 +315,19 @@ L.append(f"%   (eliminó {cd} de {ct} features chicas). {n_costa} {'polígonos d
 L.append("")
 
 if args.fill:
-    L.append(f'struct {args.nombre}(grid=true, ocean="{args.color_ocean}", land="{args.color_tierra}", grid_color="{args.grid_color}", grid_width={args.grid_width}) {{')
+    L.append(f'struct {args.nombre}(grid=true, limb=true, ocean="{args.color_ocean}", land="{args.color_tierra}", grid_color="{args.grid_color}", grid_width={args.grid_width}) {{')
     L.append("  circle(1, fill=ocean) { 0 0 }        % disco de océano")
     L.append("")
     L.append("  % --- continentes rellenos ---")
     for c in land_rings:
         L.append(f"  polygon(fill=land) {{ {bloque(c)} }}")
 else:
-    L.append(f'struct {args.nombre}(grid=true, grid_color="{args.grid_color}", grid_width={args.grid_width}) {{')
+    L.append(f'struct {args.nombre}(grid=true, limb=true, grid_color="{args.grid_color}", grid_width={args.grid_width}) {{')
     L.append('  color "black"')
     L.append("  line_width 0.8")
-    L.append("  circle(1) { 0 0 }        % limbo")
+    L.append("  if limb {")
+    L.append("    circle(1) { 0 0 }        % limbo")
+    L.append("  }")
     L.append("")
     L.append("  % --- costas ---")
     L.append("  line_width 0.4")
@@ -332,10 +346,12 @@ if grid_ml:
 
 if args.fill:
     L.append("")
-    L.append("  % limbo (contorno) encima de tierra y retícula")
-    L.append('  color "black"')
-    L.append("  line_width 0.8")
-    L.append("  circle(1) { 0 0 }")
+    L.append("  % limbo (contorno) encima de tierra y retícula; `limb=false` lo quita")
+    L.append("  if limb {")
+    L.append('    color "black"')
+    L.append("    line_width 0.8")
+    L.append("    circle(1) { 0 0 }")
+    L.append("  }")
 
 L.append("}")
 

@@ -25,6 +25,21 @@ struct MarkerShape {
   bool fillable = false;        // cuadrado/rombo/flecha sí; cruz/x no
 };
 
+// ¿Es este subtrayecto un LAZO? (su último punto repite el primero). Los cuatro
+// marcadores que son contornos cerrados —cuadrado, rombo, triángulo y flecha— se
+// escriben así, y los backends tienen que CERRARLOS al dibujarlos.
+//
+// No es un detalle: un lazo trazado como camino ABIERTO no tiene unión donde se
+// juntan sus dos extremos, tiene DOS TAPAS planas. En la punta de la flecha eso
+// es una muesca en vez de un vértice, y encima se pierde el miter —que con esa
+// punta (~22.6°, razón 5.1, muy por debajo del límite 10 de PostScript y SVG)
+// es justo lo que la hace sobresalir—. Invisible a 0.2 pt; a 2 pt la punta sale
+// CHATA, que es como se descubrió, en la flecha de rotación de orbita_polar.
+inline bool markerSubpathIsLoop(const Path &sub) {
+  return sub.size() > 2 && sub.front().x == sub.back().x
+                        && sub.front().y == sub.back().y;
+}
+
 // Geometría exacta de cada marcador, en caja unitaria [-1,1].
 inline MarkerShape markerShapeForId(MarkerId id) {
   MarkerShape shape;
