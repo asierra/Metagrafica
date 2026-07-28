@@ -140,6 +140,13 @@ orden de la lista es la ejecución.
      el corpus ni ninguna de las compuertas — lo cazó comparar con matplotlib. Salió
      gratis *solo* porque no había usuarios. El autor no puede hacerse esa prueba solo:
      ya sabe cómo se llaman las cosas.
+   - 📣 **Dónde y cómo buscar esa gente: `plan_promocion.md`** (2026-07-28). La
+     infraestructura ya no estorba —binarios para los tres sistemas, galería y referencia
+     bilingües, canal de issues—, así que lo que falta es gente escribiendo figuras. El plan
+     ordena los foros por rendimiento **para esta condición**, no por alcance: el taller con
+     estudiantes primero (produce la evidencia directamente), luego TUGboat —MetaPost es el
+     pariente más cercano—, las revistas en español, y un Show HN de costo cero. Descarta
+     SIGGRAPH y StackOverflow con su razón.
    - **Salida propuesta (por evidencia, no por calendario):** que alguien de fuera escriba
      figuras no triviales desde cero y las figuras nuevas **dejen de mover la gramática**.
      Es la regla del proyecto («no se construye sin una figura que lo pida») aplicada a los
