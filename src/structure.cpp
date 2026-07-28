@@ -185,4 +185,7 @@ void MetaGrafica::draw(Display &g) {
        pr->draw(g);
   }
   g.end();
+  // Después de end(): la cobertura ya está completa y el archivo cerrado, así
+  // que el aviso es lo último que lee el usuario antes del "render -> ".
+  g.warnIfOffCanvas();
 }

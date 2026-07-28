@@ -59,6 +59,14 @@ into an ellipse.
 match that of `display_size`, the figure ends up centered with margins (*letterbox*); to fill the canvas,
 match the two proportions.
 
+> 🔑 **And that is where the rule for choosing a tool comes from.** `world_window` is for figures whose two
+> axes **share a unit** —a plane, an orbit, a map, a geometric figure—, because there isometry is exactly
+> what you want. If x and y measure different things, or their ranges differ by more than two or three
+> times, the same scale on both flattens the figure against an edge: `world_window 0 1 0 6` on a 12 × 8 cm
+> canvas leaves the whole x axis 1.3 cm wide. That is what `plot` is for ([§11](#11-charts)): it maps data
+> to a box and stretches each axis on its own. **It is not a shortcut for making charts: it is the correct
+> coordinate system when the axes aren't comparable** — and it brings axes, ticks and labels along.
+
 > 💡 **`plot` is the exception, and it's deliberate.** A `plot` maps its **data units** to its box, and
 > there x and y stretch independently: seconds against volts have no common proportion to respect. The
 > isometric rule governs the **plane of the figure** —centimeters against world units—; a `plot`'s data
@@ -478,6 +486,11 @@ repeat(Frame, count=6, at=(0,0), advance=(1.2,0), rotate=15)
 
 > The order of `fit`'s corners **matters and reflects**: `{ .5 0  0 1 }` mirrors in x.
 
+> ⚠️ **`place`'s locus is written literally**: today it takes no named path, neither in the block
+> (`place(P) { &data }`) nor as an argument (`place(P, &data)`). It is the exception to the rule in §3 —the
+> `&` works in the drawing primitives, not here—, and to seed a struct over computed points you have to
+> write them inside the braces.
+
 **Recursion** — a struct can invoke **itself**, and that's where a short definition produces a figure you
 couldn't draw by hand. The stopping condition is an `if`:
 
@@ -557,8 +570,14 @@ bezier(&full)
 
 ```octave
 path wave  = sine(half_cycles=2, amplitude=1) { 0 0  4 0 }   % half-cycle between two ends
-path curve = smooth { 0 0  1 2  3 1  4 3 }                    % passes through those NODES
+path curve  = smooth { 0 0  1 2  3 1  4 3 }                   % passes through those NODES
+path curve2 = smooth(&nodes)                                  % the nodes, already in a path
 ```
+
+> ⚠️ **A `{ }` block is always literal.** `smooth { &nodes }` is invalid: inside the braces go coordinates,
+> not paths. To start from a path you already have, the form is the parenthesized one —`smooth(&nodes)`—,
+> as everywhere else in the algebra. The same holds for `bezier`, `polyline` and the rest: the path goes
+> **between parentheses**, as in §3.
 
 **Accumulate in a loop** — for a curve whose number of pieces depends on a variable, something `concat`
 doesn't cover, because its pieces must be written one by one:
@@ -785,8 +804,10 @@ is written (`include "../lib/satellite.mg"`).
 ## 13. How the compiler fails
 
 MG **aborts** rather than producing a half-figure: an evaluation error, an `include` that doesn't resolve or
-an odd count of coordinates end compilation with code 1. Non-fatal warnings (an unknown color, falling back
-to black) do continue.
+an odd count of coordinates end compilation with code 1. **Non-fatal warnings** do continue, and go to
+`stderr`: an unknown color (falls back to black), a character with no glyph (dropped), or a figure whose
+entire drawing landed off the canvas ([§14](#14-common-mistakes)) — there the compiler has nothing to fix,
+but you do have something to look at.
 
 This is deliberate: **an inconsistent document should produce no output**. In a figure derived from
 formulas, a physics error usually shows up as a compilation error — getting a Morse well's depth wrong makes
@@ -822,6 +843,19 @@ three are, by far, the most frequent.
 9 to 15 and the window goes from 0 to 8, the compiler drew fine: off-frame. **There is no error**, and
 that's why the symptom looks like an engine bug (an empty figure, an almost-blank EPS). Before suspecting the
 engine, check that your data range fits in the window. It happens even to those who know the language.
+
+> When **everything** falls outside, MG does warn (`la figura sale EN BLANCO`) and tells you, in cm, where
+> the drawing ended up and where the canvas is. If it only sticks out in part, it stays quiet: running off
+> one edge is often deliberate.
+
+And the sibling case, which is not a crop but a **proportion**: the data fits in the window and the figure
+still comes out as an unreadable strip. The engine is isometric ([§2](#2-the-canvas-and-the-units)), so a
+`world_window 0 1 0 6` in a `display_size 12 8` uses the same scale on both axes —the one that makes the
+long axis fit— and the whole x axis ends up 1.3 cm of the 12. There is no warning because nothing is wrong:
+drawing that way is what you asked for. **The world window is for figures whose two axes share a unit** (a
+plane, an orbit, a map). As soon as x and y measure different things, or their ranges differ by more than
+two or three times, what you want is a [`plot`](#11-charts), which maps data to a box and stretches each
+axis on its own.
 
 **A coordinate `{ }` complains about an odd number, or the figure comes out distorted.** Inside a block
 values are separated by **spaces**, so a `+` or a `-` inside a coordinate splits it in two: `{ 12 y-11 }` is
@@ -908,4 +942,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ feed1f8ee3681e01fcc6ce0b9e45f428819f08a8 -->
+<!-- translated-from: referencia.md @ 3c86c4fe62128d2396d4f2e86ad13d5394a34ad6 -->

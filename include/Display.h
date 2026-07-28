@@ -182,6 +182,10 @@ public:
   /// en false; el V3 lo activa desde world_window ... stretch=true.
   void setStretchMode(bool b) { stretch_mode = b; }
 
+  /// Diagnóstico de lienzo en blanco (§3.1). Lo llama MetaGrafica::draw tras
+  /// end(); ver el comentario de `inkPoint` para qué se mide y por qué.
+  void warnIfOffCanvas() const;
+
   void setPlumePosition(point &p) { pp = p; }
   void getPlumePosition(point &p) { p = pp; }
   virtual void setOpenPath(bool op) { dspstate.openpath = op; }
@@ -373,6 +377,48 @@ protected:
     if (x2 > xmax) xmax = x2;
     if (y1 < ymin) ymin = y1;
     if (y2 > ymax) ymax = y2;
+  }
+
+  /// Cobertura de la página: caja, en coordenadas de DISPOSITIVO (pt, y hacia
+  /// arriba en los tres backends), que encierra todo lo que dejó tinta. A
+  /// diferencia de xmin/xmax de arriba —que es del path EN CURSO y se reinicia
+  /// con cada `newpath`, para barrer el tramado— esta acumula el documento
+  /// entero y sobrevive a end().
+  ///
+  /// Existe para UN diagnóstico: la figura que compila limpia y sale en blanco
+  /// porque todo cayó fuera del lienzo. No hay error que dar —el compilador
+  /// dibujó bien lo que se le pidió— y por eso el síntoma se confunde con un bug
+  /// del motor. Es el tropiezo nº 1 de `docs/referencia.md` §14, y hasta ahora
+  /// nada lo detectaba: `plot(box=(2,1.5,15,9.5))` sin declarar `world_window`
+  /// pone la caja en unidades de mundo sobre la ventana default (el cuadrado
+  /// unitario), sale un archivo válido y vacío, y el usuario no tiene ni un
+  /// número al que agarrarse.
+  double inkx0 = 0, inky0 = 0, inkx1 = 0, inky1 = 0;
+  bool has_ink = false;
+
+  /// Registra un punto de DISPOSITIVO en la cobertura.
+  void noteInk(double dx, double dy) {
+    if (!has_ink) { inkx0 = inkx1 = dx; inky0 = inky1 = dy; has_ink = true; return; }
+    if (dx < inkx0) inkx0 = dx;
+    if (dx > inkx1) inkx1 = dx;
+    if (dy < inky0) inky0 = dy;
+    if (dy > inky1) inky1 = dy;
+  }
+
+  /// mundo→dispositivo para un punto que SÍ deja tinta: es `mt.transform` más el
+  /// registro en la cobertura. Los backends lo usan en lugar de `mt.transform`
+  /// justo donde nace una coordenada que se va a pintar.
+  ///
+  /// ⚠️ La distinción importa y por eso son dos llamadas distintas: los backends
+  /// también transforman **vectores de dirección** (la tangente de un marcador,
+  /// el versor con que `text` deduce el giro), que no son puntos de la página y
+  /// arrastrarían la cobertura hacia el origen. Esos siguen usando
+  /// `mt.transform` a secas. Si añades una primitiva, `inkPoint` es la que va en
+  /// sus coordenadas; olvidarla no rompe nada visible, solo deja ese trazo fuera
+  /// del diagnóstico.
+  void inkPoint(double &x, double &y) {
+    mt.transform(x, y);
+    noteInk(x, y);
   }
 
 

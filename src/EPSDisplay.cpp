@@ -230,12 +230,12 @@ void EPSDisplay::end() {
 }
 
 void EPSDisplay::moveto_nopath(double x, double y) {
-  mt.transform(x, y);
+  inkPoint(x, y);
   fprintf(file, "%f %f moveto\n", x, y);
 }
 
 void EPSDisplay::moveto(double x, double y) {
-  mt.transform(x, y);
+  inkPoint(x, y);
   if (!dspstate.openpath) {
     fprintf(file, "newpath\n");
     set_limits(x,y,x,y);
@@ -250,16 +250,16 @@ void EPSDisplay::rmoveto(double x, double y) {
 }
 
 void EPSDisplay::lineto(double x, double y) {
-  mt.transform(x, y);
+  inkPoint(x, y);
   fprintf(file, "%f %f lineto\n", x, y);
   adjust_limits(x,y,x,y);
 }
 
 void EPSDisplay::curveto(double x1, double y1, double x2, double y2, double x3,
                         double y3) {
-  mt.transform(x1, y1);
-  mt.transform(x2, y2);
-  mt.transform(x3, y3);
+  inkPoint(x1, y1);
+  inkPoint(x2, y2);
+  inkPoint(x3, y3);
   fprintf(file, "%g %g %g %g %g %g curveto\n", x1, y1, x2, y2, x3, y3);
 }
 
@@ -268,8 +268,8 @@ void EPSDisplay::rlineto(double x, double y) {
 }
 
 void EPSDisplay::line(double x1, double y1, double x2, double y2) {
-  mt.transform(x1, y1);
-  mt.transform(x2, y2);
+  inkPoint(x1, y1);
+  inkPoint(x2, y2);
   fprintf(file, "newpath %f %f moveto %f %f lineto stroke\n", x1, y1, x2, y2);
 }
 
@@ -279,7 +279,7 @@ void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
   double px[4] = {x1, x2, x2, x1};
   double py[4] = {y1, y1, y2, y2};
   for (int i = 0; i < 4; i++)
-    mt.transform(px[i], py[i]);
+    inkPoint(px[i], py[i]);
 
   // Bounding box en dispositivo (para %%BoundingBox y el barrido del tramado)
   double minx = px[0], maxx = px[0], miny = py[0], maxy = py[0];
@@ -539,6 +539,8 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
   // Bounding box EXACTO de la elipse completa: el extremo en x de
   // C + u·cos t + v·sin t es |(ux,vx)|, y el de y es |(uy,vy)|.
   const double hw = hypot(ux, vx), hh = hypot(uy, vy);
+  noteInk(Cx - hw, Cy - hh);
+  noteInk(Cx + hw, Cy + hh);
   if (!dspstate.openpath) {
     fprintf(file, "newpath\n");
     set_limits(Cx - hw, Cy - hh, Cx + hw, Cy + hh);
@@ -582,7 +584,7 @@ void EPSDisplay::dot(double x, double y, double r) {
   // r = RADIO del marcador (§4.6). Se dibuja como círculo y stroke() decide
   // relleno (disco) o contorno (círculo abierto) según el estado, igual que arc:
   // dot(r)=disco; dot(r,color=c) sin fill=abierto.
-  mt.transform(x, y);
+  inkPoint(x, y);
   fprintf(file, "newpath %f %f %f 0 360 arc\n", x, y, r);
   stroke();
 }
@@ -594,7 +596,7 @@ void EPSDisplay::marker(double x, double y, const MarkerShape &shape, double siz
   // ángulo es el visual en dispositivo (respeta stretch). Reutiliza stroke() como
   // dot(); las formas no-rellenables (cruz/x) fuerzan fill=false.
   double ax = x, ay = y;
-  mt.transform(ax, ay);
+  inkPoint(ax, ay);
   double angle = 0;
   if (dirx != 0 || diry != 0) {
     double bx = x + dirx, by = y + diry;

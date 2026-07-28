@@ -276,12 +276,12 @@ void PDFDisplay::setLineColor(int lc) {
 void PDFDisplay::moveto_nopath(double x, double y) {
   // Solo actualiza posición para texto; no inicia un path
   // (HPDF_Page_MoveTo pondría la página en PATH_OBJECT, bloqueando BeginText)
-  mt.transform(x, y);
+  inkPoint(x, y);
   cur_x = x; cur_y = y;
 }
 
 void PDFDisplay::moveto(double x, double y) {
-  mt.transform(x, y);
+  inkPoint(x, y);
   cur_x = x; cur_y = y;
   // En un path abierto el estado gráfico ya se fijó en setOpenPath(); libharu
   // prohíbe cambiarlo en modo path-construction, así que aquí solo se extiende.
@@ -304,7 +304,7 @@ void PDFDisplay::rmoveto(double x, double y) {
 }
 
 void PDFDisplay::lineto(double x, double y) {
-  mt.transform(x, y);
+  inkPoint(x, y);
   cur_x = x; cur_y = y;
   adjust_limits(x, y, x, y);
   HPDF_Page_LineTo(page, x, y);
@@ -318,9 +318,9 @@ void PDFDisplay::rlineto(double x, double y) {
 
 void PDFDisplay::curveto(double x1, double y1, double x2, double y2,
                          double x3, double y3) {
-  mt.transform(x1, y1);
-  mt.transform(x2, y2);
-  mt.transform(x3, y3);
+  inkPoint(x1, y1);
+  inkPoint(x2, y2);
+  inkPoint(x3, y3);
   cur_x = x3; cur_y = y3;
   // El bbox de la curva queda acotado por sus puntos de control.
   adjust_limits(x1, y1, x1, y1);
@@ -330,8 +330,8 @@ void PDFDisplay::curveto(double x1, double y1, double x2, double y2,
 }
 
 void PDFDisplay::line(double x1, double y1, double x2, double y2) {
-  mt.transform(x1, y1);
-  mt.transform(x2, y2);
+  inkPoint(x1, y1);
+  inkPoint(x2, y2);
   prepareDraw();
   HPDF_Page_MoveTo(page, x1, y1);
   HPDF_Page_LineTo(page, x2, y2);
@@ -398,7 +398,7 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
   double px[4] = {x1, x2, x2, x1};
   double py[4] = {y1, y1, y2, y2};
   for (int i = 0; i < 4; i++)
-    mt.transform(px[i], py[i]);
+    inkPoint(px[i], py[i]);
   double minx = px[0], maxx = px[0], miny = py[0], maxy = py[0];
   for (int i = 1; i < 4; i++) {
     if (px[i] < minx) minx = px[i];
@@ -455,6 +455,8 @@ void PDFDisplay::arc(double x, double y, double w, double h,
 
   double Cx, Cy, ux, uy, vx, vy;
   mt.ellipse_frame(x, y, w, h, Cx, Cy, ux, uy, vx, vy);
+  noteInk(Cx - hypot(ux, vx), Cy - hypot(uy, vy));
+  noteInk(Cx + hypot(ux, vx), Cy + hypot(uy, vy));
 
   // Bounding box EXACTO de la elipse completa (antes eran las normas de columna,
   // que bajo shear o rotación con escala anisótropa quedaban cortas).
@@ -472,7 +474,7 @@ void PDFDisplay::arc(double x, double y, double w, double h,
 void PDFDisplay::dot(double x, double y, double r) {
   // r = RADIO del marcador (§4.6). Relleno (disco) o contorno (círculo abierto)
   // según el estado: dot(r)=disco; dot(r,color=c) sin fill=abierto.
-  mt.transform(x, y);
+  inkPoint(x, y);
   HPDF_Page_GSave(page);
   if (dspstate.fill) {
     applyFillColor();            // en PAGE_DESCRIPTION, antes del path
@@ -494,7 +496,7 @@ void PDFDisplay::marker(double x, double y, const MarkerShape &shape, double siz
   // stretch). Rellenable (cuadrado/rombo/flecha) -> Fill; no-rellenable (cruz/x)
   // -> Stroke, igual convención que dot.
   double ax = x, ay = y;
-  mt.transform(ax, ay);
+  inkPoint(ax, ay);
   double angle = 0;
   if (dirx != 0 || diry != 0) {
     double bx = x + dirx, by = y + diry;

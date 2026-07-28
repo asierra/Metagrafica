@@ -81,6 +81,17 @@ re-captúralo** si el cambio era intencional.
   **Cobertura ampliada el 2026-07-23** de 6 ejemplos a **21** (todo el corpus salvo
   `curvas3`, que es biblioteca de datos y compila en blanco), al generar los renders que
   necesitaba la galería: la galería **pagó** cobertura de pruebas.
+- **Pruebas NEGATIVAS** (`errfail`) — las demás miran salida EXITOSA, así que los ~150 caminos
+  de error del compilador no tenían una sola prueba, y su regresión natural es la peor: volver
+  al SILENCIO. Cada `test/errors/*.mg` declara **en sí mismo** lo que espera (van en git, no
+  hay dos listas que desincronizar) y se exige exit **1 exacto** —un segfault también «falla»—,
+  el fragmento de mensaje, y que **no** haya archivo de salida. **Ampliada el 2026-07-28 a los
+  diagnósticos NO fatales** con dos marcadores más: `% EXPECT_WARN:` (compila, deja salida,
+  avisa) y `% EXPECT_NO_WARN:` (caso legítimo que NO debe disparar el aviso). ⚠️ **Un aviso es
+  lo MÁS expuesto a esta clase de regresión, no lo menos:** si deja de darse, la salida sigue
+  byte-idéntica y las otras seis compuertas siguen verdes — no se pierde nada salvo la única
+  pista que tenía el usuario. `EXPECT_NO_WARN` cubre la otra forma de matar un aviso: llenarlo
+  de falsos positivos hasta que se ignore.
 - **La GALERÍA al día** (`galfail`, nueva 2026-07-23) — `docs/galeria.html` es salida
   publicada (la sirve GitHub Pages) y **derivada**, y lo que la vuelve rancia no es tocar
   el motor sino **editar un comentario**: la página lleva incrustados el encabezado y el

@@ -2173,3 +2173,84 @@ notoria (cualquier sistema 2-D los tiene) que nadie había pedido hasta ahora. A
 `plan_gradientes.md`, con la viabilidad ya verificada por backend — y con un hallazgo que
 condiciona el diseño: **libharu solo implementa el sombreado tipo 4** (malla de triángulos), así
 que el lineal sale por ahí pero el **radial no**, y se difiere por eso y no por gusto.
+
+### Cerrado en la sesión del 2026-07-28 (ter) — el segundo dato de la condición 4, y el aviso de lienzo en blanco
+
+Segundo experimento del mismo día y el más informativo de los dos, porque el dato salió de una
+**equivocación**. Alejandro le pidió la misma clase de trabajo a otro modelo —una figura desde
+una imagen, en chat, sin poder ejecutar `mg`— pero le pasó por error **`docs/bitacora.md` en
+lugar de la referencia**. Se conservan los tres archivos en `Dropbox/metagrafica/`:
+`fig2-3-flash.mg` (con la referencia), `fig-flash-bitacora.mg` (con la bitácora) y `test2-3.mg`
+(la corrección a mano del segundo).
+
+🔑 **El hallazgo: con la referencia eligió la herramienta EQUIVOCADA; con la bitácora, la
+correcta.** El intento con la referencia levantó los ejes a mano sobre `world_window` —`grid()`,
+dos `axis()`, dos `numbers()`, una struct de círculo por marcador—. El intento con la bitácora
+fue directo a `plot(x=…, y=…) { xaxis … yaxis … }`, que es exactamente para lo que existe. Los
+dos fallaron al compilar, pero **el segundo falló por sintaxis y el primero por diseño**: sus
+errores de sintaxis se arreglan en cinco minutos y debajo queda una figura ilegible.
+
+Por qué: `world_window 0 1 0 6` en un `display_size 12 8`. El motor es isométrico, la escala es
+`min(12/1, 8/6) = 1.33 cm/unidad`, y el eje x entero ocupa **1.33 cm de los 12**. Los datos caen
+DENTRO de la ventana —el tropiezo nº 1 de §14 no aplica— y aun así no se ve nada útil. Encima
+`circle(0.007)` en unidades de mundo da un radio de 0.26 pt: los marcadores están en el SVG y son
+invisibles.
+
+La referencia describía las dos piezas por separado (la isometría en §2, `plot` en §11) y en
+ningún sitio decía **cuándo usar cuál**. La bitácora no describe ninguna, pero está llena de
+sesiones que cuentan por qué se construyó `plot`, y de ahí salió la elección correcta. La
+lección no es que la bitácora sea mejor documento —no lo es, ni sirve para escribir figuras—:
+es que **una referencia puede tener todos los hechos y ninguna regla de decisión**, y quien la
+lee no puede inventarla. Añadida como tal en §2 de los dos idiomas (🔑 «de ahí sale la regla
+para elegir herramienta»), más el caso hermano en §14, `smooth(&p)` en §10 (existía en el
+motor, no en el documento) y el aviso de que el locus de `place` no admite `&path`.
+
+⚠️ **Y un fallo silencioso que ninguna de las siete compuertas podía ver.** Al corregir el
+intento de la bitácora apareció esto: `plot(x=(0,1), y=(0,6), box=(2, 1.5, 15, 9.5))` **sin
+declarar `world_window`** compila con código 0, escribe un SVG válido y **sale en blanco**.
+`box=` va en unidades de MUNDO y la ventana default es el cuadrado unitario, así que la caja
+entera cae fuera. No hay nada a lo que agarrarse: ni error, ni aviso, ni diferencia observable
+respecto de un bug del motor.
+
+Cerrado con un **aviso no fatal** (`Aviso: la figura sale EN BLANCO…`, con el lienzo y el dibujo
+en cm y la ventana vigente). Tres decisiones que vale la pena registrar:
+
+1. **Se mide en coordenadas de DISPOSITIVO, no de mundo.** `Display` acumula una caja de
+   cobertura alimentada por `inkPoint()` —`mt.transform` más el registro—, que los tres backends
+   usan en lugar de `mt.transform` justo donde nace una coordenada que se va a pintar. Los
+   backends también transforman **vectores de dirección** (la tangente de un marcador, el versor
+   con que `text` deduce el giro): ésos siguen con `mt.transform` a secas, porque no son puntos
+   de la página y arrastrarían la caja hacia el origen. Medir en dispositivo es lo que hace el
+   diagnóstico exacto bajo `transform`, structs y el `box` de un `plot`, que en mundo no se ven.
+2. **Se avisa solo cuando la caja NO TOCA la página.** Es la condición segura: sin intersección,
+   nada visible se pintó, y no hay falsos positivos. Al revés no vale, y esos casos se callan a
+   propósito — en un aviso, un falso negativo cuesta mucho menos que enseñar a ignorarlo.
+   Salirse en parte por un borde es corriente y a menudo deliberado.
+3. **No se avisa cuando no hubo tinta ninguna.** `examples/curvas3.mg` es biblioteca de datos,
+   compila en blanco y está en el corpus. «No dibujé nada» es una decisión; «dibujé fuera del
+   papel» es un accidente.
+
+La compuerta 5 (pruebas negativas) no servía tal cual: exige `exit 1` y **cero** archivo de
+salida, y un aviso es lo contrario de las dos cosas. Se le añadieron dos marcadores,
+`% EXPECT_WARN:` y `% EXPECT_NO_WARN:`, con la misma convención auto-declarativa. Y hacía falta:
+**un aviso es el diagnóstico MÁS expuesto a la regresión por silencio que esa compuerta
+persigue**, no el menos — un error que deja de darse rompe algo visible tarde o temprano, pero
+un aviso que deja de darse no rompe nada: la salida sigue byte-idéntica, las otras seis
+compuertas siguen verdes, y lo único que se pierde es la única pista que tenía el usuario.
+`EXPECT_NO_WARN` cubre el reverso, que es la otra forma de matar un aviso: llenarlo de falsos
+positivos hasta que se ignore.
+
+Las dos verificadas reintroduciendo a propósito lo que deben cazar: enmudecido el aviso →
+`ERRFAIL lienzo_en_blanco (compiló en silencio)`; endurecida la condición a «algo se salió» →
+`ERRFAIL lienzo_desborde_parcial (FALSO POSITIVO)`. Con ambos bugs dentro, las otras siete
+compuertas siguieron en cero — que es justo la prueba de que ninguna podía ver esto.
+
+Estado: `ok=72 … errfail=0 (err_ok=40)`, salida byte-idéntica (el aviso no añade un byte a
+ningún archivo), traductor `ok=14`.
+
+**Queda abierto, y es decisión de semántica, no de código:** `place(P, &datos)` no existe —el
+locus se escribe literal—, y es la generalización que cualquiera hace de la regla de §3 («el
+trayecto va como primer argumento, siempre»). Los dos modelos la intentaron. Antes de añadirla
+hay que decidir cómo se lleva con las formas de 2 puntos (`count=`, `gap=`, `both_sides=`) y con
+el locus de arco: hoy el número de puntos ES la sintaxis que elige el modo, y un `&path` de
+longitud variable la vuelve dinámica.

@@ -348,12 +348,12 @@ void SVGDisplay::setOpenPath(bool op) {
 void SVGDisplay::moveto_nopath(double x, double y) {
     // Solo actualiza la posición (usado para setPlumePosition); no debe
     // arrancar ni ensuciar el path acumulado, igual que en PDFDisplay.
-    mt.transform(x, y);
+    inkPoint(x, y);
     cur_x = x; cur_y = y;
 }
 
 void SVGDisplay::moveto(double x, double y) {
-    mt.transform(x, y);
+    inkPoint(x, y);
     cur_x = x; cur_y = y;
     path_builder << "M " << x << " " << y << " ";
 }
@@ -369,7 +369,7 @@ void SVGDisplay::rmoveto(double dx, double dy) {
 }
 
 void SVGDisplay::lineto(double x, double y) {
-    mt.transform(x, y);
+    inkPoint(x, y);
     cur_x = x; cur_y = y;
     path_builder << "L " << x << " " << y << " ";
 }
@@ -380,9 +380,9 @@ void SVGDisplay::rlineto(double dx, double dy) {
 }
 
 void SVGDisplay::curveto(double x1, double y1, double x2, double y2, double x3, double y3) {
-    mt.transform(x1, y1);
-    mt.transform(x2, y2);
-    mt.transform(x3, y3);
+    inkPoint(x1, y1);
+    inkPoint(x2, y2);
+    inkPoint(x3, y3);
     path_builder << "C " << x1 << " " << y1 << ", "
                  << x2 << " " << y2 << ", "
                  << x3 << " " << y3 << " ";
@@ -397,6 +397,8 @@ void SVGDisplay::arc(double x, double y, double w, double h, double startAng, do
     // fueran los ejes, que solo coincide cuando u⊥v.
     double Cx, Cy, ux, uy, vx, vy;
     mt.ellipse_frame(x, y, w, h, Cx, Cy, ux, uy, vx, vy);
+    noteInk(Cx - hypot(ux, vx), Cy - hypot(uy, vy));
+    noteInk(Cx + hypot(ux, vx), Cy + hypot(uy, vy));
     double rx, ry, rot_deg;
     Matrix::ellipse_axes(ux, uy, vx, vy, rx, ry, rot_deg);
 
@@ -494,7 +496,7 @@ void SVGDisplay::dot(double x, double y, double r) {
     // transforma el marco; el tamaño NO (físico). Relleno (disco) o contorno
     // (círculo abierto) según el estado de relleno (§4.6): dot(r)=disco;
     // dot(r,color=c) sin fill=abierto (trazo en color de línea).
-    mt.transform(x, y);
+    inkPoint(x, y);
     char colorBuf[10];
     if (dspstate.fill) {
         sprintf(colorBuf, "#%06X", dspstate.fillcolor);
@@ -517,7 +519,7 @@ void SVGDisplay::marker(double x, double y, const MarkerShape &shape, double siz
     // signo: espeja la forma y su orientación juntas (a diferencia de un rotate()
     // como atributo SVG, que sí operaría en el espacio ya flipeado).
     double ax = x, ay = y;
-    mt.transform(ax, ay);
+    inkPoint(ax, ay);
     double angle = 0;
     if (dirx != 0 || diry != 0) {
         double bx = x + dirx, by = y + diry;

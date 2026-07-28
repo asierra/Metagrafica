@@ -56,6 +56,15 @@ se convierte en elipse.
 `world_window` no coincide con la de `display_size`, la figura queda centrada con márgenes
 (*letterbox*); para llenar el lienzo, iguala las dos proporciones.
 
+> 🔑 **Y de ahí sale la regla para elegir herramienta.** `world_window` sirve cuando los dos
+> ejes **comparten unidad** —un plano, una órbita, un mapa, una figura geométrica—, porque
+> ahí la isometría es justo lo que quieres. Si x e y miden cosas distintas, o sus rangos
+> difieren por más de dos o tres veces, la misma escala en ambos aplasta la figura contra un
+> borde: `world_window 0 1 0 6` en un lienzo de 12 × 8 cm deja el eje x entero en 1.3 cm.
+> Para eso está `plot` ([§11](#11-gráficas)), que mapea datos a una caja y estira cada eje
+> por separado. **No es un atajo para hacer gráficas: es el sistema de coordenadas correcto
+> cuando los ejes no son comparables** — y trae ejes, marcas y rótulos de paso.
+
 > 💡 **`plot` es la excepción, y es deliberada.** Un `plot` mapea sus **unidades de datos** a
 > su caja, y ahí x e y se estiran por separado: segundos contra voltios no tienen una
 > proporción común que respetar. Lo isométrico gobierna el **plano de la figura**
@@ -490,6 +499,11 @@ repeat(Cuadro, count=6, at=(0,0), advance=(1.2,0), rotate=15)
 
 > El orden de las esquinas de `fit` **importa y refleja**: `{ .5 0  0 1 }` espeja en x.
 
+> ⚠️ **El locus de `place` se escribe literal**: hoy no acepta un trayecto con nombre, ni en
+> el bloque (`place(P) { &datos }`) ni como argumento (`place(P, &datos)`). Es la excepción a
+> la regla de §3 —el `&` vale en las primitivas de dibujo, no aquí—, y para sembrar una struct
+> sobre puntos calculados hay que escribirlos en las llaves.
+
 **Recursión** — una struct puede invocarse **a sí misma**, y ahí es donde una definición
 corta produce una figura que no se podría dibujar a mano. La condición de paro es un `if`:
 
@@ -571,7 +585,13 @@ bezier(&completa)
 ```octave
 path onda = sine(half_cycles=2, amplitude=1) { 0 0  4 0 }   % media entre dos extremos
 path suave = smooth { 0 0  1 2  3 1  4 3 }                   % pasa por esos NODOS
+path suave2 = smooth(&nodos)                                 % los nodos, ya en un path
 ```
+
+> ⚠️ **Un bloque `{ }` es siempre literal.** `smooth { &nodos }` no vale: dentro de las llaves
+> van coordenadas, no trayectos. Para partir de un trayecto que ya tienes, la forma es la de
+> paréntesis —`smooth(&nodos)`—, igual que en el resto del álgebra. Vale lo mismo para
+> `bezier`, `polyline` y las demás: el trayecto va **entre paréntesis**, como en §3.
 
 **Acumular en un lazo** — para una curva cuyo número de piezas depende de una variable, algo
 que `concat` no cubre, porque sus piezas hay que escribirlas una por una:
@@ -806,7 +826,10 @@ sistema, y en el repo se escribe la ruta relativa (`include "../lib/satellite.mg
 
 MG **aborta** en vez de producir una figura a medias: un error de evaluación, un `include`
 que no resuelve o un conteo impar de coordenadas terminan la compilación con código 1. Los
-avisos no fatales (un color desconocido, que cae a negro) sí siguen.
+**avisos** no fatales sí siguen, y salen por `stderr`: un color desconocido (cae a negro), un
+carácter sin glifo (se descarta) o una figura cuyo dibujo entero quedó fuera del lienzo
+([§14](#14-errores-comunes)) — ahí no hay nada que corregir por el compilador, pero sí algo
+que mirar.
 
 Eso es deliberado: **un documento inconsistente no debe producir salida**. En una figura
 derivada de fórmulas, un error de física suele aparecer como error de compilación — dar mal
@@ -844,6 +867,19 @@ curva vive en `y` de 9 a 15 y la ventana va de 0 a 8, el compilador dibujó bien
 cuadro. **No hay ningún error**, y por eso el síntoma parece un bug del motor (una figura
 vacía, un EPS casi en blanco). Antes de sospechar del motor, comprueba que el rango de tus
 datos quepa en la ventana. Le pasa hasta a quien conoce el lenguaje.
+
+> Cuando **todo** cae fuera, MG sí avisa (`la figura sale EN BLANCO`) y te dice en cm dónde
+> quedó el dibujo y dónde el lienzo. Si se sale solo en parte, se calla: salirse por un borde
+> es a menudo deliberado.
+
+Y el caso hermano, que no es un recorte sino una **proporción**: los datos caben en la
+ventana y aun así la figura sale como una tira ilegible. El motor es isométrico ([§2](#2-el-lienzo-y-las-unidades)),
+así que una `world_window 0 1 0 6` en un `display_size 12 8` usa la misma escala en los dos
+ejes —la que hace caber el eje largo— y el eje x entero acaba midiendo 1.3 cm de los 12. No
+hay aviso porque no hay nada mal: dibujar así es lo que pediste. **La ventana del mundo es
+para figuras cuyos dos ejes comparten unidad** (un plano, una órbita, un mapa). En cuanto x
+e y midan cosas distintas, o sus rangos difieran por más de dos o tres veces, lo que quieres
+es un [`plot`](#11-gráficas), que mapea datos a una caja y estira cada eje por su cuenta.
 
 **Un `{ }` de coordenadas se queja de un número impar, o la figura sale deformada.** Dentro
 de un bloque los valores se separan por **espacios**, así que un `+` o un `-` dentro de una

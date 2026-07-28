@@ -95,8 +95,9 @@ GOLD="$ROOT/test/golden"
 # existe para impedir.
 IMGDIR="$ROOT/docs/img"
 
-# Fixtures de la compuerta 5 (pruebas negativas): cada .mg DEBE fallar, y declara
-# en su encabezado el fragmento de mensaje que debe salir. Ver el bloque al final.
+# Fixtures de la compuerta 5 (pruebas negativas): cada .mg declara en su encabezado
+# el fragmento de mensaje que debe salir, y si debe ABORTAR (`% EXPECT:`) o
+# COMPILAR avisando (`% EXPECT_WARN:`). Ver el bloque al final.
 ERRDIR="$ROOT/test/errors"
 
 # PDF entra a la red golden (antes solo eps/svg, "PDF se verifica por vista"):
@@ -442,6 +443,18 @@ fi
 #     % EXPECT: <fragmento que debe aparecer en stderr>
 #     % EXPECT_AT: <línea>:<columna>     (opcional)
 #
+# ...o, para un diagnóstico NO fatal (`warn`, que imprime y sigue):
+#     % EXPECT_WARN: <fragmento que debe aparecer en stderr>
+#
+# Los avisos son el caso MÁS expuesto a la regresión por silencio que esta
+# compuerta persigue, no el menos: un error que deja de darse rompe algo visible
+# tarde o temprano, pero un aviso que deja de darse no rompe NADA — la salida
+# sigue siendo byte-idéntica, las otras seis compuertas siguen en verde, y lo
+# único que se pierde es la única pista que tenía el usuario. `EXPECT_WARN`
+# invierte dos de las tres aserciones de abajo: exige exit 0 y exige que el
+# archivo de salida SÍ se haya creado (avisar no es abortar), y mantiene la
+# tercera, que es la que importa: el mensaje sigue saliendo.
+#
 # Se exigen TRES cosas, y cada una caza algo distinto:
 #   (a) exit == 1 EXACTO, no "!= 0": un segfault también "falla". Ésta es la
 #       aserción que caza el modo de falla de max_depth antes de su guarda (139).
@@ -460,14 +473,51 @@ for case in "$ERRDIR"/*.mg; do
     name="$(basename "$case" .mg)"
     want="$(sed -n 's/^% EXPECT: //p' "$case" | head -1)"
     want_at="$(sed -n 's/^% EXPECT_AT: //p' "$case" | head -1)"
-    if [ -z "$want" ]; then
-        echo "ERRFAIL $name (el fixture no declara '% EXPECT: ...')"
+    want_warn="$(sed -n 's/^% EXPECT_WARN: //p' "$case" | head -1)"
+    want_nowarn="$(sed -n 's/^% EXPECT_NO_WARN: //p' "$case" | head -1)"
+    if [ -z "$want" ] && [ -z "$want_warn" ] && [ -z "$want_nowarn" ]; then
+        echo "ERRFAIL $name (el fixture no declara '% EXPECT: ...' ni '% EXPECT_WARN: ...')"
         errfail_count=$((errfail_count + 1))
         continue
     fi
     errtmp="$(mktemp -d)"
     ( cd "$ERRDIR" && "$MG" "$name.mg" "$errtmp/out.svg" ) >/dev/null 2>"$errtmp/stderr"
     code=$?
+    if [ -n "$want_nowarn" ]; then
+        # El reverso: un caso LEGÍTIMO que NO debe disparar el aviso. Un aviso con
+        # falsos positivos es peor que no tenerlo —enseña a ignorarlo—, y esa
+        # regresión tampoco mueve un byte de ningún golden.
+        if [ "$code" -ne 0 ]; then
+            echo "ERRFAIL $name (ABORTÓ con $code: el fixture debe compilar limpio)"
+            echo "        dijo: $(head -1 "$errtmp/stderr")"
+            errfail_count=$((errfail_count + 1))
+        elif grep -qF "$want_nowarn" "$errtmp/stderr"; then
+            echo "ERRFAIL $name (FALSO POSITIVO: avisó «$want_nowarn» en un caso legítimo)"
+            errfail_count=$((errfail_count + 1))
+        else
+            err_ok=$((err_ok + 1))
+        fi
+        rm -rf "$errtmp"
+        continue
+    fi
+    if [ -n "$want_warn" ]; then
+        # Diagnóstico NO fatal: compila, deja salida, y avisa.
+        if [ "$code" -ne 0 ]; then
+            echo "ERRFAIL $name (ABORTÓ con $code: el aviso «$want_warn» no debe ser fatal)"
+            echo "        dijo: $(head -1 "$errtmp/stderr")"
+            errfail_count=$((errfail_count + 1))
+        elif ! grep -qF "$want_warn" "$errtmp/stderr"; then
+            echo "ERRFAIL $name (compiló en silencio: se esperaba el aviso «$want_warn»)"
+            errfail_count=$((errfail_count + 1))
+        elif [ ! -e "$errtmp/out.svg" ]; then
+            echo "ERRFAIL $name (avisó PERO no dejó archivo de salida: avisar no es abortar)"
+            errfail_count=$((errfail_count + 1))
+        else
+            err_ok=$((err_ok + 1))
+        fi
+        rm -rf "$errtmp"
+        continue
+    fi
     if [ "$code" -eq 0 ]; then
         echo "ERRFAIL $name (COMPILÓ: se esperaba que fallara con «$want»)"
         errfail_count=$((errfail_count + 1))
