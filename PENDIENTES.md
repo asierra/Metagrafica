@@ -289,9 +289,22 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 - [ ] **Plot Fase 3** (`plan_plot.md`): localizador automático `step`/`decimals`
       (1/2/5·10ᵏ), `format=` con validación, `at=v`, **`title_at=`** (título al extremo
       del eje — hoy obliga a `text()` manuales en fig4-4/fig6-4).
-- [ ] **Pseudo-3D** (`plan_pseudo3d.md`): refinamientos acotados (`hatch` como parámetro
-      de `plano`, refactor de `fig10-2v3`). MG **no** se vuelve 3D — simula volumen con
-      shear por composición 2D.
+- [ ] **Pseudo-3D — plan REESCRITO el 2026-07-28** (`plan_pseudo3d.md`), y ahora **con
+      clientes**: varias figuras del libro de mecánica cuántica y las del curso de
+      Percepción Remota (Fig. I.2, II.10, II.11). MG sigue **sin volverse 3D** —sin
+      z-buffer, sin superficies ocultas, sin iluminación—, pero la biblioteca actual llegó a
+      su techo: da **piezas** con la proyección horneada, y esas figuras piden un **espacio
+      compartido**. La malla del suelo de Fig. II.10 son decenas de líneas con la misma
+      proyección, y sus rayos unen un punto en el aire con una celda del suelo: un segmento
+      que **no pertenece a ninguna pieza**.
+      **Es la primera vez que se justifica tocar el motor aquí**, y con el límite que el
+      propio plan exigía: MG no tiene funciones de usuario —una struct dibuja, no devuelve—
+      así que una función que proyecte `(x,y,z)` no puede vivir en un `.mg`. El diseño son
+      dos piezas: `view3d(...)` (cámara, sentencia de estado con alcance) y `xyz(x,y,z)`
+      (punto proyectado). **La gramática no se toca**: un bloque de coordenadas ya acepta
+      términos que valen un punto, como `point_at`. ⚠️ Añade sintaxis antes de congelar
+      (condición 1), así que los nombres se deciden con el cuidado de §13; el plan deja
+      cuatro decisiones abiertas.
 - [ ] 📥 **Editor web / galería** (`plan_interactivo.md`) — último punto vivo del `TODO` de
       2024, retirado el 2026-07-22 (`ec0c3d1`); los otros cuatro están cerrados.
       **El editor queda CONDICIONADO a la condición 4**, no descartado y no abierto sin
