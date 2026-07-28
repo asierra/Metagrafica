@@ -181,10 +181,28 @@ jobs:
           dif=0; n=0
           for f in salidas/*; do
             n=$((n+1))
-            cmp -s "$f" "salidas-linux/$(basename "$f")" || { echo "DIFIERE $(basename "$f")"; dif=$((dif+1)); }
+            b="$(basename "$f")"
+            if ! cmp -s "$f" "salidas-linux/$b"; then
+              dif=$((dif+1))
+              # Una compuerta que falla sin decir por qué es una mala compuerta:
+              # aquí se imprime la diferencia, que en estos formatos es un número
+              # suelto y se lee de un vistazo. Los binarios (PDF) van por cmp -l.
+              echo "::group::DIFIERE $b"
+              case "$b" in
+                *.pdf) cmp -l "$f" "salidas-linux/$b" | head -20 ;;
+                *)     diff "salidas-linux/$b" "$f" | head -30 ;;
+              esac
+              echo "::endgroup::"
+            fi
           done
           echo "comparados $n archivos, difieren $dif"
           test "$dif" -eq 0
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: salidas-windows-divergentes
+          path: salidas
 
   # Espejo del anterior para macOS, y por la misma razón de fondo: el binario que
   # se publica tiene que haber DIBUJADO algo antes de publicarse. Aquí pesa más
@@ -222,10 +240,28 @@ jobs:
           dif=0; n=0
           for f in salidas/*; do
             n=$((n+1))
-            cmp -s "$f" "salidas-linux/$(basename "$f")" || { echo "DIFIERE $(basename "$f")"; dif=$((dif+1)); }
+            b="$(basename "$f")"
+            if ! cmp -s "$f" "salidas-linux/$b"; then
+              dif=$((dif+1))
+              # Una compuerta que falla sin decir por qué es una mala compuerta:
+              # aquí se imprime la diferencia, que en estos formatos es un número
+              # suelto y se lee de un vistazo. Los binarios (PDF) van por cmp -l.
+              echo "::group::DIFIERE $b"
+              case "$b" in
+                *.pdf) cmp -l "$f" "salidas-linux/$b" | head -20 ;;
+                *)     diff "salidas-linux/$b" "$f" | head -30 ;;
+              esac
+              echo "::endgroup::"
+            fi
           done
           echo "comparados $n archivos, difieren $dif"
           test "$dif" -eq 0
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: salidas-macos-divergentes
+          path: salidas
 
   publicar:
     needs: [build, smoke-windows, smoke-macos]
