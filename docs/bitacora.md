@@ -1957,3 +1957,26 @@ No se prueba ahí el `include` sin ruta: el rescate «biblioteca junto al ejecut
 📌 Anotado sin resolver: `macos-latest` es **arm64**, así que el paquete sirve a Apple Silicon
 y no a los Mac Intel. Se dice en la tabla de la página de descarga; añadir un segundo binario
 x86_64 espera a que alguien lo pida.
+
+**Addendum 5 (misma sesión) — el primer CI en un Mac: 24 fallos falsos por el `wc` de BSD.**
+Con el enlace ya arreglado, macOS compiló y **falló en las pruebas**: `c3fail=24`. No era el
+compilador. El mensaje traía la pista completa:
+
+    C3FAIL quickstart (texto EPS/SVG/PDF = 18/      18/18: un backend omite texto)
+
+Los tres conteos son **iguales** —18, 18 y 18—, pero el de SVG viene con espacios delante. El
+`wc -l` de BSD (macOS) **rellena a la izquierda** y el de GNU no, y la invariante compara
+*cadenas*: `"18" != "      18"`. Se arregla con un `tr -d ' '`.
+
+📌 **Lo que sí dice esa corrida, y es la buena noticia: `imgfail: 0` en macOS.** O sea que los
+renders publicados en `docs/img` salieron **byte a byte idénticos** compilados en un Mac. El
+miedo que motivó poner esas pruebas como informativas —que `libm` moviera el último dígito—
+queda desmentido antes incluso de que corra `smoke-macos`.
+
+🧹 **Y los cuatro avisos de la corrida**, ninguno de código propio: tres «Node.js 20 is
+deprecated» de `actions/checkout@v4` y uno de `brew`. Se subieron las acciones a sus mayores
+vigentes (checkout v5, upload-artifact v7, download-artifact v8, gh-release v3) y **se eliminó
+el `brew install flex`**: macOS ya trae flex y `src/lexv3.cpp` va committeado, así que ese paso
+solo aportaba el aviso. Aparte, `HARU_CFLAGS` gana `-Wno-deprecated-declarations`: libharu es
+código vendorizado que no mantenemos y suelta 11 avisos de `sprintf` en clang; 11 líneas de
+ruido ajeno tapan un aviso propio cuando aparezca.

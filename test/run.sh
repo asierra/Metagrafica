@@ -301,7 +301,12 @@ for example in $EXAMPLES; do
         # los operadores (Tj de texto) son grepables directo, igual que EPS/SVG.
         case "$fmt" in
             eps) c3_text_eps=$(grep -cE '\)[[:space:]]*(show|cshow|rshow|ashow)$' "$outfile") ;;
-            svg) c3_text_svg=$(grep -ao '<tspan' "$outfile" | wc -l)
+            # `| wc -l` porque grep -c cuenta LÍNEAS y los tspans de un <text> van
+            # todos en la misma. ⚠️ El `tr -d ' '` no sobra: el wc de BSD (macOS)
+            # rellena con espacios a la izquierda —«      18»— y el de GNU no, así
+            # que la comparación de cadenas de abajo daba 24 C3FAIL falsos en el
+            # primer CI que corrió en un Mac, con los tres conteos IGUALES.
+            svg) c3_text_svg=$(grep -ao '<tspan' "$outfile" | wc -l | tr -d ' ')
                  c3_filled_lines=$(grep -oE '<path d="M [-0-9.e ]+ L [-0-9.e ]+ " fill="#[0-9a-fA-F]{6}"[^>]*>' "$outfile" | grep -c 'stroke="none"') ;;
             pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile") ;;
         esac

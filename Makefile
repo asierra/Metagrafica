@@ -17,7 +17,11 @@ LDFLAGS = -g -Wpedantic $(GC_SECTIONS)
 # va en la línea de compilación y no en un header. Sin ella el build cruzado a
 # Windows muere en matrix.h:23. Inocua fuera de Windows.
 CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3 -D_USE_MATH_DEFINES -DMG_LIBDIR='"$(LIBDIR)"'
-HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -I$(HARUDIR)/include
+# -Wno-deprecated-declarations: libharu es código VENDORIZADO que no mantenemos,
+# y en clang/macOS suelta 11 avisos de `sprintf` por compilación. Callarlos no es
+# relajar el estándar de «compilación limpia» —ese es para el código propio—:
+# es que 11 líneas de ruido ajeno tapan un aviso nuestro cuando aparezca.
+HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -Wno-deprecated-declarations -I$(HARUDIR)/include
 
 # --- Compilación cruzada a Windows (MinGW) -----------------------------------
 # Windows es el hueco que más usuarios cuesta: no hay compilador de sistema, así

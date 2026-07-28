@@ -40,7 +40,7 @@ jobs:
             binario: mg
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Dependencias (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -50,10 +50,6 @@ jobs:
           if [ -n "${{ matrix.cross }}" ]; then
             sudo apt-get install -y mingw-w64 libz-mingw-w64-dev
           fi
-
-      - name: Dependencias (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install flex || true
 
       - name: Compilar (nativo)
         if: matrix.cross == ''
@@ -112,13 +108,13 @@ jobs:
             for fmt in eps svg pdf; do ../bin/mg "$f" "../salidas/$n.$fmt" >/dev/null; done
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.nombre == 'linux-x86_64'
         with:
           name: salidas-linux
           path: salidas
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.nombre }}
           path: |
@@ -133,11 +129,11 @@ jobs:
     needs: build
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v8
         with:
           name: windows-x86_64
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: salidas-linux
           path: salidas-linux
@@ -202,11 +198,11 @@ jobs:
     needs: build
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v8
         with:
           name: macos-arm64
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: salidas-linux
           path: salidas-linux
@@ -236,9 +232,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with: { path: dist }
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           # Solo los PAQUETES. `dist/**/*` subiría también el artefacto
           # `salidas-linux` —72 archivos de referencia de la comparación entre
