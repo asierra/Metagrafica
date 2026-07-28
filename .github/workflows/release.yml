@@ -201,7 +201,12 @@ jobs:
         with: { path: dist }
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*
+          # Solo los PAQUETES. `dist/**/*` subiría también el artefacto
+          # `salidas-linux` —72 archivos de referencia de la comparación entre
+          # plataformas— a la página de descarga, que no es para eso.
+          files: |
+            dist/**/metagrafica-*.tar.gz
+            dist/**/metagrafica-*.zip
           generate_release_notes: true
           body: |
             **MetaGráfica ${{ github.ref_name }}** — beta: la gramática todavía
