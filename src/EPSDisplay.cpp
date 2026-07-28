@@ -567,8 +567,13 @@ void EPSDisplay::arc(double x, double y, double w, double h, double startAng,
       fprintf(file, "%s", ps_ellipse);
       ellipse_defined = true;
     }
+    // Los términos que la composición dejó en ~1e-15 son CERO (ver snap_zero en
+    // matrix.h): un `rotate` acumulado hasta 180° deja basura fuera de la
+    // diagonal, y es lo único que hacía que la salida dependiera de la libm de
+    // cada plataforma. `s` ya es la escala de referencia de la matriz.
     fprintf(file, "%g %g [%g %g %g %g %g %g] mgarc\n",
-            startAng, endAng, ux, uy, vx, vy, Cx, Cy);
+            startAng, endAng, snap_zero(ux, s), snap_zero(uy, s),
+            snap_zero(vx, s), snap_zero(vy, s), Cx, Cy);
   }
   stroke();
 }

@@ -22,6 +22,26 @@ Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper.
 
 constexpr double deg2rad = M_PI / 180;
 
+// Redondea a cero lo que ya ES cero. Una rotación recta deja residuos de ~1e-16
+// en los términos que deberían anularse (`cos(pi/2)` da 6.123e-17), y componer
+// varias los amplifica: `repeat(..., transform=rotate(60))` acumulado tres veces
+// llega a 1e-15 donde debería haber un 0 exacto.
+//
+// No es cosmética, y tiene DOS razones:
+//  1. **Precisión.** El valor verdadero es cero, así que redondear ACERCA al
+//     resultado exacto en vez de alejarse.
+//  2. **Portabilidad.** Ese residuo es el único sitio donde la salida dependía de
+//     la plataforma: lo imprime un printf con varias cifras y cada libm da un
+//     último bit distinto. Medido el 2026-07-27: con esto, Linux, Windows y macOS
+//     producen los 72 archivos del corpus byte a byte idénticos; sin esto, no.
+//
+// `ref` es la escala contra la que «pequeño» significa algo (típicamente la suma
+// de los términos de la matriz): un umbral absoluto sería incorrecto, porque en
+// coordenadas de dispositivo un 1e-9 legítimo existe.
+inline double snap_zero(double v, double ref) {
+  return (fabs(v) <= 1e-12 * ref) ? 0.0 : v;
+}
+
 enum MatrixOperation {
   OPMTL, // Translate
   OPMRT, // Rote

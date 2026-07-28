@@ -1980,3 +1980,30 @@ el `brew install flex`**: macOS ya trae flex y `src/lexv3.cpp` va committeado, a
 solo aportaba el aviso. Aparte, `HARU_CFLAGS` gana `-Wno-deprecated-declarations`: libharu es
 código vendorizado que no mantenemos y suelta 11 avisos de `sprintf` en clang; 11 líneas de
 ruido ajeno tapan un aviso propio cuando aparezca.
+
+**Addendum 6 (misma sesión) — la MISMA lección por tercera vez, y ahora en un solo sitio.**
+`smoke-macos` dio **71 de 72** y el diagnóstico recién añadido dijo exactamente qué:
+
+    Linux:  [-28.3465  6.88426e-15  -5.50741e-15  -8.85827  170.079 124.016]
+    macOS:  [-28.3465  6.62074e-15  -5.87255e-15  -8.85827  170.079 124.016]
+
+Los dos números que difieren son **ceros numéricos** junto a valores de 28: es la matriz de
+`rpstest`, el único ejemplo con **rotación acumulada** (`repeat(..., transform=rotate(60))`
+compuesto hasta 180°), donde los términos fuera de la diagonal deberían ser 0 exacto. Cada
+`libm` deja un residuo distinto y `%g` lo imprime con seis cifras.
+
+Es la tercera aparición del mismo fenómeno en el día —`cos(90°)` en el PDF, y antes la
+familia entera de `plan_anisotropia`—, así que en vez de un tercer parche ad-hoc se puso
+**`snap_zero(v, ref)` en `include/matrix.h`**, con la explicación completa en un solo lugar, y
+lo usan los dos sitios: `PDFDisplay::deviceRotate` (referencia 1, porque `c` y `s` viven en
+[-1,1]) y la emisión del arco en `EPSDisplay` (referencia = la escala de la matriz, la misma
+`s` que ya usaba la prueba `plain` de ahí arriba). El umbral es **relativo**, no absoluto: en
+coordenadas de dispositivo un 1e-9 legítimo existe.
+
+Movió un solo golden —`rpstest.eps`, que ahora emite el `[-28.3465 0 0 -8.85827 …]` que
+corresponde a media vuelta— y **nada más**. Re-medido después del cambio:
+
+    Windows vs Linux:  idénticos 72 / 72
+
+📌 Con esto las **tres** plataformas deberían coincidir byte a byte. Lo dirá la corrida, que es
+precisamente el punto de tener la compuerta.

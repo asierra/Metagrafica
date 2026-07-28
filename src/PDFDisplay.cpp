@@ -743,9 +743,11 @@ void PDFDisplay::deviceRotate(double angle) {
   // de decimales de un log10() y emite con modff en float: hereda la libm de cada
   // plataforma, y glibc daba 21 decimales donde msvcrt daba 20.
   // El umbral es holgado: los ceros de verdad quedan a ~1e-16, y un giro de 1e-10
-  // grados no existe en ninguna figura.
-  if (std::fabs(c) < 1e-12) c = 0.0;
-  if (std::fabs(s) < 1e-12) s = 0.0;
+  // grados no existe en ninguna figura. (Aquí la referencia es 1: c y s viven en
+  // [-1,1]. El mismo criterio, con la escala de la matriz como referencia, es lo
+  // que aplica EPSDisplay a los términos del arco.)
+  c = snap_zero(c, 1.0);
+  s = snap_zero(s, 1.0);
   // Se rota alrededor de la posición actual de la pluma (cur_x, cur_y), no del
   // origen, para preservar ese punto igual que `rotate` en PostScript/EPS y que
   // el <g rotate(a,cx,cy)> de SVGDisplay. Sin esto, el texto rotado (p.ej. una
