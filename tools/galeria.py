@@ -76,7 +76,7 @@ GRUPOS = [
       "colocación y los marcadores que se orientan solos.",
       "Apparatus diagrams and schematics, where what matters is structures, "
       "placement and markers that orient themselves."),
-     ["fig2-5", "fig2-1", "fig4-1", "rpstest"]),
+     ["espectro", "fig2-5", "fig2-1", "fig4-1", "rpstest"]),
     (("Láminas de referencia", "Reference sheets"),
      ("Catálogos: cada forma, cada relleno y cada símbolo en su expresión más "
       "simple, para copiar y pegar.",
@@ -90,6 +90,15 @@ GRUPOS = [
 # lo único que hay que escribir a mano al añadir un ejemplo (y si no se escribe,
 # la tarjeta sale en español con un aviso).
 TRAD = {
+    "espectro": (
+        "The electromagnetic spectrum, with the infrared window expanded",
+        "An outreach figure made of rectangles, text and arrows. What sets it apart is "
+        "the GRADIENT fill: infrared runs orange to red to black, microwaves from light "
+        "to dark grey, and the visible band is a continuous rainbow from magenta to red "
+        "\u2014 a hue sweep, written as the six stops that are the corners of the RGB cube. "
+        "It shows `gradient=` with two, three and six stops, combined with `color=` to "
+        "outline, and arrowheads as an attribute of the line "
+        "(`marker_start`/`marker_end`), which orient themselves."),
     "orbita_polar": (
         "Polar orbits — two satellites over a globe in orthographic projection",
         "Two polar orbits inclined ±15° around the Earth, with a satellite on each and "

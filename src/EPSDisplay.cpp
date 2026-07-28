@@ -190,8 +190,13 @@ void EPSDisplay::start() {
     exit(1);
   }
   fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n", filename.c_str());
-  fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n%%%%EndComments\n",
-          (int)(dvx + 0.5), (int)(dvy + 0.5));
+  fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n", (int)(dvx + 0.5), (int)(dvy + 0.5));
+  // §4.14: shfill es nivel 3. Se declara SOLO si hay degradado, para no mover la
+  // salida de todo lo demás (que sigue siendo nivel 2) por una característica que
+  // no usa. Un intérprete que no llegue al nivel debe decirlo, no pintar basura.
+  if (flags.using_gradient)
+    fprintf(file, "%%%%LanguageLevel: 3\n");
+  fprintf(file, "%%%%EndComments\n");
   if (flags.using_ellipse) {
     fprintf(file, "%s", ps_ellipse);
     ellipse_defined = true;
@@ -305,7 +310,10 @@ void EPSDisplay::rect(double x1, double y1, double x2, double y2) {
       setColor(dspstate.fillcolor);
     else
       setGray(dspstate.fillgray);
-    if (dspstate.hatch.empty())
+    if (!dspstate.gradient.empty()) {
+      fprintf(file, "%s", quad);
+      useGradient();
+    } else if (dspstate.hatch.empty())
       fprintf(file, "%sfill\n", quad);
     else {
       fprintf(file, "%s", quad);
@@ -364,6 +372,63 @@ void EPSDisplay::useFillPattern() {
     fprintf(file, "stroke\n");
   }
   fprintf(file, "grestore\n");
+}
+
+// §4.14: degradado lineal con el operador NATIVO de PostScript, `shfill` con un
+// sombreado tipo 2 (axial). Se eligió sobre la alternativa —franjas finas de color
+// interpolado— porque el shading es exacto y sin bandeo, el archivo no crece con la
+// resolución, y las franjas son justamente lo que ya se puede escribir a mano en un
+// .mg: emitirlas no añadiría nada que el lenguaje no tuviera.
+//
+// ⚠️ `shfill` es PostScript NIVEL 3 (1997). Ghostscript lo interpreta —y la compuerta
+// psfail lo verifica en cada corrida sobre el corpus—, pero un RIP anterior a esa
+// fecha no. Por eso el prólogo declara `%%LanguageLevel: 3` cuando hay algún
+// degradado: un intérprete que no llegue debe DECIRLO, no pintar basura.
+//
+// El eje sale de Display::gradientAxis (bbox del path en dispositivo + ángulo de
+// página), el mismo que consumen SVG y PDF. `clip` lo recorta a la forma real, igual
+// que el tramado; /Extend [true true] pinta los colores extremos más allá de las
+// paradas, que es lo que evita una franja sin pintar por redondeo en los bordes.
+void int2rgb(int c, double &r, double &g, double &b);   // definida más abajo
+
+void EPSDisplay::useGradient() {
+  const std::vector<GradientStop> &st = dspstate.gradient.stops;
+  if (st.size() < 2) return;
+  double x0, y0, x1, y1;
+  gradientAxis(x0, y0, x1, y1);
+
+  fprintf(file, "gsave clip\n<< /ShadingType 2 /ColorSpace /DeviceRGB\n");
+  fprintf(file, "   /Coords [%f %f %f %f] /Extend [true true]\n", x0, y0, x1, y1);
+  fprintf(file, "   /Function ");
+  emitShadingFunction();
+  fprintf(file, ">> shfill\ngrestore\n");
+}
+
+// La función color(t) del sombreado. Con DOS paradas es una interpolación
+// exponencial (tipo 2) con N=1, o sea lineal. Con más, una función de COSTURA
+// (tipo 3) que reparte [0,1] entre los tramos y reencaja cada uno en su propio
+// [0,1] — que es como PostScript expresa "varias paradas", sin operador propio.
+void EPSDisplay::emitShadingFunction() {
+  const std::vector<GradientStop> &st = dspstate.gradient.stops;
+  auto emitRamp = [&](const GradientStop &a, const GradientStop &b) {
+    double r0, g0, b0, r1, g1, b1;
+    int2rgb(a.color, r0, g0, b0);
+    int2rgb(b.color, r1, g1, b1);
+    fprintf(file, "<< /FunctionType 2 /Domain [0 1] /C0 [%g %g %g] /C1 [%g %g %g] /N 1 >>",
+            r0, g0, b0, r1, g1, b1);
+  };
+  if (st.size() == 2) {
+    emitRamp(st[0], st[1]);
+    fprintf(file, "\n");
+    return;
+  }
+  fprintf(file, "<< /FunctionType 3 /Domain [0 1]\n      /Functions [");
+  for (size_t i = 0; i + 1 < st.size(); i++) { fprintf(file, " "); emitRamp(st[i], st[i + 1]); }
+  fprintf(file, " ]\n      /Bounds [");
+  for (size_t i = 1; i + 1 < st.size(); i++) fprintf(file, " %g", st[i].at);
+  fprintf(file, " ]\n      /Encode [");
+  for (size_t i = 0; i + 1 < st.size(); i++) fprintf(file, " 0 1");
+  fprintf(file, " ] >>\n");
 }
 
 void EPSDisplay::text(string s) {
@@ -638,7 +703,9 @@ void EPSDisplay::stroke() {
       setColor(dspstate.fillcolor);
     else 
       setGray(dspstate.fillgray);
-    if (dspstate.hatch.empty())
+    if (!dspstate.gradient.empty())
+      useGradient();
+    else if (dspstate.hatch.empty())
       fprintf(file, "closepath fill\n");
     else
       useFillPattern();

@@ -240,7 +240,7 @@ polyline { 1 1  2 0 }      % NO es roja
 
 | se puede como sentencia | y como atributo de cualquier primitiva |
 |---|---|
-| `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=`, `hatch_angle=` |
+| `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `gradient`, `gradient_angle`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=`, `hatch_angle=`, `gradient=`, `gradient_angle=` |
 
 > ⚠️ **`outlinefill`, `font`, `font_size`, `align` y `valign` no son atributos de estilo
 > genéricos:** `polyline(align="center")` es error. Pero **`text()` sí los acepta**, porque
@@ -259,6 +259,24 @@ contorneado. `fill="none"` apaga el relleno.
 
 **Líneas:** `line_width` en pt. `dash` acepta `"solid"`, `"dashed"`, `"dotted"`,
 `"longdashed"`, `"shortdashed"`, `"dashdot"`, `"dashdotdot"`.
+
+**Degradados:** `gradient` acepta una **lista de colores** —las paradas, repartidas por igual a
+lo largo del eje— y `gradient_angle` el ángulo en grados, 0 = izquierda→derecha:
+
+```octave
+rectangle(gradient=["orange", "#D93622", "black"], color="black") { 0 0  10 2 }
+rectangle(gradient=[gray(0.8), gray(0.3)], gradient_angle=90) { 0 3  10 5 }
+```
+
+> ⚠️ **El ángulo es el de la PÁGINA, no el de la figura.** Un rectángulo girado 30° con
+> `gradient_angle=0` sigue degradando de izquierda a derecha en el papel. Es la misma regla que
+> `hatch_angle`, y no un descuido: son las dos maneras de rellenar un área con algo que no es un
+> color plano, y las dos se orientan respecto de la hoja.
+
+`gradient` y `hatch` son **la misma ranura**, así que un `gradient=` por-primitiva pisa un `hatch`
+ambiente y se restaura al salir, como cualquier atributo. Darlos **juntos en la misma primitiva**
+es error: ahí no hay orden que interpretar. Con `color=` al lado, el degradado se contornea, igual
+que un `fill=`. Ver [`examples/espectro.mg`](../examples/espectro.mg).
 
 **Tramas:** `hatch` acepta un **ángulo libre** en grados o un estilo nombrado
 (`"hatch"` 45°, `"hatchback"` 135°, `"crosshatch"` ambas). `hatch_gap` es la separación en

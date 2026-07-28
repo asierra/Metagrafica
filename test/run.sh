@@ -132,7 +132,7 @@ FORMATS="eps svg pdf"
 # extent vertical medido), `include` de una biblioteca (lib/satellite.mg), `rectangle`
 # centro+tamaño y el DEFAULT de marcador-hereda-color-de-línea (flechas roja/verde sin
 # marker_color). Entró al golden el 2026-07-24, cuando `\frac` quedó completo.
-EXAMPLES="curvas3 fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita line_patterns markers-demo orbita_polar path_sample primitives quickstart rpstest sines symbols texto tiro_parabolico turning_points"
+EXAMPLES="curvas3 espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita line_patterns markers-demo orbita_polar path_sample primitives quickstart rpstest sines symbols texto tiro_parabolico turning_points"
 
 export LC_ALL=C
 
@@ -256,6 +256,7 @@ for example in $EXAMPLES; do
     # Capa 3 (paridad entre backends): acumuladores por ejemplo. Se llenan al vuelo
     # dentro del loop de formatos (antes de borrar el tmpdir) y se comparan al salir.
     c3_text_eps=""; c3_text_svg=""; c3_text_pdf=""; c3_filled_lines=0
+    c3_grad_eps=0; c3_grad_svg=0; c3_grad_pdf=0
     # La invariante de GEOMETRÍA necesita las TRES salidas a la vez, así que se
     # copian aquí (el tmpdir de cada formato muere al final de su vuelta).
     c3dir="$(mktemp -d)"
@@ -306,15 +307,21 @@ for example in $EXAMPLES; do
         # Sin herramientas externas: el PDF de libharu no está comprimido, así que
         # los operadores (Tj de texto) son grepables directo, igual que EPS/SVG.
         case "$fmt" in
-            eps) c3_text_eps=$(grep -cE '\)[[:space:]]*(show|cshow|rshow|ashow)$' "$outfile") ;;
+            eps) c3_text_eps=$(grep -cE '\)[[:space:]]*(show|cshow|rshow|ashow)$' "$outfile")
+                 c3_grad_eps=$(grep -ao 'shfill' "$outfile" | wc -l | tr -d ' ') ;;
             # `| wc -l` porque grep -c cuenta LÍNEAS y los tspans de un <text> van
             # todos en la misma. ⚠️ El `tr -d ' '` no sobra: el wc de BSD (macOS)
             # rellena con espacios a la izquierda —«      18»— y el de GNU no, así
             # que la comparación de cadenas de abajo daba 24 C3FAIL falsos en el
             # primer CI que corrió en un Mac, con los tres conteos IGUALES.
             svg) c3_text_svg=$(grep -ao '<tspan' "$outfile" | wc -l | tr -d ' ')
-                 c3_filled_lines=$(grep -oE '<path d="M [-0-9.e ]+ L [-0-9.e ]+ " fill="#[0-9a-fA-F]{6}"[^>]*>' "$outfile" | grep -c 'stroke="none"') ;;
-            pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile") ;;
+                 c3_filled_lines=$(grep -oE '<path d="M [-0-9.e ]+ L [-0-9.e ]+ " fill="#[0-9a-fA-F]{6}"[^>]*>' "$outfile" | grep -c 'stroke="none"')
+                 # USOS, no definiciones: dos formas con el mismo degradado y la
+                 # misma caja comparten un <linearGradient>, así que contar defs
+                 # daría 1 donde EPS emite 2 shfill.
+                 c3_grad_svg=$(grep -ao 'fill="url(#mggrad' "$outfile" | wc -l | tr -d ' ') ;;
+            pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile")
+                 c3_grad_pdf=$(grep -aoE '/Sh[0-9]+ sh' "$outfile" | wc -l | tr -d ' ') ;;
         esac
         cp "$outfile" "$c3dir/$base"
 
@@ -331,6 +338,16 @@ for example in $EXAMPLES; do
         fi
         if [ "$c3_filled_lines" != "0" ]; then
             echo "C3FAIL $example (SVG: $c3_filled_lines línea(s) rellena(s) sin trazo → stroke perdido)"
+            c3fail_count=$((c3fail_count + 1))
+        fi
+        # Invariante (d): RELLENOS DEGRADADOS (§4.14). Cada área con gradiente deja
+        # exactamente una operación de sombreado en cada formato —`shfill` en EPS,
+        # `fill="url(#mggrad…)"` en SVG, `/ShN sh` en PDF—, y los tres conteos deben
+        # coincidir. Es la clase de cosa que un backend omite EN SILENCIO: si SVG
+        # dibuja el degradado y PDF sale plano, cada salida es byte-estable y el
+        # golden bendice las dos. Como (a) y (b), compara backend contra backend.
+        if [ "$c3_grad_eps" != "$c3_grad_svg" ] || [ "$c3_grad_eps" != "$c3_grad_pdf" ]; then
+            echo "C3FAIL $example (degradados EPS/SVG/PDF = $c3_grad_eps/$c3_grad_svg/$c3_grad_pdf: un backend omite el relleno)"
             c3fail_count=$((c3fail_count + 1))
         fi
         # Invariante (c): GEOMETRÍA de arcos y elipses igual en los tres backends.

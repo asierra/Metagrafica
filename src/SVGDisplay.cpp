@@ -2,6 +2,7 @@
 #include "markers.h"
 #include "text_parser.h"
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 
@@ -25,7 +26,11 @@ std::string SVGDisplay::getStyleAttributes() {
     // Relleno: solo si el estado de dibujo tiene fill activo (igual que
     // EPSDisplay/PDFDisplay, que consultan dspstate.fill antes de rellenar).
     if (dspstate.fill) {
-        if (!dspstate.hatch.empty()) {
+        if (!dspstate.gradient.empty()) {
+            // §4.14: el degradado es un relleno, igual que el tramado — se
+            // referencia un <linearGradient> en vez de un color plano.
+            style << "fill=\"url(#" << ensureGradient() << ")\" ";
+        } else if (!dspstate.hatch.empty()) {
             // Relleno con patrón de tramado: se referencia un <pattern> nativo
             // (emitido perezosamente en <defs>) en vez de un color plano.
             std::string id = ensureHatchPattern(dspstate.hatch);
@@ -156,6 +161,41 @@ std::string SVGDisplay::ensureHatchPattern(const FillPattern &fp) {
             "<line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"%f\" stroke=\"#%s\" stroke-width=\"%f\"/>"
             "</pattern></defs>\n",
             id.c_str(), gap, gap, base, gap, color.c_str(), sw, gap, color.c_str(), sw);
+    return id;
+}
+
+// §4.14: <linearGradient> en <defs>, con el eje en coordenadas de usuario.
+//
+// `gradientUnits="userSpaceOnUse"` y NO el `objectBoundingBox` por default: ver el
+// comentario de Gradient en primitives.h. objectBoundingBox mapea la caja de la
+// forma al cuadrado unidad, así que en una caja 4:1 un gradiente «a 45°» saldría a
+// ~76° en la página — y este backend discreparía de EPS y PDF, que no tienen ese
+// modo y calculan el eje sobre el bbox de dispositivo. Con userSpaceOnUse los tres
+// consumen el MISMO eje, el de Display::gradientAxis.
+//
+// El id lleva las paradas y el eje, así que dos formas con el mismo degradado y la
+// misma caja comparten def, y dos con cajas distintas (que necesitan ejes distintos)
+// no se pisan. Mismo criterio de dedup que ensureHatchPattern.
+std::string SVGDisplay::ensureGradient() {
+    double x0, y0, x1, y1;
+    gradientAxis(x0, y0, x1, y1);
+
+    std::ostringstream idss;
+    idss << "mggrad";
+    for (const GradientStop &st : dspstate.gradient.stops)
+        idss << "_" << std::hex << st.color << std::dec;
+    idss << "_" << (long)std::lround(x0 * 100) << "_" << (long)std::lround(y0 * 100)
+         << "_" << (long)std::lround(x1 * 100) << "_" << (long)std::lround(y1 * 100);
+    std::string id = idss.str();
+    if (emitted_patterns.count(id)) return id;
+    emitted_patterns.insert(id);
+
+    fprintf(file, "<defs><linearGradient id=\"%s\" gradientUnits=\"userSpaceOnUse\" "
+                  "x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\">",
+            id.c_str(), x0, y0, x1, y1);
+    for (const GradientStop &st : dspstate.gradient.stops)
+        fprintf(file, "<stop offset=\"%g\" stop-color=\"#%06X\"/>", st.at, st.color);
+    fprintf(file, "</linearGradient></defs>\n");
     return id;
 }
 
@@ -352,8 +392,14 @@ void SVGDisplay::moveto_nopath(double x, double y) {
     cur_x = x; cur_y = y;
 }
 
+void SVGDisplay::notePathBox(double x0, double y0, double x1, double y1) {
+    if (path_builder.tellp() == 0) set_limits(x0, y0, x1, y1);
+    else                           adjust_limits(x0, y0, x1, y1);
+}
+
 void SVGDisplay::moveto(double x, double y) {
     inkPoint(x, y);
+    notePathBox(x, y, x, y);
     cur_x = x; cur_y = y;
     path_builder << "M " << x << " " << y << " ";
 }
@@ -370,6 +416,7 @@ void SVGDisplay::rmoveto(double dx, double dy) {
 
 void SVGDisplay::lineto(double x, double y) {
     inkPoint(x, y);
+    notePathBox(x, y, x, y);
     cur_x = x; cur_y = y;
     path_builder << "L " << x << " " << y << " ";
 }
@@ -383,6 +430,10 @@ void SVGDisplay::curveto(double x1, double y1, double x2, double y2, double x3, 
     inkPoint(x1, y1);
     inkPoint(x2, y2);
     inkPoint(x3, y3);
+    // Los tres controles ACOTAN la cúbica (casco convexo), así que su caja
+    // contiene a la curva. No es la caja ajustada, y no hace falta que lo sea.
+    notePathBox(std::min(std::min(x1, x2), x3), std::min(std::min(y1, y2), y3),
+                std::max(std::max(x1, x2), x3), std::max(std::max(y1, y2), y3));
     path_builder << "C " << x1 << " " << y1 << ", "
                  << x2 << " " << y2 << ", "
                  << x3 << " " << y3 << " ";
@@ -399,6 +450,8 @@ void SVGDisplay::arc(double x, double y, double w, double h, double startAng, do
     mt.ellipse_frame(x, y, w, h, Cx, Cy, ux, uy, vx, vy);
     noteInk(Cx - hypot(ux, vx), Cy - hypot(uy, vy));
     noteInk(Cx + hypot(ux, vx), Cy + hypot(uy, vy));
+    notePathBox(Cx - hypot(ux, vx), Cy - hypot(uy, vy),
+                Cx + hypot(ux, vx), Cy + hypot(uy, vy));
     double rx, ry, rot_deg;
     Matrix::ellipse_axes(ux, uy, vx, vy, rx, ry, rot_deg);
 

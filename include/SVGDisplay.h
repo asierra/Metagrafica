@@ -89,6 +89,20 @@ class SVGDisplay: public Display {
   // Garantiza que exista un <pattern> de tramado para este patrón/color (lo
   // emite en un <defs> la primera vez) y devuelve su id. "" si fp está vacío.
   std::string ensureHatchPattern(const FillPattern &fp);
+
+  // §4.14: emite (una vez por combinación paradas+eje) un <linearGradient> y
+  // devuelve su id. El eje va en `userSpaceOnUse` con coordenadas calculadas, NO
+  // en el `objectBoundingBox` por default de SVG: ver el comentario de Gradient
+  // en primitives.h — objectBoundingBox sesga el ángulo en cajas no cuadradas y
+  // haría que este backend discrepara de EPS y PDF.
+  std::string ensureGradient();
+
+  // bbox del path EN CURSO, en dispositivo. EPS y PDF lo llevan desde siempre
+  // (lo pide el barrido del tramado); SVG no lo necesitaba porque su <pattern>
+  // teja y recorta solo, pero el gradiente sí necesita el marco de la forma. La
+  // regla —"si el builder está vacío, este punto ARRANCA la caja"— no depende
+  // del bookkeeping de openpath, que aquí no se lleva igual que allá.
+  void notePathBox(double x0, double y0, double x1, double y1);
   // Emite (una sola vez) el @font-face con Latin Modern Math embebida en base64,
   // para que el griego matemático salga en Computer Modern en cualquier visor
   // sin recursos externos. Se llama al dibujar el primer run griego.

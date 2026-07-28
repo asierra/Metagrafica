@@ -167,7 +167,7 @@ void PDFDisplay::prepareDraw() {
    actual, así que el recorte debe quedar contenido entre GSave/GRestore que
    envuelven toda la construcción del path. */
 void PDFDisplay::ensurePatternGSave() {
-  if (dspstate.fill && !dspstate.hatch.empty() && !clip_pending) {
+  if (dspstate.fill && (!dspstate.hatch.empty() || !dspstate.gradient.empty()) && !clip_pending) {
     HPDF_Page_GSave(page);
     clip_pending = true;
   }
@@ -216,6 +216,95 @@ void PDFDisplay::hatchCurrentPath() {
     }
   }
   HPDF_Page_Stroke(page);
+}
+
+/* §4.14: recorta al path actual y lo rellena con el degradado vigente.
+
+   ⚠️ POR MALLA DE TRIÁNGULOS, y no por el sombreado axial del estándar, porque
+   libharu SOLO implementa el tipo 4 (HPDF_SHADING_FREE_FORM_TRIANGLE_MESH; su
+   propio header dice «the only defined option»). No expone los tipos 2 (axial)
+   ni 3 (radial). Para un degradado LINEAL da igual el resultado —un tramo entre
+   dos paradas es exactamente un cuadrilátero con interpolación de Gouraud, que
+   es lineal en el plano—, y por eso este backend no pierde nada. Es la razón
+   técnica, no estética, por la que el degradado RADIAL está diferido: ese sí
+   habría que aproximarlo con un abanico de triángulos.
+
+   Cada tramo entre paradas consecutivas es un cuadrilátero (dos triángulos) que
+   cruza el eje de lado a lado; el recorte lo limita a la forma real. Los dos
+   cuadriláteros PLANOS de los extremos reproducen el `/Extend [true true]` del
+   EPS, que el tipo 4 no tiene: sin ellos, un redondeo en el borde dejaría una
+   franja sin pintar. */
+void PDFDisplay::gradientCurrentPath() {
+  const std::vector<GradientStop> &st = dspstate.gradient.stops;
+  if (st.size() < 2) return;
+
+  HPDF_Page_ClosePath(page);
+  HPDF_Page_Clip(page);
+  if (dspstate.outlinefill)
+    HPDF_Page_Stroke(page);   // W S: contorno (color de línea) + recorte
+  else
+    HPDF_Page_EndPath(page);  // W n: solo recorte
+
+  double x0, y0, x1, y1;
+  gradientAxis(x0, y0, x1, y1);
+  const double ax = x1 - x0, ay = y1 - y0;
+  const double len = sqrt(ax * ax + ay * ay);
+  if (len <= 0) return;
+  const double ux = ax / len, uy = ay / len;   // a lo largo del eje
+  // Semiancho perpendicular: la diagonal del bbox cubre la forma a cualquier
+  // ángulo con holgura, y el recorte se encarga del resto.
+  const double ddx = xmax - xmin, ddy = ymax - ymin;
+  const double H = sqrt(ddx * ddx + ddy * ddy) + 1.0;
+  const double px = -uy * H, py = ux * H;
+
+  struct Vtx { double x, y; int color; };
+  std::vector<Vtx> vs;
+  // Un cuadrilátero = dos triángulos independientes (bandera 0 en cada vértice:
+  // el tipo 4 arranca triángulo nuevo con cada vértice sin conexión).
+  auto quad = [&](double ta, int ca, double tb, int cb) {
+    const double Ax = x0 + ax * ta, Ay = y0 + ay * ta;
+    const double Bx = x0 + ax * tb, By = y0 + ay * tb;
+    vs.push_back({Ax - px, Ay - py, ca});
+    vs.push_back({Ax + px, Ay + py, ca});
+    vs.push_back({Bx + px, By + py, cb});
+    vs.push_back({Ax - px, Ay - py, ca});
+    vs.push_back({Bx + px, By + py, cb});
+    vs.push_back({Bx - px, By - py, cb});
+  };
+
+  const double ext = (H + len) / len;             // cuánto sobresalir, en unidades de t
+  quad(-ext, st.front().color, 0.0, st.front().color);          // /Extend inicial
+  for (size_t i = 0; i + 1 < st.size(); i++)
+    quad(st[i].at, st[i].color, st[i + 1].at, st[i + 1].color);
+  quad(1.0, st.back().color, 1.0 + ext, st.back().color);       // /Extend final
+
+  // ⚠️ El bbox del sombreado se calcula sobre los VÉRTICES YA CONSTRUIDOS, no
+  // sobre el bbox del path. El tipo 4 codifica cada coordenada como entero de 32
+  // bits contra el rango de /Decode, y una coordenada FUERA de ese rango no se
+  // recorta: ENVUELVE. Los cuadriláteros de /Extend, que por definición se salen
+  // de la forma, reaparecían por el otro lado encima de la figura y la pintaban
+  // plana del color del extremo — el degradado entero se veía de un solo color.
+  double bx0 = vs[0].x, bx1 = vs[0].x, by0 = vs[0].y, by1 = vs[0].y;
+  for (const Vtx &v : vs) {
+    if (v.x < bx0) bx0 = v.x;
+    if (v.x > bx1) bx1 = v.x;
+    if (v.y < by0) by0 = v.y;
+    if (v.y > by1) by1 = v.y;
+  }
+
+  HPDF_Shading sh = HPDF_Shading_New(pdf, HPDF_SHADING_FREE_FORM_TRIANGLE_MESH,
+                                     HPDF_CS_DEVICE_RGB,
+                                     (HPDF_REAL)bx0, (HPDF_REAL)bx1,
+                                     (HPDF_REAL)by0, (HPDF_REAL)by1);
+  if (!sh) return;
+  for (const Vtx &v : vs)
+    HPDF_Shading_AddVertexRGB(sh, HPDF_FREE_FORM_TRI_MESH_EDGEFLAG_NO_CONNECTION,
+                              (HPDF_REAL)v.x, (HPDF_REAL)v.y,
+                              (HPDF_UINT8)((v.color >> 16) & 0xff),
+                              (HPDF_UINT8)((v.color >> 8) & 0xff),
+                              (HPDF_UINT8)(v.color & 0xff));
+
+  HPDF_Page_SetShading(page, sh);
 }
 
 /* ------------------------------------------------------------------ */
@@ -344,6 +433,11 @@ void PDFDisplay::stroke() {
   // En PDF fill y stroke son colores independientes: se usa FillStroke
   // en lugar del truco gsave/fill/grestore del driver EPS.
   if (dspstate.fill) {
+    if (!dspstate.gradient.empty()) {
+      gradientCurrentPath();
+      if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
+      return;
+    }
     if (!dspstate.hatch.empty()) {
       hatchCurrentPath();
       if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
@@ -420,7 +514,10 @@ void PDFDisplay::rect(double x1, double y1, double x2, double y2) {
   HPDF_Page_ClosePath(page);
   // En un path abierto solo se acumula; el cierre y relleno ocurren en CLPT.
   if (dspstate.openpath) return;
-  if (dspstate.fill && !dspstate.hatch.empty()) {
+  if (dspstate.fill && !dspstate.gradient.empty()) {
+    gradientCurrentPath();
+    if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
+  } else if (dspstate.fill && !dspstate.hatch.empty()) {
     hatchCurrentPath();
     if (clip_pending) { HPDF_Page_GRestore(page); clip_pending = false; }
   } else if (dspstate.fill && dspstate.outlinefill)

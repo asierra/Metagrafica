@@ -79,6 +79,7 @@ private:
   // recorta al path actual (operador W) y dibuja las líneas dentro del bbox.
   void ensurePatternGSave();
   void hatchCurrentPath();
+  void gradientCurrentPath();
   bool clip_pending = false;
   // Path abierto (compound §9.4) que aún NO tiene punto: setOpenPath deja la página
   // en PATH_OBJECT sin cursor, así que el PRIMER trazo debe abrir con MoveTo aunque

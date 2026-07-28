@@ -57,6 +57,9 @@ class EPSDisplay: public Display {
 
   // EPSDisplay-specific
   void useFillPattern();
+  // §4.14: rellena el path corriente con el degradado vigente (shfill tipo 2).
+  void useGradient();
+  void emitShadingFunction();
   void setColor(int lc);
   void setGray(double fg);
 

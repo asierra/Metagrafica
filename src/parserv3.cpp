@@ -488,6 +488,43 @@ static void emitHatch(const Value &v, double gap, GraphicsItemList &out,
   out.push_back(std::make_unique<GraphicsState>(GS_FILL));
 }
 
+// §4.14: construye el Gradient a partir del valor de `gradient` — una LISTA de
+// colores, en la notación que ya entiende `fill` (nombre CSS, "#rrggbb",
+// gray(g)). Las paradas se reparten POR IGUAL a lo largo del eje, que cubre el
+// caso corriente sin sintaxis extra; las posiciones arbitrarias
+// (`gradient_stops=`) están diferidas hasta que una figura las pida, y por eso
+// GradientStop ya lleva su `at` — así el día que lleguen no se toca ni un backend.
+//
+// Una lista de UNA parada no es un gradiente: es un relleno plano escrito raro, y
+// se rechaza en vez de aceptarse en silencio (mismo criterio que el resto de §7.5).
+static Gradient buildGradient(const Value &v, double angle) {
+  Gradient gr;
+  gr.angle = angle;
+  if (v.type != Value::LIST) {
+    evalError("gradient espera una LISTA de colores, p.ej. gradient=[\"orange\", \"black\"]");
+    return gr;
+  }
+  if (v.items.size() < 2) {
+    evalError("gradient necesita al menos DOS colores (con uno, es fill=)");
+    return gr;
+  }
+  const size_t n = v.items.size();
+  for (size_t i = 0; i < n; i++)
+    gr.stops.push_back(GradientStop{colorFromValue(v.items[i]), (double)i / (double)(n - 1)});
+  return gr;
+}
+
+// §4.14: emite el GradientAttr + activa el relleno. Gemelo de emitHatch, y por la
+// misma razón: compartido por el atributo por-primitiva y la sentencia de estado,
+// para que los dos registros se comporten idéntico.
+static void emitGradient(const Value &v, double angle, GraphicsItemList &out) {
+  Gradient gr = buildGradient(v, angle);
+  if (gr.empty()) return;
+  g_flags.using_gradient = true;
+  out.push_back(std::make_unique<GradientAttr>(std::move(gr)));
+  out.push_back(std::make_unique<GraphicsState>(GS_FILL));
+}
+
 // Atributos nombrados que una primitiva reconoce (§7.5 + los propios de cada
 // forma). Lo que no esté aquí se DESCARTABA EN SILENCIO: `marker(rotate=90)`,
 // `dot(tamano=5)`, `polyline(colour="red")` compilaban sin hacer nada y sin avisar,
@@ -501,6 +538,7 @@ static bool isKnownPrimAttr(const std::string &k) {
   static const char *ok[] = {
     // estilo (emitPrimStyle / emitStyleAttr)
     "color", "fill", "line_width", "dash", "hatch", "hatch_gap", "hatch_angle",
+    "gradient", "gradient_angle",
     // forma
     "closed",                                   // polyline/polygon §4.1
     "w", "h", "at",                             // rectangle(w,h,at) §4.4 (centro+tamaño)
@@ -600,6 +638,12 @@ static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
     auto it = named.find(k);
     if (it != named.end()) emitStyleAttr(k, it->second->eval(s), attrs);
   }
+  // Tramado y gradiente son la misma ranura (cómo se rellena un área que no es de
+  // un color plano). Entre registros gana el último —lo resuelve Display::setHatch/
+  // setGradient—, pero en la MISMA primitiva no hay orden que interpretar: es una
+  // contradicción, y descartar una en silencio es justo el destino que §7.5 evita.
+  if (named.count("hatch") && named.count("gradient"))
+    evalError("hatch y gradient son rellenos incompatibles en la misma primitiva");
   if (named.count("hatch")) {   // §4.11: hatch=ángulo|"estilo" [+ hatch_gap/hatch_angle]
     Value hv = named.at("hatch")->eval(s);
     double gap = named.count("hatch_gap") ? named.at("hatch_gap")->eval(s).num : 4.0;
@@ -607,8 +651,15 @@ static void emitPrimStyle(const std::map<std::string, ExprPtr> &named, Scope &s,
     double ang = angGiven ? named.at("hatch_angle")->eval(s).num : 0.0;
     emitHatch(hv, gap, attrs, ang, angGiven);
   }
-  // color= junto a un relleno (fill= o hatch) = contornear (§4).
-  if (named.count("color") && (named.count("fill") || named.count("hatch")))
+  if (named.count("gradient")) {   // §4.14: gradient=[colores] [+ gradient_angle]
+    Value gv = named.at("gradient")->eval(s);
+    double ang = named.count("gradient_angle") ? named.at("gradient_angle")->eval(s).num : 0.0;
+    emitGradient(gv, ang, attrs);
+  }
+  // color= junto a un relleno (fill=, hatch o gradient) = contornear (§4). El
+  // gradiente entra por la misma puerta: la banda del espectro lleva borde negro.
+  if (named.count("color") &&
+      (named.count("fill") || named.count("hatch") || named.count("gradient")))
     attrs.push_back(std::make_unique<GraphicsState>(GS_OUTLINEFILL));
 }
 
@@ -728,6 +779,14 @@ struct StateStmt : Stmt {
       Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
       double gap = (args.size() > 1 && !args[1].isStr) ? args[1].num->eval(s).num : 4.0;
       emitHatch(v, gap, out);
+      return;
+    }
+    if (name == "gradient") {       // §4.14: gradient [colores] [ángulo] (posicionales)
+      // El Value COMPLETO, no su .num: el argumento es una lista, y colapsarlo a
+      // número —como hacen las demás sentencias de estado— la vaciaría.
+      Value v = args[0].isStr ? Value(args[0].str) : args[0].num->eval(s);
+      double ang = (args.size() > 1 && !args[1].isStr) ? args[1].num->eval(s).num : 0.0;
+      emitGradient(v, ang, out);
       return;
     }
     Value v = args[0].isStr ? Value(args[0].str) : Value(args[0].num->eval(s).num);
@@ -2013,7 +2072,7 @@ struct PrimStmt : Stmt {
       else if (name == "ellipse") { auto p = std::make_unique<Arc>(); double rx, ry; resolveRadii(s, false, rx, ry); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(0, 360); p->setPath(path); item = std::move(p); }
       else if (name == "arc") { auto p = std::make_unique<Arc>(); double rx, ry; resolveRadii(s, false, rx, ry); if (rx != ry) g_flags.using_ellipse = true; p->setRadius(rx, ry); p->setAngles(namedOr(s, "from", 0), namedOr(s, "to", 360)); p->setPath(path); item = std::move(p); }
       else if (name == "polybar") {
-        // §4.12: cada coord es el centro superior de una barra; Polybar::draw la
+        // §4.14: cada coord es el centro superior de una barra; Polybar::draw la
         // expande a un rect() desde la base común 0. `width` va en unidades de la
         // ventana, es miembro aparte (no del path) → un eje log lo deja mal.
         auto p = std::make_unique<Polybar>();
@@ -3989,8 +4048,9 @@ static StmtPtr parseStatement(Lexer &lx) {
       std::exit(1);
     }
     SArg a; parseArg(a); st->args.push_back(std::move(a));           // 1er arg (obligatorio)
-    if (name == "hatch" && (lx.peek().type == T_NUMBER || lx.peek().type == T_MINUS)) {
-      SArg g; parseArg(g); st->args.push_back(std::move(g));         // hatch: paso opcional
+    if ((name == "hatch" || name == "gradient") &&
+        (lx.peek().type == T_NUMBER || lx.peek().type == T_MINUS)) {
+      SArg g; parseArg(g); st->args.push_back(std::move(g));         // paso / ángulo opcional
     }
   }
   return st;

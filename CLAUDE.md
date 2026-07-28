@@ -16,7 +16,7 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción: ok=72 … trfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción: ok=75 … trfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg + la galería es/en (PUBLICADO; capture NO los toca)
 
@@ -24,9 +24,9 @@ bash test/run_translator.sh check    # traductor V1→V3 (tools/mg1to2.py): ok=1
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
-de `examples/` (24 `.mg` × EPS/SVG/**PDF** = 72 goldens) y compara contra la red golden
+de `examples/` (25 `.mg` × EPS/SVG/**PDF** = 75 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=72 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=75 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -59,7 +59,11 @@ re-captúralo** si el cambio era intencional.
   de área nula invisible (caza ejes sin trazo por fuga de fill, Lección 6); **(c)** la
   **geometría** de arcos y elipses coincide en los tres (`tools/arcparity.py`, 2026-07-27:
   muestrea cada arco del EPS y exige que SVG y PDF contengan esa curva, más el conteo de
-  comandos `A`; se omite con aviso si no hay `python3`). Corre también en
+  comandos `A`; se omite con aviso si no hay `python3`); **(d)** nº de **rellenos degradados**
+  `EPS(shfill) == SVG(url(#mggrad…)) == PDF(/ShN sh)` (nueva 2026-07-28, §4.14: un degradado es
+  justo lo que un backend puede omitir en silencio — si SVG lo pinta y PDF sale plano, cada
+  salida es byte-estable y el golden bendice las dos; verificada enmudeciendo el SVG, que da
+  `c3fail=1` mientras `capture` bendice sin protestar). Corre también en
   `capture`. Es la única capa que caza un bug preexistente; las otras dos lo bendecen.
 
   ⚠️ **(c) es la única invariante SIN ESCAPATORIA POR BENDICIÓN**, y por eso existe: las demás
@@ -117,7 +121,18 @@ Las compuertas se verificaron reintroduciendo a propósito los bugs que deben ca
 dando `ok=57` — que es justo la prueba de que el golden no puede verlo; la de la galería,
 cambiando el título de `sines.mg` sin regenerar: `galfail=1` con las otras cinco en cero).
 
-Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexv3.cpp` from `src/lexer.l`), `pandoc` (man page). Do not edit `src/lexv3.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu is vendored in `third_party/` for PDF.
+Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexv3.cpp` from `src/lexer.l`), `pandoc` (man page). Do not edit `src/lexv3.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu (2.4.6) is vendored in `third_party/` for PDF.
+
+⚠️ **La copia vendorizada llegó INCOMPLETA y se completó el 2026-07-28.** Le faltaba
+`src/hpdf_shading.c` —el que define `HPDF_Shading_New`/`HPDF_Shading_AddVertexRGB`— aunque
+`hpdf.h` las declara y la mitad consumidora (`HPDF_Page_SetShading`, `HPDF_Page_GetShadingName`,
+el dict `/Shading` de `hpdf_pages.c`) sí estaba compilada: el árbol era incoherente consigo
+mismo y solo se notó al necesitar degradados. Se restauró el archivo de upstream v2.4.6 tal
+cual (misma licencia ZLIB, sin editar una línea; el `wildcard` del Makefile lo toma solo). **No
+es un parche a libharu, y la política de no parchearla sigue en pie:** si algo más falta, se
+restaura de upstream y se anota aquí. Lo que libharu de verdad NO implementa es el sombreado
+axial (tipo 2) ni el radial (tipo 3) — solo la malla de triángulos (tipo 4), que para un
+degradado lineal basta y para uno radial no (ver `plan_gradientes.md`).
 
 **Windows (2026-07-27):** `make CROSS=x86_64-w64-mingw32` → `bin/mg.exe`, enlazado estático,
 cruzado desde Linux con MinGW-w64 (necesita `mingw-w64` + `libz-mingw-w64-dev`). El build
@@ -146,9 +161,9 @@ Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness i
 
 The example corpus is split for the V1→V3 transition (see `examples/v1/README.md`):
 - **`examples/v1/`** — frozen V1-syntax corpus (two-letter commands). Serves as translator fixtures + provenance. `examples/v1/reference/*.svg` are the committed **migration oracle**: renders produced while the compiler still parses V1 (SVG chosen for size; SVG/EPS/PDF match). These SVGs are force-included past the `*.svg` gitignore.
-- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (24 `.mg`: curvas3, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, fractal_tree, franck_condon, gravitacion_orbita, line_patterns, markers-demo, orbita_polar, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **`gravitacion_orbita.mg` ENTRÓ al golden el 2026-07-24** (estuvo fuera a propósito hasta que `\frac` quedó completo): es la única figura que ejercita **`\frac`** (fracción math 2-D, inline y con extent vertical medido), **`include` de una biblioteca** (`include "../lib/satellite.mg"`, §15), **`rectangle(w,h,at)`**, la búsqueda `include` local→lib y el **default de marcador-hereda-color-de-línea** (flechas roja/verde sin `marker_color`). **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **`orbita_polar.mg` ENTRÓ el 2026-07-27**, al cerrarse la oclusión de la mitad trasera de la órbita: es el único que ejercita **`arc(rx, ry)`**, **`marker_at`** (marcadores en ángulos paramétricos) y **`place(..., rx/ry, at=)`** (struct posada sobre un arco elíptico) — sin él esas tres se quedan sin pruebas —, y el primero con arcos elípticos **girados** en el corpus, que es justo lo que vigila la invariante (c) de la Capa 3. **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+- **`examples/`** (raíz) — corpus V3 **compilable** con `bin/mg` (25 `.mg`: curvas3, espectro, fig1, fig2-1, fig2-5, fig4-1, fig4-4, fig6-4, fig_polybar, fill_styles, fractal_tree, franck_condon, gravitacion_orbita, line_patterns, markers-demo, orbita_polar, path_sample, primitives, quickstart, rpstest, sines, symbols, texto, tiro_parabolico, turning_points). El corpus es una **lista explícita** en `test/run.sh`, no un glob: un `.mg` nuevo en la carpeta no entra solo. **`gravitacion_orbita.mg` ENTRÓ al golden el 2026-07-24** (estuvo fuera a propósito hasta que `\frac` quedó completo): es la única figura que ejercita **`\frac`** (fracción math 2-D, inline y con extent vertical medido), **`include` de una biblioteca** (`include "../lib/satellite.mg"`, §15), **`rectangle(w,h,at)`**, la búsqueda `include` local→lib y el **default de marcador-hereda-color-de-línea** (flechas roja/verde sin `marker_color`). **Nomenclatura (2026-07-20):** los nombres siguen a la **edición de Cambridge 2025** (descargable gratis → la referencia más fácil de verificar por un lector), no a los nombres de archivo de V1 ni a ediciones previas. Por eso el 2026-07-20 `fig4-5`→**`fig4-4`** (Fig. 4.4, p. 78): **va en DOS FASES o colisiona**, y la guardia es que el renombre sea PURO (los goldens de `fig4-4` salieron byte-idénticos a los del antiguo `fig4-5`). **Y al revés:** un ejemplo que deja de reproducir su figura publicada pierde el número y toma nombre de la física (`turning_points`, como `franck_condon`) — el número de figura es una promesa de fidelidad. Se movió aquí desde `examples/v3/` el 2026-07-09; sus salidas **ya no están atadas** al oráculo V1 (dejan de ser traducción 1:1 y pasan a ejercitar/mostrar la gramática V3). Es el corpus de la red golden (`test/run.sh`, reactivada 2026-07-11). **`orbita_polar.mg` ENTRÓ el 2026-07-27**, al cerrarse la oclusión de la mitad trasera de la órbita: es el único que ejercita **`arc(rx, ry)`**, **`marker_at`** (marcadores en ángulos paramétricos) y **`place(..., rx/ry, at=)`** (struct posada sobre un arco elíptico) — sin él esas tres se quedan sin pruebas —, y el primero con arcos elípticos **girados** en el corpus, que es justo lo que vigila la invariante (c) de la Capa 3. **`espectro.mg` ENTRÓ el 2026-07-28** con los degradados (§4.14): es el único con **relleno degradado**, o sea el único sujeto de la invariante (d) de la Capa 3 — si sale del corpus, esa compuerta se queda sin nada que mirar. **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
-**Encabezado de un ejemplo — convención (2026-07-23).** Los 24 `.mg` del golden de `examples/` abren
+**Encabezado de un ejemplo — convención (2026-07-23).** Los 25 `.mg` del golden de `examples/` abren
 con: **primera línea = título**, párrafo siguiente = **descripción** (2-5 líneas de qué es y
 qué enseña del lenguaje), y a partir de `% NOTAS ———` todo lo que le sirve a **quien
 mantiene** (procedencia bibliográfica, mediciones, verificadores, avisos de cobertura

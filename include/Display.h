@@ -19,6 +19,8 @@ Antecedents: Version 0.0 1988 Pascal and Assembler, first published paper.
 
 #include <stdio.h>
 
+#include <cmath>
+
 #include <stack>
 #include <string>
 #include <vector>
@@ -67,6 +69,9 @@ struct DisplayState {
   // §4.11: familias de tramado activas (una o más HatchLine); vacío = relleno
   // sólido. Reemplaza el índice entero FPATRN (ver Display::setHatch).
   FillPattern hatch;
+  // §4.14: paradas del degradado vigente; vacío = relleno sólido o tramado.
+  // Excluyente con `hatch` (ver Display::setHatch/setGradient).
+  Gradient gradient;
   bool outlinefill = false;
   double fillgray = 0.0;
   int fillcolor = 0;
@@ -228,7 +233,14 @@ public:
   // §4.11: fija el patrón de tramado activo (una o más familias), ya construido
   // por el parser (HatchAttr). Reemplaza el setFillPattern(int) por índice: el
   // patrón viaja completo, sin pasar por una tabla restringida.
-  void setHatch(const FillPattern &fp) { dspstate.hatch = fp; }
+  // Tramado y gradiente son LA MISMA ranura conceptual —cómo se rellena un área
+  // cuando no es de un color plano—, así que fijar uno apaga el otro: gana el
+  // último, que es la regla de los registros de estilo (§7.5, un atributo
+  // por-primitiva pisa la sentencia de estado ambiente y se restaura al salir).
+  // Darlos JUNTOS en la misma primitiva sí es error, y lo caza el parser: ahí no
+  // hay orden que interpretar, solo una contradicción.
+  void setHatch(const FillPattern &fp) { dspstate.hatch = fp; dspstate.gradient = Gradient(); }
+  void setGradient(const Gradient &g) { dspstate.gradient = g; dspstate.hatch.clear(); }
 
 
   void setFillGray(double fg) {
@@ -377,6 +389,25 @@ protected:
     if (x2 > xmax) xmax = x2;
     if (y1 < ymin) ymin = y1;
     if (y2 > ymax) ymax = y2;
+  }
+
+  /// Eje del gradiente vigente (§4.14) para el path EN CURSO, en coordenadas de
+  /// dispositivo: los dos extremos del segmento a lo largo del cual van las
+  /// paradas. Común a los tres backends, que es lo que hace que coincidan sin
+  /// que ninguno reproduzca a mano el criterio de otro.
+  ///
+  /// El eje pasa por el centro del bbox del path y su semilongitud es la
+  /// semi-extensión de ese bbox PROYECTADA sobre la dirección del ángulo,
+  /// |hw·ux| + |hh·uy|. En forma cerrada y para cualquier ángulo: así las paradas
+  /// 0 y 1 caen exactamente en los bordes de la figura, sin franja muerta ni
+  /// recorte, tanto a 0° como a 37°.
+  void gradientAxis(double &x0, double &y0, double &x1, double &y1) const {
+    const double a = dspstate.gradient.angle * M_PI / 180.0;
+    const double ux = std::cos(a), uy = std::sin(a);
+    const double cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
+    const double h = std::fabs((xmax - xmin) / 2 * ux) + std::fabs((ymax - ymin) / 2 * uy);
+    x0 = cx - h * ux;  y0 = cy - h * uy;
+    x1 = cx + h * ux;  y1 = cy + h * uy;
   }
 
   /// Cobertura de la página: caja, en coordenadas de DISPOSITIVO (pt, y hacia

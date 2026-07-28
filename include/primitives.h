@@ -56,7 +56,8 @@ enum GraphicsItemType {
   GI_DOT,
   GI_CONCATENATEPATH,
   GI_POLYBAR,
-  GI_HATCHATTR         // los valores nuevos van AL FINAL: hay código que depende de los ordinales
+  GI_HATCHATTR,        // los valores nuevos van AL FINAL: hay código que depende de los ordinales
+  GI_GRADIENTATTR
 };
 
 enum AttributeType {
@@ -200,6 +201,34 @@ struct HatchLine {
   std::vector<double> dashes;  // vacío = línea continua
 };
 using FillPattern = std::vector<HatchLine>;
+
+/**
+   Descriptor de gradiente lineal (§4.14), independiente del dispositivo. Hermano
+   de FillPattern: la otra manera de que un área no se rellene de un color plano.
+
+   ⚠️ **`angle` está en el marco de la PÁGINA, no en el de la figura.** Un
+   rectángulo girado 30° con `gradient_angle=0` sigue degradando de izquierda a
+   derecha en el papel. Es la misma decisión que ya tomó `hatch_angle` —cuya
+   familia de líneas se barre sobre el bbox de DISPOSITIVO, así que un tramado a
+   45° sale a 45° en la hoja aunque la forma vaya girada— y se eligió por
+   consistencia con ese precedente y porque hace que los tres backends coincidan
+   por construcción, sin que ninguno tenga que reproducir a mano el criterio de
+   otro. La alternativa (el `objectBoundingBox` de SVG, que acompaña a la forma)
+   además SESGA el ángulo cuando la caja no es cuadrada: mapea el bbox al cuadrado
+   unidad, así que en una caja 4:1 un gradiente «a 45°» sale a ~76° en la página.
+   Es la familia de bugs de `plan_anisotropia.md`, y este es el lado seguro.
+ */
+struct GradientStop {
+  int color = 0;        // 0xRRGGBB, igual que DisplayState::fillcolor
+  double at = 0.0;      // posición a lo largo del eje, en [0,1]
+};
+
+struct Gradient {
+  std::vector<GradientStop> stops;   // <2 paradas = sin gradiente
+  double angle = 0.0;                // grados EN LA PÁGINA; 0 = izquierda→derecha
+
+  bool empty() const { return stops.size() < 2; }
+};
 
 // Abstract output device
 class Display;
@@ -376,6 +405,19 @@ public:
 
 private:
   FillPattern pattern;
+};
+
+// §4.14: transporta un Gradient completo, por la misma razón que HatchAttr
+// transporta un FillPattern — Attribute solo carga int/float y no puede llevar
+// el vector de paradas. Lo emiten `gradient=` (§7.5) y la sentencia de estado.
+class GradientAttr : public GraphicsItem {
+public:
+  GradientAttr(Gradient g) : GraphicsItem(GI_GRADIENTATTR), grad(std::move(g)) {}
+
+  void draw(Display &) override;
+
+private:
+  Gradient grad;
 };
 
 class Transform : public GraphicsItem {

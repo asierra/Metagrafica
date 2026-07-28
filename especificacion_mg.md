@@ -583,6 +583,33 @@ Internamente `sine` se aproxima con curvas bezier (las de `bzsinepaths`). Los de
 
 *(V1: se ensamblaba a mano con `BZ &sinpi`/`&sin2pi`/`&cos2pi` + `RPPT` (tile) + la pila de matrices de path `IDPT`/`TLPT`/`SCPT`. `sine` colapsa todo eso. Caso guía: fig4-10, los niveles del pozo infinito.)*
 
+### 4.14 Rellenos degradados (`gradient`)
+
+Rellena un área con una rampa de color en vez de un color plano. Hermano de `hatch` (§4.11): las dos son "cómo se rellena un área que no es de un color liso", y comparten ranura.
+
+```text
+rectangle(gradient=["orange", "#D93622", "black"], color="black") { 0 0  10 2 }
+rectangle(gradient=[gray(0.8), gray(0.3)], gradient_angle=90) { 0 3  10 5 }
+gradient ["orange", "black"] 45      % también como sentencia de estado, con ángulo opcional
+```
+
+- **`gradient`** — lista de **paradas**, en la misma notación de color que `fill` (nombre CSS, `"#rrggbb"`, `gray(g)`). Se reparten **por igual** a lo largo del eje. Menos de dos colores es error: con uno, lo que se quiere es `fill=`.
+- **`gradient_angle`** — grados; 0 (default) = izquierda→derecha.
+
+**El eje vive en el marco de la PÁGINA, no en el de la figura.** Un rectángulo girado 30° con `gradient_angle=0` sigue degradando de izquierda a derecha en el papel. Es la misma decisión que ya tomó `hatch_angle` —cuya familia de líneas se barre sobre el bbox de dispositivo— y se eligió por consistencia con ese precedente y porque hace que los tres backends coincidan por construcción. La alternativa (el `objectBoundingBox` de SVG, que acompaña a la forma) **sesga el ángulo** en cajas no cuadradas: mapea el bbox al cuadrado unidad, así que en una caja 4:1 un gradiente "a 45°" sale a ~76° en la página — la familia de bugs de `plan_anisotropia.md`.
+
+El eje cubre el bbox del trayecto exactamente: pasa por su centro y su semilongitud es la semi-extensión proyectada sobre la dirección del ángulo, `|hw·ux| + |hh·uy|`. Así las paradas 0 y 1 caen en los bordes de la figura para cualquier ángulo.
+
+**Excluyente con `hatch`.** Entre registros gana el último (un `gradient=` por-primitiva pisa un `hatch` ambiente y se restaura al salir); **juntos en la misma primitiva es error**, porque ahí no hay orden que interpretar. Con `color=` al lado, se contornea, igual que un `fill=`.
+
+Cada backend lo emite en su mecanismo nativo: `<linearGradient>` con `gradientUnits="userSpaceOnUse"` en SVG (no `objectBoundingBox`, por lo de arriba), `shfill` con sombreado axial —tipo 2— en EPS, y una **malla de triángulos** (tipo 4) en PDF, que es el único tipo que libharu implementa. Para un degradado lineal los tres dan el mismo resultado: un tramo entre dos paradas es exactamente un cuadrilátero con interpolación de Gouraud.
+
+⚠️ El EPS resultante es **PostScript nivel 3** y lo declara en el prólogo (`%%LanguageLevel: 3`), solo cuando hay algún degradado.
+
+**Diferido hasta que una figura lo pida:** paradas en posiciones arbitrarias (`gradient_stops=`), gradiente **radial** y transparencia. El radial no es gratis: libharu no expone el tipo 3, así que habría que aproximarlo con un abanico de triángulos.
+
+*(Sin antecedente en V1: no había manera de expresarlo. Caso guía: `examples/espectro.mg`, la banda del infrarrojo.)*
+
 ---
 
 ## 5. Variables y expresiones
@@ -786,6 +813,7 @@ Todos usan la forma `palabra valor(es)`. Los nombres **coinciden** con los argum
 | `dash "dashed"` / `dash [10,2]` | patrón de línea | §4.10 |
 | `cap "round"` / `join "round"` | extremos / uniones de trazo | §4.10 |
 | `hatch a [g]` / `hatch "estilo" [g]` | relleno con trama: ángulo libre `a` o estilo nombrado (`"hatch"`/`"hatchback"`/`"crosshatch"`), paso `g` opcional; o `hatch_gap g` aparte | §4.11 |
+| `gradient [colores] [a]` | relleno degradado: lista de paradas repartidas por igual, ángulo `a` opcional (marco de la PÁGINA); o `gradient_angle a` aparte. Excluyente con `hatch` | §4.14 |
 | `font "italic"` | fuente base del texto (`"roman"`, `"italic"`, `"bold"`, …, §14.3) | §14.3 |
 | `font_size h` | tamaño de texto en pt (mismo keyword en documento y en bloque) | §14 |
 | `align "center"` / `valign "middle"` | alineación horizontal / vertical de texto | §4.8 |

@@ -2254,3 +2254,72 @@ trayecto va como primer argumento, siempre»). Los dos modelos la intentaron. An
 hay que decidir cómo se lleva con las formas de 2 puntos (`count=`, `gap=`, `both_sides=`) y con
 el locus de arco: hoy el número de puntos ES la sintaxis que elige el modo, y un `&path` de
 longitud variable la vuelve dinámica.
+
+### Cerrado en la sesión del 2026-07-28 (quater) — gradientes, Fases 1 y 2
+
+`plan_gradientes.md`, abierto esa misma mañana por lo que destapó el experimento del espectro.
+Cerradas las dos primeras fases: `gradient=[colores]` + `gradient_angle` en los tres backends,
+`examples/espectro.mg` en el corpus (`ok=75`), y la cuarta invariante de la Capa 3 en el mismo
+commit, como el plan exigía. La Fase 3 (paradas arbitrarias, radial, transparencia) sigue
+diferida por la regla de demanda.
+
+**La decisión de diseño, y va contra lo que decía el plan.** §2 proponía que el eje del degradado
+viviera en la caja de la figura (el `objectBoundingBox` de SVG, «el gradiente acompaña a la
+forma»). Se descartó al implementarlo, por dos razones que solo aparecen mirando el código:
+
+1. **Ya había precedente y decía lo contrario.** `hatch_angle` barre su familia de líneas sobre el
+   bbox de DISPOSITIVO. Se verificó antes de decidir: dos rectángulos con `hatch=45`, uno girado
+   30° y otro no, comparten un solo `patternTransform="rotate(45)"` en el SVG — o sea el tramado
+   sale a 45° **en el papel**, no respecto de la forma. Tramado y degradado son las dos maneras de
+   rellenar un área con algo que no es un color plano; orientarlos en marcos distintos habría sido
+   una incoherencia gratuita.
+2. **`objectBoundingBox` sesga el ángulo.** Mapea la caja al cuadrado unidad, así que en una caja
+   4:1 un gradiente «a 45°» sale a ~76° en la página. Es la familia de `plan_anisotropia.md`, y
+   además habría obligado a EPS y PDF —que no tienen ese modo— a reproducir el sesgo a mano para
+   no discrepar.
+
+Con el eje en la página, los tres backends consumen **el mismo** (`Display::gradientAxis`) y
+coinciden por construcción en vez de por vigilancia. Cada uno lo emite en su mecanismo nativo:
+`<linearGradient gradientUnits="userSpaceOnUse">` en SVG (no objectBoundingBox, por lo anterior),
+`shfill` con sombreado axial en EPS, malla de triángulos en PDF.
+
+⚠️ **El EPS pasa a nivel 3** y lo declara (`%%LanguageLevel: 3`) **solo** cuando hay degradado, para
+no mover la salida de todo lo demás. Se eligió `shfill` sobre la alternativa de franjas finas
+porque es exacto, no crece con la resolución, y las franjas son justamente lo que ya se puede
+escribir a mano en un `.mg`: emitirlas no añadiría nada al lenguaje. Ghostscript lo interpreta y
+`psfail` lo verifica en cada corrida.
+
+🔎 **La copia vendorizada de libharu estaba INCOMPLETA, y nadie lo sabía.** El plan daba por hecho
+que el sombreado tipo 4 estaba disponible porque `hpdf.h` lo declara. No lo estaba:
+`src/hpdf_shading.c` nunca se vendorizó, aunque sí la mitad consumidora —`HPDF_Page_SetShading`,
+`HPDF_Page_GetShadingName`, el dict `/Shading` de `hpdf_pages.c`, todo compilado y enlazado—. El
+árbol llevaba siendo incoherente con su propio header desde el día uno del backend PDF, y solo se
+notó al necesitar la primera característica que lo usa. Se restauró el archivo de upstream v2.4.6
+tal cual (misma licencia ZLIB, cero ediciones, el `wildcard` del Makefile lo toma solo). La
+política de no parchear libharu sigue en pie: esto no es un parche, es completar la vendorización.
+La limitación REAL —no expone los tipos 2 (axial) ni 3 (radial)— se confirma, y es la razón
+técnica por la que el degradado radial queda diferido.
+
+🐛 **Y un bug que ninguna compuerta habría cazado.** El tipo 4 codifica cada coordenada como entero
+contra el rango de `/Decode`, y una coordenada FUERA de ese rango no se recorta: **envuelve**. Los
+cuadriláteros que reproducen el `/Extend [true true]` del EPS —que por definición se salen de la
+forma— reaparecían por el otro lado, encima de la figura, pintándola plana del color del extremo.
+El degradado entero se veía de UN SOLO COLOR con el mesh perfectamente correcto: 24 vértices, los
+colores buenos, las coordenadas buenas. Se corrige declarando el bbox del sombreado sobre los
+vértices ya construidos y no sobre el del path.
+
+📌 **Por qué no lo habría cazado nada, que es lo que vale la pena recordar:** la invariante (d)
+cuenta operaciones de sombreado, y aquí había exactamente una por figura en los tres formatos —el
+conteo era correcto—. El PDF era byte-estable, así que el golden lo habría bendecido. Se encontró
+**mirando el render**. Las siete compuertas cazan clases de fallo, no «se ve mal»; para eso sigue
+haciendo falta abrir la figura.
+
+**La cuarta invariante de la Capa 3** cuenta rellenos degradados en los tres formatos
+(`shfill` / `fill="url(#mggrad…)"` / `/ShN sh`) y exige que coincidan. Se cuentan **usos, no
+definiciones**: dos formas con el mismo degradado y la misma caja comparten un `<linearGradient>`,
+así que contar defs daría 1 donde EPS emite 2. Verificada como manda la casa —enmudeciendo el
+degradado del SVG—: `c3fail=1`, y sobre todo `capture` **también** da `c3fail=1` mientras bendice
+la salida rota sin protestar. Es, como (c), una invariante sin escapatoria por bendición.
+
+`examples/espectro.mg` entra al corpus y a la galería, y es el ÚNICO sujeto de esa invariante: si
+sale, la compuerta se queda sin nada que mirar. Está anotado en su encabezado y en `CLAUDE.md`.

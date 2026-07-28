@@ -239,7 +239,7 @@ polyline { 1 1  2 0 }      % NOT red
 
 | available as a statement | and as an attribute of any primitive |
 |---|---|
-| `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=`, `hatch_angle=` |
+| `color`, `fill`, `line_width`, `dash`, `hatch`, `hatch_gap`, `gradient`, `gradient_angle`, `outlinefill`, `font`, `font_size`, `align`, `valign` | `color=`, `fill=`, `line_width=`, `dash=`, `hatch=`, `hatch_gap=`, `hatch_angle=`, `gradient=`, `gradient_angle=` |
 
 > ⚠️ **`outlinefill`, `font`, `font_size`, `align` and `valign` are not generic style attributes:**
 > `polyline(align="center")` is an error. But **`text()` does accept them**, because there they are not
@@ -257,6 +257,24 @@ polyline { 1 1  2 0 }      % NOT red
 
 **Lines:** `line_width` in pt. `dash` accepts `"solid"`, `"dashed"`, `"dotted"`, `"longdashed"`,
 `"shortdashed"`, `"dashdot"`, `"dashdotdot"`.
+
+**Gradients:** `gradient` takes a **list of colours** —the stops, spread evenly along the axis—
+and `gradient_angle` the angle in degrees, 0 = left→right:
+
+```octave
+rectangle(gradient=["orange", "#D93622", "black"], color="black") { 0 0  10 2 }
+rectangle(gradient=[gray(0.8), gray(0.3)], gradient_angle=90) { 0 3  10 5 }
+```
+
+> ⚠️ **The angle is the PAGE's, not the figure's.** A rectangle rotated 30° with
+> `gradient_angle=0` still shades left to right on the paper. It is the same rule as
+> `hatch_angle`, and not an oversight: they are the two ways of filling an area with something
+> that is not a flat colour, and both orient themselves against the sheet.
+
+`gradient` and `hatch` are **the same slot**, so a per-primitive `gradient=` overrides an ambient
+`hatch` and is restored on the way out, like any attribute. Giving both **on the same primitive**
+is an error: there is no order to interpret there. With `color=` alongside, the gradient gets
+outlined, just like a `fill=`. See [`examples/espectro.mg`](../examples/espectro.mg).
 
 **Hatching:** `hatch` accepts a **free angle** in degrees or a named style (`"hatch"` 45°, `"hatchback"`
 135°, `"crosshatch"` both). `hatch_gap` is the spacing in pt; `hatch_angle` is the **base orientation** (it
@@ -942,4 +960,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 3c86c4fe62128d2396d4f2e86ad13d5394a34ad6 -->
+<!-- translated-from: referencia.md @ cda085bd8e654ec250aa3d644ae80ae953ca00a7 -->

@@ -23,6 +23,9 @@ struct MGFlags {
   bool using_textalign = false;
   bool using_fontcmmi = false;
   bool using_hatcher = false;
+  // §4.14: hay al menos un relleno degradado. EPS lo usa para declarar el nivel
+  // de lenguaje en el prólogo (shfill es PostScript 3).
+  bool using_gradient = false;
 };
 
 #endif

@@ -190,6 +190,10 @@ void HatchAttr::draw(Display &g) {
   g.setHatch(pattern);
 }
 
+void GradientAttr::draw(Display &g) {
+  g.setGradient(grad);
+}
+
 void Transform::draw(Display &g) {
   switch(op) {
     case OPMTL:
