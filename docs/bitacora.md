@@ -1934,3 +1934,26 @@ el cruce a Windows ✓, y **macOS falló al enlazar**: `ld: unknown options: --g
 📌 **Es un defecto viejo que nadie podía ver**: `-Wl,--gc-sections` lleva en el Makefile desde
 antes de esta sesión, y el proyecto nunca se había compilado en un Mac. El README ofrecía
 macOS y no era cierto. La primera corrida de CI se pagó sola.
+
+**Addendum 4 (misma sesión) — macOS pasa a BLOQUEAR, y se le mide la salida.** Alejandro
+mencionó que ya no tiene la MacBook, y eso invierte una decisión del workflow: las pruebas de
+macOS estaban como **informativas** (`continue-on-error`), razonando que una diferencia de
+último dígito en `libm` movería los renders publicados sin que nada estuviera roto. Con un Mac
+a la mano era lo prudente —si algo se veía raro, se miraba—. **Sin Mac es al revés: ese paso es
+el único ojo que queda sobre la plataforma, y estaba sin poder decir que no.**
+
+Dos cambios, y el segundo desactiva el miedo que justificaba el primero:
+1. `test/run.sh capture` **bloquea en las dos plataformas nativas**, no solo en Linux.
+2. **`smoke-macos`**, espejo de `smoke-windows`: desempaca el paquete, dibuja el corpus con el
+   binario que se va a publicar y **exige que la salida sea idéntica byte a byte a la de
+   Linux**. Si lo es —como resultó con Windows, 72/72—, no hay diferencias de `libm` que temer
+   y bloquear es gratis. Si no lo es, eso es justo lo que hay que saber sin un Mac: que un
+   usuario de Mac obtiene archivos distintos de los de la galería publicada.
+
+⚠️ Puede fallar en la próxima corrida, y **si falla es un hallazgo, no un accidente**.
+No se prueba ahí el `include` sin ruta: el rescate «biblioteca junto al ejecutable» es código
+`#ifdef _WIN32`, y en Unix la ruta la hornea `-DMG_LIBDIR`.
+
+📌 Anotado sin resolver: `macos-latest` es **arm64**, así que el paquete sirve a Apple Silicon
+y no a los Mac Intel. Se dice en la tabla de la página de descarga; añadir un segundo binario
+x86_64 espera a que alguien lo pida.

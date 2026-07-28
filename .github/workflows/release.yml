@@ -69,16 +69,14 @@ jobs:
       #
       # `capture` corre CINCO de las seis compuertas (todas menos el golden por
       # bytes, que necesita una red que no está en git) y sale con código ≠ 0 si
-      # alguna falla. Linux es la plataforma de referencia y ahí BLOQUEA; en
-      # macOS es informativo, porque una diferencia de último dígito en libm
-      # movería los renders publicados sin que nada esté roto.
-      - name: Pruebas (Linux, bloquea)
-        if: matrix.cross == '' && matrix.os == 'ubuntu-latest'
-        run: bash test/run.sh capture
-
-      - name: Pruebas (macOS, informativo)
-        if: matrix.os == 'macos-latest'
-        continue-on-error: true
+      # alguna falla. **Bloquea en las dos plataformas nativas.** En macOS estuvo
+      # un rato como informativo, por si una diferencia de último dígito en libm
+      # movía los renders publicados; se cambió el 2026-07-27 al caer en cuenta de
+      # que **nadie del proyecto tiene ya un Mac**: si esto no bloquea, macOS deja
+      # de tener cualquier vigilancia. Y el miedo que lo justificaba lo despeja el
+      # trabajo `smoke-macos`, que compara byte a byte contra Linux.
+      - name: Pruebas (nativo, bloquea)
+        if: matrix.cross == ''
         run: bash test/run.sh capture
 
       - name: Armar el paquete
@@ -192,8 +190,49 @@ jobs:
           echo "comparados $n archivos, difieren $dif"
           test "$dif" -eq 0
 
+  # Espejo del anterior para macOS, y por la misma razón de fondo: el binario que
+  # se publica tiene que haber DIBUJADO algo antes de publicarse. Aquí pesa más
+  # todavía, porque nadie en el proyecto tiene un Mac desde hace dos años: este
+  # trabajo es el único ojo que queda sobre esa plataforma.
+  #
+  # No se prueba `include` sin ruta: el rescate «biblioteca junto al ejecutable»
+  # es código #ifdef _WIN32. En Unix la ruta la hornea -DMG_LIBDIR y sin
+  # `make install` no hay biblioteca instalada que encontrar.
+  smoke-macos:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64
+      - uses: actions/download-artifact@v4
+        with:
+          name: salidas-linux
+          path: salidas-linux
+      - name: Dibujar, y exigir la MISMA salida que Linux
+        run: |
+          set -e
+          tar xzf metagrafica-macos-arm64.tar.gz
+          mkdir -p salidas
+          cd examples
+          for f in *.mg; do
+            n="${f%.mg}"
+            for fmt in eps svg pdf; do
+              ../metagrafica-macos-arm64/mg "$f" "../salidas/$n.$fmt" >/dev/null
+            done
+          done
+          cd ..
+          dif=0; n=0
+          for f in salidas/*; do
+            n=$((n+1))
+            cmp -s "$f" "salidas-linux/$(basename "$f")" || { echo "DIFIERE $(basename "$f")"; dif=$((dif+1)); }
+          done
+          echo "comparados $n archivos, difieren $dif"
+          test "$dif" -eq 0
+
   publicar:
-    needs: [build, smoke-windows]
+    needs: [build, smoke-windows, smoke-macos]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
