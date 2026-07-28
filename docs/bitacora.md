@@ -1864,3 +1864,28 @@ emite los dígitos con `modff`, todo en **float**, así que hereda la libm de la
 biblioteca que existe **solo** junto al `.exe` (no en `/usr/local`, para que wine no lo
 resolviera por el camino de Unix y diera un falso positivo), invocado desde otro directorio de
 trabajo. Resuelve.
+
+**Addendum 2 (misma sesión) — cerrada la última diferencia: 72/72.** Se redondea a cero el
+coseno de un giro recto en `PDFDisplay::deviceRotate`. **No es cosmética y conviene entender
+por qué:** la matriz exacta de un cuarto de vuelta es `0 1 -1 0`, y `cos(pi/2) = 6.123e-17` es
+el error de punto flotante — redondearlo **acerca** al valor verdadero, no se aleja de él. El
+umbral (1e-12) es holgado: los ceros de verdad quedan a ~1e-16 y un giro de 1e-10 grados no
+existe en ninguna figura.
+
+Movió exactamente los cuatro goldens previstos (`fig1`, `fig_polybar`, `franck_condon`,
+`quickstart`, todos en PDF: son los que rotan un rótulo de eje 90°), sin un solo cambio
+visible. Re-medido después:
+
+    Windows vs Linux, 24 ejemplos × 3 formatos:  idénticos 72 / 72
+
+📌 **Y se vuelve invariante, no anécdota.** El workflow gana un paso que compila el corpus con
+`mg.exe` sobre Windows y lo compara byte a byte contra la salida de Linux del mismo commit.
+Una medición que nadie vuelve a hacer se pudre —es la lección que ya habían enseñado
+`docs/img` y la galería—, y esta en particular es de las que se rompen en silencio: cualquier
+`printf` que herede la libm de la plataforma reintroduce la divergencia sin mover un solo
+golden, porque el golden se genera **en una sola** plataforma.
+
+🔎 Detalle de implementación que importa: las salidas de referencia se escriben con una ruta
+**relativa idéntica** en las dos plataformas. El EPS lleva su ruta de salida dentro
+(`%%Title`), así que compararlas exige o normalizar —lo que hace `test/run.sh`— o, más simple,
+pedirle a los dos la misma ruta.

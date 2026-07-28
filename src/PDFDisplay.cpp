@@ -734,6 +734,18 @@ void PDFDisplay::deviceShear(double, double) {
 void PDFDisplay::deviceRotate(double angle) {
   double rad = angle * (double)M_PI / 180.0f;
   double c = cos(rad), s = sin(rad);
+  // Un giro de 90° tiene coseno CERO, pero cos(pi/2) en punto flotante da
+  // 6.123e-17. Se redondea, y no es cosmética: (a) la matriz exacta de un cuarto
+  // de vuelta es `0 1 -1 0`, así que redondear ACERCA al valor verdadero en vez de
+  // alejarse; y (b) ese 6.123e-17 era la ÚNICA diferencia entre la salida de Linux
+  // y la de Windows en todo el corpus —68 de 72 archivos ya eran idénticos byte a
+  // byte—, porque quien lo imprime es HPDF_FToA (hpdf_utils.c), que saca el número
+  // de decimales de un log10() y emite con modff en float: hereda la libm de cada
+  // plataforma, y glibc daba 21 decimales donde msvcrt daba 20.
+  // El umbral es holgado: los ceros de verdad quedan a ~1e-16, y un giro de 1e-10
+  // grados no existe en ninguna figura.
+  if (std::fabs(c) < 1e-12) c = 0.0;
+  if (std::fabs(s) < 1e-12) s = 0.0;
   // Se rota alrededor de la posición actual de la pluma (cur_x, cur_y), no del
   // origen, para preservar ese punto igual que `rotate` en PostScript/EPS y que
   // el <g rotate(a,cx,cy)> de SVGDisplay. Sin esto, el texto rotado (p.ej. una

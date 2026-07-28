@@ -100,6 +100,26 @@ jobs:
             tar czf "$dir.tar.gz" "$dir"
           fi
 
+      # Salidas de referencia para la comparación entre plataformas de abajo. Se
+      # escriben con una ruta RELATIVA idéntica a la que usará Windows, y eso no es
+      # un detalle: el EPS lleva la ruta de salida dentro, en %%Title, así que dos
+      # rutas distintas darían archivos distintos por una razón que no importa.
+      - name: Salidas de referencia (Linux)
+        if: matrix.nombre == 'linux-x86_64'
+        run: |
+          mkdir -p salidas
+          cd examples
+          for f in *.mg; do
+            n="${f%.mg}"
+            for fmt in eps svg pdf; do ../bin/mg "$f" "../salidas/$n.$fmt" >/dev/null; done
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.nombre == 'linux-x86_64'
+        with:
+          name: salidas-linux
+          path: salidas
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.nombre }}
@@ -119,6 +139,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: windows-x86_64
+      - uses: actions/download-artifact@v4
+        with:
+          name: salidas-linux
+          path: salidas-linux
       - name: Desempacar y dibujar
         shell: bash
         run: |
@@ -141,6 +165,32 @@ jobs:
           ./mg.exe biblioteca.mg biblioteca.svg
           test -s biblioteca.svg || { echo "el include junto al .exe no resolvió"; exit 1; }
           echo "ok: mg.exe dibuja en SVG, PDF y EPS, y encuentra su biblioteca"
+
+      # La salida de Windows debe ser IDÉNTICA BYTE A BYTE a la de Linux. Se midió
+      # a mano el 2026-07-27 —72 de 72— y por eso existe este paso: una medición
+      # que nadie vuelve a hacer se pudre. La última diferencia que hubo fue el
+      # cos(90°) del PDF, que imprimía un dígito distinto según la libm de cada
+      # plataforma; se cerró redondeando el cero (PDFDisplay::deviceRotate).
+      - name: La salida de Windows == la de Linux, byte a byte
+        shell: bash
+        run: |
+          set -e
+          mkdir -p salidas
+          cd examples
+          for f in *.mg; do
+            n="${f%.mg}"
+            for fmt in eps svg pdf; do
+              ../metagrafica-windows-x86_64/mg.exe "$f" "../salidas/$n.$fmt" >/dev/null
+            done
+          done
+          cd ..
+          dif=0; n=0
+          for f in salidas/*; do
+            n=$((n+1))
+            cmp -s "$f" "salidas-linux/$(basename "$f")" || { echo "DIFIERE $(basename "$f")"; dif=$((dif+1)); }
+          done
+          echo "comparados $n archivos, difieren $dif"
+          test "$dif" -eq 0
 
   publicar:
     needs: [build, smoke-windows]
