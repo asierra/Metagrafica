@@ -224,6 +224,21 @@ make                 # builds bin/mg and the man page
 sudo make install    # optional: puts mg on your PATH
 ```
 
+### Windows
+
+The easiest way is not to build at all: each release ships a **`mg.exe`** in
+[Releases](https://github.com/asierra/Metagrafica/releases). Unzip it anywhere and run it —
+no installer, no DLLs; `lib/` just has to stay next to the executable, which is where the
+binary looks for the `include` library.
+
+To build it yourself, cross-compile from Linux with MinGW-w64, which is how the 1999 version
+was built too:
+
+```bash
+sudo apt install mingw-w64 libz-mingw-w64-dev
+make CROSS=x86_64-w64-mingw32          # → bin/mg.exe, statically linked
+```
+
 Requires a C++14 compiler (`clang++` or `g++`), GNU `make`, and **zlib**. The library for
 PDF output, [libharu](http://libharu.org/), is vendored in `third_party/`. Two more tools
 are optional: `flex`, needed only if you modify the lexer (the generated one is in the

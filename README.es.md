@@ -193,6 +193,21 @@ make                 # compila bin/mg y la página de manual
 sudo make install    # opcional: deja mg en el PATH
 ```
 
+### Windows
+
+Lo más fácil es no compilar: cada release trae un **`mg.exe`** en
+[Releases](https://github.com/asierra/Metagrafica/releases). Se descomprime donde sea y
+corre — sin instalador y sin DLLs; lo único es que `lib/` quede junto al ejecutable, que es
+donde el binario busca la biblioteca de `include`.
+
+Para compilarlo tú mismo, se cruza desde Linux con MinGW-w64, que es como se armó también la
+versión de 1999:
+
+```bash
+sudo apt install mingw-w64 libz-mingw-w64-dev
+make CROSS=x86_64-w64-mingw32          # → bin/mg.exe, enlazado estático
+```
+
 Se requiere un compilador de C++14 (`clang++` o `g++`), GNU `make` y **zlib**. La biblioteca para la salida PDF, [libharu](http://libharu.org/), viene incluida en `third_party/`. Otras dos herramientas son opcionales: `flex`, que solo hace falta si modificas el lexer (el generado está en el repositorio), y `pandoc`, solo para la página de manual — sin él `make` compila el binario igual y lo avisa.
 
 ## Uso

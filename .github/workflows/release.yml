@@ -1,0 +1,171 @@
+# Binarios de release: Linux, macOS y WINDOWS (.exe).
+#
+# Por qué existe: hasta ahora probar MetaGráfica exigía clonar y compilar, y ese
+# es el filtro que se lleva por delante a la mayoría de quien llega de la galería.
+# Windows es el caso extremo —no hay compilador de sistema— así que ahí lo que se
+# reparte tiene que ser un .exe ya hecho.
+#
+# Cómo se dispara:  git tag v3.0.0-beta.1 && git push origin v3.0.0-beta.1
+# (o a mano desde la pestaña Actions, con workflow_dispatch).
+#
+# El .exe se CRUZA desde Linux con MinGW-w64, que es como se armó también la
+# versión de 1999. No hace falta una máquina Windows en el proceso.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nombre: linux-x86_64
+            os: ubuntu-latest
+            cross: ""
+            binario: mg
+          - nombre: windows-x86_64
+            os: ubuntu-latest
+            cross: x86_64-w64-mingw32
+            binario: mg.exe
+          - nombre: macos-arm64
+            os: macos-latest
+            cross: ""
+            binario: mg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencias (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flex zlib1g-dev
+          if [ -n "${{ matrix.cross }}" ]; then
+            sudo apt-get install -y mingw-w64 libz-mingw-w64-dev
+          fi
+
+      - name: Dependencias (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install flex || true
+
+      - name: Compilar (nativo)
+        if: matrix.cross == ''
+        run: make CXX=${{ matrix.os == 'ubuntu-latest' && 'g++' || 'clang++' }}
+
+      - name: Compilar (cruzado a Windows)
+        if: matrix.cross != ''
+        run: make CROSS=${{ matrix.cross }}
+
+      # La red de pruebas solo corre donde el binario se puede EJECUTAR. En el
+      # build cruzado no hay nada que ejecutar, así que ahí basta con que enlace:
+      # el .exe se verifica en el trabajo `smoke-windows` de abajo.
+      #
+      # `capture` corre CINCO de las seis compuertas (todas menos el golden por
+      # bytes, que necesita una red que no está en git) y sale con código ≠ 0 si
+      # alguna falla. Linux es la plataforma de referencia y ahí BLOQUEA; en
+      # macOS es informativo, porque una diferencia de último dígito en libm
+      # movería los renders publicados sin que nada esté roto.
+      - name: Pruebas (Linux, bloquea)
+        if: matrix.cross == '' && matrix.os == 'ubuntu-latest'
+        run: bash test/run.sh capture
+
+      - name: Pruebas (macOS, informativo)
+        if: matrix.os == 'macos-latest'
+        continue-on-error: true
+        run: bash test/run.sh capture
+
+      - name: Armar el paquete
+        run: |
+          set -e
+          dir=metagrafica-${{ matrix.nombre }}
+          mkdir -p "$dir"
+          cp bin/${{ matrix.binario }} "$dir/"
+          # lib/ va JUNTO al binario: en Windows es la única biblioteca que hay
+          # (el binario la busca al lado del .exe), y en Unix sirve para probar
+          # sin `make install`.
+          cp -r lib "$dir/"
+          mkdir -p "$dir/examples"
+          cp examples/*.mg "$dir/examples/"
+          cp README.md README.es.md LICENSE docs/referencia.md "$dir/" 2>/dev/null || true
+          if [ "${{ matrix.binario }}" = "mg.exe" ]; then
+            zip -r "$dir.zip" "$dir"
+          else
+            tar czf "$dir.tar.gz" "$dir"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.nombre }}
+          path: |
+            metagrafica-*.tar.gz
+            metagrafica-*.zip
+
+  # El .exe cruzado no se ejecutó en el trabajo que lo produjo. Aquí se corre DE
+  # VERDAD sobre Windows y se le exige compilar una figura que ejercita el
+  # camino más frágil de la plataforma: `include` de la biblioteca que viaja al
+  # lado del .exe. Sin esto estaríamos publicando un binario que nadie ejecutó.
+  smoke-windows:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-x86_64
+      - name: Desempacar y dibujar
+        shell: bash
+        run: |
+          set -e
+          unzip -q metagrafica-windows-x86_64.zip
+          cd metagrafica-windows-x86_64
+          ./mg.exe examples/orbita_polar.mg salida.svg
+          ./mg.exe examples/orbita_polar.mg salida.pdf
+          ./mg.exe examples/franck_condon.mg salida.eps
+          for f in salida.svg salida.pdf salida.eps; do
+            test -s "$f" || { echo "vacío: $f"; exit 1; }
+          done
+          # El PDF es binario: si Windows hubiera traducido saltos de línea, la
+          # cabecera dejaría de ser %PDF y el archivo estaría corrupto.
+          head -c 5 salida.pdf | grep -q '%PDF' || { echo "PDF corrupto"; exit 1; }
+          # `include` SIN ruta: el único camino que es código exclusivo de Windows
+          # (parserv3.cpp, exeDir) y que no se puede probar en otra plataforma.
+          # Debe encontrar lib\satellite.mg junto al .exe.
+          printf 'display_size 4 4\nworld_window 0 4 0 4\ninclude "satellite.mg"\nSatellite(at=(2,2), scale=1)\n' > biblioteca.mg
+          ./mg.exe biblioteca.mg biblioteca.svg
+          test -s biblioteca.svg || { echo "el include junto al .exe no resolvió"; exit 1; }
+          echo "ok: mg.exe dibuja en SVG, PDF y EPS, y encuentra su biblioteca"
+
+  publicar:
+    needs: [build, smoke-windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+          generate_release_notes: true
+          body: |
+            **MetaGráfica ${{ github.ref_name }}** — beta: la gramática todavía
+            puede cambiar, y cambia cuando una figura nueva lo pide.
+
+            | archivo | para |
+            |---|---|
+            | `metagrafica-windows-x86_64.zip` | Windows — descomprime y corre `mg.exe`, sin instalar nada |
+            | `metagrafica-linux-x86_64.tar.gz` | Linux |
+            | `metagrafica-macos-arm64.tar.gz` | macOS (Apple Silicon) |
+
+            Cada paquete lleva el binario, `lib/` (la biblioteca de `include`,
+            que debe quedar junto al binario), los ejemplos y la referencia.
+
+                mg figura.mg            → figura.eps
+                mg figura.mg fig.svg    → SVG
+                mg figura.mg fig.pdf    → PDF

@@ -32,7 +32,11 @@ int yycolumn = 1;
  * nounput/noinput: Evitar warnings del compilador por funciones no usadas
  * yylineno: Flex mantendrá el número de línea automáticamente
  */
-%option noyywrap nounput noinput yylineno
+%option noyywrap nounput noinput yylineno nounistd never-interactive
+/* nounistd/never-interactive: <unistd.h> e isatty() no son de C estándar y
+   estorban al compilar con MinGW para Windows. El lexer nunca lee de una
+   terminal —siempre de un .mg—, así que la prueba de interactividad no hace
+   falta en ninguna plataforma. */
 
 /* Expresiones regulares base */
 DIGIT       [0-9]

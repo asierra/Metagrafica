@@ -87,6 +87,17 @@ cambiando el título de `sines.mg` sin regenerar: `galfail=1` con las otras cinc
 
 Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexmg.cpp` from `src/mgpp.l`), `pandoc` (man page). Do not edit `src/lexmg.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu is vendored in `third_party/` for PDF.
 
+**Windows (2026-07-27):** `make CROSS=x86_64-w64-mingw32` → `bin/mg.exe`, enlazado estático,
+cruzado desde Linux con MinGW-w64 (necesita `mingw-w64` + `libz-mingw-w64-dev`). El build
+nativo no cambia. Lo único exclusivo de Windows en el código es `exeDir()` en `parserv3.cpp`
+(bajo `#ifdef _WIN32`): añade `<dir del .exe>/lib/` a la búsqueda de `include`, porque allí no
+hay `make install` ni ruta que hornear en `-DMG_LIBDIR` — el reparto es un `.zip`.
+`.github/workflows/release.yml` compila los tres sistemas al empujar una etiqueta `v*`, y un
+trabajo aparte **ejecuta el `.exe` en Windows** (SVG/PDF/EPS + `include` sin ruta): el binario
+cruzado no se corre en la máquina que lo produce, y publicar lo que nadie ejecutó sería el
+mismo hueco que las compuertas existen para cerrar. En Linux `test/run.sh capture` bloquea el
+release; en macOS es informativo (libm puede mover el último dígito).
+
 ## Layout
 
 Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar). Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.

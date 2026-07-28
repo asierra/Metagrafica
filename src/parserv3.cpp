@@ -4482,6 +4482,23 @@ static bool fileReadable(const std::string &p) {
   return f.good();
 }
 
+// Directorio del ejecutable, para que la biblioteca viaje CON el programa. Solo
+// Windows: allí no hay un `make install` ni un /usr/local que hornear, el reparto
+// es un .zip que el usuario descomprime donde quiera, y `mg.exe` tiene que
+// encontrar `lib\satellite.mg` esté ese .zip donde esté. En Unix la ruta la fija
+// MG_LIBDIR al compilar y esto no se compila siquiera.
+#ifdef _WIN32
+#include <windows.h>
+static std::string exeDir() {
+  char buf[MAX_PATH];
+  DWORD n = GetModuleFileNameA(NULL, buf, MAX_PATH);
+  if (n == 0 || n >= MAX_PATH) return std::string();
+  std::string p(buf, n);
+  size_t corte = p.find_last_of("\\/");
+  return corte == std::string::npos ? std::string() : p.substr(0, corte);
+}
+#endif
+
 static StmtPtr parseInclude(Lexer &lx) {
   lx.next();                                     // 'include'
   if (lx.peek().type != T_STRING) parseError(lx, "el nombre de archivo (cadena) tras include");
@@ -4492,12 +4509,21 @@ static StmtPtr parseInclude(Lexer &lx) {
   // figura gana sobre la de la lib del sistema (útil para tantear una variante sin
   // reinstalar). Sin MG_LIBDIR (build sin la macro) solo se mira lo local.
   std::vector<std::string> cands;
-  if (!fname.empty() && fname[0] == '/')
+  if (!fname.empty() && (fname[0] == '/'
+#ifdef _WIN32
+      || fname[0] == '\\' || (fname.size() > 1 && fname[1] == ':')   // C:\… o \\servidor
+#endif
+      ))
     cands.push_back(fname);
   else {
     cands.push_back(g_baseDir.empty() ? fname : g_baseDir + "/" + fname);
 #ifdef MG_LIBDIR
     cands.push_back(std::string(MG_LIBDIR) + "/" + fname);
+#endif
+#ifdef _WIN32
+    // …y junto al .exe, que en Windows es la única «biblioteca instalada» que hay.
+    std::string dir = exeDir();
+    if (!dir.empty()) cands.push_back(dir + "/lib/" + fname);
 #endif
   }
   std::string path;

@@ -6,6 +6,32 @@ LDFLAGS = -g -Wpedantic -Wl,--gc-sections
 CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3 -DMG_LIBDIR='"$(LIBDIR)"'
 HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -I$(HARUDIR)/include
 
+# --- Compilación cruzada a Windows (MinGW) -----------------------------------
+# Windows es el hueco que más usuarios cuesta: no hay compilador de sistema, así
+# que lo que se reparte es un .exe ya hecho. Se cruza desde Linux con MinGW-w64,
+# que es como se armó también la versión de 1999:
+#
+#   make CROSS=x86_64-w64-mingw32          # → bin/mg.exe (64 bits)
+#   make CROSS=i686-w64-mingw32            # → bin/mg.exe (32 bits)
+#
+# Necesita el toolchain y zlib para MinGW (en Debian/Ubuntu: mingw-w64 y
+# libz-mingw-w64-dev). Se enlaza ESTÁTICO a propósito: el .exe tiene que correr
+# recién descomprimido, sin DLLs de gcc al lado ni instalador.
+#
+# ⚠️ La biblioteca de `include` (§15) no puede vivir en una ruta horneada como en
+# Unix: en Windows el reparto es un .zip que se descomprime donde sea. El binario
+# busca además `lib\` JUNTO AL .exe (parserv3.cpp, exeDir), así que el .zip lleva
+# mg.exe y lib/ al mismo nivel y funciona sin instalar nada.
+CROSS ?=
+EXE   =
+ifneq ($(CROSS),)
+  CXX = $(CROSS)-g++
+  CC  = $(CROSS)-gcc
+  AR  = $(CROSS)-ar
+  EXE = .exe
+  LDFLAGS += -static -static-libgcc -static-libstdc++
+endif
+
 SHELL = /bin/sh
 PREFIX = /usr/local
 MANPREFIX ?= ${PREFIX}/share/man
@@ -37,10 +63,10 @@ OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 PANDOC := $(shell command -v pandoc 2>/dev/null)
 
 ifeq ($(PANDOC),)
-all: $(BINDIR)/mg
+all: $(BINDIR)/mg$(EXE)
 	@echo "aviso: pandoc no encontrado; no se generó $(MANDIR)/mg.1 (el binario sí está en $(BINDIR)/mg)"
 else
-all: $(BINDIR)/mg $(MANDIR)/mg.1
+all: $(BINDIR)/mg$(EXE) $(MANDIR)/mg.1
 endif
 
 $(MANDIR)/mg.1: $(MANDIR)/mg.1.md
@@ -93,16 +119,16 @@ V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o PDF
 # obj/*.o), así que sus headers tienen que estar aquí: no hay un obj/main.o al que
 # colgarle dependencias. Faltaba version.h → cambiar la versión no recompilaba nada
 # y `mg -v` seguía mintiendo hasta un `make clean` (bug encontrado 2026-07-16).
-$(BINDIR)/mg: $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_LIB) \
+$(BINDIR)/mg$(EXE): $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) $(HARU_LIB) \
               $(INCDIR)/ast.h $(INCDIR)/tokens.h $(INCDIR)/parserv3.h $(INCDIR)/version.h \
               $(INCDIR)/structures.h $(INCDIR)/EPSDisplay.h $(INCDIR)/PDFDisplay.h $(INCDIR)/SVGDisplay.h | $(BINDIR)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(SRCDIR)/main.cpp $(SRCDIR)/lexv3.cpp $(SRCDIR)/parserv3.cpp $(V3_ENGINE_OBJS) -o $@ -L$(OBJDIR)/haru -lharu $(LDFLAGS) $(LIBS) -lz
 
 # Alias histórico: v3test == mg (mismo compilador V3).
-v3test: $(BINDIR)/mg | $(BINDIR)
-	cp -f $(BINDIR)/mg $(BINDIR)/v3test
+v3test: $(BINDIR)/mg$(EXE) | $(BINDIR)
+	cp -f $(BINDIR)/mg$(EXE) $(BINDIR)/v3test$(EXE)
 
-install: $(BINDIR)/mg $(MANDIR)/mg.1
+install: $(BINDIR)/mg$(EXE) $(MANDIR)/mg.1
 	install -m 755 $(BINDIR)/mg $(PREFIX)/bin
 	install $(MANDIR)/mg.1 ${MANPREFIX}/man1/
 	install -d $(LIBDIR)

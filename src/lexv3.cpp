@@ -558,12 +558,17 @@ int yycolumn = 1;
  * yylineno: Flex mantendrá el número de línea automáticamente
  */
 #define YY_NO_INPUT 1
+#define YY_NO_UNISTD_H 1
+/* nounistd/never-interactive: <unistd.h> e isatty() no son de C estándar y
+   estorban al compilar con MinGW para Windows. El lexer nunca lee de una
+   terminal —siempre de un .mg—, así que la prueba de interactividad no hace
+   falta en ninguna plataforma. */
 /* Expresiones regulares base */
 /* Enteros (5), decimales (5.5), sin cero inicial (.5) y notación científica (1e-3).
  * SIN signo inicial: el '-' unario lo maneja el parser (Unary ::= "-" Unary, §2);
  * el signo del EXPONENTE sí es parte del número. */
 /* Cadenas entre comillas dobles (ej. "blue", "$\alpha$", "/bTítulo") */
-#line 567 "src/lexv3.cpp"
+#line 572 "src/lexv3.cpp"
 
 #define INITIAL 0
 
@@ -778,12 +783,12 @@ YY_DECL
 		}
 
 	{
-#line 50 "src/lexer.l"
+#line 54 "src/lexer.l"
 
 
-#line 53 "src/lexer.l"
+#line 57 "src/lexer.l"
  /* --- ESPACIOS, SALTOS Y COMENTARIOS --- */
-#line 787 "src/lexv3.cpp"
+#line 792 "src/lexv3.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -816,16 +821,12 @@ yy_match:
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-		while ( yy_base[yy_current_state] != 101 );
+		while ( yy_current_state != 79 );
+		yy_cp = (yy_last_accepting_cpos);
+		yy_current_state = (yy_last_accepting_state);
 
 yy_find_action:
 		yy_act = yy_accept[yy_current_state];
-		if ( yy_act == 0 )
-			{ /* have to back up */
-			yy_cp = (yy_last_accepting_cpos);
-			yy_current_state = (yy_last_accepting_state);
-			yy_act = yy_accept[yy_current_state];
-			}
 
 		YY_DO_BEFORE_ACTION;
 
@@ -853,188 +854,188 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 54 "src/lexer.l"
+#line 58 "src/lexer.l"
 { yycolumn = 1; if (bracketDepth == 0) return T_NEWLINE; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 55 "src/lexer.l"
+#line 59 "src/lexer.l"
 { /* Ignorar espacios y tabulaciones */ }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 56 "src/lexer.l"
+#line 60 "src/lexer.l"
 { /* Comentario estilo TeX hasta fin de línea. Por eso el
                              módulo es mod(a,b) y NO el operador '%'. */ }
 	YY_BREAK
 /* --- PUNTUACIÓN Y AGRUPADORES --- */
 case 4:
 YY_RULE_SETUP
-#line 60 "src/lexer.l"
+#line 64 "src/lexer.l"
 { return T_LBRACE; }   /* {} no suprime newlines (ver arriba) */
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 61 "src/lexer.l"
+#line 65 "src/lexer.l"
 { return T_RBRACE; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 62 "src/lexer.l"
+#line 66 "src/lexer.l"
 { bracketDepth++; return T_LPAREN; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 63 "src/lexer.l"
+#line 67 "src/lexer.l"
 { if (bracketDepth > 0) bracketDepth--; return T_RPAREN; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 64 "src/lexer.l"
+#line 68 "src/lexer.l"
 { bracketDepth++; return T_LBRACKET; }   /* listas: [10, 2]  e indexado: a[i] */
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 65 "src/lexer.l"
+#line 69 "src/lexer.l"
 { if (bracketDepth > 0) bracketDepth--; return T_RBRACKET; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 66 "src/lexer.l"
+#line 70 "src/lexer.l"
 { return T_COMMA; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 67 "src/lexer.l"
+#line 71 "src/lexer.l"
 { return T_SEMICOLON; }  /* subtrayectos de paths */
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 68 "src/lexer.l"
+#line 72 "src/lexer.l"
 { return T_AMP; }        /* referencia a path: &nombre */
 	YY_BREAK
 /* --- OPERADORES (los de dos caracteres antes que los de uno) --- */
 case 13:
 YY_RULE_SETUP
-#line 71 "src/lexer.l"
+#line 75 "src/lexer.l"
 { return T_EQ; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 72 "src/lexer.l"
+#line 76 "src/lexer.l"
 { return T_NE; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 73 "src/lexer.l"
+#line 77 "src/lexer.l"
 { return T_LE; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 74 "src/lexer.l"
+#line 78 "src/lexer.l"
 { return T_GE; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 75 "src/lexer.l"
+#line 79 "src/lexer.l"
 { return T_PLUSASSIGN; }  /* solo `path w += pieza` (§9) */
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 76 "src/lexer.l"
+#line 80 "src/lexer.l"
 { return T_ASSIGN; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 77 "src/lexer.l"
+#line 81 "src/lexer.l"
 { return T_LT; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 78 "src/lexer.l"
+#line 82 "src/lexer.l"
 { return T_GT; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 79 "src/lexer.l"
+#line 83 "src/lexer.l"
 { return T_PLUS; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 80 "src/lexer.l"
+#line 84 "src/lexer.l"
 { return T_MINUS; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 81 "src/lexer.l"
+#line 85 "src/lexer.l"
 { return T_STAR; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 82 "src/lexer.l"
+#line 86 "src/lexer.l"
 { return T_SLASH; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 83 "src/lexer.l"
+#line 87 "src/lexer.l"
 { return T_CARET; }      /* potencia (§5.2); el '^' de
                                                     superíndices vive dentro de "..." */
 	YY_BREAK
 /* --- PALABRAS CLAVE (antes que {ID}: en empate de longitud gana la 1ª regla) --- */
 case 26:
 YY_RULE_SETUP
-#line 87 "src/lexer.l"
+#line 91 "src/lexer.l"
 { return T_STRUCT; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 88 "src/lexer.l"
+#line 92 "src/lexer.l"
 { return T_FOR; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 89 "src/lexer.l"
+#line 93 "src/lexer.l"
 { return T_TO; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 90 "src/lexer.l"
+#line 94 "src/lexer.l"
 { return T_STEP; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 91 "src/lexer.l"
+#line 95 "src/lexer.l"
 { return T_IF; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 92 "src/lexer.l"
+#line 96 "src/lexer.l"
 { return T_ELSE; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 93 "src/lexer.l"
+#line 97 "src/lexer.l"
 { return T_AND; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 94 "src/lexer.l"
+#line 98 "src/lexer.l"
 { return T_OR; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 95 "src/lexer.l"
+#line 99 "src/lexer.l"
 { return T_NOT; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 96 "src/lexer.l"
+#line 100 "src/lexer.l"
 { return T_INCLUDE; }
 	YY_BREAK
 /* --- IDENTIFICADORES, NÚMEROS Y CADENAS --- */
 case 36:
 YY_RULE_SETUP
-#line 99 "src/lexer.l"
+#line 103 "src/lexer.l"
 {
                           /* Primitivas (polyline), variables (x), atributos (color),
                            * funciones (sin, mod)… todo cae aquí; el parser resuelve. */
@@ -1044,7 +1045,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 106 "src/lexer.l"
+#line 110 "src/lexer.l"
 {
                           yylval.num = std::atof(yytext);
                           return T_NUMBER;
@@ -1053,7 +1054,7 @@ YY_RULE_SETUP
 case 38:
 /* rule 38 can match eol */
 YY_RULE_SETUP
-#line 111 "src/lexer.l"
+#line 115 "src/lexer.l"
 {
                           /* Quitamos las comillas antes de mandar el texto al parser */
                           yytext[yyleng-1] = '\0';
@@ -1064,7 +1065,7 @@ YY_RULE_SETUP
 /* --- MANEJO DE ERRORES LÉXICOS --- */
 case 39:
 YY_RULE_SETUP
-#line 119 "src/lexer.l"
+#line 123 "src/lexer.l"
 {
                           std::cerr << "Error léxico en " << yytokline << ":" << yytokcol
                                     << ": carácter inesperado '" << yytext << "'\n";
@@ -1073,10 +1074,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 125 "src/lexer.l"
+#line 129 "src/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1080 "src/lexv3.cpp"
+#line 1081 "src/lexv3.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1143,7 +1144,8 @@ case YY_STATE_EOF(INITIAL):
 
 			else
 				{
-				yy_cp = (yy_c_buf_p);
+				yy_cp = (yy_last_accepting_cpos);
+				yy_current_state = (yy_last_accepting_state);
 				goto yy_find_action;
 				}
 			}
@@ -1626,7 +1628,7 @@ static void yy_load_buffer_state  (void)
         b->yy_bs_column = 0;
     }
 
-        b->yy_is_interactive = file ? (isatty( fileno(file) ) > 0) : 0;
+        b->yy_is_interactive = 0;
     
 	errno = oerrno;
 }
@@ -2052,7 +2054,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 125 "src/lexer.l"
+#line 129 "src/lexer.l"
 
 
 /* * NOTA ARQUITECTÓNICA:

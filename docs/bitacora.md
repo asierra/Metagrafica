@@ -1771,3 +1771,56 @@ necesita recoger.
 
 La compuerta `galfail` mira ahora **las dos** páginas (`galeria.py --check` compara ambas), sin
 cambios en `test/run.sh` más allá de los comentarios y del texto del mensaje.
+
+### Cerrado en la sesión del 2026-07-27 (sexies) — Windows: `mg.exe` cruzado con MinGW
+
+Es el hueco que más usuarios cuesta y el que menos se puede tapar con documentación: en
+Windows no hay compilador de sistema, así que o se reparte un `.exe` hecho o no hay usuarios.
+Se cruza desde Linux con MinGW-w64 —como la versión de 1999— y **no hace falta una máquina
+Windows para producirlo**, solo para probarlo.
+
+🔎 **La auditoría de portabilidad salió mucho mejor de lo temido**, y conviene registrar por
+qué, porque es mérito de decisiones viejas:
+- **La fuente matemática va EMBEBIDA** (`g_lmmath_ttf` por memoria, `font_lmmath_eps.h` como
+  texto): no se abre ningún archivo en tiempo de ejecución, que era el obstáculo grande.
+- **Los tres backends abren con `"wb"`** (`EPSDisplay.cpp:187`, `SVGDisplay.cpp:195`, y
+  libharu en `hpdf_streams.c:937`). En Windows el modo texto traduce `\n` a `\r\n`: habría
+  corrompido el PDF en silencio. Ya estaba bien.
+- **Cero POSIX en el código propio**: ni `unistd.h`, ni `dirent`, ni `getopt`, ni `fork`.
+- `libharu` es C portable y va vendorizado; solo `zlib` es externa (`libz-mingw-w64-dev`).
+
+Tres cambios, todos chicos:
+
+**1. `src/lexer.l` gana `nounistd never-interactive`.** El único `#include <unistd.h>` del
+árbol lo ponía flex. El lexer nunca lee de una terminal —siempre de un `.mg`—, así que la
+prueba de interactividad no hace falta en ninguna plataforma. Verificado antes de tocarlo que
+el `lexv3.cpp` committeado sale de este mismo flex 2.6.4 (el diff eran solo los `#line`).
+
+**2. `Makefile`: `make CROSS=x86_64-w64-mingw32` → `bin/mg.exe`.** Fija CXX/CC/AR con el
+prefijo, añade el sufijo `.exe` a los targets y enlaza **estático**
+(`-static -static-libgcc -static-libstdc++`): el `.exe` tiene que correr recién
+descomprimido, sin DLLs de gcc al lado. El build nativo no cambia (`EXE` vacío).
+
+**3. `include` junto al `.exe`** (`parserv3.cpp`, `exeDir`, bajo `#ifdef _WIN32`). En Unix la
+biblioteca §15 vive en una ruta horneada con `-DMG_LIBDIR`; en Windows no hay `make install`
+ni `/usr/local`, el reparto es un `.zip` que el usuario descomprime donde quiera. Se añade
+`<dir del .exe>/lib/` como último candidato, y de paso se reconocen `C:\…` y `\\servidor`
+como rutas absolutas. Fuera de Windows no se compila ni una línea de esto, así que el golden
+no se entera (`ok=72`).
+
+**4. `.github/workflows/release.yml`** — no había CI de ninguna clase. Con una etiqueta `v*`
+compila Linux, macOS y Windows, y publica los tres paquetes con `lib/`, los ejemplos y la
+referencia dentro.
+
+⚠️ **Lo importante del workflow no es que compile, es que EJECUTA el `.exe`.** El binario
+cruzado no se corre en la máquina que lo produce, así que hay un trabajo `smoke-windows` en
+`windows-latest` que lo desempaca y dibuja en SVG, PDF y EPS; comprueba que el PDF siga
+empezando con `%PDF` (si Windows hubiera traducido saltos de línea, no lo haría) y compila un
+`.mg` con **`include "satellite.mg"` sin ruta**, que es el único camino de código exclusivo
+de Windows y el único que no se puede probar en otra plataforma. Publicar un binario que
+nadie ejecutó sería justo el tipo de hueco que este proyecto cierra con compuertas.
+
+📌 En Linux `test/run.sh capture` **bloquea** el release (cinco de las seis compuertas: todas
+menos el golden por bytes, que necesita una red que no está en git). En macOS es informativo
+a propósito: una diferencia de último dígito en `libm` movería los renders publicados sin que
+nada esté roto.
