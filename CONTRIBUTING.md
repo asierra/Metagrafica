@@ -65,7 +65,7 @@ C++14. Rules, not preferences:
   override, include guards `MG_*_H` (never `__*`), in-class member initializers.
 - **Comments and compiler messages are in Spanish.** The code is not.
 - New language features go **in the compiler**. No external preprocessors.
-- Do not hand-edit `src/lexv3.cpp` or `src/lexmg.cpp` — flex generates them.
+- Do not hand-edit `src/lexv3.cpp` — flex generates it from `src/lexer.l`.
   `include/version.h` **is** edited by hand.
 
 ## Nothing may fail silently

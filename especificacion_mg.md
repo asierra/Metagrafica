@@ -1026,7 +1026,7 @@ Sus dos ventajas de 1988 —evaluación barata en Pascal/ensamblador y cónicas
 *racionales* para círculos exactos— ya no aplican: la salida es EPS/PDF/SVG (los tres
 hablan cúbica nativa) y MG tiene arcos y elipses reales (§4.3).
 
-*(Historia: `$S 1` figura en el comentario de `Parser.cpp` pero **nunca se implementó**
+*(Historia: `$S 1` figura en el comentario de `Parser.cpp` —rama `v1-legacy`— pero **nunca se implementó**
 —el `switch` solo atiende `n==0` y `n>1`—, así que las cónicas no sobrevivieron al paso
 a EPS de 1991. Ni `SP` ni `$S` aparecen una sola vez en el corpus V1 congelado: en 25
 años y tres libros publicados el comando no se usó nunca. La sección se conserva

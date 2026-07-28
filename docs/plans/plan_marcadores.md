@@ -24,12 +24,12 @@ como un sistema paralelo.
 
 | Capacidad | Dónde | Notas |
 |---|---|---|
-| Marcar una struct por nombre | `MKST` → `Parser.cpp:468` (`YMKST`) | Fija el puntero `st` usado por los placements siguientes |
+| Marcar una struct por nombre | `MKST` → `Parser.cpp:468` (rama `v1-legacy`) (`YMKST`) | Fija el puntero `st` usado por los placements siguientes |
 | Struct a lo largo de **línea** con rotación tangente | `LNST` → `StructureLine::draw_side` (`structure.cpp:60-86`) | `rt = atan2(dy,dx)`, `mtln.rotate(rt)` → **`orient="auto"` ya resuelto para líneas** |
 | Struct a lo largo de **arco** con rotación tangente | `ARCST` → `StructureArc::draw_side` (`structure.cpp:104-138`) | Rota tangente ±90°; soporta `shift`, `both_sides` |
 | Struct a lo largo de **path** | `DPST`/`RPST` → `StructurePath::draw` (`structure.cpp:33-47`) | **Solo `translate`+`scale`, NO rota** ← hueco principal |
 | Struct ajustada a rectángulo | `PWST`/`PVST` → `StructureRectangle::draw` (`structure.cpp:49-57`) | `fit` en V3 |
-| Parámetros de colocación | `scale` (`sc`), `shift`, `gap`, `n` (repeticiones), `both_sides` (`sc<0`) | Ya parseados en `Parser.cpp` (YLNST/YARCST/YRPST) |
+| Parámetros de colocación | `scale` (`sc`), `shift`, `gap`, `n` (repeticiones), `both_sides` (`sc<0`) | Ya parseados en `Parser.cpp` (YLNST/YARCST/YRPST; rama `v1-legacy`) |
 | Structs personalizadas como marcador | vía `MKST`/`&name` + placement | Ya soportado; el §B.B del plan original ya funciona en V1 |
 
 **Conclusión:** el caso "flecha orientada al final de una línea" y "struct rotada
@@ -50,7 +50,7 @@ consulta al dibujarse, o bien como una expansión en el parser a placements
 ### A.3 Tokens V1 vestigiales
 
 `MKMR` (`YOPS`) y `MR` (`YOP, GI_NULL`, sin primitiva asociada) siguen en
-`keyword_map` (`mgpp.l:44,46`) sin uso real. Al diseñar la gramática V3 conviene
+`keyword_map` (`mgpp.l:44,46`, rama `v1-legacy`) sin uso real. Al diseñar la gramática V3 conviene
 **retirarlos** (mueren con el front-end V1) o reciclar la idea de `MR` (marker) en
 el nuevo comando. No invertir en ellos.
 
@@ -256,7 +256,7 @@ arranque** dentro del binario.
   previa de que "heredan color y fill... sale gratis": eso es el default, pero el
   override de color es una necesidad real y se resuelve en §B.4.
 
-**Complementario — ruta de búsqueda para `INPUT`.** `openFile` (`mgpp.l:106`) abre
+**Complementario — ruta de búsqueda para `INPUT`.** `openFile` (`mgpp.l:106`, rama `v1-legacy`) abre
 el nombre tal cual con `ifstream`, sin ruta de búsqueda: `INPUT arrow`/`INPUT
 markers` solo funcionan desde el directorio del archivo. Añadir un fallback
 (`$MG_LIB` → directorio del ejecutable → default de instalación) arregla las

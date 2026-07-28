@@ -63,7 +63,7 @@ HARU_OBJS = $(patsubst $(HARUDIR)/src/%.c, $(OBJDIR)/haru/%.o, $(HARU_SRCS))
 HARU_LIB = $(OBJDIR)/haru/libharu.a
 
 SRCS = $(addprefix $(SRCDIR)/, Display.cpp EPSDisplay.cpp PDFDisplay.cpp SVGDisplay.cpp main.cpp structure.cpp matrix.cpp \
-	primitives.cpp lexmg.cpp text.cpp text_parser.cpp Parser.cpp splines.cpp)
+	primitives.cpp text.cpp text_parser.cpp splines.cpp)
 
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 
@@ -87,10 +87,7 @@ $(MANDIR)/mg.1: $(MANDIR)/mg.1.md
 $(MANDIR)/mg.1.pdf: $(MANDIR)/mg.1.md
 	pandoc $< -s -t pdf -o $@
 
-$(SRCDIR)/lexmg.cpp: $(SRCDIR)/mgpp.l
-	flex -o $@ $<
-
-# Lexer V3 (en desarrollo): src/lexer.l -> src/lexv3.cpp
+# Lexer V3: src/lexer.l -> src/lexv3.cpp
 $(SRCDIR)/lexv3.cpp: $(SRCDIR)/lexer.l
 	flex -o $@ $<
 
@@ -122,8 +119,8 @@ $(BINDIR):
 # --- Cutover (§22.6): bin/mg ES el compilador V3 -----------------------------
 # main.cpp es el entry point V3 (parserv3.h: buildFromSource/g_baseDir/g_flags).
 # Objetos del motor reutilizados por el parser V3 (incluye PDF/haru para paridad
-# de backends con el V1). El front-end V1 (Parser.cpp, lexmg.cpp) queda fuera
-# del binario; sigue congelado en la rama v1-legacy.
+# de backends con el V1). El front-end V1 se BORRÓ del árbol el 2026-07-27, ya
+# cerrado el traductor; sigue completo en la rama v1-legacy.
 V3_ENGINE_OBJS = $(addprefix $(OBJDIR)/, Display.o EPSDisplay.o SVGDisplay.o PDFDisplay.o structure.o \
 	matrix.o primitives.o text.o text_parser.o splines.o)
 
@@ -153,7 +150,7 @@ uninstall:
 	-rmdir $(LIBDIR)
 
 clean:
-	rm -rf obj obj-win $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp $(SRCDIR)/lexv3.cpp
+	rm -rf obj obj-win $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexv3.cpp
 # Dependencias de headers: AUTOMÁTICAS (los obj/*.d que genera -MMD, ver arriba).
 # Sustituyen a la lista que mantenía `makedepend` aquí abajo, que se había podrido:
 # decía que EPSDisplay.o depende de font_cmmi.h y NO de font_lmmath_eps.h, que es

@@ -1889,3 +1889,38 @@ golden, porque el golden se genera **en una sola** plataforma.
 **relativa idéntica** en las dos plataformas. El EPS lleva su ruta de salida dentro
 (`%%Title`), así que compararlas exige o normalizar —lo que hace `test/run.sh`— o, más simple,
 pedirle a los dos la misma ruta.
+
+### Cerrado en la sesión del 2026-07-27 (septies) — fuera el front-end V1: `main` es solo V3
+
+Pregunta de Alejandro: ¿está cerrado el traductor, para poder borrar `Parser.cpp` y el lexer
+viejo? Sí, y el borrado destapó de paso una red de pruebas podrida.
+
+**El traductor está cerrado** (`tools/mg1to2.py`, `ok=14`) y **no depende del front-end V1 en
+tiempo de ejecución**: es Python, lee los `.mg` de V1 directamente. `Parser.cpp` y `mgpp.l`
+servían de **referencia de la semántica V1** —la aridad exacta de cada comando de dos letras—,
+y esa referencia sigue viva en la rama: `git show v1-legacy:src/Parser.cpp`.
+
+Borrados de `main`: `src/Parser.cpp`, `src/mgpp.l`, `include/Parser.h`, `include/MGLexer.h`,
+`include/mgpp_tab.h`. Ninguno se compilaba desde el cutover —estaban en `SRCS` del Makefile
+pero fuera de `V3_ENGINE_OBJS`, o sea que la lista *decía* que se construían y no era cierto,
+que es peor que no estar—. Con ellos se fue **`include/font_cmmi.h`**, 1339 líneas de fuente
+Type42 empotrada, **huérfano** desde la migración a LM Math del 2026-07-20: no lo incluía
+nadie (`cmmiUnicode()` es otra cosa, vive en `text_parser.h` y sí se usa). Build limpio y
+`ok=72` sin mover un byte.
+
+🔎 **Y el hallazgo lateral, que vale más que el borrado: `test/golden_translator` llevaba SEIS
+DÍAS rancia.** `bash test/run_translator.sh check` daba `ok=9 fail=5`. Ninguno era un fallo del
+traductor —que no se ha tocado—: los cinco eran cambios **intencionales del motor** que nadie
+había bendecido ahí, porque esa red se genera con «traductor + `bin/mg`» y la mueve cualquier
+cambio del compilador:
+- `fig2-3` y `primitives`: **toda** línea distinta era un arco. La bandera *large-arc* de un
+  arco de 180° cambió con la reconstrucción de arcos de hoy; en 180° la elección es ambigua
+  (las dos mitades miden lo mismo) y el dibujo es idéntico.
+- `fig6-1` y `fig4-10`: un `<text>` con **un espacio suelto** que el golden traía y la salida
+  de hoy ya no emite — lo quitó `plan_text_space`. Mejora, no regresión.
+- `fig6-10`: idéntico ya, fallaba por arrastre de la captura vieja.
+
+📌 **La causa raíz es estructural: `test/run.sh` no corre el harness del traductor**, así que no
+existe el reflejo de re-bendecirlo. Es exactamente la lección de `docs/img` y de la galería, un
+escalón más afuera. Queda documentado en `CLAUDE.md` («Build and test») como paso obligatorio
+tras tocar el motor. **Si se repite, la respuesta es una séptima compuerta**, no otra nota.

@@ -18,7 +18,9 @@ make clean
 
 bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería: ok=72 … galfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
-bash test/run.sh images   # regenera docs/img/*.svg + docs/galeria.html (PUBLICADO; capture NO los toca)
+bash test/run.sh images   # regenera docs/img/*.svg + la galería es/en (PUBLICADO; capture NO los toca)
+
+bash test/run_translator.sh check    # traductor V1→V3 (tools/mg1to2.py): ok=14
 ```
 
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
@@ -27,6 +29,14 @@ de `examples/` (24 `.mg` × EPS/SVG/**PDF** = 72 goldens) y compara contra la re
 `make` y `bash test/run.sh check` (debe dar **ok=72 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
+
+⚠️ **`test/run_translator.sh` NO lo corre `test/run.sh`, y por eso se pudre.** Su red golden
+es «traductor + `bin/mg`», así que la mueve **cualquier** cambio del motor, igual que la del
+corpus — pero nadie la corre, y el 2026-07-27 apareció con seis días de atraso (`ok=9 fail=5`:
+la bandera *large-arc* de los arcos de 180° tras la reconstrucción de arcos, y un `<text>` con
+un espacio suelto que dejó de emitirse con `plan_text_space`). Ninguno era un fallo del
+traductor. **Tras tocar el motor, corre también `bash test/run_translator.sh check` y
+re-captúralo** si el cambio era intencional.
 
 **Seis compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
@@ -85,7 +95,7 @@ Las seis compuertas se verificaron reintroduciendo a propósito los bugs que deb
 dando `ok=57` — que es justo la prueba de que el golden no puede verlo; la de la galería,
 cambiando el título de `sines.mg` sin regenerar: `galfail=1` con las otras cinco en cero).
 
-Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexmg.cpp` from `src/mgpp.l`), `pandoc` (man page). Do not edit `src/lexmg.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu is vendored in `third_party/` for PDF.
+Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexv3.cpp` from `src/lexer.l`), `pandoc` (man page). Do not edit `src/lexv3.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu is vendored in `third_party/` for PDF.
 
 **Windows (2026-07-27):** `make CROSS=x86_64-w64-mingw32` → `bin/mg.exe`, enlazado estático,
 cruzado desde Linux con MinGW-w64 (necesita `mingw-w64` + `libz-mingw-w64-dev`). El build
@@ -148,11 +158,11 @@ sobre `examples/*.mg` que tengan `docs/img/X.svg`, mientras que la compuerta ite
 ensayos (`franck_condon_anarm`, `turning_points_nodos`, `parabola_vs_arco`), que no son
 corpus. Son dos reglas parecidas y distintas; no las unifiques.
 
-**Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru); los que quedan en el árbol **fuera del build** son `src/Parser.cpp` y `src/lexmg.cpp` (front-end V1). V1 sigue congelado en `v1-legacy`. `make v3test` es un alias (`cp bin/mg bin/v3test`).
+**Cutover hecho (§22.6):** `bin/mg` en `main` **es el compilador V3** (se arma de `src/parserv3.cpp` + `src/lexv3.cpp` + motor + PDF/haru). `test/run.sh` compila el corpus de `examples/` con la salida del propio renderer V3 como red golden (regresión, no el oráculo V1); **reactivado 2026-07-11** (ver "Build and test"). `src/main.cpp` **sí es el entry point V3** y está en el build (Makefile: `bin/mg` = `main.cpp` + `lexv3.cpp` + `parserv3.cpp` + motor + haru). **El front-end V1 se BORRÓ del árbol el 2026-07-27** (`src/Parser.cpp`, `src/mgpp.l`, `include/Parser.h`, `include/MGLexer.h`, `include/mgpp_tab.h`), una vez cerrado el traductor: estaba fuera del build y su papel era servir de referencia de la semántica V1, que ahora se consulta en la rama —`git show v1-legacy:src/Parser.cpp`—. En la misma pasada se fue `include/font_cmmi.h`, huérfano desde la migración a LM Math. `main` es ahora **solo V3**. `make v3test` es un alias (`cp bin/mg bin/v3test`).
 
 ## Architecture
 
-Pipeline (V3, post-cutover): `.mg` → **lexer** (`src/lexer.l` → `src/lexv3.cpp`) → **Parser V3** (`src/parserv3.cpp`: descenso recursivo → AST de `Stmt` → `exec` emite `GraphicsItem`s) → in-memory tree (`MetaGrafica`) → **Display** backend → EPS/SVG/PDF. *(El pipeline V1 —`src/mgpp.l` → `src/Parser.cpp`— sigue en el árbol como referencia/insumo del traductor, pero fuera del build; ver `plan_mg1to2.md`.)*
+Pipeline (V3, post-cutover): `.mg` → **lexer** (`src/lexer.l` → `src/lexv3.cpp`) → **Parser V3** (`src/parserv3.cpp`: descenso recursivo → AST de `Stmt` → `exec` emite `GraphicsItem`s) → in-memory tree (`MetaGrafica`) → **Display** backend → EPS/SVG/PDF. *(El pipeline V1 —`mgpp.l` → `Parser.cpp`— vive solo en la rama `v1-legacy` desde el 2026-07-27; es la referencia de la semántica V1 que consulta `tools/mg1to2.py`.)*
 
 - **`GraphicsItem`** (`include/primitives.h`) — abstract base of every drawable; hierarchy is non-copyable (use-count bookkeeping in `StructureUser`). `Path` = `std::vector<point>`.
 - **`Structure` / `MetaGrafica`** (`include/structures.h`) — named reusable groups; `MetaGrafica` is the document (dimensions `$D` in cm, world window `WW`, font size). `StructureLine/Arc/Path/Rectangle` place structs geometrically.

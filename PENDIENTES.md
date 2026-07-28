@@ -127,7 +127,8 @@ orden de la lista es la ejecución.
        ÚNICO que detenía ese árbol. Era infraestructura de carga. Con eso, el ítem cumple
        la regla del proyecto («no se construye sin una figura que lo pida»).
      - 🔎 **Dato de archivo:** `MAXDEEP` sobrevive como palabra en el léxico de V1
-       (`src/mgpp.l:43`) pero `parseDef` no tiene caso para ella → **se ignora**, igual
+       (`mgpp.l:43`, hoy solo en la rama `v1-legacy`) pero `parseDef` no tiene caso
+       para ella → **se ignora**, igual
        que el `$S 1` de las splines cónicas. Murió en la misma transición a EPS de 1991.
    - **Va antes que (1) porque lo que compra la palabra «beta» es el permiso para
      romper.** Hoy un renombre cuesta un `sed`; después de 1.0 cuesta una migración y un

@@ -97,10 +97,12 @@ V1 es **orientado a líneas / tokens**, no estructurado por bloques. Reglas:
 - **Structs**: `OPST nombre ... CLST` delimitan una definición; `MKST nombre ...`
   la invoca.
 
-> El lexer V1 (`src/mgpp.l`) y el parser (`src/Parser.cpp`) son la referencia
-> autoritativa de la aridad y el formato exacto de cada comando. Cuando dudes de
-> cómo se parsea un comando, míralo ahí. `src/lexmg.cpp` (generado) tiene el
-> `keyword_map` con todos los tokens.
+> El lexer V1 (`mgpp.l`) y el parser (`Parser.cpp`) son la referencia autoritativa
+> de la aridad y el formato exacto de cada comando. Cuando dudes de cómo se parsea
+> un comando, míralo ahí. ⚠️ **Desde el 2026-07-27 ya no están en `main`**: se
+> borraron al cerrarse este traductor, y viven en la rama `v1-legacy`. Se consultan
+> sin cambiar de rama con `git show v1-legacy:src/Parser.cpp` (o `:src/mgpp.l`, que
+> trae el `keyword_map` con todos los tokens).
 
 ---
 
