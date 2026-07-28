@@ -8,7 +8,7 @@
 #   ./run.sh images    - regenerate docs/img/*.svg + la galería es/en (salida
 #                        PUBLICADA y versionada)
 #
-# Seis compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
+# Siete compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
 #   - Golden por bytes (eps/svg/pdf): caza REGRESIONES de salida. No caza un bug
 #     preexistente: se bendice como correcto.
 #   - Ghostscript sobre el EPS (psfail): caza los bugs de PRÓLOGO, que el golden
@@ -62,6 +62,10 @@
 #     los ~150 caminos de error del compilador no tenían NINGUNA prueba. Su
 #     regresión natural es volver al SILENCIO, que no mueve un byte de ningún
 #     golden. Ver el bloque de la compuerta al final del archivo.
+#   - La REFERENCIA EN INGLÉS al día (trfail): docs/reference.md no se puede
+#     regenerar —traducir es humano—, así que se vigila su PROCEDENCIA: lleva
+#     grabado el hash del referencia.md del que salió. No dice si la traducción
+#     es buena, dice si es vieja. Ver el bloque al final.
 #   - La GALERÍA al día (galfail): docs/galeria.html + docs/gallery.html (es/en)
 #     son publicadas y DERIVADAS, y
 #     lo que la vuelve rancia es editar un COMENTARIO — lleva incrustados el
@@ -244,6 +248,7 @@ c3fail_count=0
 imgfail_count=0
 errfail_count=0
 galfail_count=0
+trfail_count=0
 err_ok=0
 
 for example in $EXAMPLES; do
@@ -393,6 +398,37 @@ else
     echo "WARN: python3 no encontrado; se omite la compuerta de la galería"
 fi
 
+# --- Compuerta 7: la referencia en INGLÉS al día (trfail) --------------------
+# docs/reference.md es la traducción de docs/referencia.md y, a diferencia de
+# docs/img o la galería, NO SE PUEDE REGENERAR: traducir es trabajo humano. Así
+# que esta compuerta no compara contenidos —no sabría— sino PROCEDENCIA:
+# reference.md lleva grabado el hash del referencia.md del que se tradujo, y aquí
+# se comprueba que siga siendo el vigente.
+#
+# No dice si la traducción es buena; dice si es VIEJA, que es justo lo que nadie
+# notaba: el 2026-07-27 llevaba 88 líneas de atraso en 5 commits, y lo que le
+# faltaba era precisamente lo más nuevo (marker_at, arcos elípticos, la regla de
+# la ruta log) — o sea lo que más querría leer alguien de fuera.
+#
+# Se re-sella A MANO, y a propósito: es la única forma de que sellar signifique
+# "ya traduje", en vez de ser un efecto colateral de otra cosa.
+REFES="$ROOT/docs/referencia.md"
+REFEN="$ROOT/docs/reference.md"
+if [ -f "$REFES" ] && [ -f "$REFEN" ] && command -v git >/dev/null 2>&1; then
+    tr_want="$(git hash-object "$REFES" 2>/dev/null)"
+    tr_got="$(sed -n 's/.*translated-from: referencia.md @ \([0-9a-f]*\).*/\1/p' "$REFEN" | head -1)"
+    if [ -z "$tr_got" ]; then
+        echo "TRFAIL docs/reference.md no declara de qué referencia.md se tradujo"
+        echo "       añade al final:  <!-- translated-from: referencia.md @ $tr_want -->"
+        trfail_count=$((trfail_count + 1))
+    elif [ "$tr_want" != "$tr_got" ]; then
+        echo "TRFAIL docs/reference.md está RANCIA (referencia.md cambió desde la traducción)"
+        echo "       diferencias:  git diff $tr_got -- docs/referencia.md"
+        echo "       tras traducir, sella con:  <!-- translated-from: referencia.md @ $tr_want -->"
+        trfail_count=$((trfail_count + 1))
+    fi
+fi
+
 # --- Compuerta 5: pruebas NEGATIVAS (errfail) --------------------------------
 # Las otras cuatro compuertas miran salida EXITOSA, así que los ~150 caminos de
 # error del compilador (evalError/parseError/exit) no tenían una sola prueba. Y su
@@ -459,14 +495,14 @@ done
 
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count trfail: $trfail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count (err_ok=$err_ok)"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count trfail=$trfail_count (err_ok=$err_ok)"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0

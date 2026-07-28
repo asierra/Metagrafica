@@ -16,7 +16,7 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería: ok=72 … galfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción: ok=72 … trfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg + la galería es/en (PUBLICADO; capture NO los toca)
 
@@ -26,7 +26,7 @@ bash test/run_translator.sh check    # traductor V1→V3 (tools/mg1to2.py): ok=1
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
 de `examples/` (24 `.mg` × EPS/SVG/**PDF** = 72 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=72 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=72 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -38,7 +38,7 @@ un espacio suelto que dejó de emitirse con `plan_text_space`). Ninguno era un f
 traductor. **Tras tocar el motor, corre también `bash test/run_translator.sh check` y
 re-captúralo** si el cambio era intencional.
 
-**Seis compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+**Siete compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
 - **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
@@ -90,7 +90,18 @@ re-captúralo** si el cambio era intencional.
   `python3`, y se regenera con `images` y no con `capture`, por la misma razón que
   `docs/img`.
 
-Las seis compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
+- **La REFERENCIA EN INGLÉS al día** (`trfail`, nueva 2026-07-28) — `docs/reference.md` es la
+  traducción de `docs/referencia.md` y, a diferencia de `docs/img` o la galería, **no se puede
+  regenerar**: traducir es trabajo humano. Así que no se compara el contenido sino la
+  **procedencia**: el archivo inglés lleva grabado, en un comentario al final, el
+  `git hash-object` del español del que salió, y la compuerta comprueba que siga siendo el
+  vigente. No dice si la traducción es buena; dice si es **vieja**. Nació de encontrarla con 88
+  líneas de atraso en 5 commits, y lo que le faltaba era lo más nuevo —`marker_at`, arcos
+  elípticos, la regla de la ruta log—, o sea justo lo que querría leer alguien de fuera. Se
+  re-sella **a mano** a propósito: así sellar significa «ya traduje» y no es el efecto colateral
+  de otro comando.
+
+Las compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
 (la de `docs/img`, con el archivo rancio **real** de `e9198c0`: lo caza, y el golden sigue
 dando `ok=57` — que es justo la prueba de que el golden no puede verlo; la de la galería,
 cambiando el título de `sines.mg` sin regenerar: `galfail=1` con las otras cinco en cero).

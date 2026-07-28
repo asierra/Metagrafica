@@ -2104,3 +2104,33 @@ gramática; el último renombre real fue el `title`→`label` del 2026-07-16—.
 está en beta (los nombres, no la salida), que los nombres viejos fallan ruidosamente y nunca en
 silencio, y que la salida está medida en tres plataformas. La misma información, pero como
 argumento en vez de como aviso.
+
+### Cerrado en la sesión del 2026-07-28 — la referencia inglesa, y una compuerta para lo que no se regenera
+
+`docs/reference.md` llevaba **88 líneas de atraso en 5 commits** —del 24 al 27 de julio—, y lo que
+le faltaba era, con precisión incómoda, **lo más nuevo**: `marker_at`, `arc(rx, ry)` y el recorte
+de arcos, `asin`/`acos` vía `atan2`, arcos bajo transformación con el aviso de que `rotate` gira
+el plano, la regla de la ruta log, y los tres mapas de `lib/` con `limb`. O sea justo lo que
+querría leer alguien que llega de fuera — que es para lo que existe esa traducción. Los seis
+bloques quedaron portados, con sus fragmentos de código verificados igual que los del español.
+
+📌 **Y la causa es la cuarta instancia del mismo patrón en dos días.** `docs/img`, la galería, el
+conteo de ejemplos del README y los goldens del traductor se pudrieron todos por lo mismo: salida
+derivada que nadie vigila. La referencia inglesa es eso, con un agravante — **no se puede
+regenerar**: traducir es trabajo humano, así que no admite una compuerta al estilo `galfail`, que
+compara contra lo que el generador produciría hoy.
+
+**Séptima compuerta (`trfail`): se vigila la PROCEDENCIA, no el contenido.** `reference.md` lleva
+grabado al final, en un comentario HTML, el `git hash-object` del `referencia.md` del que se
+tradujo; la compuerta comprueba que siga siendo el vigente. No sabe si la traducción es buena
+—nada automático puede saberlo—, sabe si es **vieja**, que era exactamente lo que nadie notaba.
+Cuando falla imprime las tres cosas útiles: que está rancia, el `git diff <hash> -- docs/referencia.md`
+que enseña lo que falta traducir, y la línea con la que sellar al terminar.
+
+⚠️ **Se re-sella A MANO, y es deliberado.** Si sellara `capture` o `images`, sellar sería un
+efecto colateral de otro comando y volveríamos al punto de partida. Sellar tiene que significar
+«ya traduje». Es la misma razón por la que `capture` no toca `docs/img`.
+
+Verificada como las anteriores: se le metió un cambio al español y la cazó (`trfail=1`) con las
+otras seis en cero; revertido, vuelve a `trfail=0`. Corre en `check` y en `capture`, así que
+también bloquea un release con la referencia inglesa atrasada.

@@ -21,7 +21,7 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=72 … galfail=0** (6 compuertas: la
+> Build/test: `make` + `bash test/run.sh check` → **ok=72 … trfail=0** (7 compuertas: la
 > 5ª son 38 pruebas NEGATIVAS en `test/errors/`; la 6ª, nueva el 2026-07-23, vigila que
 > `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva incrustado el
 > código de cada ejemplo, así que **editar un comentario la desactualiza** y ninguna de

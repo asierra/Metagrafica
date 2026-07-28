@@ -114,6 +114,7 @@ rectangle(w=4, h=3, at=(2, 1.5))           % …or center + size (at = center; o
 circle(2) { 5 5  9 5 }                     % one circle per point; 2 = radius (world)
 ellipse(3, 1.5) { 5 5 }                    % x, y radii
 arc(2, from=0, to=120) { 0 0 }             % degrees, positive = counterclockwise
+arc(4, 2, from=270, to=450) { 0 0 }        % ELLIPTICAL arc (rx, ry); also rx=, ry=
 dot(2) { 1 1  2 3 }                        % disc of PHYSICAL radius 2 pt
 marker(3, shape="cross") { 1 1 }           % symbol of physical radius
 bezier { 0 0  1 2  3 2  4 0 }              % p0 c1 c2 p1 [c1 c2 p2 …]  (3k+1 points)
@@ -138,6 +139,42 @@ polyline { 0 0  (p)  5 5 }                     % scalars and a point p mixed
 
 **`marker` shapes:** `circle`, `square`, `diamond`, `cross`, `x`, `triangle`, `arrow`, `circle-dot`. Also
 the name of your own `struct`. `dot(r)` is the disc shortcut and carries no `shape=`.
+
+**Markers on an arc or an ellipse (`marker_at`).** `arc`, `ellipse` and `circle` take markers at
+**parametric** positions, not just at the ends, each one oriented to the local tangent:
+
+```octave
+ellipse(3, 5, marker="arrow", marker_at=[0, 180]) { 0 0 }   % direction-of-travel arrows
+arc(2, from=0, to=180, marker="arrow", marker_at=45) { 0 0 } % a single angle, no list
+```
+
+The values are in **degrees**, the same parameter as the primitive's own `from`/`to` (they are not
+`t ∈ [0,1]` as in `point_at`/`sample`, which travel by arc length). With `marker_at` present,
+`marker=` is only the **shape**: the endpoints must be asked for separately with
+`marker_start`/`marker_end`. ⚠️ On an ellipse, parametric angles are **not** evenly spaced along
+the curve. A marker is **physically** sized and of a single colour; to stamp a whole struct, with
+its colours, on that same arc, use `place(..., at=)`.
+
+**Trimming an arc: drawing only the stretch that shows.** `from`/`to` are not normalised —the
+sweep is `to − from`, it may exceed 360° and it may start anywhere—, so an `arc` is how you draw
+*part* of an ellipse: the half of an orbit that the planet does not hide, for instance. And the
+cut angles are computed **inside the `.mg` itself**, because the evaluator carries trigonometry
+([§7](#7-expressions-and-control-flow)): no measuring on the drawing, no splitting the curve by
+hand.
+
+```octave
+% Orbit with semi-axes a, b, concentric with a globe of radius R. The hidden stretch is
+% the one that runs behind AND falls inside the disc; the crossings come from |P(t)|² = R².
+s  = sqrt((R*R - a*a)/(b*b - a*a))
+tc = atan2(s, sqrt(1 - s*s)) * 180/pi           % = asin(s), in degrees
+arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % skips the stretch t ∈ (180−tc, 180+tc)
+```
+
+The ends of the stroke land on the limb **by construction**, with nothing adjusted, because the
+globe's circle and the equation share centre and radius. Note that this is not a contour
+intersection problem —path algebra ([§10](#10-path-algebra)) would not help—: occlusion is a
+matter of depth, and in 2-D you have to *decide* which half is behind. Full figure in
+[`examples/orbita_polar.mg`](../examples/orbita_polar.mg).
 
 **`compound`** joins several primitives into **a single** filled stroke:
 
@@ -306,6 +343,11 @@ first = xs[0]
 **Functions:** `sin` `cos` `tan` `atan2(y,x)` `sqrt` `abs` `exp` `ln` `mod(a,b)` `len(list)` `str(x)`
 `str(x,decimals)` `gray(g)`. Angles are in **radians** (`cos(a*pi/180)`). Constants: `pi`, `true`, `false`.
 
+> **There is no `asin` or `acos`**, but `atan2` expresses them: the arcsine of `s` is
+> `atan2(s, sqrt(1-s*s))`, and the arccosine, `atan2(sqrt(1-s*s), s)`. With those you solve the
+> angles of a geometric construction inside the `.mg` —where to trim an arc, for instance
+> ([§4](#4-primitives))— instead of measuring them on the drawing.
+
 **Operators:** `+ - * / ^`, comparison `== != < <= > >=`, logical `and` `or` `not`.
 
 ```octave
@@ -453,6 +495,15 @@ Also as a per-primitive or placement argument: `polyline(transform=rotate(30)) {
 
 > Under a `transform`, text moves its **anchor**; the glyphs are not deformed (except `rotate`, which does
 > turn them).
+
+A `rotate`, a `scale` with different factors in x and y, or a `shear` applied to a `circle`, an
+`arc` or an `ellipse` yield the **rotated** ellipse they should, with their angles intact: the
+whole figure is transformed, not its radii separately. This holds in all three output formats.
+
+> ⚠️ **`rotate` turns the plane, not the figure about its own centre.** If the centre is not at the
+> origin, rotating displaces it. To turn something in place, bring the origin to the centre first
+> and draw there: `{ translate 0 cy   rotate 15   ellipse(a, b) { 0 0 } }`. This is the trap that
+> sends two concentric ellipses drifting to opposite sides.
 
 ---
 
@@ -610,6 +661,27 @@ the line crosses the whole box**, which is usually what's wanted; `to=` cuts it 
 > values ≤ 0; if your points are just poorly spread, what you want are guide lines, not a scale
 > ([details](#14-common-mistakes)).
 
+**With a logarithmic axis, `plot` maps positions, not shapes.** A linear axis wraps the content in a
+matrix and transforms all of it; log cannot —it is not an affine transformation— so it remaps
+**coordinate by coordinate**. The consequence is a rule, not a corner case: whatever is not a
+coordinate stays as you wrote it, in page units. That already held for `line_width`, the type and
+the radius of `dot`; it holds just the same for the **radius** of `circle`/`arc`/`ellipse` and the
+`width` of `polybar`.
+
+```octave
+plot(x=(1,1000), y=(0,10), xscale="log") {
+    circle(0.5) { 10 5 }     % circle of radius 0.5 ON THE PAGE, centred on the datum (10,5)
+    dot(3)      { 10 5 }     % the right way to mark a datum: physical, 3 pt
+}
+```
+
+> ⚠️ **The same `circle(0.5)` measures different things depending on the axis.** With a linear axis
+> the matrix transforms it along with everything else (and in an anisotropic frame it comes out an
+> ellipse); with a log axis it keeps its page size. This is not an oversight: under a logarithm a
+> circle of data is neither a circle nor an ellipse —it is an asymmetric egg—, so there is no
+> "correct" shape to draw. To mark data use `dot`, which is physical and therefore behaves the same
+> on both routes.
+
 **`legend`** — `at=` combines `"top"`/`"center"`/`"bottom"` with `"-left"`/`"-right"`; plus `margin`,
 `sample_width`, `sample_height`, `gap`, `row_gap`, `font_size` (all in pt). With a block, each entry
 declares its sample; **without a block**, the entries are set by the `rule`s with `label_at="legend"`:
@@ -664,7 +736,19 @@ prisma(2, 1, 1.5)               % width, height, depth
 
 The `include` must precede the use, and **compilation fails** if the file doesn't resolve. In `lib/` come
 `pseudo3d.mg` (volume simulated by oblique projection, without a z-buffer: the paint order is the writing
-order) and `satellite.mg` (an icon, `struct Satellite`).
+order), `satellite.mg` (an icon, `struct Satellite`) and three **world maps** in orthographic
+projection, generated from real data (Natural Earth) with `tools/geo2mg.py`: `polar_map.mg`
+(`PolarMap`, seen from the north pole), `fulldisk_map.mg` (`FullDiskMap`, equatorial) and
+`mapa_p30_n55.mg` (`Mapa`, lat 30, lon −55).
+
+All three are ordinary structs normalised to **radius 1**, so they are placed like any other one
+—`scale` is the globe's radius in world units— and they take `grid=false` to drop the graticule and
+`limb=false` to drop the outline of the disc, plus `ocean=`/`land=`/`grid_color=`/`grid_width=`:
+
+```octave
+include "../lib/mapa_p30_n55.mg"
+Mapa(scale=5, at=(0, 0.5), grid=false)      % globe of radius 5 centred at (0, 0.5)
+```
 
 **Where `include` looks:** first **next to your file** (relative path), and then in the **installed
 library** (`make install` copies `lib/*.mg` to `$PREFIX/share/metagrafica/lib`). Local **overrides**
@@ -798,3 +882,5 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
+
+<!-- translated-from: referencia.md @ f342bd2c66f4c1c5ecbd67872f934fcd85123b30 -->
