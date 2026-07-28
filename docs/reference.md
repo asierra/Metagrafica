@@ -925,9 +925,9 @@ them. What you want is not an axis scale but **guide lines at the points**, draw
 generates the data. A regular grid and "lines where the points are" are different things — the same
 distinction as between `grid=` and `rule`. See `examples/tiro_parabolico.mg`.
 
-**I moved the `{ }` to the next line and the error talks about "a command" and points at my
-first coordinate.** The coordinate block must start on the **same line** where the head of the
-primitive ended — the `)` of the arguments, or the name if there are none:
+**"This `{` opens a scope block and its contents are statements, but it starts with a number".**
+The coordinate block must start on the **same line** where the head of the primitive ended — the
+`)` of the arguments, or the name if there are none:
 
 ```octave
 rectangle(fill="red") { 0 0  4 3 }         % ✅
@@ -945,12 +945,13 @@ polyline { 0 0
            4 4 }                           % ✅ an open block continues on the next line
 ```
 
-**Why the message seems beside the point**, which is the confusing part: a bare `{ }` **is a
-valid construct** — the scope block of [§9](#9-transformations), as in
-`{ translate 3 2  Frame() }`. So the compiler does not see a broken primitive: it sees a
-primitive with no coordinates followed by a scope block full of numbers where it expected
-statements. Hence the "a command was expected… but the number 0 was found", pointing at your
-first coordinate.
+**Why the compiler puts it that way:** a bare `{ }` **is a valid construct** — the scope block of
+[§9](#9-transformations), as in `{ translate 3 2  Frame() }`. So it does not see a broken
+primitive: it sees a primitive with no coordinates followed by a scope block full of numbers
+where it expected statements. The error names that cause and gives you **the line to join up**.
+Inside the body of a `for` or an `if` the same `{ 0 0 }` gets the other half of the diagnostic:
+there is nothing to join there, and what you want is to accumulate the points into a `path` with
+`+=` ([§10](#10-path-algebra)).
 
 **I put `exit` and it still fails further down.** `exit` silences the later **syntax** errors —unclosed
 braces, a misspelled primitive, odd coordinates—, which is the normal case of half-written code. It does not
@@ -991,4 +992,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 0b1276cc5565af5f30320a4afc13c38d8a429d66 -->
+<!-- translated-from: referencia.md @ eaea0c4f2d41bcc4e383fc6037cc46638022f1fa -->

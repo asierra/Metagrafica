@@ -3705,7 +3705,7 @@ static bool isPrim(const std::string &n) {
          n == "polybar" || n == "smooth";   // smooth: primitiva §9.2 Y expresión de path (como sine)
 }
 
-static StmtPtr parseBlock(Lexer &);        // adelantadas (mutuamente recursivas)
+static StmtPtr parseBlock(Lexer &, const char *bodyOf = nullptr);   // adelantadas (mutuamente recursivas)
 static StmtPtr parseStructDef(Lexer &);
 static StmtPtr parseFor(Lexer &);
 static StmtPtr parseIf(Lexer &);
@@ -4056,8 +4056,57 @@ static StmtPtr parseStatement(Lexer &lx) {
   return st;
 }
 
-static StmtPtr parseBlock(Lexer &lx) {
+// bodyOf: null = bloque de ámbito suelto (§7.1); "for"/"if" = cuerpo de ese
+// constructo. Solo cambia el diagnóstico de abajo, que en un cuerpo tiene otra causa.
+static StmtPtr parseBlock(Lexer &lx, const char *bodyOf) {
+  const Tok &brace = lx.peek();              // el '{', para señalarlo si resulta ser el error
   lx.next();                                 // consume '{'
+
+  // Un '{' que ARRANCA una sentencia es el bloque de ámbito de §7.1, así que su
+  // contenido son sentencias — y ninguna sentencia empieza por un número. Si aquí
+  // hay uno, casi siempre es un bloque de COORDENADAS que se quedó huérfano al
+  // bajarlo a la línea siguiente:
+  //
+  //     rectangle(fill="red")
+  //         { 0 0  4 3 }        <- el '{' tiene que ir arriba, tras el ')'
+  //
+  // Sin esta rama el error salía del parseStatement de adentro y decía «se esperaba
+  // un comando… pero se encontró el número 0» señalando la primera coordenada: cierto,
+  // pero nombra el síntoma y no la causa, y no menciona la línea que hay que juntar.
+  // Es el mismo defecto (y el mismo remedio) que la rama de «no es un comando conocido
+  // (¿primitiva mal escrita?)» de parseStateStmt.
+  //
+  // Vive AQUÍ y no en la rama de PrimStmt porque así vale para todas las formas con
+  // bloque —`text`, `place`, `fit`, `sine`, `compound`— con una sola implementación.
+  //
+  // En el cuerpo de un `for` o un `if` la primera línea vale igual (tampoco puede
+  // empezar una sentencia con un número) pero la CAUSA es otra —querer generar
+  // coordenadas con un lazo—, así que la segunda línea cambia: juntar las líneas no
+  // arreglaría nada ahí.
+  if (lx.peek().type == T_NUMBER ||
+      (lx.peek().type == T_MINUS && lx.peek(1).type == T_NUMBER)) {
+    // La línea de la sentencia anterior: se busca hacia atrás saltando los saltos de
+    // línea. Es lo que hay que juntar con este '{', y darla ahorra buscarla.
+    int prevLine = 0;
+    for (size_t i = lx.pos; i-- > 0; ) {
+      if (lx.toks[i].type == T_LBRACE || lx.toks[i].type == T_NEWLINE) continue;
+      prevLine = lx.toks[i].line;
+      break;
+    }
+    std::fprintf(stderr,
+        "Error de sintaxis en %d:%d: este '{' abre un bloque de ámbito y su contenido "
+        "son sentencias, pero empieza con un número.\n", brace.line, brace.col);
+    if (bodyOf)
+      std::fprintf(stderr,
+          "        El cuerpo de un '%s' lleva sentencias, no coordenadas. Para generar "
+          "puntos con un lazo, acumúlalos en un `path` con '+='.\n", bodyOf);
+    else if (prevLine > 0)
+      std::fprintf(stderr,
+          "        Si son las coordenadas de la sentencia de la línea %d, tienen que "
+          "empezar en SU MISMA LÍNEA (el '{' va tras el ')').\n", prevLine);
+    std::exit(1);
+  }
+
   auto blk = std::make_unique<BlockStmt>();
   while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
     if (lx.accept(T_NEWLINE)) continue;      // saltar líneas en blanco dentro del bloque
@@ -4215,7 +4264,7 @@ static StmtPtr parseFor(Lexer &lx) {
   if (lx.accept(T_STEP)) st->step = parseExpression(lx);
   while (lx.accept(T_NEWLINE)) {}              // '{' puede ir en la línea siguiente
   if (lx.peek().type != T_LBRACE) parseError(lx, "'{' del cuerpo del for");
-  st->body = parseBlock(lx);                   // BlockStmt: estado + ámbito por iteración
+  st->body = parseBlock(lx, "for");            // BlockStmt: estado + ámbito por iteración
   return st;
 }
 
@@ -4225,7 +4274,7 @@ static StmtPtr parseIf(Lexer &lx) {
   st->cond = parseExpression(lx);
   while (lx.accept(T_NEWLINE)) {}              // '{' puede ir en la línea siguiente
   if (lx.peek().type != T_LBRACE) parseError(lx, "'{' del cuerpo del if");
-  st->thenB = parseBlock(lx);
+  st->thenB = parseBlock(lx, "if");
   // else opcional: puede llevar newlines entre el '}' y el 'else'. Si no hay
   // else, restaura la posición para que el newline siga siendo terminador.
   size_t save = lx.pos;
@@ -4233,7 +4282,7 @@ static StmtPtr parseIf(Lexer &lx) {
   if (lx.accept(T_ELSE)) {
     while (lx.accept(T_NEWLINE)) {}
     if (lx.peek().type == T_IF)          st->elseB = parseIf(lx);      // else if …
-    else if (lx.peek().type == T_LBRACE) st->elseB = parseBlock(lx);
+    else if (lx.peek().type == T_LBRACE) st->elseB = parseBlock(lx, "if");
     else parseError(lx, "'{' o 'if' tras else");
   } else {
     lx.pos = save;

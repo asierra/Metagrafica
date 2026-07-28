@@ -2323,3 +2323,45 @@ la salida rota sin protestar. Es, como (c), una invariante sin escapatoria por b
 
 `examples/espectro.mg` entra al corpus y a la galería, y es el ÚNICO sujeto de esa invariante: si
 sale, la compuerta se queda sin nada que mirar. Está anotado en su encabezado y en `CLAUDE.md`.
+
+### Cerrado en la sesión del 2026-07-28 (quinquies) — el diagnóstico del bloque huérfano
+
+Salió escribiendo `examples/espectro.mg`: bajar el `{ }` de coordenadas a la línea siguiente
+falla, y el mensaje hablaba de «se esperaba un comando… pero se encontró el número 0»,
+señalando la primera coordenada. Cierto y sin embargo inútil.
+
+**Por qué el mensaje era así**, que es lo que hacía falta entender antes de tocar nada: un `{ }`
+suelto **es un constructo válido** —el bloque de ámbito de §7.1—. Así que el compilador no veía
+una primitiva rota: veía una primitiva sin coordenadas y, detrás, un bloque de ámbito lleno de
+números donde esperaba sentencias. El error era correcto; nombraba el síntoma.
+
+La regla, acotada probándola antes de documentarla: por **dentro** tanto los `( )` como los
+`{ }` pueden ocupar cuantas líneas quieras y llevar comentarios —una lista de paradas partida en
+dos líneas compila, y un bloque de coordenadas partido también—; lo único que no puede haber es
+un salto de línea **antes** del `{`. Vale igual para una primitiva sin paréntesis.
+
+El diagnóstico nuevo vive en **`parseBlock`, no en la rama de `PrimStmt`**, y esa es la decisión:
+ahí cubre de una sola vez todas las formas con bloque (`text`, `place`, `fit`, `sine`,
+`compound`) en vez de repetirse en cada una. Da dos renglones: qué pasó, y **la línea que hay que
+juntar** —se busca hacia atrás en el vector de tokens saltando los saltos de línea, que es barato
+porque el archivo se tokeniza entero de antemano—.
+
+⚠️ **Y da una segunda mitad distinta en el cuerpo de un `for`/`if`**, porque ahí la causa es otra:
+`for i = 0 to 3 { 0 0  1 1 }` es querer generar coordenadas con un lazo, y juntar las líneas no
+arreglaría nada. El primer renglón vale igual; el segundo manda a acumular en un `path` con `+=`.
+Sin esa distinción el mensaje habría mentido en un caso para acertar en el otro.
+
+Mismo defecto y mismo remedio que la rama de «`%s` no es un comando conocido (¿primitiva mal
+escrita?)» de `parseStateStmt`, que se añadió en su día por la misma razón: el error señalaba al
+`{` pidiendo «una expresión» y no nombraba nunca la palabra que había que corregir.
+
+Dos fixtures nuevos (`bloque_coords_otra_linea`, `bloque_coords_en_for`), con `EXPECT_AT` para
+que además se verifique **dónde** apunta; `err_ok` sube de 40 a 42. Verificados como manda la
+casa: devuelto el diagnóstico genérico, los dos se ponen rojos («falló, pero sin decir…»), que es
+justo lo que protegen — no que falle, sino que falle diciendo la causa.
+
+📌 Y una lección de mantenimiento en el mismo movimiento: la entrada de §14 se había escrito unas
+horas antes **citando el mensaje viejo**. Cambiar el mensaje la volvió rancia al instante. Se
+actualizó en los dos idiomas, pero conviene tenerlo presente — **citar un mensaje del compilador
+en la referencia crea un acoplamiento que ninguna compuerta vigila**, y aquí se salvó solo porque
+las dos cosas se hicieron seguidas.

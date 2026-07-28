@@ -953,9 +953,9 @@ eje sino **líneas guía en los puntos**, dibujadas en el mismo lazo que genera 
 Malla regular y «líneas donde están los puntos» son cosas distintas — la misma distinción que
 hay entre `grid=` y `rule`. Ver `examples/tiro_parabolico.mg`.
 
-**Bajé el `{ }` a la línea siguiente y el error habla de «un comando» y señala mi primera
-coordenada.** El bloque de coordenadas tiene que empezar en la **misma línea** en la que acabó
-la cabeza de la primitiva —el `)` de los argumentos, o el nombre si no lleva—:
+**«Este `{` abre un bloque de ámbito y su contenido son sentencias, pero empieza con un
+número».** El bloque de coordenadas tiene que empezar en la **misma línea** en la que acabó la
+cabeza de la primitiva —el `)` de los argumentos, o el nombre si no lleva—:
 
 ```octave
 rectangle(fill="red") { 0 0  4 3 }         % ✅
@@ -973,12 +973,13 @@ polyline { 0 0
            4 4 }                           % ✅ el bloque abierto sigue en la línea de abajo
 ```
 
-**Por qué el mensaje parece no venir a cuento**, que es lo que despista: un `{ }` suelto **es un
-constructo válido** —el bloque de ámbito de [§9](#9-transformaciones), el de
-`{ translate 3 2  Cuadro() }`—. Así que el compilador no ve una primitiva rota: ve una primitiva
-sin coordenadas y, a continuación, un bloque de ámbito lleno de números donde esperaba
-sentencias. De ahí el «se esperaba un comando… pero se encontró el número 0», apuntando a tu
-primera coordenada.
+**Por qué el compilador lo cuenta así:** un `{ }` suelto **es un constructo válido** —el bloque
+de ámbito de [§9](#9-transformaciones), el de `{ translate 3 2  Cuadro() }`—. Así que no ve una
+primitiva rota: ve una primitiva sin coordenadas y, a continuación, un bloque de ámbito lleno de
+números donde esperaba sentencias. El error nombra esa causa y te da **la línea que hay que
+juntar**. Dentro del cuerpo de un `for` o un `if` el mismo `{ 0 0 }` da la otra mitad del
+diagnóstico: ahí no hay nada que juntar, y lo que se quiere es acumular los puntos en un `path`
+con `+=` ([§10](#10-álgebra-de-trayectos)).
 
 **Puse `exit` y sigue fallando más abajo.** `exit` calla los errores de **sintaxis**
 posteriores —llaves sin cerrar, una primitiva mal escrita, coordenadas impares—, que es el
