@@ -871,8 +871,10 @@ static Box path_bbox(const Path &path) {
   if (path.empty()) return Box{0, 0, 0, 0};
   double minx = path[0].x, miny = path[0].y, maxx = path[0].x, maxy = path[0].y;
   for (const point &p : path) {
-    if (p.x < minx) minx = p.x; if (p.x > maxx) maxx = p.x;
-    if (p.y < miny) miny = p.y; if (p.y > maxy) maxy = p.y;
+    if (p.x < minx) minx = p.x;
+    if (p.x > maxx) maxx = p.x;
+    if (p.y < miny) miny = p.y;
+    if (p.y > maxy) maxy = p.y;
   }
   return Box{minx, miny, maxx - minx, maxy - miny};
 }

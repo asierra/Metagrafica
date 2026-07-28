@@ -3,7 +3,11 @@ CXX = clang++
 CXXFLAGS = -g -std=c++14 -ffunction-sections -fdata-sections
 LIBS = -lm -Wmultichar
 LDFLAGS = -g -Wpedantic -Wl,--gc-sections
-CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3 -DMG_LIBDIR='"$(LIBDIR)"'
+# -D_USE_MATH_DEFINES: M_PI y compañía NO son de C++ estándar. glibc las da
+# siempre, pero MinGW solo si la macro está definida ANTES de <cmath> — por eso
+# va en la línea de compilación y no en un header. Sin ella el build cruzado a
+# Windows muere en matrix.h:23. Inocua fuera de Windows.
+CPPFLAGS = -I./include -I./third_party/libharu/include -fno-rtti -fno-exceptions -Wpedantic -Wall -Wsuggest-override -O3 -D_USE_MATH_DEFINES -DMG_LIBDIR='"$(LIBDIR)"'
 HARU_CFLAGS = -O2 -ffunction-sections -fdata-sections -I$(HARUDIR)/include
 
 # --- Compilación cruzada a Windows (MinGW) -----------------------------------
@@ -29,7 +33,15 @@ ifneq ($(CROSS),)
   CC  = $(CROSS)-gcc
   AR  = $(CROSS)-ar
   EXE = .exe
-  LDFLAGS += -static -static-libgcc -static-libstdc++
+  # Los objetos del cruce van a SU PROPIO directorio. Si comparten obj/ con el
+  # build nativo, `make` no los reconstruye —tienen fecha más nueva que el
+  # fuente— y el enlace muere con «undefined reference» a símbolos que sí están:
+  # son objetos ELF que el ld de MinGW no puede leer. Pasa en cuanto alternas
+  # `make` y `make CROSS=…`, y el mensaje no dice nada de eso.
+  OBJDIR = obj-win
+  # -s (strip): el .exe se DESCARGA, no se depura. Sin esto son 15 MB de
+  # símbolos que nadie va a leer.
+  LDFLAGS += -static -static-libgcc -static-libstdc++ -s
 endif
 
 SHELL = /bin/sh
@@ -41,7 +53,7 @@ LIBDIR = $(PREFIX)/share/metagrafica/lib
 
 SRCDIR = src
 INCDIR = include
-OBJDIR = obj
+OBJDIR ?= obj
 BINDIR = bin
 MANDIR = man
 
@@ -141,7 +153,7 @@ uninstall:
 	-rmdir $(LIBDIR)
 
 clean:
-	rm -rf $(OBJDIR) $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp $(SRCDIR)/lexv3.cpp
+	rm -rf obj obj-win $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexmg.cpp $(SRCDIR)/lexv3.cpp
 # Dependencias de headers: AUTOMÁTICAS (los obj/*.d que genera -MMD, ver arriba).
 # Sustituyen a la lista que mantenía `makedepend` aquí abajo, que se había podrido:
 # decía que EPSDisplay.o depende de font_cmmi.h y NO de font_lmmath_eps.h, que es

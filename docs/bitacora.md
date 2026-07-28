@@ -1824,3 +1824,43 @@ nadie ejecutó sería justo el tipo de hueco que este proyecto cierra con compue
 menos el golden por bytes, que necesita una red que no está en git). En macOS es informativo
 a propósito: una diferencia de último dígito en `libm` movería los renders publicados sin que
 nada esté roto.
+
+**Addendum (misma sesión) — el `.exe` compilado y EJECUTADO de verdad.** Alejandro instaló el
+toolchain, así que el build cruzado dejó de ser teoría. Cuatro hallazgos, tres arreglados aquí:
+
+🐛 **`M_PI` no existe en MinGW.** `matrix.h:23` (`constexpr double deg2rad = M_PI / 180`) no
+compila: `M_PI` no es de C++ estándar, glibc la da siempre y MinGW solo con
+`_USE_MATH_DEFINES` definida **antes** de `<cmath>`. Va en `CPPFLAGS`, no en un header, porque
+tiene que llegar antes que cualquier inclusión. Inocua fuera de Windows.
+
+🐛 **Los objetos del cruce no pueden compartir `obj/` con los del build nativo.** Alternar
+`make` y `make CROSS=…` dejaba objetos ELF que el `ld` de MinGW no lee, y el error que salía
+—«undefined reference to kExtraTextGlyphs»— no dice nada de eso: parece un símbolo perdido.
+El cruce usa ahora `obj-win/`, y `clean` borra los dos.
+
+📏 **`-s` al enlazar: 15.6 MB → 1.9 MB.** El `.exe` se descarga, no se depura.
+
+🧹 **Cinco warnings que clang no da y g++ sí** (`-Wmisleading-indentation` ×2,
+`-Wsign-compare` ×3). Se arreglaron para conservar el «compilación limpia» del Code style
+ahora que hay dos toolchains: dos `if` que compartían renglón, y tres comparaciones de un
+`int` con `string::npos` que funcionaban por la truncación a −1 y ahora lo dicen con un cast
+explícito. Cero cambio de salida (`ok=72`).
+
+📐 **Y la medición que no se podía hacer de otro modo: la salida de Windows contra la de
+Linux, byte a byte** (24 ejemplos × 3 formatos, el `.exe` corriendo bajo wine, normalizando el
+`%%Title` del EPS igual que el harness):
+
+    idénticos 68 / 72   ·   difieren 4   ·   errores 0
+
+**Los 24 SVG y los 24 EPS son idénticos.** Difieren **cuatro PDF**, y los cuatro por lo mismo:
+la cadena `0.000000000000000061232` (Linux) contra `0.00000000000000006123` (Windows). Es
+`cos(90°)` —el cero numérico de `PDFDisplay::deviceRotate`, `PDFDisplay.cpp:736`— y los cuatro
+archivos son justamente los que rotan un rótulo de eje 90°. La diferencia no es nuestra: la
+pone `HPDF_FToA` (`hpdf_utils.c:182`), que deriva el número de decimales de un `log10()` y
+emite los dígitos con `modff`, todo en **float**, así que hereda la libm de la plataforma
+—glibc da 21 decimales, msvcrt 20—.
+
+✅ **Verificado también el único código exclusivo de Windows**, `exeDir()`: con un `.mg` de
+biblioteca que existe **solo** junto al `.exe` (no en `/usr/local`, para que wine no lo
+resolviera por el camino de Unix y diera un falso positivo), invocado desde otro directorio de
+trabajo. Resuelve.

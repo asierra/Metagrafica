@@ -720,6 +720,9 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
   // asigna a int (→ -1) y luego `v_end == string::npos` vuelve a convertir -1 a
   // size_t máx, así que la comparación funciona. Se deja como está (cambiarlo a
   // size_t requeriría revisar `it = v_end - 1` y `v_end > it` con `it` int).
+  // v_end es int a propósito: recoge el size_t que devuelve find_first_*, y cuando
+  // eso es npos la truncación lo deja en -1, que es contra lo que se compara abajo
+  // —con el cast explícito, si no g++ avisa de comparar con y sin signo—.
   int v_end, it=0, iend = input.size();
   // Modo matemático: '_'/'^' (sub/superíndice) solo operan entre '$…$'; fuera son
   // caracteres literales (así prosa como line_width no se parte en subíndice).
@@ -745,7 +748,7 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
         break;
       } else if (input[it]=='\\') {
         v_end = input.find_first_not_of(ALFABETIC, ++it);
-        if (v_end == string::npos) // Last word in string
+        if (v_end == (int)string::npos) // Last word in string
           v_end = iend;
         if (v_end > it && v_end <= iend) {
           string variable = input.substr(it, v_end - it);
@@ -762,7 +765,7 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
         //it = v_end-1;
       } else {
         v_end = input.find_first_of(TOKENLIM, it);
-        if (v_end == string::npos) // Last word in string
+        if (v_end == (int)string::npos) // Last word in string
           v_end = iend;
         if (it >= v_end){
           //printf("punto %d %d %c\n", it, v_end, input[it]);
@@ -880,7 +883,7 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
       }
       textflush();
       v_end = input.find_first_not_of(ALFABETIC, ++it);
-      if (v_end == string::npos) // Last word in string
+      if (v_end == (int)string::npos) // Last word in string
         v_end = iend;
       if (v_end > it && v_end <= iend) {
         string variable = input.substr(it, v_end - it);

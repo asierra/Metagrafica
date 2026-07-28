@@ -34,3 +34,4 @@ local/
 # Cachés de las herramientas Python de tools/
 __pycache__/
 *.pyc
+obj-win/
