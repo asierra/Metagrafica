@@ -2134,3 +2134,42 @@ efecto colateral de otro comando y volveríamos al punto de partida. Sellar tien
 Verificada como las anteriores: se le metió un cambio al español y la cazó (`trfail=1`) con las
 otras seis en cero; revertido, vuelve a `trfail=0`. Corre en `check` y en `capture`, así que
 también bloquea un release con la referencia inglesa atrasada.
+
+### Cerrado en la sesión del 2026-07-28 (bis) — la condición 4 dio su primer dato, y no fue un bug
+
+Alejandro le pasó a un modelo la **referencia del lenguaje** y una imagen (`geo/infra.png`, el
+espectro electromagnético de su curso de Percepción Remota) y le pidió la figura, **sin manera
+de ejecutar `mg`**. El resultado, `geo/espectro.mg`, compila a la primera y se parece bastante:
+`display_size`/`world_window`, `rectangle` por dos esquinas, `fill` con hex, `text` con
+`align`/`valign`/`color`, matemáticas `$10^2$`, subtrayectos con `;` y hasta `/n` para partir
+renglón. Todo eso se lee de la referencia y se aplicó a ciegas.
+
+Lo valioso no es el parecido: son **las dos cosas que su intento reveló, y que el autor no podía
+ver**.
+
+🔎 **1. Descubribilidad — cómo se le pone una flecha a una línea.** Escribió esto:
+
+    polyline { 63 90  68 90 }
+    marker(shape="arrow", marker_orient=0) { 68 90 }
+
+Dos primitivas y la coordenada repetida a mano, cuando lo idiomático —y lo que hace **todo** el
+corpus— es `polyline(marker_end="arrow") { 63 90  68 90 }`. **No lo encontró porque la referencia
+no lo decía:** `marker_end` aparecía **una sola vez**, de pasada, dentro del párrafo de
+`marker_at`, y nunca como *la* manera de ponerle una punta a una línea, que es lo más común que
+alguien va a querer. Un lector competente con solo la referencia **no puede descubrirlo**.
+
+Arreglado el mismo día en los dos idiomas: bloque propio junto a las formas de `marker`, con los
+cuatro modos compilados antes de escribirlos, tabla de los ocho atributos, y el punto que lo
+justifica —la flecha **se orienta sola** a la tangente, así que estampar un marcador suelto
+obliga a repetir la coordenada y calcular el ángulo a mano—.
+
+📌 **Esto es exactamente lo que la condición 4 existe para recoger.** No es un bug: ninguna
+compuerta podía verlo, y el autor tampoco, porque ya sabe que `marker_end` existe. Hizo falta
+alguien de fuera intentando una figura.
+
+🎨 **2. Capacidad — MG no tiene gradientes.** La banda del espectro **es** un gradiente continuo,
+y el modelo lo aproximó con franjas planas porque es lo único que el lenguaje permite. Ausencia
+notoria (cualquier sistema 2-D los tiene) que nadie había pedido hasta ahora. Abierto
+`plan_gradientes.md`, con la viabilidad ya verificada por backend — y con un hallazgo que
+condiciona el diseño: **libharu solo implementa el sombreado tipo 4** (malla de triángulos), así
+que el lineal sale por ahí pero el **radial no**, y se difiere por eso y no por gusto.

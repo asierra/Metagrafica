@@ -139,6 +139,31 @@ polyline { 0 0  (p)  5 5 }                     % escalares y un punto p mezclado
 `circle-dot`. También el nombre de un `struct` propio. `dot(r)` es el atajo del disco y no
 lleva `shape=`.
 
+**Flechas y marcadores SOBRE una línea.** Esto es lo que se busca casi siempre, y **no** se
+hace estampando un `marker` aparte en la punta: cualquier primitiva de trayecto los lleva como
+atributo y los coloca y **orienta sola**.
+
+```octave
+polyline(marker_end="arrow") { 1 2  4 2 }                       % punta al final
+polyline(marker_start="arrow", marker_end="arrow") { 1 1  4 1 }  % en los dos extremos
+polyline(marker="circle", marker_size=2) { 5 1  6 2  7 1 }       % en TODOS los vértices
+polyline(marker_end="arrow", marker_end_shift=0.3) { 5 2  7 2 }  % retrasada sobre la línea
+```
+
+| atributo | |
+|---|---|
+| `marker_start` / `marker_mid` / `marker_end` | dónde: primer vértice, intermedios, último |
+| `marker` | la forma **en todos** los vértices (o solo la forma, si hay `marker_at`) |
+| `marker_size` | radio **físico**, en pt |
+| `marker_color` / `marker_fill` | color; por default el marcador **hereda el de su línea** |
+| `marker_orient` | `"auto"` (tangente, default), `"reverse"`, `"fixed"`, o un ángulo |
+| `marker_start_orient` / `marker_end_orient` | lo mismo, para un solo extremo |
+| `marker_start_shift` / `marker_end_shift` | correr el marcador a lo largo de la línea |
+
+La flecha se **orienta a la tangente local** sin que se lo pidas, así que una línea quebrada o
+un arco la reciben bien girada — por eso estampar un `marker` suelto en la punta es peor: hay
+que repetir la coordenada y calcular el ángulo a mano.
+
 **Marcadores sobre un arco o una elipse (`marker_at`).** `arc`, `ellipse` y `circle` aceptan
 marcadores en posiciones **paramétricas**, no solo en los extremos, cada uno orientado a la
 tangente local:

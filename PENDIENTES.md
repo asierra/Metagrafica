@@ -140,6 +140,17 @@ orden de la lista es la ejecución.
      el corpus ni ninguna de las compuertas — lo cazó comparar con matplotlib. Salió
      gratis *solo* porque no había usuarios. El autor no puede hacerse esa prueba solo:
      ya sabe cómo se llaman las cosas.
+   - 🔎 **PRIMER DATO REAL (2026-07-27):** Alejandro le dio a un modelo la referencia y una
+     imagen, **sin manera de ejecutar `mg`**, y le pidió la figura. Salió `geo/espectro.mg`,
+     que compila y se parece. Dos hallazgos que **el autor no podía ver**: (a) para poner una
+     punta de flecha escribió un `marker` suelto en la coordenada del extremo, porque
+     `marker_end` aparecía **una sola vez** en la referencia y de pasada, dentro del párrafo
+     de `marker_at` — nunca como *la* manera de ponerle una flecha a una línea, que es lo que
+     hace todo el corpus. **Arreglado el 2026-07-28** en los dos idiomas, con tabla de los
+     atributos y el aviso de que la flecha se orienta sola. (b) Aproximó los gradientes con
+     franjas planas porque **el lenguaje no tiene gradientes** → `plan_gradientes.md`.
+     📌 Un fallo de descubribilidad y un hueco de capacidad, los dos de una sola figura
+     intentada por alguien de fuera. Es exactamente lo que esta condición pide recoger.
    - 📣 **Dónde y cómo buscar esa gente: `plan_promocion.md`** (2026-07-28). La
      infraestructura ya no estorba —binarios para los tres sistemas, galería y referencia
      bilingües, canal de issues—, así que lo que falta es gente escribiendo figuras. El plan
@@ -305,6 +316,17 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       términos que valen un punto, como `point_at`. ⚠️ Añade sintaxis antes de congelar
       (condición 1), así que los nombres se deciden con el cuidado de §13; el plan deja
       cuatro decisiones abiertas.
+- [ ] 🎨 **Gradientes de relleno** (`plan_gradientes.md`, abierto 2026-07-28) — MG no los
+      tiene y es una ausencia notoria: cualquier sistema de gráficos 2-D los soporta. Cliente
+      real: la figura del espectro electromagnético del curso de Percepción Remota, donde la
+      banda **es** un gradiente continuo. Forma propuesta: como `hatch`, que ya resolvió una
+      vez «un relleno que no es un color plano» (`gradient=[colores]`, `gradient_angle=`).
+      ⚠️ **La viabilidad no es simétrica y condiciona el diseño**: SVG nativo, EPS por `shfill`
+      de PostScript nivel 3, y **libharu solo implementa el sombreado tipo 4** (malla de
+      triángulos) — el lineal sale por ahí, el **radial no**, y por eso se difiere. La cuarta
+      invariante de la Capa 3 (rellenos degradados en los tres formatos) va **en el mismo
+      commit** que la característica: un gradiente es justo lo que un backend omite en
+      silencio.
 - [ ] 📥 **Editor web / galería** (`plan_interactivo.md`) — último punto vivo del `TODO` de
       2024, retirado el 2026-07-22 (`ec0c3d1`); los otros cuatro están cerrados.
       **El editor queda CONDICIONADO a la condición 4**, no descartado y no abierto sin

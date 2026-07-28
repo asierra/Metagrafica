@@ -140,6 +140,31 @@ polyline { 0 0  (p)  5 5 }                     % scalars and a point p mixed
 **`marker` shapes:** `circle`, `square`, `diamond`, `cross`, `x`, `triangle`, `arrow`, `circle-dot`. Also
 the name of your own `struct`. `dot(r)` is the disc shortcut and carries no `shape=`.
 
+**Arrows and markers ON a line.** This is what you almost always want, and it is **not** done by
+stamping a separate `marker` at the tip: every path primitive takes them as attributes and places
+and **orients** them by itself.
+
+```octave
+polyline(marker_end="arrow") { 1 2  4 2 }                       % head at the end
+polyline(marker_start="arrow", marker_end="arrow") { 1 1  4 1 }  % at both ends
+polyline(marker="circle", marker_size=2) { 5 1  6 2  7 1 }       % at EVERY vertex
+polyline(marker_end="arrow", marker_end_shift=0.3) { 5 2  7 2 }  % pulled back along the line
+```
+
+| attribute | |
+|---|---|
+| `marker_start` / `marker_mid` / `marker_end` | where: first vertex, interior ones, last |
+| `marker` | the shape **at every** vertex (or just the shape, when `marker_at` is present) |
+| `marker_size` | **physical** radius, in pt |
+| `marker_color` / `marker_fill` | colour; by default a marker **inherits its line's** |
+| `marker_orient` | `"auto"` (tangent, the default), `"reverse"`, `"fixed"`, or an angle |
+| `marker_start_orient` / `marker_end_orient` | the same, for one end only |
+| `marker_start_shift` / `marker_end_shift` | slide the marker along the line |
+
+The arrow is **oriented to the local tangent** without being asked, so a polyline or an arc gets
+it properly turned — which is why stamping a loose `marker` at the tip is worse: you have to
+repeat the coordinate and work out the angle by hand.
+
 **Markers on an arc or an ellipse (`marker_at`).** `arc`, `ellipse` and `circle` take markers at
 **parametric** positions, not just at the ends, each one oriented to the local tangent:
 
@@ -883,4 +908,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ f342bd2c66f4c1c5ecbd67872f934fcd85123b30 -->
+<!-- translated-from: referencia.md @ feed1f8ee3681e01fcc6ce0b9e45f428819f08a8 -->
