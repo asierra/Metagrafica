@@ -130,6 +130,10 @@ polybar(width=0.5) { 1 3  2 5  3 4 }       % cada punto es el centro superior de
 sine(half_cycles=2, amplitude=1) { 0 0  4 0 }
 ```
 
+> ⚠️ **El `{` va en la MISMA LÍNEA que la primitiva.** Por dentro, tanto los `( )` como los
+> `{ }` pueden ocupar cuantas líneas quieras; lo que no puede haber es un salto de línea
+> **antes** del `{` ([detalle](#14-errores-comunes)).
+
 `polyline`, `polygon` y `bezier` admiten **subtrayectos disjuntos** separados por `;`:
 
 ```octave
@@ -948,6 +952,33 @@ cruza el cero), ninguna malla log va a pasar por ellos. Lo que quieres no es una
 eje sino **líneas guía en los puntos**, dibujadas en el mismo lazo que genera los datos.
 Malla regular y «líneas donde están los puntos» son cosas distintas — la misma distinción que
 hay entre `grid=` y `rule`. Ver `examples/tiro_parabolico.mg`.
+
+**Bajé el `{ }` a la línea siguiente y el error habla de «un comando» y señala mi primera
+coordenada.** El bloque de coordenadas tiene que empezar en la **misma línea** en la que acabó
+la cabeza de la primitiva —el `)` de los argumentos, o el nombre si no lleva—:
+
+```octave
+rectangle(fill="red") { 0 0  4 3 }         % ✅
+rectangle(fill="red")
+    { 0 0  4 3 }                           % ❌ error, y señalando al 0
+```
+
+Por dentro no hay restricción: los argumentos, una lista y el propio bloque de coordenadas
+pueden partirse en varias líneas y llevar comentarios, con tal de que el `{` haya abierto ya.
+
+```octave
+rectangle(gradient=["magenta",      % una lista partida…
+                    "red"]) { 0 0  4 3 }   % ✅ …pero el { sigue arriba
+polyline { 0 0
+           4 4 }                           % ✅ el bloque abierto sigue en la línea de abajo
+```
+
+**Por qué el mensaje parece no venir a cuento**, que es lo que despista: un `{ }` suelto **es un
+constructo válido** —el bloque de ámbito de [§9](#9-transformaciones), el de
+`{ translate 3 2  Cuadro() }`—. Así que el compilador no ve una primitiva rota: ve una primitiva
+sin coordenadas y, a continuación, un bloque de ámbito lleno de números donde esperaba
+sentencias. De ahí el «se esperaba un comando… pero se encontró el número 0», apuntando a tu
+primera coordenada.
 
 **Puse `exit` y sigue fallando más abajo.** `exit` calla los errores de **sintaxis**
 posteriores —llaves sin cerrar, una primitiva mal escrita, coordenadas impares—, que es el

@@ -131,6 +131,10 @@ polybar(width=0.5) { 1 3  2 5  3 4 }       % each point is the top center of a b
 sine(half_cycles=2, amplitude=1) { 0 0  4 0 }
 ```
 
+> ⚠️ **The `{` goes on the SAME LINE as the primitive.** Inside them, both `( )` and `{ }` may
+> span as many lines as you like; what you cannot have is a line break **before** the `{`
+> ([details](#14-common-mistakes)).
+
 `polyline`, `polygon` and `bezier` accept **disjoint subpaths** separated by `;`:
 
 ```octave
@@ -921,6 +925,33 @@ them. What you want is not an axis scale but **guide lines at the points**, draw
 generates the data. A regular grid and "lines where the points are" are different things — the same
 distinction as between `grid=` and `rule`. See `examples/tiro_parabolico.mg`.
 
+**I moved the `{ }` to the next line and the error talks about "a command" and points at my
+first coordinate.** The coordinate block must start on the **same line** where the head of the
+primitive ended — the `)` of the arguments, or the name if there are none:
+
+```octave
+rectangle(fill="red") { 0 0  4 3 }         % ✅
+rectangle(fill="red")
+    { 0 0  4 3 }                           % ❌ error, pointing at the 0
+```
+
+Inside there is no restriction: the arguments, a list and the coordinate block itself may be
+split across lines and carry comments, as long as the `{` has already opened.
+
+```octave
+rectangle(gradient=["magenta",      % a list split across lines…
+                    "red"]) { 0 0  4 3 }   % ✅ …but the { is still up there
+polyline { 0 0
+           4 4 }                           % ✅ an open block continues on the next line
+```
+
+**Why the message seems beside the point**, which is the confusing part: a bare `{ }` **is a
+valid construct** — the scope block of [§9](#9-transformations), as in
+`{ translate 3 2  Frame() }`. So the compiler does not see a broken primitive: it sees a
+primitive with no coordinates followed by a scope block full of numbers where it expected
+statements. Hence the "a command was expected… but the number 0 was found", pointing at your
+first coordinate.
+
 **I put `exit` and it still fails further down.** `exit` silences the later **syntax** errors —unclosed
 braces, a misspelled primitive, odd coordinates—, which is the normal case of half-written code. It does not
 silence the **lexical** ones: a character the language doesn't recognize (`@`, or an accented letter outside
@@ -960,4 +991,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ cda085bd8e654ec250aa3d644ae80ae953ca00a7 -->
+<!-- translated-from: referencia.md @ 0b1276cc5565af5f30320a4afc13c38d8a429d66 -->
