@@ -1721,3 +1721,53 @@ aparezca la figura, el arreglo es calcular la perpendicular después de pasar a 
 (los cuatro tics: radio por un solo factor, ±90 para una perpendicular, atan2 sobre una
 columna, ángulo de mundo usado como de dispositivo) y «Cómo cazar más». Es el documento a leer
 antes de meter geometría nueva.
+
+### Cerrado en la sesión del 2026-07-27 (quinquies) — la puerta de entrada: galería bilingüe y READMEs
+
+Trabajo de **atracción de usuarios**, que es la condición 4 del 1.0 («uso real por gente que no
+es el autor»). No es marketing: la condición pide retroalimentación sobre **ergonomía y
+nombres**, y esa es la única que el autor no puede darse a sí mismo —ya sabe cómo se llaman las
+cosas—. Todo lo de esta entrada existe para bajar el costo de que alguien de fuera llegue,
+compile una figura y opine.
+
+**1. La galería ahora son DOS páginas**, `docs/galeria.html` (es) y `docs/gallery.html` (en),
+generadas por el mismo `tools/galeria.py` y enlazadas entre sí; cada README apunta a la de su
+idioma. El README ya venía en dos idiomas desde antes: la galería es la que de verdad se ve
+primero, y estaba solo en español.
+
+⚠️ **El inglés NO puede salir de los `.mg`.** Van comentados en español por política del
+proyecto, y meterles un segundo encabezado los volvería ilegibles —además de romper la
+convención de encabezado que publica la galería—. Las traducciones viven en una tabla `TRAD`
+dentro del tool. **Un ejemplo sin traducir igual aparece**, en español y con aviso por stderr:
+la regla de que un ejemplo nuevo salga solo pesa más que la uniformidad del idioma.
+
+**2. El orden es ahora editorial, y ese era un bug de presentación real.** La página abría con
+`quickstart` y las dos figuras más vistosas —`orbita_polar` y `gravitacion_orbita`— caían al
+**pie**, en «Más ejemplos», porque nadie las había puesto en un grupo. Ahora abre con «Figuras
+que se calculan solas» y los catálogos van al final. Lo que no se liste sigue cayendo al pie:
+esa es la válvula que mantiene la propiedad de «aparece solo».
+
+**3. Caja «Pruébalo» y aviso de beta en el encabezado.** Tres comandos —clonar, `make`,
+compilar una figura— porque la tarjeta enseñaba el código y ahí se acababa el camino. El aviso
+de beta está a propósito: baja el costo de las primeras roturas y ahuyenta a quien quiere algo
+estable hoy, que no es el usuario que esta etapa necesita.
+
+**4. Los READMEs decían «las 21 figuras de ejemplo» y son 23.** La cara pública, rancia, y
+**nada la vigilaba** — la misma clase de bug que inventó `galfail`, un escalón más afuera. Se
+quitó el número en vez de corregirlo: un número en prosa no tiene compuerta que lo cuide, y lo
+que no puede envejecer no hay que vigilarlo.
+
+**5. Sección «¿Por qué no TikZ o matplotlib?»** en ambos READMEs. Un usuario adopta una
+herramienta cuando entiende qué se **niega** a hacer, y no lo decía ningún documento. Dice sin
+adornos que si tu figura es una vista de un conjunto de datos uses matplotlib, y reconoce que
+TikZ ya está instalado en todas partes y tiene una década de paquetes que MG no tendrá. La
+ventaja que sí ofrece va medida, no adjetivada: **el corpus completo, 24 figuras, compila en
+90 ms**.
+
+**6. Canal de retroalimentación explícito** (el gestor de issues) en el punto que lo pedía: el
+README ya decía «buscamos tu opinión» sin decir dónde. Con la nota de que un «no encontré cómo
+hacer X» sirve tanto como un error — que es, literalmente, la evidencia que la condición 4
+necesita recoger.
+
+La compuerta `galfail` mira ahora **las dos** páginas (`galeria.py --check` compara ambas), sin
+cambios en `test/run.sh` más allá de los comentarios y del texto del mensaje.

@@ -5,7 +5,7 @@
 # Modes:
 #   ./run.sh capture   - (re)generate the golden files from the current build
 #   ./run.sh check     - (default) compare current output against the golden files
-#   ./run.sh images    - regenerate docs/img/*.svg + docs/galeria.html (salida
+#   ./run.sh images    - regenerate docs/img/*.svg + la galería es/en (salida
 #                        PUBLICADA y versionada)
 #
 # Seis compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
@@ -62,7 +62,8 @@
 #     los ~150 caminos de error del compilador no tenían NINGUNA prueba. Su
 #     regresión natural es volver al SILENCIO, que no mueve un byte de ningún
 #     golden. Ver el bloque de la compuerta al final del archivo.
-#   - La GALERÍA al día (galfail): docs/galeria.html es publicada y DERIVADA, y
+#   - La GALERÍA al día (galfail): docs/galeria.html + docs/gallery.html (es/en)
+#     son publicadas y DERIVADAS, y
 #     lo que la vuelve rancia es editar un COMENTARIO — lleva incrustados el
 #     encabezado y el código de cada ejemplo. Ninguna de las otras cinco puede
 #     verlo: un cambio de comentario no mueve un byte de ningún .svg ni de ningún
@@ -175,7 +176,7 @@ if [ "$MODE" = "images" ]; then
     if command -v python3 >/dev/null 2>&1; then
         python3 "$ROOT/tools/galeria.py" || exit 1
     else
-        echo "WARN: python3 no encontrado; docs/galeria.html NO se regeneró" >&2
+        echo "WARN: python3 no encontrado; la galería NO se regeneró" >&2
     fi
     echo "---"
     echo "images done: $img_n regenerado(s). Revisa el diff ANTES de commitear: es la cara pública."
@@ -369,17 +370,18 @@ for svg in "$IMGDIR"/*.svg; do
 done
 
 # --- Compuerta 6: la GALERÍA al día (galfail) --------------------------------
-# docs/galeria.html es salida publicada y DERIVADA (la sirve GitHub Pages), y lo
-# que la vuelve rancia no es tocar el motor sino editar un COMENTARIO: la página
-# lleva incrustados el encabezado y el código fuente completo de cada ejemplo. O
-# sea que ninguna de las otras cinco compuertas puede verlo — imgfail vigila los
-# renders, y un cambio de comentario no mueve un solo byte de ningún .svg.
+# docs/galeria.html y docs/gallery.html (es + en, 2026-07-27) son salida publicada
+# y DERIVADA (la sirve GitHub Pages), y lo que las vuelve rancias no es tocar el
+# motor sino editar un COMENTARIO: la página lleva incrustados el encabezado y el
+# código fuente completo de cada ejemplo. O sea que ninguna de las otras cinco
+# compuertas puede verlo — imgfail vigila los renders, y un cambio de comentario
+# no mueve un solo byte de ningún .svg. `galeria.py --check` mira las DOS.
 #
 # Se compara regenerando en memoria (galeria.py --check), no por mtime. Se omite
 # con aviso si no hay python3, igual que gs.
 if command -v python3 >/dev/null 2>&1; then
     if ! galout="$(python3 "$ROOT/tools/galeria.py" --check 2>&1)"; then
-        echo "GALFAIL docs/galeria.html ($galout)"
+        echo "GALFAIL galería ($galout)"
         galfail_count=$((galfail_count + 1))
     fi
 else

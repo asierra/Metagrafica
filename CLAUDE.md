@@ -112,10 +112,18 @@ se cazaron cuatro afirmaciones ya falsas —el «AÚN NO COMPILABLE» de `rpstes
 Symbol de `symbols`, los «21 ejemplos» de `primitives` y la anécdota del man en
 `quickstart`—: los comentarios envejecen y **nada los vigilaba** hasta `galfail`.
 
-**Galería (2026-07-23):** `docs/galeria.html`, generada por `tools/galeria.py`, publicada en
-GitHub Pages (fuente: `main`, raíz) → <https://asierra.github.io/Metagrafica/docs/galeria.html>.
-23 tarjetas con figura, título, descripción y el código completo en un desplegable; enlazada
-desde ambos README. ⚠️ **Qué entra NO es la misma regla que `imgfail`:** la galería itera
+**Galería (2026-07-23; BILINGÜE y reordenada el 2026-07-27):** `tools/galeria.py` genera **dos**
+páginas —`docs/galeria.html` (es) y `docs/gallery.html` (en)— publicadas en GitHub Pages
+(fuente: `main`, raíz) y enlazadas entre sí; cada README apunta a la de su idioma. 23 tarjetas
+con figura, título, descripción y el código completo en un desplegable, más una caja «Pruébalo»
+con los tres comandos de clonar-compilar-dibujar y el aviso de beta. ⚠️ **El texto en inglés NO
+sale de los `.mg`** (van comentados en español, política del proyecto): vive en la tabla `TRAD`
+del propio tool, y un ejemplo sin traducir sale igual, en español y con aviso por stderr — la
+regla de que un ejemplo nuevo aparezca solo pesa más que la uniformidad del idioma.
+⚠️ **El ORDEN es una decisión editorial, no alfabética:** abre con «Figuras que se calculan
+solas» (`orbita_polar`, `gravitacion_orbita`, `fractal_tree`…) y deja los catálogos al final.
+Antes abría con `quickstart` y las dos figuras más vistosas caían al pie, en «Más ejemplos»,
+porque no estaban en ningún grupo — que sigue siendo el destino de lo que no se liste. ⚠️ **Qué entra NO es la misma regla que `imgfail`:** la galería itera
 sobre `examples/*.mg` que tengan `docs/img/X.svg`, mientras que la compuerta itera al revés
 —sobre `docs/img`— y por eso vigila además las tres variantes que existen solo para los
 ensayos (`franck_condon_anarm`, `turning_points_nodos`, `parabola_vs_arco`), que no son

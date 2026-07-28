@@ -16,8 +16,8 @@ parameterized and regenerated.
 It was created for the figures of scientific publications — among them Ana María Cetto and
 Luis de la Peña's quantum mechanics textbooks — and has been in use for nearly four decades.
 
-**→ [See the gallery](https://asierra.github.io/Metagrafica/docs/galeria.html)** — the 21
-example figures, each one next to the source that draws it.
+**→ [See the gallery](https://asierra.github.io/Metagrafica/docs/gallery.html)** — every
+example figure, each one next to the source that draws it.
 
 ## Quick start
 
@@ -198,6 +198,25 @@ exhaustive design spec (in Spanish) is [`especificacion_mg.md`](especificacion_m
 MetaGráfica is deliberately **not** a general-purpose programming language: it has variables,
 expressions, `for` and `if`, logical expressions, and not much more.
 
+## Why not TikZ or matplotlib?
+
+Because they answer different questions, and it is worth being clear about the one MG does
+not answer.
+
+**matplotlib**, gnuplot, NCL — they start from *data*: you have an array and you want to see
+it. MG does not analyse data (`polybar` takes intervals already counted, not observations),
+has no statistics and no interactivity. If your figure is a view of a dataset, use those.
+
+**TikZ** is the real neighbour: declarative too, figure-as-source too, same readers. It is
+already installed on every TeX system and has a decade of packages MG will never have. What
+MG offers instead is that it drags no LaTeX along — the whole example corpus, 24 figures,
+compiles in **90 ms** — that one source produces EPS, SVG *and* PDF, and that a figure is a
+standalone document rather than a fragment of a paper.
+
+MG is for the third case: **you know exactly what the figure has to be, and you need it
+precise, reproducible and parameterised.** A textbook illustration, an apparatus diagram, a
+curve derived from a formula instead of measured on screen.
+
 ## Building
 
 ```bash
@@ -228,7 +247,7 @@ bin/mg figure.mg out.pdf      # → PDF
 
 ## Examples
 
-The **[gallery](https://asierra.github.io/Metagrafica/docs/galeria.html)** shows every one
+The **[gallery](https://asierra.github.io/Metagrafica/docs/gallery.html)** shows every one
 of them rendered, with its source.
 
 [`examples/`](examples/) holds the working corpus, where you can see the different
@@ -267,7 +286,9 @@ and both matter to you directly:
 2. **We are looking for your feedback.** Before the grammar is frozen, the tool needs to be
    validated by real use. **If you use MG at this stage, your opinion on the ergonomics and
    the names is exactly what is missing**, and there is still time to change things at no
-   cost to anyone — which is precisely what the "beta" label is for.
+   cost to anyone — which is precisely what the "beta" label is for. The place for it is
+   [the issue tracker](https://github.com/asierra/Metagrafica/issues): "I could not find
+   how to do X" is as useful as a bug report, and often more.
 
 The full list of what is left for 1.0 is in [§22.7 of the specification](especificacion_mg.md).
 

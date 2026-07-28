@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MetaGráfica — galería de ejemplos</title>
+<title>MetaGráfica — example gallery</title>
 <style>
 :root {
   --fondo: #ffffff; --texto: #1a1a1a; --tenue: #5b6472; --borde: #e2e5ea;
@@ -80,33 +80,33 @@ footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--bord
 <body>
 <div class="envoltura">
 <header>
-  <div class="barra"><a href="gallery.html">English</a></div>
-  <h1>MetaGráfica — galería</h1>
-  <p>Un lenguaje descriptivo para figuras técnicas y científicas. Cada figura de esta página es un archivo de texto: despliega el código bajo cualquiera de ellas y lo verás entero, tal como se compiló.</p>
-  <p>El mismo archivo produce EPS, SVG o PDF según la extensión que le pidas. No hay ratón: una figura es código fuente, así que se versiona, se compara y se regenera.</p>
-  <p><a href="https://github.com/asierra/Metagrafica">Repositorio</a> ·
-     <a href="https://github.com/asierra/Metagrafica/blob/main/docs/referencia.md">Referencia del lenguaje</a> ·
-     <a href="https://github.com/asierra/Metagrafica#building">Cómo compilarlo</a></p>
+  <div class="barra"><a href="galeria.html">Español</a></div>
+  <h1>MetaGráfica — gallery</h1>
+  <p>A descriptive language for technical and scientific figures. Every figure on this page is a text file: unfold the source under any of them and you get the whole thing, exactly as it was compiled.</p>
+  <p>The same file produces EPS, SVG or PDF depending on the extension you ask for. There is no mouse: a figure is source code, so it can be versioned, diffed and regenerated.</p>
+  <p><a href="https://github.com/asierra/Metagrafica">Repository</a> ·
+     <a href="https://github.com/asierra/Metagrafica/blob/main/docs/referencia.md">Language reference</a> ·
+     <a href="https://github.com/asierra/Metagrafica#building">How to build it</a></p>
   <div class="probar">
-    <h2>Pruébalo</h2>
-    <p>Necesitas un compilador de C++ y <code>flex</code>. Compila en segundos y no arrastra LaTeX.</p>
+    <h2>Try it</h2>
+    <p>You need a C++ compiler and <code>flex</code>. It builds in seconds and drags no LaTeX along.</p>
     <pre>git clone https://github.com/asierra/Metagrafica
 cd Metagrafica &amp;&amp; make
-bin/mg examples/orbita_polar.mg figura.svg</pre>
+bin/mg examples/orbita_polar.mg figure.svg</pre>
   </div>
-  <p class="beta">Versión 3.0.0-beta: la gramática todavía puede cambiar, y cambia cuando una figura nueva lo pide. Si escribes figuras con ella, lo que te resulte incómodo puede acabar en el lenguaje.</p>
+  <p class="beta">Version 3.0.0-beta: the grammar can still change, and it does change when a new figure asks for it. If you write figures with it, whatever you find awkward may well end up in the language.</p>
 </header>
-    <h2>Figuras que se calculan solas</h2>
-    <p class="grupo-desc">Nada está medido a ojo: se dan los parámetros físicos y la geometría se deduce. Cambia un número y la figura entera se reacomoda.</p>
+    <h2>Figures that compute themselves</h2>
+    <p class="grupo-desc">Nothing is measured by eye: you give the physical parameters and the geometry follows. Change one number and the whole figure rearranges itself.</p>
     <div class="rejilla">
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/orbita_polar.svg" alt="Órbitas polares — dos satélites sobre un globo en proyección ortográfica" loading="lazy"></div>
+        <div class="lienzo"><img src="img/orbita_polar.svg" alt="Polar orbits — two satellites over a globe in orthographic projection" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Órbitas polares — dos satélites sobre un globo en proyección ortográfica</h3>
-          <p>Dos órbitas polares inclinadas ±15° alrededor de la Tierra, con un satélite en cada una y flechas de sentido de marcha. Cada órbita se dibuja como un ARCO ELÍPTICO cuyo barrido salta el tramo que pasa por detrás del globo: la oclusión sale de una fórmula cerrada evaluada en el propio <code>.mg</code>, sin recortes a mano. Los satélites se posan sobre la órbita por su ángulo paramétrico, ya orientados a la tangente, y el globo es un mapa vectorial real incluido de <code>lib/</code>.</p>
+          <h3>Polar orbits — two satellites over a globe in orthographic projection</h3>
+          <p>Two polar orbits inclined ±15° around the Earth, with a satellite on each and arrows for the direction of travel. Each orbit is drawn as an ELLIPTICAL ARC whose sweep skips the stretch that runs behind the globe: the occlusion comes from a closed formula evaluated in the <code>.mg</code> itself, with nothing trimmed by hand. The satellites sit on the orbit by their parametric angle, already oriented to the tangent, and the globe is a real vector map included from <code>lib/</code>.</p>
           <div class="pie"><code>orbita_polar.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/orbita_polar.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/orbita_polar.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Órbitas polares — dos satélites sobre un globo en proyección ortográfica
 %
 % Dos órbitas polares inclinadas ±15° alrededor de la Tierra, con un satélite en cada
@@ -223,13 +223,13 @@ text(str(orbit_km) + &quot; Km&quot;, align=&quot;right&quot;) { -2.9 5.5 }</pre
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/gravitacion_orbita.svg" alt="Órbita circular — gravitación y fuerza centrípeta" loading="lazy"></div>
+        <div class="lienzo"><img src="img/gravitacion_orbita.svg" alt="Circular orbit — gravitation and centripetal force" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Órbita circular — gravitación y fuerza centrípeta</h3>
-          <p>Un satélite en órbita circular alrededor de la Tierra —vista desde el polo norte, un mapa vectorial REAL— con la fuerza gravitacional que lo curva hacia el centro (roja) y su velocidad tangente (verde), y las dos fórmulas compuestas matemáticamente. Estrena varias cosas del lenguaje: <code>\frac</code> para las fracciones, DOS bibliotecas por <code>include</code> (<code>lib/satellite.mg</code> y <code>lib/polar_map.mg</code>, un mapa icónico generado de datos Natural Earth con <code>tools/geo2mg.py</code>) colocadas con <code>scale</code>/<code>rotate</code>/<code>at</code>, y flechas cuya punta HEREDA el color de su línea. Va en aspecto 16:9 y rotula con texto matemático <code>$…$</code>.</p>
+          <h3>Circular orbit — gravitation and centripetal force</h3>
+          <p>A satellite in circular orbit around the Earth —seen from the north pole, over a REAL vector map— with the gravitational force curving it towards the centre (red) and its tangential velocity (green), plus the two formulas typeset mathematically. It introduces <code>\frac</code>, TWO libraries via <code>include</code> (<code>lib/satellite.mg</code> and <code>lib/polar_map.mg</code>, an iconic map generated from Natural Earth data with <code>tools/geo2mg.py</code>) placed with <code>scale</code>/<code>rotate</code>/<code>at</code>, and arrowheads that INHERIT the colour of their line.</p>
           <div class="pie"><code>gravitacion_orbita.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/gravitacion_orbita.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/gravitacion_orbita.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Órbita circular — gravitación y fuerza centrípeta
 %
 % Un satélite en órbita circular alrededor de la Tierra —vista desde el polo norte, un
@@ -283,13 +283,13 @@ text(&quot;Atracción&quot;, align=&quot;center&quot;, size=8) { 12.5 4 }</pre><
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fractal_tree.svg" alt="Árboles fractales — una estructura que se contiene a sí misma." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fractal_tree.svg" alt="Fractal trees — a structure that contains itself" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Árboles fractales — una estructura que se contiene a sí misma.</h3>
-          <p>Los dos árboles son la misma estructura de cuatro líneas —un tronco con dos copias menores de sí mismo en la punta— invocada con ángulos de rama distintos; cada uno son 511 segmentos. La condición de paro es un <code>if</code> corriente, y <code>max_depth</code> es la red de seguridad.</p>
+          <h3>Fractal trees — a structure that contains itself</h3>
+          <p>Both trees are the same four-line structure —a trunk with two smaller copies of itself at the tip— invoked with different branch angles; each one is 511 segments. The stopping condition is an ordinary <code>if</code>, and <code>max_depth</code> is the safety net.</p>
           <div class="pie"><code>fractal_tree.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fractal_tree.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fractal_tree.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Árboles fractales — una estructura que se contiene a sí misma.
 %
 % Los dos árboles son la misma estructura de cuatro líneas —un tronco con dos
@@ -405,13 +405,13 @@ struct arbol(theta, phi, n, s) {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/franck_condon.svg" alt="Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO." loading="lazy"></div>
+        <div class="lienzo"><img src="img/franck_condon.svg" alt="The Franck-Condon principle — two Morse potentials, PARAMETRIC" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO.</h3>
-          <p>Nada está medido: se dan los parámetros de Morse (a, re, we, xe) de cada estado electrónico más Te, y de ahí salen en forma cerrada la curva, los niveles vibracionales, los puntos de retorno y las funciones de onda. Cambia un número y la figura entera se reacomoda de forma coherente.</p>
+          <h3>The Franck-Condon principle — two Morse potentials, PARAMETRIC</h3>
+          <p>Nothing is measured: you give the Morse parameters (a, re, we, xe) of each electronic state plus Te, and from those the curve, the vibrational levels, the turning points and the wavefunctions all follow in closed form. Change one number and the whole figure rearranges itself coherently.</p>
           <div class="pie"><code>franck_condon.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/franck_condon.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/franck_condon.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Principio de Franck-Condon — dos potenciales de Morse, PARAMÉTRICO.
 %
 % Nada está medido: se dan los parámetros de Morse (a, re, we, xe) de cada estado
@@ -631,13 +631,13 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/turning_points.svg" alt="Comportamiento de ψ según la energía — los puntos de retorno clásicos." loading="lazy"></div>
+        <div class="lienzo"><img src="img/turning_points.svg" alt="How ψ behaves with energy — the classical turning points" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Comportamiento de ψ según la energía — los puntos de retorno clásicos.</h3>
-          <p>Oscilatoria donde E &gt; V, exponencial donde E &lt; V, y los puntos de retorno como frontera entre ambas. Figura PARAMÉTRICA: se dan las asíntotas del potencial, su mínimo, los tres retornos y las tres energías, y de ahí salen en forma cerrada la curva V(x) y, por WKB, las longitudes de onda, las amplitudes y las colas.</p>
+          <h3>How ψ behaves with energy — the classical turning points</h3>
+          <p>Oscillatory where E &gt; V, exponential where E &lt; V, and the turning points as the boundary between them. A PARAMETRIC figure: you give the asymptotes of the potential, its minimum, the three turning points and the three energies, and from those follow the V(x) curve in closed form and, through WKB, the wavelengths, the amplitudes and the tails.</p>
           <div class="pie"><code>turning_points.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/turning_points.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/turning_points.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Comportamiento de ψ según la energía — los puntos de retorno clásicos.
 %
 % Oscilatoria donde E &gt; V, exponencial donde E &lt; V, y los puntos de retorno como
@@ -899,17 +899,17 @@ text(&quot;$x_2$&quot;) { (x2+0.05) (ylab) }</pre></details>
         </div>
       </article>
     </div>
-    <h2>Gráficas de datos</h2>
-    <p class="grupo-desc">El plot mapea unidades de datos a una caja en centímetros; los ejes heredan los rangos y se rotulan solos.</p>
+    <h2>Data plots</h2>
+    <p class="grupo-desc">A plot maps data units to a box in centimetres; the axes inherit the ranges and label themselves.</p>
     <div class="rejilla">
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/quickstart.svg" alt="El ejemplo del README — y = x², con ejes, malla y leyenda." loading="lazy"></div>
+        <div class="lienzo"><img src="img/quickstart.svg" alt="The README example — y = x², with axes, grid and legend" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>El ejemplo del README — y = x², con ejes, malla y leyenda.</h3>
-          <p>La figura más corta que muestra el lenguaje de gráficas completo: <code>plot</code> mapea unidades de datos a una caja en centímetros, y los ejes heredan los rangos y se rotulan solos.</p>
+          <h3>The README example — y = x², with axes, grid and legend</h3>
+          <p>The shortest figure that shows the whole plotting language: <code>plot</code> maps data units to a box in centimetres, and the axes inherit the ranges and label themselves.</p>
           <div class="pie"><code>quickstart.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/quickstart.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/quickstart.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% El ejemplo del README — y = x², con ejes, malla y leyenda.
 %
 % La figura más corta que muestra el lenguaje de gráficas completo: `plot` mapea
@@ -950,13 +950,13 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), grid=true) {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig6-4.svg" alt="Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig6-4.svg" alt="Alpha-decay half-lives — the Geiger-Nuttall law" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall.</h3>
-          <p>Eje y LOGARÍTMICO: los datos van en unidades reales y el plot los mapea a su caja; los ejes heredan los rangos y se rotulan solos, sin un solo rótulo de potencia de diez escrito a mano. Los isótopos son texto anclado a sus datos.</p>
+          <h3>Alpha-decay half-lives — the Geiger-Nuttall law</h3>
+          <p>LOGARITHMIC y axis: the data are given in real units and the plot maps them to its box; the axes inherit the ranges and label themselves, without a single power-of-ten label written by hand. The isotopes are text anchored to their data.</p>
           <div class="pie"><code>fig6-4.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig6-4.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig6-4.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Vidas medias de decaimiento alfa — la ley de Geiger-Nuttall.
 %
 % Eje y LOGARÍTMICO: los datos van en unidades reales y el plot los mapea a su
@@ -1022,13 +1022,13 @@ text(&quot;$\lambda^{-1} (/rs)$&quot;) { -0.83 5.5 }</pre></details>
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig4-4.svg" alt="Tres pozos de potencial y la estructura de su espectro." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig4-4.svg" alt="Three potential wells and the structure of their spectra" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Tres pozos de potencial y la estructura de su espectro.</h3>
-          <p>Cada panel es un plot en unidades físicas, con su origen real. Los niveles de energía y los puntos de retorno se DERIVAN de E: mover una energía reacomoda sola su línea, sus marcas y sus rótulos. Varios plot en un documento, y ejes con <code>base=</code> (el eje V centrado de a, el eje x sobre V=0 de c).</p>
+          <h3>Three potential wells and the structure of their spectra</h3>
+          <p>Each panel is a plot in physical units, with its true origin. The energy levels and the turning points are DERIVED from E: move one energy and its line, its ticks and its labels rearrange themselves. Several plots in one document, and axes with <code>base=</code> (the V axis centred in a, the x axis on V=0 in c).</p>
           <div class="pie"><code>fig4-4.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig4-4.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig4-4.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Tres pozos de potencial y la estructura de su espectro.
 %
 % Cada panel es un plot en unidades físicas, con su origen real. Los niveles de
@@ -1181,13 +1181,13 @@ text(&quot;c)&quot;) { 94 3 }</pre></details>
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig_polybar.svg" alt="Espectros de absorción del CO₂ — histogramas con polybar." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig_polybar.svg" alt="CO₂ absorption spectra — histograms with polybar" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Espectros de absorción del CO₂ — histogramas con <code>polybar</code>.</h3>
-          <p>Dos espesores de CO₂ superpuestos; el área rayada entre ambos es la diferencia entre los dos espectros. Ejercita polybar y el relleno tramado sin contorno.</p>
+          <h3>CO₂ absorption spectra — histograms with <code>polybar</code></h3>
+          <p>Two CO₂ path lengths superposed; the hatched area between them is the difference between the two spectra. Exercises polybar and hatched fill with no outline.</p>
           <div class="pie"><code>fig_polybar.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig_polybar.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig_polybar.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Espectros de absorción del CO₂ — histogramas con `polybar`.
 %
 % Dos espesores de CO₂ superpuestos; el área rayada entre ambos es la diferencia
@@ -1271,13 +1271,13 @@ text(&quot;$\lambda(\mu/rm)$&quot;) { 12.34 -0.28 }</pre></details>
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig1.svg" alt="Contenido de H₂O en la atmósfera como función de la altura." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig1.svg" alt="Water content of the atmosphere as a function of altitude" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Contenido de H₂O en la atmósfera como función de la altura.</h3>
-          <p>La línea continua son los valores calculados; los círculos y las cruces, dos conjuntos de valores observados. Marcadores sobre datos, con rótulos de ejes en notación matemática.</p>
+          <h3>Water content of the atmosphere as a function of altitude</h3>
+          <p>The solid line is the computed values; the circles and the crosses are two sets of observed values. Markers over data, with axis labels in mathematical notation.</p>
           <div class="pie"><code>fig1.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig1.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig1.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Contenido de H₂O en la atmósfera como función de la altura.
 %
 % La línea continua son los valores calculados; los círculos y las cruces, dos
@@ -1353,13 +1353,13 @@ plot(x=(0,12), y=(0,10), box=(1.3,1.1, 11.5,7.5)) {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/tiro_parabolico.svg" alt="Tiro parabólico — una trayectoria muestreada punto a punto." loading="lazy"></div>
+        <div class="lienzo"><img src="img/tiro_parabolico.svg" alt="Projectile motion — a trajectory sampled point by point" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Tiro parabólico — una trayectoria muestreada punto a punto.</h3>
-          <p>Tres cosas a la vez: <code>path +=</code> construye la curva dentro de un <code>for</code>, y las mismas coordenadas alimentan las proyecciones a cada eje; la malla no es regular ni logarítmica, sino que cae donde la física pone los puntos; y el cañón es una struct con la BOCA en su origen local, colocada con la misma variable que fija el origen de la trayectoria, así que mover y0 mueve el cañón y la curva JUNTOS.</p>
+          <h3>Projectile motion — a trajectory sampled point by point</h3>
+          <p>Three things at once: <code>path +=</code> builds the curve inside a <code>for</code>, and the same coordinates feed the projections onto each axis; the grid is neither regular nor logarithmic, but falls where the physics puts the points; and the cannon is a struct with its MUZZLE at its local origin, placed with the same variable that fixes the start of the trajectory, so moving y0 moves cannon and curve TOGETHER.</p>
           <div class="pie"><code>tiro_parabolico.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/tiro_parabolico.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/tiro_parabolico.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Tiro parabólico — una trayectoria muestreada punto a punto.
 %
 % Tres cosas a la vez: `path +=` construye la curva dentro de un `for`, y las
@@ -1431,17 +1431,17 @@ dot(&amp;proyy, size=2.6, color=&quot;green&quot;)</pre></details>
         </div>
       </article>
     </div>
-    <h2>Ilustraciones y diagramas</h2>
-    <p class="grupo-desc">Diagramas de aparato y esquemas, donde mandan las estructuras, la colocación y los marcadores que se orientan solos.</p>
+    <h2>Illustrations and diagrams</h2>
+    <p class="grupo-desc">Apparatus diagrams and schematics, where what matters is structures, placement and markers that orient themselves.</p>
     <div class="rejilla">
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig2-5.svg" alt="Difracción de electrones — el experimento de Davisson-Germer." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig2-5.svg" alt="Electron diffraction — the Davisson-Germer experiment" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Difracción de electrones — el experimento de Davisson-Germer.</h3>
-          <p>Es el ejemplo de ILUSTRACIÓN del README. El detector es una struct colocada girada 37°; el haz, la cota y el giro del detector son marcadores que se ORIENTAN SOLOS a la tangente de su línea o de su arco y se anclan al vértice, sin un solo ángulo calculado a mano.</p>
+          <h3>Electron diffraction — the Davisson-Germer experiment</h3>
+          <p>The illustration example from the README. The detector is a struct placed at 37°; the beam, the dimension line and the detector&#x27;s rotation are markers that ORIENT THEMSELVES to the tangent of their line or arc and anchor to the vertex, without a single angle worked out by hand.</p>
           <div class="pie"><code>fig2-5.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig2-5.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig2-5.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Difracción de electrones — el experimento de Davisson-Germer.
 %
 % Es el ejemplo de ILUSTRACIÓN del README. El detector es una struct colocada
@@ -1554,13 +1554,13 @@ text(&quot;$\varphi$&quot;)   { 8 0.9 }</pre></details>
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig2-1.svg" alt="Modelo de cuerpo negro — la cavidad y su orificio." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig2-1.svg" alt="Black-body model — the cavity and its aperture" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Modelo de cuerpo negro — la cavidad y su orificio.</h3>
-          <p>La caja y el arco del orificio se unen en UN solo trayecto cerrado con <code>compound</code>: al cerrar, los extremos se juntan solos, sin una línea que los conecte. Relleno tramado con contorno.</p>
+          <h3>Black-body model — the cavity and its aperture</h3>
+          <p>The box and the arc of the aperture join into ONE closed path with <code>compound</code>: on closing, the ends meet by themselves, with no line connecting them. Hatched fill with an outline.</p>
           <div class="pie"><code>fig2-1.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig2-1.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig2-1.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Modelo de cuerpo negro — la cavidad y su orificio.
 %
 % La caja y el arco del orificio se unen en UN solo trayecto cerrado con
@@ -1594,13 +1594,13 @@ Fg1(at=(0.52, 0.5), scale=0.46)</pre></details>
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fig4-1.svg" alt="Difracción de electrones — cuatro paneles, de una y de dos rendijas." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fig4-1.svg" alt="Electron diffraction — four panels, single and double slit" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Difracción de electrones — cuatro paneles, de una y de dos rendijas.</h3>
-          <p>Las curvas de intensidad viven en curvas3.mg como datos naturales (posición contra intensidad); aquí se TRANSPONEN para que la intensidad quede horizontal y se colocan con <code>fit</code> en su rectángulo, sin rotar nada. La base común —pantallas y haz— se factoriza en una struct.</p>
+          <h3>Electron diffraction — four panels, single and double slit</h3>
+          <p>The intensity curves live in curvas3.mg as natural data (position against intensity); here they are TRANSPOSED so that intensity runs horizontally, and are placed with <code>fit</code> into their rectangle, rotating nothing. The common base —screens and beam— is factored out into a struct.</p>
           <div class="pie"><code>fig4-1.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig4-1.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fig4-1.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Difracción de electrones — cuatro paneles, de una y de dos rendijas.
 %
 % Las curvas de intensidad viven en curvas3.mg como datos naturales (posición
@@ -1683,13 +1683,13 @@ text(&quot;d)&quot;) { 0.81 -0.03 }</pre></details>
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/rpstest.svg" alt="Repetición de estructuras — las formas de colocar una struct muchas veces." loading="lazy"></div>
+        <div class="lienzo"><img src="img/rpstest.svg" alt="Repeating structures — the ways to place a struct many times" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Repetición de estructuras — las formas de colocar una struct muchas veces.</h3>
-          <p>Un cuadro repetido con <code>repeat</code>: avanzando en x, en diagonal y deformado, y girando sobre el mismo punto, donde <code>transform=</code> acumula el giro en cada copia. La última no es un repeat, sino colocación puntual con at= y scale=.</p>
+          <h3>Repeating structures — the ways to place a struct many times</h3>
+          <p>A box repeated with <code>repeat</code>: advancing in x, along a diagonal and deformed, and turning about a single point, where <code>transform=</code> accumulates the rotation in each copy. The last one is not a repeat but a single placement with at= and scale=.</p>
           <div class="pie"><code>rpstest.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/rpstest.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/rpstest.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Repetición de estructuras — las formas de colocar una struct muchas veces.
 %
 % Un cuadro repetido con `repeat`: avanzando en x, en diagonal y deformado, y
@@ -1734,17 +1734,17 @@ Cuadro(scale=(0.2, 0.125), at=(0.1, 0.75))</pre></details>
         </div>
       </article>
     </div>
-    <h2>Láminas de referencia</h2>
-    <p class="grupo-desc">Catálogos: cada forma, cada relleno y cada símbolo en su expresión más simple, para copiar y pegar.</p>
+    <h2>Reference sheets</h2>
+    <p class="grupo-desc">Catalogues: every shape, fill and symbol in its simplest form, to copy and paste.</p>
     <div class="rejilla">
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/primitives.svg" alt="Formas básicas — lámina de referencia de las primitivas geométricas." loading="lazy"></div>
+        <div class="lienzo"><img src="img/primitives.svg" alt="Basic shapes — reference sheet of the geometric primitives" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Formas básicas — lámina de referencia de las primitivas geométricas.</h3>
-          <p>Es un catálogo, no una figura: cada primitiva en su forma más simple, y luego las mismas con relleno y trama. Las formas se escriben AL RAS, sin envolverlas en structs, para que quien viene a buscar «cómo se dibuja una elipse» encuentre la línea que la dibuja. Hermana de fill_styles.mg y line_patterns.mg.</p>
+          <h3>Basic shapes — reference sheet of the geometric primitives</h3>
+          <p>A catalogue, not a figure: each primitive in its simplest form, and then the same ones filled and hatched. The shapes are written FLAT, not wrapped in structs, so that whoever comes looking for «how do I draw an ellipse» finds the line that draws it. Sister sheet to fill_styles.mg and line_patterns.mg.</p>
           <div class="pie"><code>primitives.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/primitives.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/primitives.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Formas básicas — lámina de referencia de las primitivas geométricas.
 %
 % Es un catálogo, no una figura: cada primitiva en su forma más simple, y luego
@@ -1855,13 +1855,13 @@ for k = 0 to 4 {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/fill_styles.svg" alt="Rellenos de área — lámina de referencia de tramas, grises y contornos." loading="lazy"></div>
+        <div class="lienzo"><img src="img/fill_styles.svg" alt="Area fills — reference sheet of hatches, greys and outlines" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Rellenos de área — lámina de referencia de tramas, grises y contornos.</h3>
-          <p>El catálogo de tramados (hatch, hatchback, crosshatch, y el crosshatch enderezado a rejilla recta con hatch_angle=0), la escala de grises y la combinación de relleno con contorno. Hermana de primitives.mg y line_patterns.mg.</p>
+          <h3>Area fills — reference sheet of hatches, greys and outlines</h3>
+          <p>The catalogue of hatch patterns (hatch, hatchback, crosshatch, and the crosshatch straightened into a square grid with hatch_angle=0), the greyscale, and fill combined with an outline. Sister sheet to primitives.mg and line_patterns.mg.</p>
           <div class="pie"><code>fill_styles.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fill_styles.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/fill_styles.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Rellenos de área — lámina de referencia de tramas, grises y contornos.
 %
 % El catálogo de tramados (hatch, hatchback, crosshatch, y el crosshatch
@@ -1940,13 +1940,13 @@ numbers(from=0.1, by=0.1, count=10,  decimals=1, at=(0.025,  (yg-0.05)),   advan
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/line_patterns.svg" alt="Patrones y anchos de línea — lámina de referencia." loading="lazy"></div>
+        <div class="lienzo"><img src="img/line_patterns.svg" alt="Line patterns and widths — reference sheet" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Patrones y anchos de línea — lámina de referencia.</h3>
-          <p>Los seis estilos de <code>dash</code> a la izquierda y una escala de <code>line_width</code> en puntos tipográficos a la derecha, generados con un <code>for</code> sobre una lista. Hermana de primitives.mg y fill_styles.mg.</p>
+          <h3>Line patterns and widths — reference sheet</h3>
+          <p>The six <code>dash</code> styles on the left and a <code>line_width</code> scale in typographic points on the right, generated with a <code>for</code> over a list. Sister sheet to primitives.mg and fill_styles.mg.</p>
           <div class="pie"><code>line_patterns.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/line_patterns.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/line_patterns.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Patrones y anchos de línea — lámina de referencia.
 %
 % Los seis estilos de `dash` a la izquierda y una escala de `line_width` en
@@ -1983,13 +1983,13 @@ for i = 0 to 5 {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/markers-demo.svg" alt="Marcadores — las siete formas del catálogo, y cómo se orientan." loading="lazy"></div>
+        <div class="lienzo"><img src="img/markers-demo.svg" alt="Markers — the seven catalogue shapes, and how they orient" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Marcadores — las siete formas del catálogo, y cómo se orientan.</h3>
-          <p>Las formas, la orientación tangente sobre una curva (<code>arrow</code> se orienta sola) y el color independiente entre marcador y curva. El tamaño es FÍSICO, en puntos: inmune a la ventana, porque solo la posición se transforma.</p>
+          <h3>Markers — the seven catalogue shapes, and how they orient</h3>
+          <p>The shapes, tangent orientation along a curve (<code>arrow</code> orients itself) and independent colour between marker and curve. The size is PHYSICAL, in points: immune to the window, because only the position is transformed.</p>
           <div class="pie"><code>markers-demo.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/markers-demo.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/markers-demo.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Marcadores — las siete formas del catálogo, y cómo se orientan.
 %
 % Las formas, la orientación tangente sobre una curva (`arrow` se orienta sola) y
@@ -2047,13 +2047,13 @@ marker(size=7, shape=&quot;diamond&quot;, color=&quot;green&quot;) { 1 1  3 1.6 
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/symbols.svg" alt="Catálogo de los símbolos matemáticos que se escriben \comando." loading="lazy"></div>
+        <div class="lienzo"><img src="img/symbols.svg" alt="Catalogue of the mathematical symbols written as \command" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Catálogo de los símbolos matemáticos que se escriben \comando.</h3>
-          <p>Los 110 nombres, compuestos en Latin Modern Math: 69 de operadores, relaciones, flechas y delimitadores, y 41 de letras griegas —minúsculas, variantes, mayúsculas y la ħ de <code>\hbar</code>—.</p>
+          <h3>Catalogue of the mathematical symbols written as \command</h3>
+          <p>All 110 names, typeset in Latin Modern Math: 69 of operators, relations, arrows and delimiters, and 41 of Greek letters —lowercase, variants, uppercase and the ħ of <code>\hbar</code>.</p>
           <div class="pie"><code>symbols.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/symbols.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/symbols.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Catálogo de los símbolos matemáticos que se escriben \comando.
 %
 % Los 110 nombres, compuestos en Latin Modern Math: 69 de operadores, relaciones,
@@ -2195,13 +2195,13 @@ for i = 0 to 40 {
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/texto.svg" alt="Texto — alineación, marcado, matemáticas y tipografía fina." loading="lazy"></div>
+        <div class="lienzo"><img src="img/texto.svg" alt="Text — alignment, markup, mathematics and fine typography" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Texto — alineación, marcado, matemáticas y tipografía fina.</h3>
-          <p>Rótulos anclados a líneas guía para ver align y valign; negrita y énfasis; subíndices, superíndices y letras griegas; comillas tipográficas, rayas, viñetas y símbolos fuera de Latin-1; y texto de varios renglones con /n.</p>
+          <h3>Text — alignment, markup, mathematics and fine typography</h3>
+          <p>Labels anchored to guide lines to show off align and valign; bold and emphasis; subscripts, superscripts and Greek letters; typographic quotes, dashes, bullets and symbols outside Latin-1; and multi-line text with /n.</p>
           <div class="pie"><code>texto.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/texto.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/texto.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Texto — alineación, marcado, matemáticas y tipografía fina.
 %
 % Rótulos anclados a líneas guía para ver align y valign; negrita y énfasis;
@@ -2291,13 +2291,13 @@ text(&quot;con un renglon/n/nvacio en medio&quot;) { -3.2 -2.15 }</pre></details
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/path_sample.svg" alt="Muestreo de un trayecto: sample, point_at y angle_at." loading="lazy"></div>
+        <div class="lienzo"><img src="img/path_sample.svg" alt="Sampling a path: sample, point_at and angle_at" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Muestreo de un trayecto: sample, point_at y angle_at.</h3>
-          <p>Esta familia LEE la geometría de una curva en un parámetro t entre 0 y 1 recorrido por LONGITUD DE ARCO, así que t=0.5 es el medio GEOMÉTRICO y no la mitad de los segmentos. El flag <code>curve</code> fija cómo se interpreta el trayecto, que es neutro: en verde los puntos como vértices (toca la envolvente), en rojo como controles bézier (toca la curva).</p>
+          <h3>Sampling a path: sample, point_at and angle_at</h3>
+          <p>This family READS the geometry of a curve at a parameter t between 0 and 1 travelled by ARC LENGTH, so t=0.5 is the GEOMETRIC midpoint and not half the segments. The <code>curve</code> flag sets how the path is interpreted, which is neutral: in green the points as vertices (touching the hull), in red as Bézier controls (touching the curve).</p>
           <div class="pie"><code>path_sample.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/path_sample.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/path_sample.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Muestreo de un trayecto: sample, point_at y angle_at.
 %
 % Esta familia LEE la geometría de una curva en un parámetro t entre 0 y 1
@@ -2351,13 +2351,13 @@ text(&quot;point_at + angle_at en t=0.5&quot;,        align=&quot;left&quot;, va
         </div>
       </article>
       <article class="tarjeta">
-        <div class="lienzo"><img src="img/sines.svg" alt="Ondas — la primitiva sine." loading="lazy"></div>
+        <div class="lienzo"><img src="img/sines.svg" alt="Waves — the sine primitive" loading="lazy"></div>
         <div class="cuerpo">
-          <h3>Ondas — la primitiva <code>sine</code>.</h3>
-          <p>Cada <code>sine</code> recibe una base de dos puntos, un número de medios ciclos y una amplitud, y genera por dentro las curvas bézier: la onda oscila perpendicular a su base, sea cual sea su orientación. Aquí se ven la fase 0 y la variante cuadrada.</p>
+          <h3>Waves — the <code>sine</code> primitive</h3>
+          <p>Each <code>sine</code> takes a two-point baseline, a number of half cycles and an amplitude, and generates the Bézier curves internally: the wave oscillates perpendicular to its baseline, whatever its orientation. Phase 0 and the square variant are shown.</p>
           <div class="pie"><code>sines.mg</code>
-            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/sines.mg">ver en GitHub</a></div>
-          <details><summary>Ver el código que la dibuja</summary>
+            <a href="https://github.com/asierra/Metagrafica/blob/main/examples/sines.mg">view on GitHub</a></div>
+          <details><summary>See the source that draws it</summary>
             <pre>% Ondas — la primitiva `sine`.
 %
 % Cada `sine` recibe una base de dos puntos, un número de medios ciclos y una
@@ -2409,7 +2409,7 @@ text(&quot;base diagonal / vertical&quot;) { 0.3 0.05 }</pre></details>
       </article>
     </div>
 <footer>
-  Página generada por <code>tools/galeria.py</code> a partir de <code>examples/</code> y <code>docs/img/</code>. El título y la descripción de cada tarjeta salen del encabezado de su propio <code>.mg</code>.
+  Page generated by <code>tools/galeria.py</code> from <code>examples/</code> and <code>docs/img/</code>. The sources are commented in Spanish, which is the project's working language.
 </footer>
 </div>
 </body>

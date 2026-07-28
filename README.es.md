@@ -12,7 +12,7 @@ Describes *qué es la figura* —puntos, paths, structs, transformaciones— y `
 
 Se creó para figuras de publicaciones científicas —entre ellas los libros de mecánica cuántica de Ana María Cetto y Luis de la Peña— y lleva cerca de cuatro décadas en uso.
 
-**→ [Ver la galería](https://asierra.github.io/Metagrafica/docs/galeria.html)** — las 21
+**→ [Ver la galería](https://asierra.github.io/Metagrafica/docs/galeria.html)** — todas las
 figuras de ejemplo, cada una junto al código que la dibuja.
 
 ## Inicio rápido
@@ -168,6 +168,24 @@ for i = 0 to 11 {
 La referencia del lenguaje es **[`docs/referencia.md`](docs/referencia.md)** — se lee de corrido o se consulta mientras construyes una figura. `man mg` es la versión de terminal, y la especificación de diseño exhaustiva (interna) es [`especificacion_mg.md`](especificacion_mg.md). MetaGráfica **no** pretende ser un lenguaje de programación de
 propósito general: tiene variables, expresiones, `for` e `if`, expresiones lógicas y no mucho más.
 
+## ¿Por qué no TikZ o matplotlib?
+
+Porque contestan preguntas distintas, y conviene ser claro sobre la que MG **no** contesta.
+
+**matplotlib**, gnuplot o NCL parten de los *datos*: tienes un arreglo y quieres verlo. MG no
+analiza datos (`polybar` recibe intervalos ya contados, no observaciones), no tiene
+estadística ni interactividad. Si tu figura es una vista de un conjunto de datos, usa esos.
+
+**TikZ** es el vecino de verdad: también declarativo, también figura-como-código, mismo
+público. Además ya está instalado en cualquier sistema TeX y tiene una década de paquetes que
+MG nunca va a tener. Lo que MG ofrece a cambio es que no arrastra LaTeX —el corpus completo,
+24 figuras, compila en **90 ms**—, que un mismo fuente produce EPS, SVG *y* PDF, y que una
+figura es un documento autónomo y no un fragmento de un artículo.
+
+MG es para el tercer caso: **sabes exactamente cómo tiene que ser la figura, y la necesitas
+precisa, reproducible y parametrizada.** Una ilustración de libro de texto, un diagrama de
+aparato, una curva que se deduce de una fórmula en vez de medirse en pantalla.
+
 ## Compilación
 
 ```bash
@@ -223,7 +241,7 @@ y las compuertas de prueba.
 
 1. **El lenguaje todavía puede cambiar.** Los nombres de los comandos y de sus argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste menor más adelante; los nombres viejos fallan de forma ruidosa, nunca en silencio. Cada cambio pasa por una red de regresión sobre todo el corpus: «beta» no quiere decir que la salida se mueva sola, quiere decir que un nombre puede cambiar — y siempre avisando.
 
-2. **Buscamos tu retroalimentación.** Antes de congelar la gramática hace falta validar la herramienta con uso real. **Si usas MG en esta etapa, tu opinión sobre la ergonomía y los nombres es justo lo que falta**, y todavía estamos a tiempo de cambiar sin costo para nadie — que es exactamente para lo que sirve la etiqueta «beta».
+2. **Buscamos tu retroalimentación.** Antes de congelar la gramática hace falta validar la herramienta con uso real. **Si usas MG en esta etapa, tu opinión sobre la ergonomía y los nombres es justo lo que falta**, y todavía estamos a tiempo de cambiar sin costo para nadie — que es exactamente para lo que sirve la etiqueta «beta». El lugar es [el gestor de issues](https://github.com/asierra/Metagrafica/issues): un «no encontré cómo hacer X» sirve tanto como un error, y a menudo más.
 
 La lista completa de lo que falta para el 1.0 está en [§22.7 de la especificación](especificacion_mg.md).
 
