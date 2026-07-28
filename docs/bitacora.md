@@ -2365,3 +2365,56 @@ horas antes **citando el mensaje viejo**. Cambiar el mensaje la volvió rancia a
 actualizó en los dos idiomas, pero conviene tenerlo presente — **citar un mensaje del compilador
 en la referencia crea un acoplamiento que ninguna compuerta vigila**, y aquí se salvó solo porque
 las dos cosas se hicieron seguidas.
+
+### Cerrado en la sesión del 2026-07-28 (sexies) — `elevacion_solar`: al corpus SIN cobertura nueva
+
+Figura nueva, `examples/elevacion_solar.mg`: reconstrucción en español de la Fig. 7.4 de
+Lillesand, Kiefer & Chipman (ángulos de elevación solar), pedida para el curso de Percepción
+Remota de la ENCiT. Entra al golden — `ok=75` → **`ok=78`**, 26 ejemplos.
+
+**La construcción es física, no medida.** Los dos números declarados arriba —`lat` y la
+oblicuidad— gobiernan todo: la posición del observador sobre el limbo, la inclinación del plano
+tangente, la de los tres rayos, el barrido de los tres arcos y el número que imprime cada
+rótulo (`h = 90° − lat + δ`). Es la misma regla de `orbita_polar`: el valor que manda sobre la
+geometría es el que se publica, así que el dibujo no puede desmentir al letrero.
+
+🔎 **La lámina original no aguanta esa regla, y por eso no se copió.** Medidos sobre el escaneo,
+sus tres rayos se separan ~10° entre sí, cuando entre un solsticio y el equinoccio va la
+oblicuidad, 23.44°; y su punto de tangencia cae a ~24° de latitud, donde el Sol de verano pasa
+al norte del cenit. Se rehízo, no se tradujo.
+
+**El limbo es un meridiano.** `lib/fulldisk_map.mg` es una vista ortográfica desde el ecuador,
+así que el borde del disco es el meridiano a 90° de la vista, visto de canto: un punto del limbo
+a ángulo φ está **exactamente** a latitud φ. El observador se posa ahí sin corrección de ninguna
+clase, y el ecuador del mapa cae solo sobre el plano ecuatorial dibujado. Nada de esto se ajustó
+a ojo porque nada hacía falta ajustar.
+
+El giro del satélite tampoco es a ojo: su antena apunta a +y en el marco del icono, así que para
+mirar a la Tierra hay que llevarla a `lat + 180`, o sea `rotate = lat + 90`. Escrito con la
+variable, sigue mirando a la Tierra si se cambia la latitud.
+
+⚠️ **La latitud más significativa es la que no se puede dibujar.** En el trópico de Cáncer
+`lat = obl`, luego `h = 90.0°` exacto: el Sol al cenit en el solsticio — que *es* la definición
+del trópico. Pero entonces el rayo de verano y la línea del cenit son la MISMA línea, y la
+composición de Lillesand supone al satélite sobre esa línea: el Sol le queda pegado detrás y los
+rótulos se encabalgan (se compiló para verlo, no se supuso). El despeje del icono vale
+`d·sin(lat − obl)`, que con `d = 8.8` y medio ancho ~1.5 pide **lat ≳ 33°**, y en el trópico vale
+cero: no hay tamaño ni distancia que lo salve, solo sacar al satélite del cenit. Se eligió
+latitud media (45°) y conservar al satélite en el cenit; el trópico queda como posible lámina
+aparte, donde la coincidencia sería la lección y no el estorbo.
+
+📌 **Por qué entró al corpus, que es lo nuevo aquí: NO ejercita ni una característica exclusiva.**
+Se revisó una por una antes de proponerlo, y todas tienen ya quien las cubra — listas de cadenas
+indexadas en `fill_styles`/`symbols`/`line_patterns`, el arco con flecha en los dos extremos y
+`marker_start_orient="reverse"` en `fig2-5:96` (el mismo renglón), el texto girado en los rótulos
+de eje de `fig1`/`quickstart` (en SVG sale el mismo `<g transform="rotate()">`; solo cambia el
+ángulo), los dos `include` de `lib/` en `gravitacion_orbita`. Lo que aporta es **ser el único
+usuario de `lib/fulldisk_map.mg`**: un asset generado, committeado y documentado en §12 de la
+referencia que **ninguna de las ocho compuertas miraba**. Los otros dos mapas sí tenían usuario;
+este no. Sienta un criterio de admisión que no existía: un ejemplo puede entrar por cubrir un
+**asset** del repo, no solo una característica del lenguaje. Y es la primera figura del corpus
+hecha para una **audiencia externa** —un curso— y no para probar el motor.
+
+De paso, el conteo de tarjetas de `CLAUDE.md` estaba rancio: decía 23 desde el 2026-07-23 y eran
+24 desde que entró `espectro`. Ahora 25, y el número sale de contar los `<article>` de la página
+generada, no de la memoria.

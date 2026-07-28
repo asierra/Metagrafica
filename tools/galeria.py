@@ -63,8 +63,8 @@ GRUPOS = [
       "deduce. Cambia un número y la figura entera se reacomoda.",
       "Nothing is measured by eye: you give the physical parameters and the "
       "geometry follows. Change one number and the whole figure rearranges itself."),
-     ["orbita_polar", "gravitacion_orbita", "fractal_tree", "franck_condon",
-      "turning_points"]),
+     ["orbita_polar", "gravitacion_orbita", "elevacion_solar", "fractal_tree",
+      "franck_condon", "turning_points"]),
     (("Gráficas de datos", "Data plots"),
      ("El plot mapea unidades de datos a una caja en centímetros; los ejes "
       "heredan los rangos y se rotulan solos.",
@@ -99,6 +99,18 @@ TRAD = {
         "It shows `gradient=` with two, three and six stops, combined with `color=` to "
         "outline, and arrowheads as an attribute of the line "
         "(`marker_start`/`marker_end`), which orient themselves."),
+    "elevacion_solar": (
+        "Solar elevation angles \u2014 the geometry of illumination in remote sensing",
+        "A section through the observer's meridian at solar noon: the globe, the tangent "
+        "plane (the local horizon), the local vertical with the satellite at the zenith, "
+        "and the three rays of the June solstice, the equinoxes and the December "
+        "solstice. The three elevation angles are not placed by eye: they follow from the "
+        "latitude and the obliquity of the ecliptic \u2014the two numbers declared at the "
+        "top\u2014 and the labels print the very value that governed the drawing. Change "
+        "`lat` and the whole figure recomputes. The globe is a real vector map included "
+        "from `lib/`, in an equatorial orthographic view: its limb is a meridian seen "
+        "edge-on, so a point on the limb at angle \u03c6 lies at exactly latitude "
+        "\u03c6, and the observation point sits on it with no correction at all."),
     "orbita_polar": (
         "Polar orbits — two satellites over a globe in orthographic projection",
         "Two polar orbits inclined ±15° around the Earth, with a satellite on each and "
