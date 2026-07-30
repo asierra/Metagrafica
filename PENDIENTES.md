@@ -6,7 +6,7 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-22**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-29**.
 >
 > También reemplaza a **`ideas.txt`** (borrador fundacional de V3, borrado el 2026-07-22).
 > Se repasaron sus 18 puntos contra el código: 14 están superados —varios muy por encima de
@@ -21,11 +21,15 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=72 … trfail=0** (7 compuertas: la
-> 5ª son 38 pruebas NEGATIVAS en `test/errors/`; la 6ª, nueva el 2026-07-23, vigila que
-> `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva incrustado el
-> código de cada ejemplo, así que **editar un comentario la desactualiza** y ninguna de
-> las otras cinco puede verlo). La Capa 3 ganó el 2026-07-27 una **tercera** invariante:
+> Build/test: `make` + `bash test/run.sh check` → **ok=78 … docfail=0** (9 compuertas,
+> razonadas una por una en `CLAUDE.md`; la 5ª son 42 pruebas NEGATIVAS en `test/errors/`,
+> ampliadas el 2026-07-28 a los diagnósticos NO fatales con `EXPECT_WARN`/`EXPECT_NO_WARN`;
+> la 6ª vigila que `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva
+> incrustado el código de cada ejemplo, así que **editar un comentario la desactualiza** y
+> ninguna de las otras puede verlo; la 7ª, que `docs/reference.md` no sea una traducción
+> VIEJA; y la 9ª, nueva el 2026-07-29, compila los bloques ```octave de la referencia en los
+> dos idiomas: **la documentación también puede mentir**, y a un modelo de lenguaje le miente
+> con éxito). La Capa 3 ganó el 2026-07-27 una **tercera** invariante:
 > paridad **geométrica** de arcos entre los tres backends (`tools/arcparity.py`) — la
 > única sin escapatoria por bendición, porque no compara contra un golden sino un backend
 > contra otro. Ver `plan_anisotropia.md`.
@@ -678,6 +682,39 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       toman `&p` en las DOS posiciones, así que la asimetría se nota. La spec §9.2 lista
       `smooth(&p)` como expresión válida → divergencia. Barato (la maquinaria existe): unificar
       para que `smooth` acepte `&p` en ambas posiciones, o retirar la forma-expresión de §9.2.
+      - 🆕 **2026-07-29: lo volvió a cazar la 9ª compuerta, y desde el otro lado.** La forma
+        `path suave2 = smooth(&nodos)` estaba **en `docs/referencia.md` §10 como ejemplo**, y el
+        ⚠️ de ese párrafo la declaraba «la» manera de partir de un trayecto que ya tienes, «igual
+        que en el resto del álgebra», añadiendo «vale lo mismo para `bezier`, `polyline` y las
+        demás». Medido: cierto para las que CONSUMEN un trayecto, falso para los generadores
+        —`sine(&p, …)` tampoco—, que era justo el párrafo al que estaba pegado. La referencia se
+        corrigió en los dos idiomas para describir lo que el compilador hace hoy, incluida la
+        limitación en voz alta. **Eso abarata la opción «retirar»**: ya no hay documentación
+        pública que prometa la forma-expresión, solo la spec §9.2. La decisión sigue siendo de
+        Alejandro. Ver `docs/bitacora.md` 2026-07-29 (quater).
+- [ ] 🐞 **`world_window` en unidades de DATOS no avisa, y arruina la figura en silencio**
+      (medido 2026-07-29). Escribir `world_window 0.4 2.5 0 100` porque los datos van de 0.4 a
+      2.5 y de 0 a 100 produce una figura ilegible —el motor es isométrico, el eje grande aplasta
+      al otro—, y con un `plot` encima el `box=` cae fuera de la ventana. **Compila limpio**, así
+      que ni el golden ni la Capa 3 ni el bucle «compila y lee el error» lo ven: es exactamente
+      el perfil del aviso de lienzo en blanco (2026-07-28). Cerrar = aviso NO fatal cuando el
+      `box=` de un `plot` queda mayormente fuera de su ventana, o cuando la proporción de la
+      ventana delata unidades de datos. Con `EXPECT_WARN` y su `EXPECT_NO_WARN` (el caso legítimo
+      de `fig6-4`, que sí mezcla ventana de página con datos en el plot).
+      - 📊 **Evidencia, no conjetura:** es la única falla que sobrevivió a las tres variantes del
+        Modelfile del agente (`docs/bitacora.md` 2026-07-29 quinquies). Es la regla más explícita
+        de ese SYSTEM, con su ejemplo correcto al lado, y los tres brazos la ignoraron; arreglando
+        **solo** eso, el resto de lo que escribieron estaba bien. Y le sirve igual a un humano: es
+        el tropiezo nº 1 de §14 de la referencia, que hoy solo se cuenta, no se detecta.
+- [ ] 🐞 **`carácter inesperado 'X'` no orienta**: dice dónde y qué, no el arreglo (medido
+      2026-07-29). El caso concreto es `#` usado como comentario —lo natural para quien viene de
+      Python o shell—, que da `Error léxico en 4:15: carácter inesperado '#'` sin nombrar nunca
+      el `%`. Con el mensaje actual, un agente al que se le realimenta el error **no logra
+      corregirse ni en dos vueltas**; sus hermanos con más contexto sí (bitácora 2026-07-29
+      quinquies). Barato: añadir la pista para los caracteres de comentario de otros lenguajes
+      (`#`, `//`, `;`) — «¿comentario? en MG empiezan con `%`». Misma familia que los demás
+      «el mensaje no orienta» de esta sección y que la mejora del bloque huérfano del 2026-07-28: el mensaje que nombra la
+      corrección vale el doble del que solo localiza el fallo.
 - [ ] 🐞 **Un literal de lista no se puede indexar**: `[10,20,30][1]` es error de sintaxis
       («se esperaba un comando… pero se encontró `[`»), y también dentro de un bloque de
       coordenadas. Hay que pasar por una variable (`xs = [10,20,30]` y luego `xs[i]`), que
