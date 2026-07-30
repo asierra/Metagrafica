@@ -2586,3 +2586,50 @@ Estado: 28 compilan, 9 fragmentos, 1 notación, 1 contraejemplo, 0 fallos, en lo
 Verificada como manda la casa, reintroduciendo las tres clases: el bug real de vuelta (lo caza), el
 marcador del contraejemplo quitado (lo caza, o sea que la marca es load-bearing) y el contraejemplo
 vuelto válido (lo caza con su mensaje propio). `ok=78 … docfail=0`.
+
+### Cerrado en la sesión del 2026-07-29 (quinquies) — el Modelfile del agente, con números
+
+`tools/generar_modelfile.py` reescrito: ahora emite el Modelfile COMPLETO (`docs/modelfile_llm.txt`)
+en vez de solo la galería, y `docs/galeria_llm.md` desaparece. Las tres decisiones salieron de un
+experimento de tres brazos, no de opinión: mismo modelo (`qwen2.5-coder`, temp 0.1, seed 42), tres
+SYSTEM —**A** referencia completa, **B** galería de 8 ejemplos sin NOTAS, **C** las dos—, tres
+tareas cortas y `bin/mg` como juez. Artefactos en `../agente/exp3/`, fuera del repo.
+
+**Contexto medido:** A 15.8k tokens · B 10.0k · C 25.2k · Modelfile anterior ~49k, o sea **1.5×
+por encima de `num_ctx 32768`**: más de la mitad de la galería se descartaba en silencio. Con un
+prompt largo, C llegó a 30.1k/32.8k = 92%, así que **C no es viable**.
+
+**Lo que decidió cada cosa.** (1) Fuera la referencia completa: el brazo A compilaba igual que los
+otros y **alucinaba mobiliario** —un `legend` vacío, un `table` con cuatro filas inventadas,
+argumentos que no existen (`frame=`, `grid_dash=`)—; darle el catálogo entero a un modelo chico
+hace que use todo lo que ve. Y era el único que **no lograba corregirse** con el mensaje del
+compilador ni en dos vueltas, mientras B se corregía en una. (2) §15 va al frente: es el destilado,
+y en la referencia vive al final —donde le toca para un lector humano—, que es lo primero que se
+pierde si algo se trunca; reordenar es trabajo del Modelfile, no del documento. (3) Ejemplos sin
+`% NOTAS` y lista explícita: las NOTAS eran el **28%** de lo que se mandaba y son procedencia
+bibliográfica, mediciones y avisos de cobertura — ruido para quien escribe una figura. Es la misma
+decisión que `tools/galeria.py` ya había tomado para el caso gemelo.
+
+📌 **Los tres brazos eligieron `plot`**, o sea que la regla de decisión que se añadió a §2 el
+2026-07-28 funciona — y B la acierta con `fig6-4` sola, sin referencia.
+
+⚠️ **Y lo que NO se arregló, que es el resultado importante: las tres gráficas compilan y las tres
+son ilegibles.** Causa raíz verificada arreglando solo eso: ponen **`world_window` en unidades de
+DATOS**. Con la ventana en geometría de página y un `box=`, el resto de lo que escribió el modelo
+estaba bien. Es UNA idea equivocada, es la regla más explícita del Modelfile, la ignoró en las tres
+versiones, y **compila limpio**, así que el bucle con el compilador tampoco la ve. Apunta a un
+aviso del motor —la clase del aviso de lienzo en blanco del 2026-07-28—, que es lo único que un
+modelo no puede ignorar y que además le sirve a un humano.
+
+💡 **Una trampa de prompt que conviene no repetir:** la primera versión de la regla del salto de
+renglón decía «va `/n`… `\n` no existe en MG», y el modelo escribió **`\n`** — la regla *nombraba*
+la forma incorrecta y eso fue lo que copió. Reescrita sin mencionarla, solo con la buena deletreada
+y un ejemplo marcado «cópialo», salió bien a la primera. Las otras nueve reglas están expuestas a
+lo mismo.
+
+⚠️ **Dos trampas de instrumento, ninguna del modelo.** `ollama run` escribe **escapes ANSI a
+stdout** aunque redirijas a archivo (`\x1b[4D\x1b[K` partiendo números por la mitad): tumbó una
+corrida entera y es el mismo artefacto del 2026-07-28, cuyo diagnóstico —«redirigir a archivo»— no
+bastaba; hay que usar `/api/generate`. Y la descripción de figura que se le daba (un volcado de
+visión sobre un escaneo malo) **no es una tarea válida**: confunde tres habilidades, y los brazos
+fallaban por la primera sin llegar a medir la tercera. Lo señaló Alejandro.
