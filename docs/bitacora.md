@@ -2494,3 +2494,48 @@ en medio y se leen como una raya cortada. En los solsticios no pasa: 23.44° no 
 les faltó hasta el 2026-07-28. Y de paso: §12 de la referencia enumera el contenido de `lib/`, así
 que enumerarlo mal es la clase de podredumbre que este proyecto persigue — se añadió en los dos
 idiomas y se re-selló `reference.md`.
+
+### Cerrado en la sesión del 2026-07-29 (ter) — `marker_mid` no tenía una sola prueba
+
+Sección 5 nueva en `markers-demo.mg`, el catálogo: `marker_start` / `marker_mid` / `marker_end`
+sobre una polilínea de cuatro puntos, en contraste con la sección 2, donde `marker=` decora
+**todos** los vértices. Sale un círculo al arranque, **dos** flechas en los vértices intermedios y
+una al final, y eso es lo que enseña: `marker_mid` toma los intermedios, así que un vértice de más
+es un marcador de más — es la manera de poner una punta a media línea sin partirla en dos.
+
+⚠️ **Por qué hacía falta: `marker_mid` estaba documentado en la tabla de §4 de la referencia y NO
+lo ejercitaba ningún `.mg` del árbol.** Sus dos hermanos sí tienen quien los use (`marker_start` y
+`marker_end` salen en `fig2-5`, `fig4-1`, `elevacion_solar` y `gravitacion_orbita`); el de en medio,
+nadie. Y `markers-demo`, que es el catálogo y el sitio donde un lector va a buscarlo, cubría las
+dos clases de marcador —la primitiva y el atributo— pero ninguna de las tres formas posicionales.
+Su regresión natural es la peor de todas: la punta desaparece, la salida sigue siendo
+byte-estable, y las ocho compuertas siguen verdes. Queda anotado como cobertura exclusiva en el
+encabezado del ejemplo.
+
+Para hacerle sitio, el lienzo creció hacia abajo (`display_size 12 13.6`, `world_window 0 12 -1.6
+12`). **Ventana y lienzo crecen lo mismo**, así que la escala isométrica no se mueve y nada de lo
+que ya estaba cambia de tamaño ni de posición; va dicho en un comentario, para que el `13.6` no
+parezca un número mágico. Verificado en los tres backends: círculo relleno y tres arpones, idénticos.
+
+📌 **Y el motivo de la auditoría, que es la parte que sirve para después.** Todo esto salió de
+preguntar si `examples/efectos_atmosfera.mg` —una figura del curso de Percepción Remota, la Fig.
+1.11 de Lillesand— debía entrar al corpus. Se revisó característica por característica, como con
+`elevacion_solar`: `angle_at`/`point_at`/`curve=true` los cubre `path_sample` (que además lo
+declara como cobertura propia), `path X = sine(…)` lo cubren `franck_condon` y `turning_points`,
+`atan2` `orbita_polar`, y `sqrt`, `hatch`+`hatch_gap`, el subíndice de grupo `_{…}`, el icono
+girado por un ángulo derivado de la escena y los varios `include` en una figura tienen todos dueño.
+**Lo único exclusivo era `marker_mid`.** Y el argumento de asset —entrar por ser el único usuario
+de `lib/sun.mg`, que es exactamente por lo que entró `elevacion_solar`— se había evaporado una hora
+antes, al adoptar `Sun` en `elevacion_solar`.
+
+Así que la figura **no entra**, y la bandera se cubre donde le toca. La regla que queda, dicha por
+Alejandro mientras prepara el curso —«va a ver más figuras y no todas entrarán al corpus»—: una
+figura de curso **no entra por default**. Entra si aporta cobertura que nadie más da, o si es el
+único usuario de un asset vigilado; y si lo que aporta es UNA bandera, la bandera se cubre en el
+ejemplo que le corresponde, no se admiten 120 líneas por ella. Es el complemento del criterio del
+2026-07-28, que dijo cuándo SÍ; este dice cuándo no basta.
+
+La figura se queda fuera del repo por ahora: un `.mg` committeado en `examples/` que no está en la
+lista `EXAMPLES` sería un archivo que **ninguna compuerta compila**, justo el patrón que `imgfail`
+y `galfail` existen para evitar. Si las figuras de curso se acumulan, pedirán carpeta propia
+declarada como no-corpus.

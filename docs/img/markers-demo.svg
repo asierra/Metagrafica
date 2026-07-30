@@ -1,39 +1,44 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="340.157480pt" height="340.157480pt" viewBox="0 -340.157480 340.157480 340.157480" xmlns="http://www.w3.org/2000/svg">
-<rect x="0" y="-340.157480" width="340.157480" height="340.157480" fill="#ffffff"/>
+<svg width="340.157480pt" height="385.511811pt" viewBox="0 -385.511811 340.157480 385.511811" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="-385.511811" width="340.157480" height="385.511811" fill="#ffffff"/>
 <g transform="scale(1, -1)">
-<text x="170.078740" y="-323.149606" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="10.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="bold">Marcadores estándar y orientación tangente</tspan></text>
-<circle cx="34.015748" cy="283.464567" r="8.000000" fill="#000000" />
-<polygon points="74.2047,275.465 90.2047,275.465 90.2047,291.465 74.2047,291.465 74.2047,275.465 " fill="#000000" />
-<polygon points="130.394,275.465 138.394,283.465 130.394,291.465 122.394,283.465 130.394,275.465 " fill="#000000" />
-<polyline points="170.583,283.465 186.583,283.465 " fill="none" stroke="#000000" stroke-width="1.000000" />
-<polyline points="178.583,275.465 178.583,291.465 " fill="none" stroke="#000000" stroke-width="1.000000" />
-<polyline points="218.772,275.465 234.772,291.465 " fill="none" stroke="#000000" stroke-width="1.000000" />
-<polyline points="218.772,291.465 234.772,275.465 " fill="none" stroke="#000000" stroke-width="1.000000" />
-<polygon points="266.961,277.865 282.961,283.465 266.961,289.065 266.961,277.865 " fill="#000000" />
-<polygon points="323.15,283.465 317.816,284.531 312.483,286.131 307.15,288.798 312.483,283.465 307.15,278.131 312.483,280.798 317.816,282.398 323.15,283.465 " fill="none" stroke="#000000" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="104.813,235.78 99.2126,251.78 93.6126,235.78 104.813,235.78 " fill="#000000" />
-<polygon points="163.906,249.38 147.906,243.78 163.906,238.18 163.906,249.38 " fill="#000000" />
-<polygon points="206.998,251.78 212.598,235.78 218.198,251.78 206.998,251.78 " fill="#000000" />
-<polygon points="269.291,232.466 280.605,243.78 269.291,255.093 257.978,243.78 269.291,232.466 " fill="#000000" />
-<path d="M 28.3465 170.079 L 85.0394 226.772 L 170.079 226.772 L 255.118 170.079 L 311.811 141.732 " fill="none" stroke-width="1" stroke="#0000FF" />
-<polygon points="28.3465,170.079 22.6896,166.307 16.5618,163.008 9.49004,160.651 18.9186,160.651 18.9186,151.222 21.2754,158.294 24.5747,164.422 28.3465,170.079 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="85.0394,226.772 78.3542,225.533 71.4221,224.915 63.9938,225.534 72.66,221.82 68.9459,213.154 73.8978,218.725 79.3443,223.058 85.0394,226.772 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="170.079,226.772 164.175,230.145 158.484,234.15 153.213,239.421 157.43,230.988 148.997,226.771 156.376,227.826 163.332,227.615 170.079,226.772 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="255.118,170.079 250.087,174.652 245.4,179.797 241.398,186.086 243.685,176.939 234.538,174.652 241.97,174.08 248.715,172.366 255.118,170.079 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="311.811,141.732 306.444,145.906 301.376,150.676 296.904,156.64 299.886,147.695 290.941,144.713 298.395,144.714 305.252,143.522 311.811,141.732 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<path d="M 28.3465 70.8661 L 85.0394 104.882 L 141.732 82.2047 L 198.425 116.22 L 255.118 93.5433 L 311.811 110.551 " fill="none" stroke-width="1" stroke="#FF0000" />
-<circle cx="28.346457" cy="70.866142" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
-<circle cx="85.039370" cy="104.881890" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
-<circle cx="141.732283" cy="82.204724" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
-<circle cx="198.425197" cy="116.220472" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
-<circle cx="255.118110" cy="93.543307" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
-<circle cx="311.811024" cy="110.551181" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
-<polygon points="28.3465,21.3465 35.3465,28.3465 28.3465,35.3465 21.3465,28.3465 28.3465,21.3465 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="85.0394,38.3543 92.0394,45.3543 85.0394,52.3543 78.0394,45.3543 85.0394,38.3543 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="141.732,15.6772 148.732,22.6772 141.732,29.6772 134.732,22.6772 141.732,15.6772 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="198.425,41.189 205.425,48.189 198.425,55.189 191.425,48.189 198.425,41.189 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="255.118,24.1811 262.118,31.1811 255.118,38.1811 248.118,31.1811 255.118,24.1811 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
-<polygon points="311.811,32.685 318.811,39.685 311.811,46.685 304.811,39.685 311.811,32.685 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<text x="170.078740" y="-368.503937" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="10.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="bold">Marcadores estándar y orientación tangente</tspan></text>
+<circle cx="34.015748" cy="328.818898" r="8.000000" fill="#000000" />
+<polygon points="74.2047,320.819 90.2047,320.819 90.2047,336.819 74.2047,336.819 74.2047,320.819 " fill="#000000" />
+<polygon points="130.394,320.819 138.394,328.819 130.394,336.819 122.394,328.819 130.394,320.819 " fill="#000000" />
+<polyline points="170.583,328.819 186.583,328.819 " fill="none" stroke="#000000" stroke-width="1.000000" />
+<polyline points="178.583,320.819 178.583,336.819 " fill="none" stroke="#000000" stroke-width="1.000000" />
+<polyline points="218.772,320.819 234.772,336.819 " fill="none" stroke="#000000" stroke-width="1.000000" />
+<polyline points="218.772,336.819 234.772,320.819 " fill="none" stroke="#000000" stroke-width="1.000000" />
+<polygon points="266.961,323.219 282.961,328.819 266.961,334.419 266.961,323.219 " fill="#000000" />
+<polygon points="323.15,328.819 317.816,329.885 312.483,331.485 307.15,334.152 312.483,328.819 307.15,323.485 312.483,326.152 317.816,327.752 323.15,328.819 " fill="none" stroke="#000000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="104.813,281.134 99.2126,297.134 93.6126,281.134 104.813,281.134 " fill="#000000" />
+<polygon points="163.906,294.734 147.906,289.134 163.906,283.534 163.906,294.734 " fill="#000000" />
+<polygon points="206.998,297.134 212.598,281.134 218.198,297.134 206.998,297.134 " fill="#000000" />
+<polygon points="269.291,277.82 280.605,289.134 269.291,300.448 257.978,289.134 269.291,277.82 " fill="#000000" />
+<path d="M 28.3465 215.433 L 85.0394 272.126 L 170.079 272.126 L 255.118 215.433 L 311.811 187.087 " fill="none" stroke-width="1" stroke="#0000FF" />
+<polygon points="28.3465,215.433 22.6896,211.661 16.5618,208.362 9.49004,206.005 18.9186,206.005 18.9186,196.577 21.2754,203.648 24.5747,209.776 28.3465,215.433 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="85.0394,272.126 78.3542,270.888 71.4221,270.269 63.9938,270.888 72.66,267.174 68.9459,258.508 73.8978,264.08 79.3443,268.412 85.0394,272.126 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="170.079,272.126 164.175,275.499 158.484,279.504 153.213,284.775 157.43,276.342 148.997,272.126 156.376,273.18 163.332,272.97 170.079,272.126 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="255.118,215.433 250.087,220.006 245.4,225.151 241.398,231.44 243.685,222.293 234.538,220.006 241.97,219.435 248.715,217.72 255.118,215.433 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="311.811,187.087 306.444,191.26 301.376,196.03 296.904,201.994 299.886,193.049 290.941,190.068 298.395,190.068 305.252,188.876 311.811,187.087 " fill="none" stroke="#0000FF" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<path d="M 28.3465 116.22 L 85.0394 150.236 L 141.732 127.559 L 198.425 161.575 L 255.118 138.898 L 311.811 155.906 " fill="none" stroke-width="1" stroke="#FF0000" />
+<circle cx="28.346457" cy="116.220472" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
+<circle cx="85.039370" cy="150.236220" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
+<circle cx="141.732283" cy="127.559055" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
+<circle cx="198.425197" cy="161.574803" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
+<circle cx="255.118110" cy="138.897638" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
+<circle cx="311.811024" cy="155.905512" r="5.000000" fill="none" stroke="#000000" stroke-width="1.000000" />
+<polygon points="28.3465,66.7008 35.3465,73.7008 28.3465,80.7008 21.3465,73.7008 28.3465,66.7008 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="85.0394,83.7087 92.0394,90.7087 85.0394,97.7087 78.0394,90.7087 85.0394,83.7087 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="141.732,61.0315 148.732,68.0315 141.732,75.0315 134.732,68.0315 141.732,61.0315 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="198.425,86.5433 205.425,93.5433 198.425,100.543 191.425,93.5433 198.425,86.5433 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="255.118,69.5354 262.118,76.5354 255.118,83.5354 248.118,76.5354 255.118,69.5354 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="311.811,78.0394 318.811,85.0394 311.811,92.0394 304.811,85.0394 311.811,78.0394 " fill="none" stroke="#008000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<path d="M 28.3465 31.1811 L 127.559 14.1732 L 226.772 31.1811 L 311.811 14.1732 " fill="none" stroke-width="1" stroke="#000000" />
+<circle cx="28.346457" cy="31.181102" r="8.000000" fill="#000000" />
+<polygon points="127.559,14.1732 122.225,15.2396 116.893,16.8396 111.559,19.5068 116.893,14.1732 111.559,8.83963 116.893,11.5068 122.225,13.1068 127.559,14.1732 " fill="none" stroke="#000000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="226.772,31.1811 221.438,32.2475 216.105,33.8475 210.772,36.5147 216.105,31.1811 210.772,25.8475 216.105,28.5147 221.438,30.1147 226.772,31.1811 " fill="none" stroke="#000000" stroke-width="1.000000" stroke-miterlimit="5.5" />
+<polygon points="311.811,14.1732 306.79,16.2649 301.875,18.8797 297.168,22.5411 301.352,16.2651 295.076,12.0811 300.829,13.6505 306.372,14.1735 311.811,14.1732 " fill="none" stroke="#000000" stroke-width="1.000000" stroke-miterlimit="5.5" />
 </g>
 </svg>
