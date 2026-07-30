@@ -98,6 +98,11 @@ private:
   // Current font handle and dirty flag
   HPDF_Font current_font = nullptr;
 
+  // Cara vigente en el DISPOSITIVO, gemela de `current_font` y FUERA de dspstate:
+  // sobrevive a push/popDrawState, que es justo lo que la hace útil como guard.
+  // Ver el comentario de setFontFace.
+  FontFace dev_face = FN_NOFACE;
+
   // Face name for embedded Latin Modern Math TTF (from HPDF_LoadTTFontFromMemory)
   const char* lmmath_face = nullptr;
 };

@@ -642,8 +642,21 @@ void PDFDisplay::setFontSize(double fz) {
 }
 
 void PDFDisplay::setFontFace(FontFace face) {
-  if (face == dspstate.fontFace) return;
+  // El estado LÓGICO se fija siempre; el guard que sigue solo evita rehacer el trabajo
+  // del dispositivo.
   Display::setFontFace(face);
+
+  // ⚠ El guard va contra `dev_face` (la cara del DISPOSITIVO) y no contra
+  // dspstate.fontFace: push/popDrawState restauran dspstate, pero `current_font` es un
+  // miembro nuestro y el q/Q de libharu no lo toca, así que al salir de un bloque el
+  // estado lógico volvía a la cara de fuera mientras el dispositivo seguía con la de
+  // dentro — y el guard, viendo dspstate ya restaurado, NO re-seleccionaba. Efecto:
+  // `text("$E$/n(nota)")` sacaba la 2ª línea en itálico math y la dejaba puesta para
+  // los textos siguientes (TextBlock::draw sí acota cada renglón con push/pop; el que
+  // no cooperaba era este guard). Es la misma familia que el bug de font_size en EPS,
+  // resuelto igual: un caché de dispositivo fuera de dspstate.
+  if (face == dev_face) return;
+  dev_face = face;
 
   const char* fname    = nullptr;
   const char* encoding = "WinAnsiEncoding";

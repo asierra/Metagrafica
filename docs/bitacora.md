@@ -2418,3 +2418,39 @@ hecha para una **audiencia externa** —un curso— y no para probar el motor.
 De paso, el conteo de tarjetas de `CLAUDE.md` estaba rancio: decía 23 desde el 2026-07-23 y eran
 24 desde que entró `espectro`. Ahora 25, y el número sale de contar los `<article>` de la página
 generada, no de la memoria.
+
+### Cerrado en la sesión del 2026-07-29 — la cara tipográfica se fugaba entre renglones, y solo en PDF
+
+`text("(1) Radiación incidente $E$/n(con factor de atenuación)")` sacaba el **segundo renglón en
+itálico matemático**, y lo dejaba puesto para los textos siguientes. Solo en PDF: EPS y SVG
+salían bien. Se vio mirando el render de una figura nueva, no por una compuerta.
+
+**La causa es un guard que compara contra el estado equivocado.** `PDFDisplay::setFontFace`
+abría con `if (face == dspstate.fontFace) return;`, y `dspstate` es el estado **lógico**, que
+`push/popDrawState` restauran. Pero la cara del **dispositivo** vive en `current_font`, que es un
+miembro nuestro y el `q`/`Q` de libharu no toca. Al salir de un bloque el estado lógico volvía a
+la cara de fuera mientras el dispositivo seguía con la de dentro, y el guard —viendo `dspstate`
+ya restaurado— **no re-seleccionaba**. Arreglado con un caché de dispositivo `dev_face`, fuera de
+`dspstate`: exactamente la misma familia y el mismo remedio que el bug de `font_size` en EPS del
+2026-07-09.
+
+Vale la pena el detalle de por qué no bastó lo que ya había: `TextBlock::draw` **sí** acota cada
+renglón con `push/popDrawState`, y su comentario describe este mismo caso —se puso el 2026-07-21
+justo para eso—. El motor tenía la arquitectura correcta; lo que la derrotaba era el caché de un
+backend. Un `push/pop` solo sirve si todos los guards de abajo miden contra el dispositivo.
+
+⚠️ **El golden lo bendecía, y no de casualidad: `test/golden/texto.pdf` tenía los cuatro renglones
+en negrita**, cuando `texto.mg:86` es un `text()` aparte y sin `/b`. O sea que el ejemplo que
+existe para cubrir `TextBlock` —el único— llevaba el bug horneado en su propio golden desde que se
+capturó. La invariante (a) de la Capa 3 cuenta operaciones de texto: son las mismas con la cara
+bien o mal, así que es ciega a esto. Ninguna de las ocho compuertas podía verlo; el arreglo se
+verificó comparando PDF contra EPS y contra la intención declarada en el `.mg`.
+
+Repro mínimo, por si vuelve: cinco rótulos —`"uno $E$ dos"`, `"tres cuatro"`, `"cinco $E$/nseis"`,
+`"siete ocho"`, `"nueve $\frac{a}{b}$ diez"`— rendeados en PDF y en EPS lado a lado. Antes
+diferían en tres de los cinco; después son idénticos. Y da la forma exacta de la fuga: un run
+math **en la misma línea** siempre restauraba bien (por eso «dos» nunca salió mal); lo que no
+restauraba era el **corte de renglón**, y de ahí en adelante contaminaba a los vecinos hasta que
+un `\frac` volvía a fijar la cara.
+
+Movió **un solo golden** en todo el corpus, `texto.pdf`. `ok=78` y traductor `ok=14`.
