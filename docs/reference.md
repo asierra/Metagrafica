@@ -802,7 +802,8 @@ prisma(2, 1, 1.5)               % width, height, depth
 
 The `include` must precede the use, and **compilation fails** if the file doesn't resolve. In `lib/` come
 `pseudo3d.mg` (volume simulated by oblique projection, without a z-buffer: the paint order is the writing
-order), `satellite.mg` (an icon, `struct Satellite`) and three **world maps** in orthographic
+order), two **icons** —`satellite.mg` (`struct Satellite`) and `sun.mg` (`struct Sun`, the Sun: a
+radius-1 disc plus a ring of rays, `rays=` how many)— and three **world maps** in orthographic
 projection, generated from real data (Natural Earth) with `tools/geo2mg.py`: `polar_map.mg`
 (`PolarMap`, seen from the north pole), `fulldisk_map.mg` (`FullDiskMap`, equatorial) and
 `mapa_p30_n55.mg` (`Mapa`, lat 30, lon −55).
@@ -992,4 +993,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ eaea0c4f2d41bcc4e383fc6037cc46638022f1fa -->
+<!-- translated-from: referencia.md @ d9c8d6b459a99f18fcf7bdac5bfaeb61233103f8 -->

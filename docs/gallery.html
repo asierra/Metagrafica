@@ -320,6 +320,14 @@ text(&quot;Atracción&quot;, align=&quot;center&quot;, size=8) { 12.5 4 }</pre><
 % observación se posa sobre el limbo sin corrección de ninguna clase, y por eso el
 % ecuador del mapa cae sobre el plano ecuatorial dibujado.
 %
+% EL SOL ES UN ICONO DE BIBLIOTECA (`lib/sun.mg`), no un disco con rótulo: se lee sin
+% que haya que escribirle «Sol» encima. Cuesta margen a la derecha —el anillo de rayos
+% llega a 1.9 radios— y por eso la columna de soles se corrió de x=14.5 a 13.9: con el
+% icono en 14.5, «Primavera/Otoño» se salía del lienzo. Los soles resbalan por su propio
+% rayo, así que mover la columna NO cambia ningún ángulo; las tres elevaciones siguen
+% imprimiendo 68.4/45.0/21.6. Todo lo que se separa del sol (el corte del rayo entrante,
+% el margen de los rótulos) se mide desde `sun_out`, el radio libre de rayos.
+%
 % LATITUDES TROPICALES: con lat &lt; 23.44 el rayo de verano queda por encima del cenit
 % (h &gt; 90°). La figura sigue siendo correcta, pero se lee peor, porque los arcos se
 % montan sobre la línea del cenit. 45° es la latitud que mejor separa los tres rayos.
@@ -328,6 +336,7 @@ display_size 20 14
 world_window -7 20  -7 12
 
 include &quot;../lib/fulldisk_map.mg&quot;
+include &quot;../lib/sun.mg&quot;
 include &quot;../lib/satellite.mg&quot;
 
 % --- los dos números de los que sale todo ---
@@ -335,8 +344,9 @@ lat = 45            % latitud del punto de observación, grados N
 obl = 23.44         % oblicuidad de la eclíptica = declinación en los solsticios
 
 R     = 5           % radio del globo
-sun_x = 14.5        % los tres soles se alinean en esta columna
-sun_r = 1
+sun_x = 13.9        % los tres soles se alinean en esta columna
+sun_r = 0.8         % radio del DISCO del sol; sus rayos llegan a 1.9 radios
+sun_out = 2.15*sun_r  % de aquí para afuera ya no hay rayos: el radio libre
 
 d2r = pi/180
 Px  = R*cos(lat*d2r)          % punto de observación, sobre el limbo
@@ -389,14 +399,16 @@ for k = 0 to 2 {
     sy = Py + (sun_x - Px)*tan(d*d2r)      % el sol de esta época, en su columna
     h  = 90 - lat + d                       % elevación sobre el horizonte local
 
+    % El rayo se corta en el radio LIBRE, no en el borde del disco: si llegara al
+    % disco atravesaría el anillo de rayos del icono.
     polyline(color=&quot;darkorange&quot;, line_width=0.6) {
-        (Px) (Py)  (sun_x - sun_r*cos(d*d2r)) (sy - sun_r*sin(d*d2r)) }
+        (Px) (Py)  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
 
-    circle(sun_r, fill=&quot;gold&quot;, color=&quot;darkorange&quot;) { (sun_x) (sy) }
-    text(&quot;Sol&quot;, align=&quot;center&quot;, valign=&quot;middle&quot;, size=9) { (sun_x) (sy) }
+    % El icono dice «sol» solo, así que no lleva rótulo dentro.
+    Sun(scale=sun_r, at=(sun_x, sy))
 
-    text(&quot;/b&quot; + epoca[k], size=10) { (sun_x + sun_r + 0.5) (sy + 0.28) }
-    text(&quot;$h$ = &quot; + str(h, 1) + &quot;°&quot;, size=8.5, color=&quot;gray&quot;) { (sun_x + sun_r + 0.5) (sy - 0.62) }
+    text(&quot;/b&quot; + epoca[k], size=10) { (sun_x + sun_out + 0.35) (sy + 0.28) }
+    text(&quot;$h$ = &quot; + str(h, 1) + &quot;°&quot;, size=8.5, color=&quot;gray&quot;) { (sun_x + sun_out + 0.35) (sy - 0.62) }
 
     arc(radio[k], from=hor, to=d, color=gray(0.35), line_width=0.6,
         marker_start=&quot;arrow&quot;, marker_start_orient=&quot;reverse&quot;, marker_end=&quot;arrow&quot;, marker_size=3) { (Px) (Py) }

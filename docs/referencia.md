@@ -823,7 +823,8 @@ prisma(2, 1, 1.5)               % ancho, alto, profundidad
 
 El `include` debe preceder al uso, y **falla el compilado** si el archivo no resuelve. En
 `lib/` vienen `pseudo3d.mg` (volumen simulado por proyección oblicua, sin z-buffer: el orden
-de pintado es el de escritura), `satellite.mg` (un icono, `struct Satellite`) y tres **mapas
+de pintado es el de escritura), dos **iconos** —`satellite.mg` (`struct Satellite`) y `sun.mg`
+(`struct Sun`, el Sol: disco de radio 1 y un anillo de rayos, `rays=` cuántos)— y tres **mapas
 del mundo** en proyección ortográfica, generados de datos reales (Natural Earth) con
 `tools/geo2mg.py`: `polar_map.mg` (`PolarMap`, vista desde el polo norte),
 `fulldisk_map.mg` (`FullDiskMap`, ecuatorial) y `mapa_p30_n55.mg` (`Mapa`, lat 30, lon −55).

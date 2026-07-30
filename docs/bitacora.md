@@ -2454,3 +2454,43 @@ restauraba era el **corte de renglón**, y de ahí en adelante contaminaba a los
 un `\frac` volvía a fijar la cara.
 
 Movió **un solo golden** en todo el corpus, `texto.pdf`. `ok=78` y traductor `ok=14`.
+
+### Cerrado en la sesión del 2026-07-29 (bis) — el Sol como icono de biblioteca
+
+`lib/sun.mg` nueva: `struct Sun(rays=12, disc="gold", ray="darkorange", ray_in=1.35,
+ray_out=1.9, lw=0.6)`. Disco de **radio 1**, así que `scale` ES el radio en unidades de mundo,
+igual que en los mapas. Los rayos van en un anillo **aparte** —de `ray_in` a `ray_out`, en
+radios—, separados del disco: ese hueco es lo que lo hace legible a tamaño chico, y es la única
+decisión de dibujo del archivo. Estilo tomado de una lámina de pictogramas de sol (no va en el
+repo): rayos de línea, no púas.
+
+Adoptada en `elevacion_solar`, donde reemplaza tres `circle(fill="gold")` **y sus tres
+`text("Sol")`**: el icono se lee solo, el rótulo era andamio. Lo dijo Alejandro antes de verlo
+—«seguramente no necesitará la etiqueta, pero tal vez los rayos se encimen»—, y acertó en las
+dos, aunque el encimamiento no fue donde se esperaba: no entre rayos de soles vecinos (los
+separan 4.75 unidades y el anillo mide 1.52) sino entre el anillo y **las etiquetas de época**,
+que colgaban de `sun_r + 0.5` y quedaban debajo de los rayos. En el primer intento
+«Primavera/Otoño» se salía del lienzo.
+
+**Lo que arregla el choque es medir desde el radio LIBRE, no desde el disco.** `sun_out =
+2.15*sun_r` es el radio pasado el cual ya no hay rayos, y de ahí cuelga todo lo que se separa del
+sol: el corte del rayo entrante (si llegara al borde del disco, como antes, atravesaría el anillo)
+y el margen de los rótulos. Con eso el icono puede crecer o encogerse sin recalibrar nada.
+
+Aun así hizo falta margen, y la columna de soles pasó de `x = 14.5` a `13.9`. 📌 **Mover la
+columna no cambia ningún ángulo**, y eso es lo que hace que sea un ajuste de composición y no una
+mentira: la altura de cada sol se calcula de su declinación (`sy = Py + (sun_x − Px)·tan δ`), así
+que los tres resbalan por su propio rayo. Las elevaciones siguen imprimiendo 68.4/45.0/21.6, que
+es la regla de la entrada del 2026-07-28: el número que gobierna la geometría es el que se
+publica. Queda escrito en las NOTAS del `.mg`, porque un `13.9` sin explicación es justo lo que
+alguien «corrige» de vuelta a `14.5`.
+
+⚠️ **Un detalle cosmético que se decidió NO perseguir:** en el sol del equinoccio el rayo entrante
+es horizontal y uno de los doce rayos del icono también, así que quedan colineales con el hueco
+en medio y se leen como una raya cortada. En los solsticios no pasa: 23.44° no cae en la malla de
+30°. Se quita con `rays=10` en ese sol si algún día molesta.
+
+`lib/sun.mg` **nace con un usuario vigilado por las compuertas**, que es lo que a los tres mapas
+les faltó hasta el 2026-07-28. Y de paso: §12 de la referencia enumera el contenido de `lib/`, así
+que enumerarlo mal es la clase de podredumbre que este proyecto persigue — se añadió en los dos
+idiomas y se re-selló `reference.md`.
