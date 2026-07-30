@@ -16,7 +16,7 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción: ok=78 … trfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción + bloques de doc: ok=78 … docfail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg + la galería es/en (PUBLICADO; capture NO los toca)
 
@@ -26,7 +26,7 @@ bash test/run_translator.sh check    # traductor V1→V3 (tools/mg1to2.py): ok=1
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
 de `examples/` (26 `.mg` × EPS/SVG/**PDF** = 78 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=78 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=78 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0 docfail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -38,7 +38,7 @@ un espacio suelto que dejó de emitirse con `plan_text_space`). Ninguno era un f
 traductor. **Tras tocar el motor, corre también `bash test/run_translator.sh check` y
 re-captúralo** si el cambio era intencional.
 
-**Siete compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+**Ocho compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
 - **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
@@ -116,6 +116,24 @@ re-captúralo** si el cambio era intencional.
   re-sella **a mano** a propósito: así sellar significa «ya traduje» y no es el efecto colateral
   de otro comando.
 
+- **Los BLOQUES DE CÓDIGO de la documentación** (`docfail`, nueva 2026-07-29,
+  `tools/docblocks.py`) — las otras siete vigilan la **salida** del compilador; ninguna mira lo
+  que la documentación **afirma**, y una afirmación falsa es peor que un bug: es un bug que el
+  lector copia con confianza. Compila los bloques ```octave de `docs/referencia.md` y
+  `docs/reference.md`. Nació preguntándose qué contexto necesita un **agente externo** para
+  escribir una figura, y en su primera corrida encontró un ⚠️ de §10 que enseñaba
+  `smooth(&nodos)` como **la** forma de partir de un trayecto que ya tienes —y no compila: los
+  generadores exigen bloque literal—; llevaba ahí, en los dos idiomas, sin que nada lo viera.
+  ⚠️ **Un humano tropieza y desconfía del documento; un modelo de lenguaje obedece**, así que
+  para él la referencia es la única fuente de verdad y un error ahí se vuelve código roto con
+  seguridad. Cada bloque declara **en el propio `.md`** lo que espera (`<!-- mg-noexec: … -->` =
+  notación, no código; `<!-- mg-expect-error -->` = contraejemplo ❌ deliberado, que **debe**
+  fallar y que también rompe la compuerta si algún día compila) — no hay lista aparte que
+  desincronizar. Los bloques que solo usan una `struct`, un `path` o una variable que el texto
+  definió antes se cuentan como **fragmentos** y no fallan: sus errores son de EVALUACIÓN, o sea
+  que el parseo —lo único que esta compuerta juzga— ya pasó. Se omite con aviso si no hay
+  `python3`.
+
 Las compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
 (la de `docs/img`, con el archivo rancio **real** de `e9198c0`: lo caza, y el golden sigue
 dando `ok=57` — que es justo la prueba de que el golden no puede verlo; la de la galería,
@@ -155,7 +173,7 @@ la plataforma, y **no la caza ningún golden**, porque el golden se genera en un
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar). Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar). Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
 
 **Política V1 (2026-07-15, endurecida 2026-07-20):** todo el trabajo actual es desarrollo de **V3**; **no se trackea material V1 nuevo**. Los `.mg` crudos de V1 y sus traducciones literales se quedaban en el árbol sin commitear; desde el 2026-07-20 **se borran** en cuanto el port V3 está cerrado (así se fueron `fig4-8.mg`, `exp.mg`, `fp3i2dat.mg` y el `fig4-8.eps` de 1998). No estaban en git en **ninguna** rama —`origin/v1-legacy` incluida—, así que el borrado es definitivo: antes de borrar, lo que debe sobrevivir son las **medidas**, transcritas al `.mg` o a un `plan_*.md`, no el archivo (ver el encabezado de `turning_points.mg`, que conserva cómo re-medir el PDF vectorial de Cambridge y los nodos del V(x) manual). Lo ya trackeado en `examples/v1/` (31 archivos: corpus congelado + oráculo) **se queda como está**.
 

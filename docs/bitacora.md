@@ -2539,3 +2539,50 @@ La figura se queda fuera del repo por ahora: un `.mg` committeado en `examples/`
 lista `EXAMPLES` sería un archivo que **ninguna compuerta compila**, justo el patrón que `imgfail`
 y `galfail` existen para evitar. Si las figuras de curso se acumulan, pedirán carpeta propia
 declarada como no-corpus.
+
+### Cerrado en la sesión del 2026-07-29 (quater) — la novena compuerta: los bloques de la documentación
+
+Las ocho compuertas anteriores vigilan la **salida** del compilador. Ninguna mira lo que la
+documentación **afirma**, y una afirmación falsa ahí es peor que un bug: es un bug que el lector
+copia con confianza. `tools/docblocks.py` compila los bloques ```octave de `docs/referencia.md` y
+`docs/reference.md`; `docfail` en `test/run.sh`.
+
+**En su primera corrida encontró uno, y de los caros.** El ⚠️ de §10 declaraba que la forma de
+partir de un trayecto que ya tienes es la de paréntesis —`smooth(&nodos)`—, «igual que en el
+resto del álgebra», y añadía «vale lo mismo para `bezier`, `polyline` y las demás». Medido:
+`polyline(&p)` y `bezier(&p)` sí; **`smooth(&p)` y `sine(&p, …)` no compilan**, los generadores
+exigen su bloque literal. O sea que el aviso era cierto para las primitivas que CONSUMEN un
+trayecto y falso justo para los generadores, que era el párrafo al que estaba pegado. Llevaba ahí
+en los dos idiomas sin que nada lo viera. Corregido el texto a lo que el compilador hace hoy
+—incluida la limitación, dicha en voz alta: suavizar un trayecto que ya está en una variable no se
+puede— y anotada aparte la pregunta de gramática, que es de Alejandro: implementar `smooth(&p)` o
+dejarlo así.
+
+📌 **De dónde salió, porque explica el diseño.** No de auditar la referencia, sino de preguntar
+qué contexto necesita un **agente externo** —un ChatGPT, sin repo y sin compilador— para escribir
+una figura sencilla. La respuesta empieza antes del contenido: que todo lo que el contexto afirme
+compile. ⚠️ **Un humano tropieza con un ejemplo malo y desconfía del documento; un modelo obedece.**
+Para él la referencia es la única fuente de verdad, así que un error ahí no es una molestia, es
+código roto con toda seguridad. Y es una compuerta que le sirve igual al lector humano: nadie
+había comprobado nunca que los ejemplos de la referencia funcionen.
+
+**Cómo declara cada bloque lo que espera: en el propio `.md`**, con un comentario HTML invisible al
+renderizar, y no en una lista dentro del tool — misma política que `test/errors/*.mg`, porque dos
+listas que mantener se desincronizan. `<!-- mg-noexec: razón -->` para lo que no es código (el
+bloque de firmas de §10, con sus corchetes de argumento opcional); `<!-- mg-expect-error -->` para
+un contraejemplo ❌ deliberado, que **debe** fallar — y que rompe la compuerta también si algún día
+**compila**, porque un contraejemplo que dejó de serlo enseña lo contrario de lo que dice. Es el
+mismo par que `EXPECT_WARN`/`EXPECT_NO_WARN` de las pruebas negativas.
+
+**Los fragmentos no se marcan, y el argumento de por qué es lo interesante.** Nueve bloques usan una
+`struct`, un `path` o una variable que el texto definió párrafos antes y no repiten; no pueden
+compilar solos. No hacen falta marcadores porque `struct no definida`, `path no definido` y
+`variable no definida` son errores de **EVALUACIÓN**: si el parseo hubiera fallado, el error sería
+de sintaxis y se reportaría **en su lugar**. O sea que ver uno de esos tres prueba que el bloque
+parseó — que es exactamente lo único que esta compuerta juzga. Sin ese argumento habría hecho falta
+marcar nueve bloques a mano, y cada marca es una cosa más que se pudre.
+
+Estado: 28 compilan, 9 fragmentos, 1 notación, 1 contraejemplo, 0 fallos, en los dos idiomas.
+Verificada como manda la casa, reintroduciendo las tres clases: el bug real de vuelta (lo caza), el
+marcador del contraejemplo quitado (lo caza, o sea que la marca es load-bearing) y el contraejemplo
+vuelto válido (lo caza con su mensaje propio). `ok=78 … docfail=0`.

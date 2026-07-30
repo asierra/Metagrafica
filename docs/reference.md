@@ -593,13 +593,15 @@ bezier(&full)
 ```octave
 path wave  = sine(half_cycles=2, amplitude=1) { 0 0  4 0 }   % half-cycle between two ends
 path curve  = smooth { 0 0  1 2  3 1  4 3 }                   % passes through those NODES
-path curve2 = smooth(&nodes)                                  % the nodes, already in a path
 ```
 
-> ⚠️ **A `{ }` block is always literal.** `smooth { &nodes }` is invalid: inside the braces go coordinates,
-> not paths. To start from a path you already have, the form is the parenthesized one —`smooth(&nodes)`—,
-> as everywhere else in the algebra. The same holds for `bezier`, `polyline` and the rest: the path goes
-> **between parentheses**, as in §3.
+> ⚠️ **A `{ }` block is always literal, and the generators take nothing but a block.**
+> `smooth { &nodes }` is invalid —inside the braces go coordinates, not paths— and
+> `smooth(&nodes)` is invalid **too**: `smooth` and `sine` require their points written right
+> there. The parenthesized `&` form belongs to the primitives that CONSUME a path
+> —`polyline(&p)`, `polygon(&p)`, `bezier(&p)`, as in §3—, not to the ones that generate it.
+> Smoothing a path you already hold in a variable **is not possible today**; its nodes have to
+> be written literally.
 
 **Accumulate in a loop** — for a curve whose number of pieces depends on a variable, something `concat`
 doesn't cover, because its pieces must be written one by one:
@@ -655,6 +657,7 @@ paths and approximate on a genuinely curved bezier.
 **Sampling** — read geometry from a path at a parameter `t ∈ [0,1]`, traversed by **arc length** (so
 `t = 0.5` is the *geometric* middle, not half the segments):
 
+<!-- mg-noexec: signatures, not code: the brackets mark the optional argument -->
 ```octave
 sample(&p, n [, curve=b])       % n points equally spaced by arc → a PATH
 point_at(&p, t [, curve=b])     % the point at t → [x, y]
@@ -930,6 +933,7 @@ distinction as between `grid=` and `rule`. See `examples/tiro_parabolico.mg`.
 The coordinate block must start on the **same line** where the head of the primitive ended — the
 `)` of the arguments, or the name if there are none:
 
+<!-- mg-expect-error -->
 ```octave
 rectangle(fill="red") { 0 0  4 3 }         % ✅
 rectangle(fill="red")
@@ -993,4 +997,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 **Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ d9c8d6b459a99f18fcf7bdac5bfaeb61233103f8 -->
+<!-- translated-from: referencia.md @ 91fbd360701289323075c795921fc16cc333fe47 -->

@@ -607,13 +607,14 @@ bezier(&completa)
 ```octave
 path onda = sine(half_cycles=2, amplitude=1) { 0 0  4 0 }   % media entre dos extremos
 path suave = smooth { 0 0  1 2  3 1  4 3 }                   % pasa por esos NODOS
-path suave2 = smooth(&nodos)                                 % los nodos, ya en un path
 ```
 
-> ⚠️ **Un bloque `{ }` es siempre literal.** `smooth { &nodos }` no vale: dentro de las llaves
-> van coordenadas, no trayectos. Para partir de un trayecto que ya tienes, la forma es la de
-> paréntesis —`smooth(&nodos)`—, igual que en el resto del álgebra. Vale lo mismo para
-> `bezier`, `polyline` y las demás: el trayecto va **entre paréntesis**, como en §3.
+> ⚠️ **Un bloque `{ }` es siempre literal, y los generadores solo aceptan bloque.**
+> `smooth { &nodos }` no vale —dentro de las llaves van coordenadas, no trayectos— y
+> `smooth(&nodos)` **tampoco**: `smooth` y `sine` exigen sus puntos escritos ahí mismo. La
+> forma de paréntesis con `&` es de las primitivas que CONSUMEN un trayecto —`polyline(&p)`,
+> `polygon(&p)`, `bezier(&p)`, como en §3—, no de las que lo generan. Suavizar un trayecto que
+> ya tienes en una variable **no se puede hoy**; sus nodos hay que escribirlos literales.
 
 **Acumular en un lazo** — para una curva cuyo número de piezas depende de una variable, algo
 que `concat` no cubre, porque sus piezas hay que escribirlas una por una:
@@ -670,6 +671,7 @@ genuinamente curva.
 **Muestreo** — leen geometría de un trayecto en un parámetro `t ∈ [0,1]`, recorrido por
 **longitud de arco** (así `t = 0.5` es el medio *geométrico*, no la mitad de los segmentos):
 
+<!-- mg-noexec: firmas, no código: los corchetes marcan el argumento opcional -->
 ```octave
 sample(&p, n [, curve=b])       % n puntos equiespaciados por arco → un TRAYECTO
 point_at(&p, t [, curve=b])     % el punto en t → [x, y]
@@ -958,6 +960,7 @@ hay entre `grid=` y `rule`. Ver `examples/tiro_parabolico.mg`.
 número».** El bloque de coordenadas tiene que empezar en la **misma línea** en la que acabó la
 cabeza de la primitiva —el `)` de los argumentos, o el nombre si no lleva—:
 
+<!-- mg-expect-error -->
 ```octave
 rectangle(fill="red") { 0 0  4 3 }         % ✅
 rectangle(fill="red")

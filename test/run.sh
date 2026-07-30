@@ -250,6 +250,7 @@ imgfail_count=0
 errfail_count=0
 galfail_count=0
 trfail_count=0
+docfail_count=0
 err_ok=0
 
 for example in $EXAMPLES; do
@@ -447,6 +448,30 @@ if [ -f "$REFES" ] && [ -f "$REFEN" ] && command -v git >/dev/null 2>&1; then
     fi
 fi
 
+# --- Compuerta 9: los BLOQUES DE CÓDIGO de la documentación (docfail) --------
+# Las otras ocho vigilan la SALIDA del compilador. Ninguna mira lo que la
+# documentación AFIRMA, y una afirmación falsa es peor que un bug: es un bug que
+# el lector copia con confianza. Nació el 2026-07-29 preguntándose qué contexto
+# necesita un agente externo para escribir una figura, y en su primera corrida
+# encontró un ⚠️ de §10 que enseñaba `smooth(&nodos)` como LA forma correcta —y no
+# compila: los generadores exigen bloque literal—. Llevaba ahí sin que nada lo
+# viera, en los dos idiomas.
+#
+# Un humano tropieza y desconfía del documento; un modelo de lenguaje obedece,
+# así que para él la referencia es la única fuente de verdad. Cada bloque declara
+# EN EL PROPIO .md lo que espera (mg-noexec para notación, mg-expect-error para un
+# contraejemplo deliberado), y no hay lista aquí que se desincronice. Se omite con
+# aviso si no hay python3, igual que gs.
+if command -v python3 >/dev/null 2>&1; then
+    if ! docout="$(python3 "$ROOT/tools/docblocks.py" docs/referencia.md docs/reference.md 2>&1)"; then
+        echo "DOCFAIL bloques de código de la documentación:"
+        echo "$docout" | sed 's/^/        /'
+        docfail_count=$((docfail_count + 1))
+    fi
+else
+    echo "WARN: python3 no encontrado; se omite la compuerta de bloques de documentación"
+fi
+
 # --- Compuerta 5: pruebas NEGATIVAS (errfail) --------------------------------
 # Las otras cuatro compuertas miran salida EXITOSA, así que los ~150 caminos de
 # error del compilador (evalError/parseError/exit) no tenían una sola prueba. Y su
@@ -562,14 +587,14 @@ done
 
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count trfail: $trfail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count trfail: $trfail_count docfail: $docfail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ] || [ "$docfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count trfail=$trfail_count (err_ok=$err_ok)"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count trfail=$trfail_count docfail=$docfail_count (err_ok=$err_ok)"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ] || [ "$docfail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
