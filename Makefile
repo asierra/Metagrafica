@@ -60,9 +60,16 @@ endif
 SHELL = /bin/sh
 PREFIX = /usr/local
 MANPREFIX ?= ${PREFIX}/share/man
+# Datos de la herramienta bajo un solo árbol: la biblioteca §15 y los ejemplos, que
+# se instalan JUNTOS para que el `include "../lib/x.mg"` de un ejemplo resuelva igual
+# instalado (examples/../lib) que en el árbol de fuentes — por eso NO van bajo share/doc.
+DATADIR = $(PREFIX)/share/metagrafica
 # Biblioteca de .mg incluibles (§15): `include "x.mg"` la busca DESPUÉS de lo local.
 # La ruta se hornea en el binario vía -DMG_LIBDIR (CPPFLAGS). Overridable para probar.
-LIBDIR = $(PREFIX)/share/metagrafica/lib
+LIBDIR = $(DATADIR)/lib
+# Documentación legible: referencia (es/en), galería y el ensayo. Solo lectura; nada
+# de esto lo consume el compilador (bitácora y plans/ son de mantenedor, NO se instalan).
+DOCDIR = $(PREFIX)/share/doc/metagrafica
 
 SRCDIR = src
 INCDIR = include
@@ -151,16 +158,30 @@ v3test: $(BINDIR)/mg$(EXE) | $(BINDIR)
 	cp -f $(BINDIR)/mg$(EXE) $(BINDIR)/v3test$(EXE)
 
 install: $(BINDIR)/mg$(EXE) $(MANDIR)/mg.1
+	install -d $(PREFIX)/bin ${MANPREFIX}/man1
 	install -m 755 $(BINDIR)/mg $(PREFIX)/bin
 	install $(MANDIR)/mg.1 ${MANPREFIX}/man1/
 	install -d $(LIBDIR)
 	install -m 644 lib/*.mg $(LIBDIR)
+	install -d $(DATADIR)/examples
+	install -m 644 examples/*.mg $(DATADIR)/examples
+	install -d $(DOCDIR) $(DOCDIR)/img
+	install -m 644 docs/referencia.md docs/reference.md docs/calcular_en_vez_de_medir.md $(DOCDIR)
+	install -m 644 docs/galeria.html docs/gallery.html $(DOCDIR)
+	install -m 644 docs/img/*.svg $(DOCDIR)/img
 
 uninstall:
 	rm $(PREFIX)/bin/mg
 	rm ${MANPREFIX}/man1/mg.1
 	rm -f $(LIBDIR)/*.mg
 	-rmdir $(LIBDIR)
+	rm -f $(DATADIR)/examples/*.mg
+	-rmdir $(DATADIR)/examples
+	-rmdir $(DATADIR)
+	rm -f $(DOCDIR)/img/*.svg $(DOCDIR)/referencia.md $(DOCDIR)/reference.md \
+	      $(DOCDIR)/calcular_en_vez_de_medir.md $(DOCDIR)/galeria.html $(DOCDIR)/gallery.html
+	-rmdir $(DOCDIR)/img
+	-rmdir $(DOCDIR)
 
 clean:
 	rm -rf obj obj-win $(BINDIR) $(MANDIR)/mg.1 $(SRCDIR)/lexv3.cpp
