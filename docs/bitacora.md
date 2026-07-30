@@ -2633,3 +2633,32 @@ corrida entera y es el mismo artefacto del 2026-07-28, cuyo diagnóstico —«re
 bastaba; hay que usar `/api/generate`. Y la descripción de figura que se le daba (un volcado de
 visión sobre un escaneo malo) **no es una tarea válida**: confunde tres habilidades, y los brazos
 fallaban por la primera sin llegar a medir la tercera. Lo señaló Alejandro.
+
+### Cerrado en la sesión del 2026-07-29 (sexies) — dónde vive una figura de curso: fuera del repo
+
+`efectos_atmosfera.mg` —reconstrucción en español de la Fig. 1.11 de Lillesand, Kiefer & Chipman,
+el balance radiativo que ve un sensor remoto, para el curso PercepcionRemota2026 de la ENCiT— se
+terminó hoy y **no vive en el repo**: Alejandro la movió a los `assets` del curso y le cambió los
+`include` de `"../lib/sun.mg"` a `"sun.mg"`, o sea a la **biblioteca instalada**. Compila así.
+
+📌 **Y eso zanja la pregunta que quedaba abierta.** La entrada (ter) de hoy decía que la figura se
+quedaba fuera del repo «por ahora» y anotaba que un `.mg` en `examples/` que ninguna compuerta
+compila es el patrón que `imgfail` y `galfail` existen para evitar. La solución resultó no ser una
+compuerta nueva ni una carpeta `examples/curso/`: **una figura de curso vive con el curso**, y la
+forma de `include` de nombre a secas (§12) es exactamente el mecanismo que lo permite —`lib/` es
+instalable justamente para esto—. Vale para las que vienen: al corpus solo entra lo que aporta
+cobertura, y lo demás se apoya en la biblioteca instalada desde donde le toque vivir.
+
+⚠️ **La dependencia que eso crea, dicha en voz alta:** la figura del curso depende de `lib/sun.mg`
+y `lib/satellite.mg` **instalados**, no de una copia propia. Si `lib/` cambia de forma incompatible,
+la figura del curso se rompe sin que ninguna compuerta lo note — la red de pruebas mira `examples/`.
+Lo que la protege de hecho es que `lib/sun.mg` tiene ahora un usuario dentro del corpus
+(`elevacion_solar`), así que su geometría está vigilada aunque su cliente externo no lo esté.
+
+**Lo que la figura enseñó, ya recogido en el repo:** el sensor es `lib/satellite.mg` orientado por
+el rayo que lo alimenta —`atan2` de sensor→terreno menos 90°, porque la antena del icono apunta a
++y, y el origen retirado `1.05·scale` para que la BOCA de la antena caiga donde convergen las
+flechas— y el sol es `lib/sun.mg`, la biblioteca que nació de aquí (entrada *bis*). También destapó
+el leak de cara tipográfica en PDF (entrada de la mañana) y motivó la auditoría de admisión que
+cerró `marker_mid` (entrada *ter*). Verificada en los tres backends: paridad de texto 23/23/23,
+`gs` limpio, `arcparity` OK, cero avisos.
