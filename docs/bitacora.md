@@ -2662,3 +2662,36 @@ flechas— y el sol es `lib/sun.mg`, la biblioteca que nació de aquí (entrada 
 el leak de cara tipográfica en PDF (entrada de la mañana) y motivó la auditoría de admisión que
 cerró `marker_mid` (entrada *ter*). Verificada en los tres backends: paridad de texto 23/23/23,
 `gs` limpio, `arcparity` OK, cero avisos.
+
+### Cerrado en la sesión del 2026-07-30 — `make install` reparte también ejemplos y doc legible
+
+Un `mg` instalado no tenía **de dónde aprender el lenguaje**: `install` dejaba binario, man y
+`lib/*.mg`, pero la referencia y los ejemplos vivían solo en el árbol de fuentes. Ahora `install`
+lleva la referencia (`referencia.md`/`reference.md`), la galería (`galeria.html`/`gallery.html` +
+`docs/img/*.svg`) y el ensayo `calcular_en_vez_de_medir.md` a `share/doc/metagrafica/`, y los 26
+ejemplos a `share/metagrafica/examples/`. La bitácora y `plans/` **NO se instalan**: son de
+mantenedor.
+
+📌 **Por qué los ejemplos van a `share/metagrafica/examples` y NO a `share/doc`.** Varios ejemplos
+hacen `include "../lib/x.mg"` (ruta relativa) o `include "curvas3.mg"` (hermano). La búsqueda §15 es
+`g_baseDir` (dir del archivo principal) → `MG_LIBDIR`. Si el ejemplo se instala **hermano de `lib/`**
+bajo `share/metagrafica/`, ese `../lib/` resuelve igual instalado (`examples/../lib`) que en el árbol
+—**sin editar un solo `.mg`**—. La alternativa que propuso Alejandro —dejar el `include` de nombre a
+secas y que caiga a `MG_LIBDIR`— es más limpia para el binario instalado, **pero rompe el árbol sin
+instalar**: en un checkout `MG_LIBDIR` apunta a `/usr/local/...` que no existe, y hoy los tres
+ejemplos con mapa (`orbita_polar`, `gravitacion_orbita`, `elevacion_solar`) compilan en el golden
+*precisamente por* la ruta relativa. Rescatarla exigía que el binario no instalado hallara el `lib/`
+del repo (hornear `MG_LIBDIR=$(pwd)/lib`, no portable; o un candidato `exeDir/../lib`, y las dos
+disposiciones difieren). Se descartó: la opción de hermanos es cero-edición, cero-motor, cero-riesgo
+para las compuertas.
+
+⚠️ **`install -d $(PREFIX)/bin ${MANPREFIX}/man1` como primera línea:** el `install` previo asumía
+que esos dos dirs ya existían (normal para `/usr/local`), y reventaba en un prefijo virgen. Cazado
+al probar la instalación en un stage temporal.
+
+Verificado reconstruyendo con el `PREFIX` del stage (para que `MG_LIBDIR` apuntara dentro) e
+instalando en un prefijo **virgen**: los cuatro casos con `include` rinden SVG correcto desde su
+ubicación instalada —`orbita_polar`, `gravitacion_orbita` (dos `../lib/`), `fig4-1` (hermano
+`curvas3.mg`) y `elevacion_solar` **desde otro cwd**, que confirma que `g_baseDir` sale de la ruta
+del archivo y no del cwd—. `uninstall` refleja todo y deja `share/doc` (compartido) intacto. Solo se
+tocó el `Makefile`; el motor y los ejemplos quedaron sin cambiar, así que no movió ningún golden.

@@ -23,6 +23,14 @@ bash test/run.sh images   # regenera docs/img/*.svg + la galería es/en (PUBLICA
 bash test/run_translator.sh check    # traductor V1→V3 (tools/mg1to2.py): ok=14
 ```
 
+**`make install` (2026-07-30)** reparte, además del binario y el man: `lib/*.mg` en
+`$(LIBDIR)` = `share/metagrafica/lib` (la ruta horneada en `-DMG_LIBDIR`), los 26 ejemplos en
+`share/metagrafica/examples` —**hermanos de `lib/` a propósito**: así el `include "../lib/x.mg"`
+de un ejemplo resuelve igual instalado que en el árbol, sin editar un `.mg`— y la doc legible
+(referencia es/en, galería es/en + `docs/img/*.svg`, el ensayo) en `share/doc/metagrafica`. La
+bitácora y `plans/` **NO se instalan** (mantenedor). `uninstall` lo refleja. Ver `docs/bitacora.md`
+2026-07-30 por qué los ejemplos van bajo `share/metagrafica` y no `share/doc`.
+
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
 de `examples/` (26 `.mg` × EPS/SVG/**PDF** = 78 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
