@@ -2764,3 +2764,92 @@ sale de un `.mg` que se lee, se versiona y se recompila — no competir con un m
 marcados como tales, porque a `docs/plans/` **no lo mira ninguna compuerta**: `test/run.sh` solo
 le pasa `referencia.md` y `reference.md` a `docblocks.py`. Por eso la documentación de verdad es
 una fase aparte del plan, en la referencia, donde `docfail` sí la compila.
+
+---
+
+## 2026-07-31 (bis) — Fases A+B y C del plan pseudo-3D: la cámara ya es un parámetro
+
+Tres commits: `32f4089` (`tools/ver.sh` + hallazgos), `c7e3aca` (`view3d`/`plane3d`/`xyz()`),
+`7af7866` (`lib/pseudo3d.mg` reescrita). `ok=78 … docfail=0 (err_ok=44)`, traductor `ok=14`.
+
+### El método, que es lo que más conviene reusar
+
+**La figura se escribió ANTES que la sintaxis, a propósito.** Se reconstruyó la fig. II-4 de
+Lira —una esfera reticulada con el casquete del ángulo sólido, catorce círculos del espacio—
+armando a mano la matriz de cada plano y descomponiéndola **QR en el propio `.mg`** para
+emitirla como `rotate/scale/shear`. Cuatro líneas de álgebra por círculo, repetidas tres veces.
+Eso compró dos cosas: la geometría quedó **probada en los tres backends antes** de añadir
+gramática (y por tanto, si algo fallaba después, era la sintaxis y no las matemáticas), y
+`plane3d` nació como **abreviatura de algo ya funcionando** en vez de como apuesta de diseño.
+Al portar la figura, `tools/ver.sh --diff` dio **0 px en EPS/SVG/PDF y también con otra cámara**
+(35°/42°) — lo segundo es lo que lo vuelve prueba y no coincidencia—, con los bytes de EPS y SVG
+sí cambiando. Cuerpo del fuente: 113 → 87 líneas.
+
+⚠️ **Pero 0 px solo es criterio válido si la figura YA era escena-derivada.** En la Fase C,
+`fig2-7b-v3` no podía darlo **por construcción**: sus piezas no compartían cámara, y se puede
+medir —la pantalla (`plano k=0.3`) recedía a **73.3°** y el cristal (`prisma a=35`) a **35.0°**,
+treinta y ocho grados—. Cuando las piezas no comparten mundo, meterlas en uno **obliga** a
+cambiar el dibujo: ese cambio *es* el arreglo. Confundir las dos situaciones llevaría a
+perseguir un 0 px imposible o, peor, a "conseguirlo" conservando el defecto.
+
+### `plane3d` cuesta cero cambios de backend, y por qué
+
+`Matrix::ellipse_frame` representa una elipse por **centro + semidiámetros conjugados**
+`P(t) = C + u·cos t + v·sin t`, que es literalmente la forma cerrada de la proyección ortográfica
+de un círculo del espacio (`u`, `v` = proyecciones de la base del plano por el radio). Los tres
+backends ya la consumen desde la reconstrucción de arcos del 2026-07-27. Así que `plane3d` es un
+`Stmt` que empuja esa matriz con `OPMPUSH`/`Transform` —como ya hace la sentencia de
+transformación— y enciende `using_ellipse`; un `circle(r)` dentro sale como la elipse **exacta**.
+Y el `from`/`to` de un `arc` sigue siendo ángulo **del plano**, lo que hace que recortar por
+visibilidad se escriba solo. `xyz()` devuelve un `Value::LIST` de dos, el mismo mecanismo de
+`point_at`: **la gramática no se tocó**.
+
+**Ejes: `z` = profundidad** (x derecha, y arriba, z hacia el observador). Se eligió porque hace
+de `view3d(azimuth=0, elevation=0)` la **identidad** — la vista frontal es el default y no un
+caso especial. Verificado a 0 px contra el dibujo plano de siempre.
+
+📌 **El ocultamiento de la mitad trasera salió en forma cerrada**, como en `orbita_polar`: un
+punto se ve si `P·w > 0`, y sobre un círculo eso es `A + B cos t + D sin t > 0`, o sea un solo
+`acos`. Los cortes **caen sobre el limbo por construcción** (el borde de visibilidad es el plano
+`P·w = 0`, y su intersección con la esfera ES el limbo). Para un meridiano `A = 0` ⇒ media
+elipse exacta; para un paralelo `A/M = tan(lat)·tan(elev)`.
+
+### Fase C: retirar una struct también es trabajo
+
+`plano` **se fue**: era `plane3d` con menos generalidad y una cizalla propia horneada. `prisma`
+pasó a tres planos de la escena con `pos=[x,y,z]` (`at=` sigue siendo palabra de colocación,
+§8), y entró `lamina`. ⚠️ **El plan decía mal que `fig10-2v3` fuera oráculo**: no usa la
+biblioteca, tiene su propio `shear`. El único cliente es `fig2-7b-v3`.
+
+📌 **Y el puerto salió MÁS FIEL al original publicado, no menos.** Una pantalla perpendicular al
+haz es un plano y-z, y en las dos proyecciones el eje y va vertical en la página: la pantalla
+tiene lados **verticales** y arriba/abajo inclinados, que es lo que muestra `meta/fig2-7b.png` y
+lo contrario de lo que producía `plano`. La pieza llevaba años **girada 90° en carácter**
+respecto de su fuente, y no se había visto porque no había con qué compararla. La cámara se
+**despejó del `.png`** (borde de la pantalla → `angle=44°`; razón del anillo, que vale
+`f·cos(angle)` → `foreshorten=0.375`): dos medidas independientes que caen sobre la misma
+cámara, lo que no estaba garantizado en un dibujo a mano.
+
+### `tools/ver.sh`, y las dos cosas medidas que codifica
+
+Las ocho compuertas cazan **clases** de fallo; ninguna contesta «¿se ve bien?». **(1)** Un SVG de
+MetaGráfica hay que rasterizarlo con un **navegador**: `rsvg-convert` e Inkscape ignoran el
+`@font-face` de LM Math y caen a una sans, o sea que mienten sobre la tipografía matemática (una
+ρ correcta se ve como «ø»). **(2)** `--diff` es del **mismo formato**: entre backends el
+antialiasing deja 6333 px de ruido contra los 524 de un rótulo desplazado 1.4 pt — la señal
+queda debajo del ruido, y por eso la paridad entre backends se cuenta por operadores (Capa 3) y
+no por píxeles. Dentro de un formato el piso es **0 px exactos**. No sustituye al golden, que es
+más sensible: contesta la que el golden no puede, «los bytes cambiaron a propósito, ¿cambió el
+dibujo?».
+
+### Tres hallazgos, todos de escribir una figura de verdad
+
+- 🐞 **Un `arc` de barrido CERO tumba el PDF entero** (libharu 0x1051); EPS y SVG lo toleran.
+  Es exactamente `to == from`. Importa porque un barrido cero es la salida **natural** de
+  recortar por visibilidad y significa «no se ve nada», que es legítimo. Ninguna compuerta lo
+  caza: sin PDF escrito no hay golden que comparar.
+- **`scale sx sy` a media línea** no toma `sy`; la salida —`scale sx (sy)`— vive solo en un
+  comentario del código, y el error dice «variable no definida: shear», señalando una línea
+  correcta.
+- **La fuente math del SVG no lleva lista de respaldo.** Exposición baja (la ruta de publicación
+  es un navegador y sí la carga); mejora de robustez, no bug de salida.
