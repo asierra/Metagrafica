@@ -3210,3 +3210,59 @@ Es el mismo criterio de la política V1: antes de borrar, lo que debe sobrevivir
 generada** va `bezier(&p, fill=)` y no `polygon(&p, fill=)`. Lo que lo hace digno de un ⚠️ y no
 de una nota al pie es que **nada avisa**: las dos son lecturas legítimas de la misma lista de
 puntos —vértices contra puntos de control—, así que el error no falla, dibuja otra cosa.
+
+---
+
+## 2026-08-01 (septies) — `irradiancia`: la silueta no necesitaba motor, y el ángulo se dibuja donde vive
+
+Tercera figura pseudo-3D del corpus (`ok=87`, 29 ejemplos), y con ella la **estrategia E** de
+`plan_pseudo3d.md` queda resuelta. ⚠️ **El plan decía que E pedía «geometría nueva» en el motor.
+Era falso.**
+
+### La derivación, que cabe en veinte líneas de `.mg`
+
+La proyección restringida al plano de la base es una **afinidad**, y la tangencia es invariante
+afín. Así que no hay que resolver «tangente a una elipse desde un punto» en la página: se
+**retro-proyecta el ápice al marco de la base** —un 2×2— y allí el borde vuelve a ser un
+**círculo**, donde la tangencia es de secundaria: `θ = atan2(b,a) ± acos(r/D)`.
+
+📌 Lo que hace la construcción limpia es el paso final: los puntos de tangencia se devuelven al
+ESPACIO y las generatrices se dibujan con `xyz()` en sus dos extremos, **porque son rectas de
+verdad del cono**. La retro-proyección solo sirvió para encontrar el ángulo, no para dibujar.
+
+El cilindro que pedirá `fig18-5` es el hermano fácil: dos círculos iguales en planos paralelos
+comparten marco, así que las tangentes comunes tocan en `atan2(s) ± 90°`, sin `acos` siquiera.
+
+Verificado **dos veces**: numéricamente sobre seis configuraciones aleatorias —cámara, ápice,
+centro y una base `u,v` deliberadamente no ortonormal— la elipse nunca cruza la generatriz
+(≥ 3e−10) y la toca (≈ 2e−9); y **dentro de la propia figura**, porque `dΩ` es la sección del
+cono a una fracción del recorrido y sale tangente por construcción. Si la derivación se rompe,
+deja de estarlo y se ve.
+
+⚠️ **Y la pieza que lo destrabó llegó por otro camino:** `acos` se añadió esa misma mañana
+porque el rodeo `atan2(s, sqrt(1-s*s))` que la referencia enseñaba producía `-nan` en silencio.
+Cuando se escribió la Fase F, `acos` no existía — que es probablemente por qué E parecía pedir
+motor.
+
+### El ángulo se dibuja en su plano, y eso es mejor que el original
+
+El original marca φ con una **flecha doble plana**, en el papel. Eso miente un poco: el ángulo
+entre dos direcciones proyectadas no es la proyección del ángulo del espacio. Aquí el arco vive
+en el plano que contiene a n̂ y al eje, con marco `u = n̂` y `v =` la componente del eje
+perpendicular a n̂ — y entonces se escribe `from=0 to=fid`, en grados y sin convertir nada.
+
+📌 **La diferencia se midió sin buscarla.** Al colocar el rótulo de φ en la bisectriz **del
+espacio**, cayó encima de la flecha de n̂: la proyección tampoco conserva la bisección de un
+ángulo. Es la misma razón por la que el arco tiene que ser geométrico. El arco mide; el rótulo
+solo señala, así que ése sí va en la bisectriz de la página — y bisecando contra la
+**generatriz** más cercana, no contra el eje, porque el hueco libre lo bordea el cono (medido
+desde P: n̂ a 90°, generatriz a 75.7°, eje a 63.5°).
+
+### Dos veces la misma lección de método
+
+Durante esta figura leí mal los píxeles **dos veces** y la medición me desmintió las dos: las
+patas de la cota de λ (que parecían desiguales y median 26.458 y 26.457 pt) y el final del arco
+de φ (que parecía terminar en la generatriz y termina en el eje, 63.540° los dos).
+
+Es el contrapeso a la lección de `ver.sh`: **mirar destapa defectos que las compuertas no ven,
+pero también inventa alguno**. El que sobrevive es el que se mide.

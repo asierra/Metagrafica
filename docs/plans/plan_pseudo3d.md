@@ -413,6 +413,44 @@ silencio), la profundidad `examples/../lib` que ese layout existe para garantiza
 lector la consume: un **grupo editorial** en la galería, que es el mecanismo que ya existía para
 esto.
 
+### ✅ La SILUETA (estrategia E) — RESUELTA 2026-08-01, y **sin motor nuevo**
+
+⚠️ **Este plan decía que E pedía «geometría nueva» en el motor. Era falso.** Se resuelve en el
+`.mg`, en veinte líneas, y la pieza que faltaba llegó por otro camino: `acos`, añadido esa
+misma mañana porque el rodeo `atan2(s, sqrt(1-s*s))` que la referencia enseñaba producía `-nan`
+en silencio.
+
+**La derivación.** La proyección restringida al plano de la base es una **afinidad**, y la
+tangencia es invariante afín. Así que en vez de resolver «tangente a una elipse desde un punto»
+en la página, se **retro-proyecta el ápice al marco de la base**, donde el borde vuelve a ser un
+círculo:
+
+1. `O' = xyz(O)`, `U' = xyz(O+u) − O'`, `V' = xyz(O+v) − O'`.
+2. Resolver `[U' V']·(a,b) = xyz(A) − O'` — un 2×2.
+3. `θ = atan2(b,a) ± acos(r/D)`, con `D = hypot(a,b)`. Pide `D > r`.
+4. Los puntos de tangencia vuelven al ESPACIO y las generatrices se dibujan con `xyz()` en sus
+   dos extremos: **son rectas de verdad del cono**, y la retro-proyección solo sirvió para
+   encontrar θ.
+
+**El cilindro es el hermano fácil:** dos círculos iguales en planos paralelos comparten marco,
+así que en la retro-proyección están separados por `s` y las tangentes comunes tocan en
+`atan2(s) ± 90°`. Sin `acos` siquiera.
+
+**Verificado dos veces:** numéricamente sobre seis configuraciones aleatorias —cámara, ápice,
+centro y una base `u,v` deliberadamente no ortonormal— la elipse nunca cruza la generatriz
+(≥ 3e−10) y la toca (≈ 2e−9); y **dentro de la propia figura**, porque `dΩ` es la sección del
+cono a una fracción del recorrido y tiene que salir tangente por construcción.
+
+**`irradiancia` ENTRÓ AL CORPUS** con ella (`ok=87`, 29 ejemplos), y trae otra mejora sobre el
+original: el ángulo φ se dibuja **en el plano que contiene a n̂ y al eje**, donde el barrido del
+arco ES φ. El original lo marca con una flecha doble plana en el papel, y eso miente — el ángulo
+entre dos direcciones proyectadas no es la proyección del ángulo del espacio. 📌 Se midió al
+colocar el rótulo: puesto en la bisectriz **del espacio** caía sobre la flecha de n̂, porque la
+proyección tampoco conserva la bisección. El arco mide; el rótulo señala, y va en la bisectriz
+de la página.
+
+Queda de E únicamente `fig18-5`, que suma el **cilindro** a lo ya resuelto.
+
 ### Fase F — diferidas
 - **Silueta de revolución** (estrategia E): cono/cilindro = dos círculos de A + sus dos
   tangentes comunes. La piden `lira_II-7` y `fig18-5`, y **se difieren juntas** porque comparten

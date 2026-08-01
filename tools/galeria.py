@@ -73,7 +73,7 @@ GRUPOS = [
       "circle in the drawing is a circle of the scene, and the exact ellipse of its "
       "projection is worked out by the compiler. Change the camera and it all moves "
       "together."),
-     ["angulo_solido", "onda_electromagnetica"]),
+     ["angulo_solido", "onda_electromagnetica", "irradiancia"]),
     (("Gráficas de datos", "Data plots"),
      ("El plot mapea unidades de datos a una caja en centímetros; los ejes "
       "heredan los rangos y se rotulan solos.",
@@ -109,6 +109,14 @@ TRAD = {
         "exact ellipse of its projection. What belongs to no plane —the three dotted "
         "dimension lines— uses `xyz()`. Change `azd` or `eld` and the whole figure "
         "moves together."),
+    "irradiancia": (
+        "The irradiance law — the solid angle dA subtends from P",
+        "A patch ΔP on a surface, its normal, and the cone running from P to the area element "
+        "dA at distance r. What this figure shows is that a SILHOUETTE can be computed: the two "
+        "generators of the cone are the tangents from P to the rim of dA, and they come out in "
+        "closed form without the language knowing anything about cones. And that an ANGLE of "
+        "space is drawn in its own plane —the one containing the normal and the axis—, where the "
+        "sweep of the arc IS the angle and the ellipse you see is worked out by the projection."),
     "onda_electromagnetica": (
         "Electromagnetic wave — E and B in perpendicular planes",
         "Two waves in phase, each in its own plane: the electric field in the vertical one, "
