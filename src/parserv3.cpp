@@ -1870,19 +1870,8 @@ static Path sinePathFromArgs(Scope &s, const std::map<std::string, ExprPtr> &nam
   return sineBezierPath(p1, p2, n, A, phase, squared);
 }
 
-// sine como SENTENCIA (§4.13): dibuja la onda — un Polyline(GI_BEZIER), sin
-// clase de motor.
-struct SineStmt : Stmt {
-  std::map<std::string, ExprPtr> named;   // half_cycles, amplitude, phase, squared
-  std::vector<ExprPtr> coords;            // 2 puntos = base
-  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
-    Path path = sinePathFromArgs(s, named, coords);
-    if (path.empty()) return;
-    auto p = std::make_unique<Polyline>(GI_BEZIER);
-    p->setPath(path);
-    out.push_back(std::move(p));
-  }
-};
+// (`sine` como SENTENCIA §4.13 ya no tiene clase propia: `parseSine` arma un
+// PrimStmt de nombre "sine" cuyo pathArg es la onda. Ver ahí el porqué.)
 
 // sine como EXPRESIÓN DE PATH (§9): la misma onda, como datos de control bezier
 // para el álgebra (concat/reverse/…). Con phase=90/270 cada llamada es un medio
@@ -2023,6 +2012,7 @@ struct PrimStmt : Stmt {
     else if (name == "polygon")  poly = GI_POLYGON;
     else if (name == "bezier")   poly = GI_BEZIER;   // path = p0 c1 c2 p1 [c1 c2 p2…]; Polyline::draw agrupa de 3 en 3 → curveto
     else if (name == "smooth")   poly = GI_BEZIER;   // §9.2: mismo item que bezier, pero el bloque son NODOS y las tangentes las deriva el compilador
+    else if (name == "sine")     poly = GI_BEZIER;   // §4.13: la onda llega ya hecha en pathArg (parseSine); aquí solo es una curva más
     else isPoly = false;
     // `smooth { nodos }` como primitiva de dibujo (§9.2), hermana de `bezier`.
     // La diferencia es de quién calcula las tangentes: en `bezier` el bloque son
@@ -4660,9 +4650,36 @@ static void parseSineArgs(Lexer &lx, std::map<std::string, ExprPtr> &named,
   if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
 }
 
+// `sine { base }` (§4.13) se arma como un PrimStmt cuyo `pathArg` ES la onda.
+//
+// Tenía clase propia (SineStmt) y por eso se quedó fuera de todo lo que PrimStmt
+// hace con los argumentos nombrados: `sine(color="red", fill=…)` compilaba sin una
+// queja y no hacía NADA — la misma clase de no-op mudo que el proyecto ya había
+// cerrado dos veces para las demás primitivas, y de la que `sine` se libró por tener
+// parser propio. Enrutándola por PrimStmt hereda de una vez el estilo por-primitiva
+// con su alcance (gsave/grestore), el `closed=` y —lo que más importa— la validación
+// `isKnownPrimAttr`, que ahora también caza un `half_cicles=` mal escrito: los
+// argumentos de GEOMETRÍA se apartan aquí, así que cualquier nombre que sobre llega
+// a la lista blanca y se rechaza por su nombre.
 static StmtPtr parseSine(Lexer &lx) {
-  auto st = std::make_unique<SineStmt>();
-  parseSineArgs(lx, st->named, st->coords);
+  std::map<std::string, ExprPtr> named;
+  std::vector<ExprPtr> coords;
+  parseSineArgs(lx, named, coords);
+
+  auto st = std::make_unique<PrimStmt>();
+  st->name = "sine";
+  auto wave = std::make_unique<PathSine>();
+  wave->coords = std::move(coords);
+  // Reparto: lo que describe la ONDA va al generador; el resto es estilo y lo
+  // valida PrimStmt contra la lista blanca de §7.5.
+  for (auto &kv : named) {
+    const std::string &k = kv.first;
+    if (k == "half_cycles" || k == "amplitude" || k == "phase" || k == "squared")
+      wave->named[k] = std::move(kv.second);
+    else
+      st->named[k] = std::move(kv.second);
+  }
+  st->pathArg = std::move(wave);
   return st;
 }
 

@@ -2,8 +2,9 @@
 %
 % Cada `sine` recibe una base de dos puntos, un número de medios ciclos y una
 % amplitud, y genera por dentro las curvas bézier: la onda oscila perpendicular a
-% su base, sea cual sea su orientación. Aquí se ven la fase 0 y la variante
-% cuadrada.
+% su base, sea cual sea su orientación. Aquí se ven la fase 0, la variante cuadrada,
+% las bases inclinada y vertical, y el estilo por-primitiva —color, trazo, guiones y
+% relleno puestos en la propia onda, sin tocar el estado ambiente—.
 %
 % NOTAS --------------------------------------------------------------------
 % `phase` (múltiplos de 90°: coseno, etc.) está implementado por cuartos de
@@ -40,8 +41,16 @@ color "green"
 sine(half_cycles=3, amplitude=0.35) { 0.5 0.4  5 1.7 }   % diagonal
 sine(half_cycles=2, amplitude=0.35) { 7 0.3  7 2 }       % vertical
 
+% --- Estilo por-primitiva: el atributo va en la onda y solo la afecta a ella ---
+% El color ambiente sigue siendo verde; ninguna de las tres lo hereda. `closed=true`
+% cierra la curva por su base, que es lo que hace rellenable una onda.
+sine(half_cycles=2, amplitude=0.2, fill="#ffd8d8", closed=true) { 8.4 0.55  11.4 0.55 }
+sine(half_cycles=2, amplitude=0.2, color="purple", line_width=1.4) { 8.4 1.1  11.4 1.1 }
+sine(half_cycles=2, amplitude=0.2, dash="dashed") { 8.4 1.65  11.4 1.65 }
+
 % --- Etiquetas ---
 color "black"
 text("$\phi = sin(n \pi x),  n = 1..4$") { 1 9.6 }
 text("$\rho = |\phi|^2$  (squared=true)") { 1 5.1 }
 text("base diagonal / vertical") { 0.3 0.05 }
+text("estilo por-primitiva") { 8.4 0.05 }

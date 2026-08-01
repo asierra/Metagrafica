@@ -3101,3 +3101,59 @@ los tres backends, cerrando el círculo dentro del propio fixture (`deg(rad(x))`
 La referencia perdió el ⚠️ que enseñaba el rodeo y ganó, en los dos idiomas, la lista nueva de
 funciones, el puente grados/radianes y un aviso de que las cuatro funciones con dominio
 **abortan** — con el porqué, que es que un NaN en una coordenada no hace ruido.
+
+---
+
+## 2026-08-01 (quinquies) — `sine` deja de tragarse sus atributos, enrutándola por `PrimStmt`
+
+Lo destapó `onda_3d.mg`, el ejercicio preliminar de la onda electromagnética:
+`sine(half_cycles=1, amplitude=1, fill="#ffcdcd")` compilaba sin una queja y salía
+`fill="none"`. Y no era solo `fill`: `parseSineArgs` aceptaba **cualquier** nombre sin
+validarlo, y `SineStmt::exec` solo leía la geometría y empujaba una `Polyline` pelada, así que
+`color=`, `line_width=`, `dash=` y `marker_*=` corrían la misma suerte.
+
+Es **la misma clase de bug que el proyecto ya había cerrado dos veces** —el no-op mudo del
+argumento nombrado, que hace que un typo parezca puesto y no haga nada—. `sine` se libró de
+aquellas dos pasadas por una razón estructural y no por descuido: **tiene parser propio**
+(`parseSine`), no pasa por `PrimStmt`, y por eso no heredó `isKnownPrimAttr`. Vale la pena
+anotarlo como patrón: cuando un constructo se sale del camino común, hereda los bugs que el
+camino común ya arregló.
+
+### La decisión, y por qué (a) y no (b)
+
+Había dos salidas: **(a)** que `sine` honre los atributos como todas las demás, o **(b)** que
+rechace los que no entiende. Alejandro eligió (a), que era también lo que apuntaba la evidencia:
+`bezier(&p, fill=)` **sí** los honra, y tener dos conductas para la misma curva —una que rellena
+y otra que no— es lo confuso.
+
+### Cómo, sin duplicar el aparato
+
+En vez de copiar en `SineStmt` las diez líneas de estilo de `PrimStmt`, `parseSine` **arma un
+`PrimStmt`** de nombre `"sine"` cuyo `pathArg` es la onda. La pieza que lo hace barato ya
+existía: `PathSine`, el generador que servía al álgebra de trayectos (§9). Los nombrados se
+reparten en el parser —`half_cycles`/`amplitude`/`phase`/`squared` al generador, el resto a
+`PrimStmt`— y `SineStmt` desaparece.
+
+Con eso `sine` hereda de una vez tres cosas y no una: el estilo por-primitiva **con su alcance**
+(`gsave`/`grestore`), el **`closed=`** —que es justamente lo que vuelve rellenable una onda— y
+la **validación** contra la lista blanca. Ese reparto es además lo que hace que un
+`half_cicles=` mal escrito ya no se pierda: lo que no es geometría llega a la lista blanca y se
+rechaza por su nombre.
+
+**Cero churn en los 81 goldens**, que es la comprobación de que el enrutado no cambió el camino
+sin atributos: cuando no hay ninguno, `attrs` queda vacío y se emite exactamente lo de antes.
+
+### La cobertura, que son dos cosas distintas
+
+Una compuerta de errores puede fijar que el typo se rechace, pero **no** que el atributo surta
+efecto —para eso hace falta un golden—. Así que van las dos: `test/errors/
+sine_atributo_desconocido.mg` para el rechazo, y **`sines.mg`** —la lámina de referencia de
+`sine`, su casa natural— gana un grupo con una onda **rellena** (`fill=` + `closed=`), una
+**morada gruesa** (`color=` + `line_width=`) y una **discontinua** (`dash=`, que hereda el verde
+ambiente: el ejemplo enseña de paso que un atributo por-primitiva anula uno solo del estado, no
+todos). `docs/img/sines.svg` se regeneró: es cara pública.
+
+📌 **Queda abierto el otro hallazgo de `onda_3d`:** `polygon(&p)` sobre una curva generada toma
+los puntos de control como vértices y rellena una cometa. La conducta es defendible; lo que
+falta es una línea en §10 y otra en §13 diciendo que para rellenar una curva generada va
+`bezier(&p, fill=)`.

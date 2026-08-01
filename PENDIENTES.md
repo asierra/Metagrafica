@@ -387,12 +387,18 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
         esquivarla —escribir cada transformación en su renglón—, y para el lector es un error
         que señala una línea correcta. Misma clase que el hallazgo de `marker_end` del
         2026-07-27.
-- [ ] 🐞 **`sine` se TRAGA EN SILENCIO todos sus atributos por-primitiva** (hallado 2026-08-01
-      escribiendo `onda_3d.mg`). `sine(half_cycles=1, amplitude=1, fill="red") { … }` compila sin
-      una queja y sale `fill="none"`. No es solo `fill`: `parseSineArgs` (`parserv3.cpp`) acepta
-      **cualquier** nombre sin validar, y `SineStmt::exec` solo llama a `sinePathFromArgs`
-      (half_cycles/amplitude/phase/squared) y empuja una `Polyline` pelada — así que `color=`,
-      `line_width=`, `dash=` y `marker_*=` corren la misma suerte.
+- [x] ~~🐞 **`sine` se TRAGA EN SILENCIO todos sus atributos por-primitiva**~~ — **CERRADO
+      2026-08-01, opción (a):** `sine` los HONRA, como todas las demás. `parseSine` ya no arma
+      una `SineStmt` (clase borrada) sino un **`PrimStmt` de nombre `"sine"`** cuyo `pathArg` es
+      la onda (`PathSine`, que ya existía para el álgebra §9), repartiendo los nombrados —la
+      geometría al generador, el resto a `PrimStmt`—. Con eso hereda de una vez el estilo con su
+      alcance `gsave`/`grestore`, el `closed=` (que es lo que vuelve rellenable una onda) y la
+      validación `isKnownPrimAttr`, que ahora caza también un `half_cicles=` mal escrito.
+      **Cero churn** en los 81 goldens: sin atributos, la ruta emite exactamente lo de antes.
+      Cobertura: `sines.mg` dibuja ahora una onda rellena, una morada gruesa y una discontinua
+      (que el atributo SURTA EFECTO solo lo puede fijar un golden), y
+      `test/errors/sine_atributo_desconocido.mg` fija el rechazo del typo. Lo hallado, para
+      memoria: `sine(…, fill="red")` compilaba y salía `fill="none"`.
       - **Es exactamente la clase de bug que el proyecto ya cerró DOS veces** («las primitivas
         tragan argumentos nombrados desconocidos en silencio», 2026-07-22): el typo parece puesto
         y no hace nada. `sine` se salvó de aquella pasada porque **tiene su propio parser**
