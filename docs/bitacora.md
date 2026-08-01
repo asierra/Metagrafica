@@ -2853,3 +2853,62 @@ dibujo?».
   correcta.
 - **La fuente math del SVG no lleva lista de respaldo.** Exposición baja (la ruta de publicación
   es un navegador y sí la carga); mejora de robustez, no bug de salida.
+
+---
+
+## 2026-08-01 — El arco de barrido cero, y la compuerta que no podía verlo
+
+Cierra el primero de los tres hallazgos de ayer, que era el que bloqueaba a los demás: la
+figura `angulo_solido.mg` no podía entrar a ningún lado mientras necesitara un `if` para
+esquivar un bug del motor.
+
+### El bug: la salida temprana estaba en el renglón equivocado
+
+`arc_bezier` (`src/PDFDisplay.cpp`) abría con `if (sweep == 0.0) return;` **antes** de emitir
+el `MoveTo` inicial. Con eso el path quedaba **vacío**, y el `Stroke` que hace quien llama
+reventaba con `HPDF_PAGE_INVALID_GMODE` (0x1051) — el manejador de errores de libharu es fatal
+a propósito (el primer error deja el documento inválido), así que un arco degenerado en
+cualquier rincón de la figura costaba el PDF **entero**, con exit 1 y sin archivo.
+
+El arreglo es mover la salida **debajo** del `MoveTo`/`LineTo`. Así el arco de barrido cero **no
+traza nada pero sí deja la pluma en su punto de inicio**, que no es una invención: es lo que ya
+hacían los otros dos, y por eso no fallaban. PostScript `arc` con `start == end` añade el punto;
+SVG omite el comando `A` de extremos idénticos —lo dice su especificación— y conserva el `M`/`L`
+que lo precede. El PDF era el único que se quedaba sin nada que trazar.
+
+Se verificaron los **tres caminos** del constructor de paths, que son estados distintos de
+libharu y no uno: arco suelto, arco como **primer** trazo de un `compound` (abre con `MoveTo`) y
+arco **en medio** de uno (se une con `LineTo`). Los tres backends salen con la misma estructura
+de operadores.
+
+### Lo que costó más que el bug: la compuerta no alcanzaba a verlo
+
+La prueba obvia era un fixture en `test/errors/`, y ahí apareció el problema de fondo: **el
+harness de errores compila solo a SVG**. Un bug que vive en PDF le es invisible por
+construcción. Y las otras compuertas, menos: sin archivo PDF escrito no hay golden que comparar
+ni tres salidas que confrontar en la Capa 3. El bug no estaba en un hueco entre compuertas —
+estaba en un punto ciego que **ninguna** cubría.
+
+Se amplió `EXPECT_NO_WARN` para compilar a los **tres** backends. Y solo ése: los fixtures
+fatales abortan en el parser, antes de que el backend importe, así que triplicar sus corridas
+sería gasto sin cobertura. El razonamiento es que `EXPECT_NO_WARN` afirma *«esto es legítimo y
+compila limpio»*, y esa afirmación no está completa en un solo backend. La clase de fallo que
+abre —un backend que **aborta** donde los otros dos toleran— es justo la que se le escapa a todo
+lo demás.
+
+Verificado por el método de siempre, reintroduciendo el bug: `errfail=1` señalando `[pdf]`, con
+los 78 goldens y las otras siete compuertas en verde. Esa asimetría **es** la demostración de
+que la compuerta nueva mira algo que las demás no.
+
+### La guarda se quitó, y ésa era la prueba de verdad
+
+`angulo_solido.mg` esquivaba el bug con un `if tc > 0.001` alrededor de sus paralelos. Se quitó:
+el SVG sale **byte-idéntico**, y EPS y PDF difieren únicamente en los cinco pares
+`gsave`/`grestore` que abría el propio `if` — o sea cero cambio de dibujo, y la diferencia que
+queda es la huella del alcance de estado que se fue. La figura ya no pierde su PDF al subir la
+elevación (probada a 42°, donde un paralelo queda entero detrás del globo). `arcparity.py` pasa.
+
+Que un paralelo entero oculto dé barrido cero **no es un caso a esquivar**: es la respuesta de la
+cuenta. «No se ve nada» es un resultado legítimo de recortar por visibilidad, y el motor tenía
+que aceptarlo sin que el autor lo envolviera en un condicional — sobre todo si la figura va a
+entrar al corpus, donde el `if` habría quedado enseñando a esquivar un bug.

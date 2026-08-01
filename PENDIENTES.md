@@ -316,9 +316,30 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       - 💡 **Lo que sí deja como método:** para VER un SVG de MetaGráfica hay que usar un
         navegador. `rsvg-convert` e Inkscape mienten sobre la tipografía math, y es fácil
         diagnosticar como bug del compilador lo que es sustitución del visor.
-- [ ] 🐞 **Un arco de BARRIDO CERO tumba el PDF entero** (hallado 2026-07-31 escribiendo
-      `angulo_solido.mg`). Repro mínimo, tres líneas:
-      `arc(1, from=30, to=30) { 2 2 }` → **EPS ok, SVG ok, PDF aborta** con
+- [x] ~~🐞 **Un arco de BARRIDO CERO tumba el PDF entero**~~ — **CERRADO 2026-08-01.**
+      `arc_bezier` (`src/PDFDisplay.cpp`) salía por su `if (sweep == 0.0) return;` **antes** de
+      emitir el `MoveTo`: el path quedaba vacío y el `Stroke` de quien llama reventaba. El punto
+      ahora se emite y la salida es después, así que el arco degenerado **no traza nada pero sí
+      deja la pluma en su inicio** — que es lo que ya hacían los otros dos (PostScript `arc` con
+      `start==end` añade el punto; SVG omite el `A` de extremos idénticos y conserva el `M`/`L`).
+      Verificado en los tres caminos del constructor de paths: suelto, primer trazo de un
+      `compound` (abre con `MoveTo`) y en medio de uno (se une con `LineTo`); los tres backends
+      salen con la misma estructura.
+      - **La prueba está en `test/errors/arco_barrido_cero.mg`**, y para que pudiera verlo hubo
+        que **ampliar la compuerta**: el harness de errores compilaba **solo a SVG**, o sea que
+        no podía ver un bug que vive en PDF. Ahora los fixtures `EXPECT_NO_WARN` —y solo ésos:
+        los fatales abortan antes de que el backend importe— se compilan a los **TRES**. Es el
+        cambio que le da sentido al marcador: si la afirmación es «esto es legítimo y compila
+        limpio», tiene que serlo en los tres, y un backend que aborta donde los otros toleran es
+        exactamente la clase de fallo que ninguna otra compuerta alcanza. Verificado
+        reintroduciendo el bug: `errfail=1` señalando `[pdf]`, con los 78 goldens en verde.
+      - **La guarda `if tc > 0.001` de `angulo_solido.mg` se quitó**, que era el punto: SVG salió
+        **byte-idéntico** y EPS/PDF difieren solo en los cinco pares `gsave`/`grestore` que
+        abría el propio `if`. Cero cambio de dibujo, y la figura ya no pierde el PDF al subir la
+        elevación (probada a 42°, donde un paralelo queda entero detrás).
+
+      Lo hallado el 2026-07-31 escribiendo `angulo_solido.mg`, para memoria. Repro mínimo, tres
+      líneas: `arc(1, from=30, to=30) { 2 2 }` → **EPS ok, SVG ok, PDF aborta** con
       `Error de libharu 0x1051` (`HPDF_PAGE_INVALID_GMODE`) y exit 1: no se genera archivo.
       - **Es exactamente el sweep 0**, no «sweeps raros»: `from=0 to=360` (círculo completo),
         `from=0 to=0.5` y `from=10 to=370` compilan en los tres. Solo `to == from` falla.

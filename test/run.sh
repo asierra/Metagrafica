@@ -488,6 +488,10 @@ fi
 # ...o, para un diagnóstico NO fatal (`warn`, que imprime y sigue):
 #     % EXPECT_WARN: <fragmento que debe aparecer en stderr>
 #
+# ...o, para un caso LEGÍTIMO que debe compilar limpio (en los TRES backends) sin
+# disparar un diagnóstico:
+#     % EXPECT_NO_WARN: <fragmento que NO debe aparecer en stderr>
+#
 # Los avisos son el caso MÁS expuesto a la regresión por silencio que esta
 # compuerta persigue, no el menos: un error que deja de darse rompe algo visible
 # tarde o temprano, pero un aviso que deja de darse no rompe NADA — la salida
@@ -529,12 +533,31 @@ for case in "$ERRDIR"/*.mg; do
         # El reverso: un caso LEGÍTIMO que NO debe disparar el aviso. Un aviso con
         # falsos positivos es peor que no tenerlo —enseña a ignorarlo—, y esa
         # regresión tampoco mueve un byte de ningún golden.
-        if [ "$code" -ne 0 ]; then
-            echo "ERRFAIL $name (ABORTÓ con $code: el fixture debe compilar limpio)"
-            echo "        dijo: $(head -1 "$errtmp/stderr")"
-            errfail_count=$((errfail_count + 1))
-        elif grep -qF "$want_nowarn" "$errtmp/stderr"; then
-            echo "ERRFAIL $name (FALSO POSITIVO: avisó «$want_nowarn» en un caso legítimo)"
+        #
+        # Éste es el ÚNICO caso que se compila a los TRES backends (los fatales
+        # abortan antes de que el backend importe). La razón: aquí «compila limpio»
+        # es la afirmación entera, y un backend puede abortar donde los otros dos
+        # toleran — eso fue exactamente el arco de barrido cero, que tumbaba el PDF
+        # con INVALID_GMODE mientras EPS y SVG lo dibujaban vacío. Con un solo
+        # backend esta compuerta no lo habría visto, y las demás menos: sin archivo
+        # PDF no hay golden que comparar ni tres salidas que confrontar.
+        nowarn_bad=0
+        for ext in svg eps pdf; do
+            ( cd "$ERRDIR" && "$MG" "$name.mg" "$errtmp/out.$ext" ) >/dev/null 2>"$errtmp/stderr.$ext"
+            code=$?
+            if [ "$code" -ne 0 ]; then
+                echo "ERRFAIL $name [$ext] (ABORTÓ con $code: el fixture debe compilar limpio)"
+                echo "        dijo: $(head -1 "$errtmp/stderr.$ext")"
+                nowarn_bad=1
+            elif [ ! -e "$errtmp/out.$ext" ]; then
+                echo "ERRFAIL $name [$ext] (salió con 0 PERO no dejó archivo de salida)"
+                nowarn_bad=1
+            elif grep -qF "$want_nowarn" "$errtmp/stderr.$ext"; then
+                echo "ERRFAIL $name [$ext] (FALSO POSITIVO: avisó «$want_nowarn» en un caso legítimo)"
+                nowarn_bad=1
+            fi
+        done
+        if [ "$nowarn_bad" -ne 0 ]; then
             errfail_count=$((errfail_count + 1))
         else
             err_ok=$((err_ok + 1))

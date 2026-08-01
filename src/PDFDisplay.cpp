@@ -62,8 +62,6 @@ static void arc_bezier(HPDF_Page page,
   double endRad   = endDeg   * PI / 180.0;
   double sweep    = endRad - startRad;
 
-  if (sweep == 0.0) return;
-
   int numSegs = (int)ceil(fabs(sweep) / (PI * 0.5));
   if (numSegs < 1) numSegs = 1;
   double segSweep = sweep / numSegs;
@@ -80,6 +78,16 @@ static void arc_bezier(HPDF_Page page,
   map(ax, ay, px, py);
   if (continuePath) HPDF_Page_LineTo(page, px, py);
   else              HPDF_Page_MoveTo(page, px, py);
+
+  // Barrido CERO: el arco no dibuja nada, pero SÍ deja la pluma en su punto de
+  // inicio — es lo que hacen los otros dos backends (PostScript `arc` con
+  // start==end añade el punto; SVG omite el comando `A` de extremos idénticos y
+  // conserva el `M`/`L`). El punto tiene que emitirse ANTES de salir: sin él el
+  // path queda vacío y el `Stroke` de quien llama aborta con INVALID_GMODE
+  // (0x1051), o sea que un arco degenerado tumbaba el PDF entero. Y no es un caso
+  // exótico: es la salida natural de recortar un arco por visibilidad, que
+  // significa «no se ve nada», un resultado legítimo y no un error del autor.
+  if (sweep == 0.0) return;
 
   for (int i = 0; i < numSegs; i++) {
     double tn = t + segSweep;

@@ -103,7 +103,12 @@ re-captúralo** si el cambio era intencional.
   lo MÁS expuesto a esta clase de regresión, no lo menos:** si deja de darse, la salida sigue
   byte-idéntica y las otras seis compuertas siguen verdes — no se pierde nada salvo la única
   pista que tenía el usuario. `EXPECT_NO_WARN` cubre la otra forma de matar un aviso: llenarlo
-  de falsos positivos hasta que se ignore.
+  de falsos positivos hasta que se ignore. ⚠️ **`EXPECT_NO_WARN` es el único que se compila a los
+  TRES backends** (ampliación 2026-08-01; los fatales abortan antes de que el backend importe).
+  Su afirmación es «esto es legítimo y compila limpio», y eso tiene que valer en los tres: un
+  backend que ABORTA donde los otros dos toleran no lo alcanza ninguna otra compuerta —sin
+  archivo no hay golden que comparar ni tres salidas que confrontar en la Capa 3—. Es lo que
+  pasaba con el arco de barrido cero, que tumbaba el PDF entero.
 - **La GALERÍA al día** (`galfail`, nueva 2026-07-23) — `docs/galeria.html` es salida
   publicada (la sirve GitHub Pages) y **derivada**, y lo que la vuelve rancia no es tocar
   el motor sino **editar un comentario**: la página lleva incrustados el encabezado y el
