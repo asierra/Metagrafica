@@ -33,6 +33,9 @@
 // recogidas durante la evaluación (parse_text las activa); se vuelcan al Display
 // antes de dibujar, igual que main.cpp V1 (g.flags = parser.flags).
 MGFlags g_flags;
+// La cámara pseudo-3D (declarada en ast.h, donde la consume `xyz()`). Arranca en
+// la identidad: sin un `view3d` el lenguaje se comporta exactamente como antes.
+View3D g_view3d;
 
 // --- Interfaz al scanner generado por Flex (src/lexer.l) ---------------------
 extern int   yylex();
@@ -893,7 +896,12 @@ struct BlockStmt : Stmt {
   void exec(Scope &parent, MetaGrafica &mg, GraphicsItemList &out) override {
     out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
     Scope child(&parent);                  // reads y writes suben al padre (AssignStmt); nombres nuevos = locales
+    // La cámara (view3d) es estado de EVALUACIÓN, no matriz: no la desapila
+    // popTransforms, así que se acota aquí a mano. Sin esto, un view3d dentro de
+    // un bloque se filtraría a todo lo que siguiera.
+    const View3D savedView = g_view3d;
     for (auto &st : body) st->exec(child, mg, out);
+    g_view3d = savedView;
     popTransforms(countTransforms(body), out);   // restaura transforms locales (§11.1)
     out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
   }
@@ -1444,6 +1452,82 @@ static std::string namedStr(Scope &s, const std::map<std::string, ExprPtr> &m, c
   Value v = it->second->eval(s);
   return v.type == Value::STRING ? v.str : "";
 }
+
+// --- Cámara y planos de la escena (plan_pseudo3d.md §4) ----------------------
+
+// Lee un arg nombrado que vale un vector [x,y,z]; si falta, deja el default.
+static void namedVec3(Scope &s, const std::map<std::string, ExprPtr> &m,
+                      const char *k, double out[3]) {
+  auto it = m.find(k);
+  if (it == m.end()) return;
+  Value v = it->second->eval(s);
+  if (v.type != Value::LIST || v.items.size() < 3)
+    evalError("plane3d: tiene que ser una lista de tres, [x,y,z], el argumento ", k);
+  for (int i = 0; i < 3; i++) out[i] = v.items[i].num;
+}
+
+// view3d(azimuth=, elevation=) / view3d(type="oblique", angle=, foreshorten=)
+// Fija la cámara para lo que sigue. **NO** es isTransform(): no empuja matriz,
+// cambia estado de EVALUACIÓN. Su alcance lo acota BlockStmt, que la guarda y
+// restaura igual que el ámbito de un translate.
+struct View3dStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &) override {
+    std::string type = namedStr(s, named, "type");
+    if (type == "oblique") {
+      g_view3d.oblique = true;
+      g_view3d.angle = namedNum(s, named, "angle", 45) * deg2rad;
+      g_view3d.fore  = namedNum(s, named, "foreshorten", 0.5);
+    } else if (type.empty() || type == "axonometric") {
+      g_view3d.oblique = false;
+      g_view3d.az = namedNum(s, named, "azimuth", 0) * deg2rad;
+      g_view3d.el = namedNum(s, named, "elevation", 0) * deg2rad;
+    } else {
+      evalError("view3d: type desconocido (axonometric u oblique): ", type);
+    }
+  }
+};
+
+// plane3d(at=[x,y,z], u=[…], v=[…]) — dibujar en un plano del espacio.
+// Empuja la matriz que lleva las coordenadas locales del plano a la página, así
+// que SÍ es isTransform() y el bloque la desapila como a un rotate. El local
+// (0,0) cae en `at`, el (1,0) en `at+u` y el (0,1) en `at+v`: u y v llevan la
+// escala. Defaults = el plano del papel.
+//
+// 📌 Un `circle(r)` bajo esta matriz sale como la elipse EXACTA de la proyección
+// de ese círculo del espacio, y por eso esto no toca ni un backend: el motor ya
+// representa una elipse por centro + semidiámetros CONJUGADOS
+// (Matrix::ellipse_frame), que es justo la forma cerrada de esa proyección.
+// Y el `from`/`to` de un `arc` sigue siendo ángulo DEL PLANO, no de la página.
+struct Plane3dStmt : Stmt {
+  std::map<std::string, ExprPtr> named;
+  bool isTransform() const override { return true; }
+  void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
+    double o[3] = {0, 0, 0}, u[3] = {1, 0, 0}, v[3] = {0, 1, 0};
+    namedVec3(s, named, "at", o);
+    namedVec3(s, named, "u",  u);
+    namedVec3(s, named, "v",  v);
+    double Ox, Oy, Ux, Uy, Vx, Vy;
+    g_view3d.project(o[0], o[1], o[2], Ox, Oy);
+    // u y v son DIRECCIONES: se proyecta el extremo y se le resta el origen. Con
+    // las dos proyecciones de hoy (lineales) da lo mismo que proyectarlas
+    // sueltas; se hace por diferencia para que siga valiendo si algún día entra
+    // una proyección con traslación.
+    g_view3d.project(o[0] + u[0], o[1] + u[1], o[2] + u[2], Ux, Uy);
+    g_view3d.project(o[0] + v[0], o[1] + v[1], o[2] + v[2], Vx, Vy);
+    DataMatrix A = {{Ux - Ox, Vx - Ox, Ox},
+                    {Uy - Oy, Vy - Oy, Oy},
+                    {0,       0,       1 }};
+    Matrix m; m.set(A);
+    // La matriz de un plano no es conforme en general → EPS necesita su
+    // procedimiento de elipse. Sin esta bandera el .eps sale byte-estable pero
+    // revienta al interpretarse (/undefined in ellipse); lo caza `psfail`.
+    g_flags.using_ellipse = true;
+    auto t = std::make_unique<Transform>();
+    t->setOperation(OPMPUSH); t->setMatrix(m);
+    out.push_back(std::move(t));
+  }
+};
 
 // Constructor de matriz para transform= (§17): rotate(a)/scale(a[,b])/translate(a,b)/
 // shear(a,b), yuxtapuestos y compuestos en orden de escritura (post-multiplicación).
@@ -3919,6 +4003,19 @@ static StmtPtr parseStatement(Lexer &lx) {
       }
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
+    return st;
+  }
+  // Cámara y planos de la escena (plan_pseudo3d.md §4). Los dos llevan solo args
+  // nombrados entre paréntesis y NO llevan bloque de coordenadas: `view3d` fija
+  // estado y `plane3d` empuja una matriz; lo que se dibuje va después.
+  if (name == "view3d") {
+    auto st = std::make_unique<View3dStmt>();
+    if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
+    return st;
+  }
+  if (name == "plane3d") {
+    auto st = std::make_unique<Plane3dStmt>();
+    if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, st->named); }
     return st;
   }
   if (name == "plot") return parsePlot(lx);    // plot(x=, y=, box=, …) { contenido + xaxis/yaxis } (§13.7)

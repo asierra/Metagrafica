@@ -26,6 +26,33 @@ struct Value {
   Value(const std::string &s) : type(STRING), str(s) {}
 };
 
+// --- Cámara pseudo-3D (plan_pseudo3d.md §4) --------------------------------
+// Convención de ejes: x a la derecha, y arriba, z HACIA EL OBSERVADOR. El plano
+// del papel es xy, y de ahí la propiedad que decidió la convención:
+// `view3d(azimuth=0, elevation=0)` es la IDENTIDAD, así que la vista frontal es
+// el caso por default y no un caso especial.
+//
+// Es estado de EVALUACIÓN, no un elemento gráfico: `xyz()` y `plane3d` la
+// consultan cuando se ejecuta la sentencia, no cuando se dibuja.
+struct View3D {
+  bool   oblique = false;        // false = axonométrica ortográfica
+  double az = 0, el = 0;         // acimut y elevación (radianes)
+  double angle = 0, fore = 1;    // oblicua: dirección del escorzo (rad) y factor
+
+  void project(double x, double y, double z, double &X, double &Y) const {
+    if (oblique) {
+      // Caballera/gabinete: la cara frontal (z=0) conserva su forma SIEMPRE, y
+      // lo lejano (z<0) recede hacia `angle`.
+      X = x - z * fore * std::cos(angle);
+      Y = y - z * fore * std::sin(angle);
+    } else {
+      X = x * std::cos(az) + z * std::sin(az);
+      Y = y * std::cos(el) + (x * std::sin(az) - z * std::cos(az)) * std::sin(el);
+    }
+  }
+};
+extern View3D g_view3d;
+
 // Representación textual de un Value, para la concatenación con '+' (§6.1) y el
 // estampado de text(). Un número se formatea con %g (entero sin punto, decimales
 // mínimos), igual que TextStmt cuando el contenido evalúa a número.
@@ -241,6 +268,19 @@ struct CallExpr : Expr {         // función builtin: sin(x), mod(a,b), len(l)�
       return Value(std::log(a[0].num));
     }
     if (fn == "mod"   && need(2)) return Value(std::fmod(a[0].num, a[1].num));
+    // xyz(x,y,z): un punto del espacio de la escena, proyectado con la `view3d`
+    // vigente. Devuelve un PUNTO (lista de dos), igual que point_at, así que
+    // sirve donde va una coordenada — sin tocar la gramática.
+    // ⚠️ Va FUERA de todo `plane3d`: el punto sale YA proyectado, en coordenadas
+    // del documento, y dentro de un plane3d se transformaría dos veces.
+    if (fn == "xyz" && need(3)) {
+      double X, Y;
+      g_view3d.project(a[0].num, a[1].num, a[2].num, X, Y);
+      Value v; v.type = Value::LIST;
+      v.items.push_back(Value(X));
+      v.items.push_back(Value(Y));
+      return v;
+    }
     if (fn == "len"   && need(1)) return Value((double)a[0].items.size());
     // str(x): número→cadena en formato mínimo (reusa valueToStr). str(x, dec):
     // con dec decimales fijos. Útil para etiquetas concatenadas con '+'; complementa
