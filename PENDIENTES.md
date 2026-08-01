@@ -421,6 +421,22 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       - 🔎 Queda la duda de si `polygon(&p)` debería **avisar** cuando el trayecto trae aritmética
         3k+1 de Bézier. Sería un aviso con falsos positivos (un trayecto de 4 puntos es legítimo
         como polígono), así que probablemente no; se anota para no re-litigarlo.
+- [ ] 🕳️ **`lib/pseudo3d.mg` sigue SIN CLIENTE en el corpus** (anotado 2026-08-01). Cuatro piezas
+      —`prisma`, `lamina`, y desde hoy `cono` y `cilindro`— committeadas, instaladas por
+      `make install` y documentadas en §12 y §13 de la referencia, y **ningún ejemplo las
+      compila** en `check`. Es la misma situación que metió a `elevacion_solar` al corpus por
+      `lib/fulldisk_map.mg`.
+      - **Cobertura parcial conseguida hoy:** el bloque ```octave de §12 las invoca, así que
+        `docfail` verifica que **parsean y evalúan**. Lo que no verifica es el DIBUJO — para eso
+        hace falta un golden, o sea una figura.
+      - **Las candidatas son las dos aparcadas:** `fig2-7b` (usa `prisma` y `lamina`; pospuesta
+        porque la figura aún no convence) y `fig18-5` (usaría `cilindro`). Cualquiera de las dos
+        cierra el hueco; ninguna es urgente.
+      - ⚠️ **Y una limitación que salió al extraer:** una struct de MG **no puede devolver lo que
+        calculó**. `irradiancia` necesita los puntos de tangencia para colocar el rótulo de φ, así
+        que si llamara a `cono` tendría que recalcularlos — por eso se quedó con la receta inline
+        y es el ejemplo al que §13 manda para VER la derivación. La biblioteca sirve a quien solo
+        quiere la forma.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo

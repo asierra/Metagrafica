@@ -869,8 +869,9 @@ prisma(2, 1, 1.5)               % ancho, alto, profundidad
 ```
 
 El `include` debe preceder al uso, y **falla el compilado** si el archivo no resuelve. En
-`lib/` vienen `pseudo3d.mg` (`prisma` y `lamina`, piezas sólidas puestas en la escena de la
-cámara de [§13](#13-escenas-pseudo-3d)), dos **iconos** —`satellite.mg` (`struct Satellite`) y `sun.mg`
+`lib/` vienen `pseudo3d.mg` (piezas puestas en la escena de la cámara de
+[§13](#13-escenas-pseudo-3d): `prisma` y `lamina`, de caras planas, y `cono` y `cilindro`, cuya
+**silueta se calcula**), dos **iconos** —`satellite.mg` (`struct Satellite`) y `sun.mg`
 (`struct Sun`, el Sol: disco de radio 1 y un anillo de rayos, `rays=` cuántos)— y tres **mapas
 del mundo** en proyección ortográfica, generados de datos reales (Natural Earth) con
 `tools/geo2mg.py`: `polar_map.mg` (`PolarMap`, vista desde el polo norte),
@@ -884,6 +885,22 @@ la retícula, más `ocean=`/`land=`/`grid_color=`/`grid_width=`:
 include "../lib/mapa_p30_n55.mg"
 Mapa(scale=5, at=(0, 0.5), grid=false)      % globo de radio 5 centrado en (0, 0.5)
 ```
+
+Las piezas de `pseudo3d.mg` se colocan en **coordenadas de la escena**, con `pos=`, y viven bajo
+la `view3d` vigente. En `cono` y `cilindro`, `axis` es el vector que va de `pos` al otro extremo:
+lleva dirección y longitud juntas, así que no hay parámetro de altura.
+
+```octave
+include "../lib/pseudo3d.mg"
+view3d(azimuth=-25, elevation=22)
+prisma(1.2, 0.8, 1.0, pos=[0, 0, 0])
+cono(0.9, axis=[0, 3.2, 0], pos=[3.5, 0, 0])
+cilindro(0.85, axis=[2.4, 1.3, -0.6], pos=[6.5, 0.6, 0])
+```
+
+> Van en **alambre**: se trazan los bordes, no se rellena el cuerpo. Y la silueta de un cono
+> pide que el ápice caiga **fuera** de su base proyectada; si no, se está mirando el cono por
+> dentro y solo se dibuja la base.
 
 **Dónde busca el `include`:** primero **junto a tu archivo** (ruta relativa), y luego en la
 **biblioteca instalada** (`make install` copia `lib/*.mg` a `$PREFIX/share/metagrafica/lib`).
@@ -919,7 +936,7 @@ pertenece:
 | una **curva rellena**, una onda, marcadores sobre ella | `plane3d` + las primitivas de siempre | `onda_electromagnetica` |
 | un **rayo**, una cota, un rótulo colgado de un punto: algo que no pertenece a ninguna pieza | `xyz()` | los tres |
 | la **silueta** de un cono o un cilindro | se calcula en el `.mg`; la receta está en el encabezado de `irradiancia` | `irradiancia` |
-| una **caja** o una placa | `prisma` / `lamina` de `lib/pseudo3d.mg` ([§12](#12-bibliotecas)) | — |
+| una **caja**, una placa, un **cono** o un **cilindro** | `prisma` `lamina` `cono` `cilindro` de `lib/pseudo3d.mg` ([§12](#12-bibliotecas)) | — |
 | un **arco de ángulo**, una flecha, un contorno a mano alzada | nada especial: se dibuja en el papel | `irradiancia` |
 
 **Por dónde empezar.** Si la figura es sobre todo círculos o curvas puestos en planos, lee

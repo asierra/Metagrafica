@@ -3322,3 +3322,57 @@ sombrero dibujado a mano se fue y quedó `text("$\hat{n}$")`.
 
 La familia se queda en dos a propósito. `\bar`, `\tilde` y `\dot` entran cuando una figura los
 pida — la regla de demanda de siempre.
+
+---
+
+## 2026-08-01 (nonies) — `cono` y `cilindro` a la biblioteca, y una compuerta que probaba la máquina
+
+Extraídas a `lib/pseudo3d.mg`, **después** de que `irradiancia` probara la receta en los tres
+backends y no antes: es el método que funcionó con `plane3d`, donde la abstracción nació como
+abreviatura de algo que ya andaba.
+
+`cono` y `cilindro` toman `axis`, el vector que va de `pos` al otro extremo — lleva dirección y
+longitud juntas, así que no hay parámetro de altura. El cilindro resultó el hermano fácil: dos
+círculos iguales comparten marco, así que sus tangentes comunes tocan a `atan2(s) ± 90°`, sin
+`acos`.
+
+### La extracción se verificó portando la figura, y luego se revirtió
+
+`irradiancia` se reescribió sobre `cono(...)` y `ver.sh --diff` dio **16 px**, que resultaron ser
+**dos motas en los puntos de tangencia**: ahí se cruzan la elipse de la base y las generatrices, y
+lo único que cambió fue el orden de pintado. Geometría idéntica ⇒ extracción fiel.
+
+Y aun así se **revirtió**, por una razón que conviene registrar: `irradiancia` necesita los
+puntos de tangencia para colocar el rótulo de φ, y **una struct de MG no puede devolver lo que
+calculó**. Llamando a `cono` tendría que recalcularlos igual, así que la figura se quedaría con
+la cuenta *y* la llamada. Se queda inline, que además es lo que §13 promete al mandar ahí «para
+ver la derivación»; la biblioteca sirve a quien solo quiere la forma.
+
+⚠️ **Consecuencia: `lib/pseudo3d.mg` sigue sin cliente en el corpus.** Cuatro piezas que ninguna
+figura compila. Anotado en `PENDIENTES.md`; lo cerrará `fig2-7b` o `fig18-5` cuando alguna entre.
+
+### Y el hallazgo de verdad: `docfail` estaba probando la máquina, no el repo
+
+Al documentar las piezas nuevas, el bloque ```octave de §12 **falló** diciendo que `prisma` no
+tiene `pos=`. Pero sí lo tiene — desde la Fase C.
+
+La causa: `docblocks.py` compila el bloque en un directorio temporal y copia ahí las
+bibliotecas, de modo que `include "pseudo3d.mg"` (nombre a secas) resuelve. Pero
+`include "../lib/pseudo3d.mg"` —la forma que usa un ejemplo del corpus, y que la referencia
+enseña— **no resolvía**, y caía a la búsqueda instalada (`-DMG_LIBDIR`). Estaba compilando
+contra `/usr/local/share/metagrafica/lib/`, una copia de dos días antes con el `prisma`
+**anterior** a la Fase C.
+
+O sea que la compuerta habría **bendecido una API que el repo ya no tiene**, y en una máquina sin
+`make install` habría fallado por no encontrar el archivo. Ninguna de las dos cosas tiene que ver
+con lo que el bloque afirma.
+
+Arreglado copiando las bibliotecas **dos veces** —al lado del bloque y en un `lib/` hermano— y
+compilando el bloque en un subdirectorio, para que las dos formas de `include` resuelvan contra
+el árbol. La prueba está en las dos corridas: antes fallaba contra el `prisma` instalado, después
+pasa contra el del repo.
+
+📌 Es la tercera vez en el día que una compuerta resulta estar mirando el sitio equivocado (las
+otras dos: el harness de errores compilando solo a SVG, y §13 sin una sola referencia a un
+ejemplo). El patrón que las une es que **ninguna fallaba**: había que preguntarles qué estaban
+mirando.

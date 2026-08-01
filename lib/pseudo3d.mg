@@ -67,3 +67,117 @@ struct lamina(h, d, pos=[0,0,0], angulo=45, paso=3, contorno="black", lw=0.6) {
     { plane3d(at=[px, py, pz], u=[0, 0, d], v=[0, h, 0])
       polygon(hatch=angulo, hatch_gap=paso, color=contorno) { 0 0  1 0  1 1  0 1 } }
 }
+
+% --- cono(r, axis, pos) y cilindro(r, axis, pos): siluetas de revolución --------
+%
+% Un cono y un cilindro no son caras planas: lo que se dibuja de ellos es su SILUETA,
+% y esa hay que calcularla. La receta salió de `examples/irradiancia.mg` y se extrajo
+% aquí después de estar probada en los tres backends, no antes.
+%
+% CÓMO. La proyección restringida al plano de una base es una AFINIDAD, y la tangencia
+% es invariante afín. Así que en vez de resolver «tangente a una elipse» en la página,
+% se retro-proyecta al marco de la base —un 2x2— donde el borde vuelve a ser un CÍRCULO:
+%   - cono: el ápice cae en (a,b) y los puntos de tangencia están en
+%     atan2(b,a) ± acos(1/D), con D = hypot(a,b) medido en radios.
+%   - cilindro: los dos círculos son iguales, así que las tangentes comunes tocan en
+%     atan2(s) ± 90°, con s el desplazamiento entre centros retro-proyectado. Sin acos.
+% Los puntos de tangencia vuelven al ESPACIO y las generatrices se trazan con `xyz()`
+% en sus dos extremos, porque son rectas de verdad del cuerpo.
+%
+% ⚠️ `axis` es el vector del ápice (o de la base) al OTRO extremo: lleva dirección y
+%   longitud juntas, así que no hace falta un parámetro de altura.
+% ⚠️ Van en ALAMBRE, como el resto de esta biblioteca: se trazan los bordes, no se
+%   rellena el cuerpo. Rellenarlo pide el arco lejano de la base, que es otra cuenta.
+
+% --- cono ---
+% ⚠️ Si el ápice cae DENTRO de la base proyectada (D <= 1) se está mirando el cono por
+%   dentro y no hay silueta que trazar: se dibuja solo la base. Sin esa guarda `acos`
+%   abortaría, que es correcto pero no es lo que una figura quiere aquí.
+struct cono(r, axis=[0,1,0], pos=[0,0,0], base=true, contorno="black", lw=0.6) {
+    axl = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2])
+    dx = axis[0]/axl   dy = axis[1]/axl   dz = axis[2]/axl
+    cx = pos[0] + axis[0]   cy = pos[1] + axis[1]   cz = pos[2] + axis[2]
+
+    % marco de la base: e1 ⊥ eje (horizontal si se puede), e2 = eje x e1
+    hh = sqrt(dz*dz + dx*dx)
+    e1x = 1   e1y = 0   e1z = 0
+    if hh > 0.001 { e1x = dz/hh   e1z = -dx/hh }
+    e2x = dy*e1z - dz*e1y   e2y = dz*e1x - dx*e1z   e2z = dx*e1y - dy*e1x
+
+    line_width lw
+    color contorno
+    if base {
+        { plane3d(at=[cx, cy, cz], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+          circle(1) { 0 0 } }
+    }
+
+    pO = xyz(cx, cy, cz)
+    pU = xyz(cx + r*e1x, cy + r*e1y, cz + r*e1z)
+    pV = xyz(cx + r*e2x, cy + r*e2y, cz + r*e2z)
+    pA = xyz(pos[0], pos[1], pos[2])
+    ux = pU[0] - pO[0]   uy = pU[1] - pO[1]
+    vx = pV[0] - pO[0]   vy = pV[1] - pO[1]
+    dd = ux*vy - uy*vx
+    qx = pA[0] - pO[0]   qy = pA[1] - pO[1]
+    aa = ( qx*vy - qy*vx) / dd
+    bb = (-qx*uy + qy*ux) / dd
+    DD = sqrt(aa*aa + bb*bb)
+
+    if DD > 1 {
+        t0 = atan2(bb, aa)
+        dt = acos(1/DD)
+        g1 = t0 + dt   g2 = t0 - dt
+        polyline { xyz(pos[0], pos[1], pos[2])
+                   xyz(cx + r*(cos(g1)*e1x + sin(g1)*e2x),
+                       cy + r*(cos(g1)*e1y + sin(g1)*e2y),
+                       cz + r*(cos(g1)*e1z + sin(g1)*e2z)) }
+        polyline { xyz(pos[0], pos[1], pos[2])
+                   xyz(cx + r*(cos(g2)*e1x + sin(g2)*e2x),
+                       cy + r*(cos(g2)*e1y + sin(g2)*e2y),
+                       cz + r*(cos(g2)*e1z + sin(g2)*e2z)) }
+    }
+}
+
+% --- cilindro ---
+% `pos` es el centro de una base y `axis` lleva a la otra. Se trazan los dos círculos
+% enteros (alambre) y las dos tangentes comunes.
+struct cilindro(r, axis=[0,1,0], pos=[0,0,0], contorno="black", lw=0.6) {
+    axl = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2])
+    dx = axis[0]/axl   dy = axis[1]/axl   dz = axis[2]/axl
+    c2x = pos[0] + axis[0]   c2y = pos[1] + axis[1]   c2z = pos[2] + axis[2]
+
+    hh = sqrt(dz*dz + dx*dx)
+    e1x = 1   e1y = 0   e1z = 0
+    if hh > 0.001 { e1x = dz/hh   e1z = -dx/hh }
+    e2x = dy*e1z - dz*e1y   e2y = dz*e1x - dx*e1z   e2z = dx*e1y - dy*e1x
+
+    line_width lw
+    color contorno
+    { plane3d(at=[pos[0], pos[1], pos[2]], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+      circle(1) { 0 0 } }
+    { plane3d(at=[c2x, c2y, c2z], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+      circle(1) { 0 0 } }
+
+    pO = xyz(pos[0], pos[1], pos[2])
+    pU = xyz(pos[0] + r*e1x, pos[1] + r*e1y, pos[2] + r*e1z)
+    pV = xyz(pos[0] + r*e2x, pos[1] + r*e2y, pos[2] + r*e2z)
+    pB = xyz(c2x, c2y, c2z)
+    ux = pU[0] - pO[0]   uy = pU[1] - pO[1]
+    vx = pV[0] - pO[0]   vy = pV[1] - pO[1]
+    dd = ux*vy - uy*vx
+    qx = pB[0] - pO[0]   qy = pB[1] - pO[1]
+    aa = ( qx*vy - qy*vx) / dd
+    bb = (-qx*uy + qy*ux) / dd
+
+    % Las tangentes comunes de dos círculos IGUALES son perpendiculares a la línea de
+    % centros: no hay nada que resolver, solo girar 90°.
+    for k = 0 to 1 {
+        g = atan2(bb, aa) + rad(90 - 180*k)
+        polyline { xyz(pos[0] + r*(cos(g)*e1x + sin(g)*e2x),
+                       pos[1] + r*(cos(g)*e1y + sin(g)*e2y),
+                       pos[2] + r*(cos(g)*e1z + sin(g)*e2z))
+                   xyz(c2x + r*(cos(g)*e1x + sin(g)*e2x),
+                       c2y + r*(cos(g)*e1y + sin(g)*e2y),
+                       c2z + r*(cos(g)*e1z + sin(g)*e2z)) }
+    }
+}

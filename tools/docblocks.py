@@ -110,11 +110,24 @@ def main(argv):
 
     total_fallos = 0
     with tempfile.TemporaryDirectory() as d:
-        dir_tmp = pathlib.Path(d)
-        # Las bibliotecas al lado del bloque: así el `include "pseudo3d.mg"` que documenta
-        # la referencia (nombre a secas, sin ruta) se resuelve, y de paso se comprueba.
+        # El bloque se compila en un subdirectorio y las bibliotecas se copian DOS veces:
+        # al lado del bloque y en un `lib/` hermano. Así resuelven contra la copia DEL
+        # REPO las dos formas que la referencia enseña — `include "pseudo3d.mg"` (nombre a
+        # secas) e `include "../lib/pseudo3d.mg"` (la que usa un ejemplo del corpus).
+        #
+        # ⚠️ Sin el `lib/` hermano, un bloque con `../lib/...` no resolvía y caía a la
+        # búsqueda instalada (-DMG_LIBDIR): estaba probando la biblioteca INSTALADA EN LA
+        # MÁQUINA, no la del árbol. Se descubrió el 2026-08-01, con una copia instalada de
+        # dos días de antigüedad que traía el `prisma` anterior a la Fase C — o sea que la
+        # compuerta habría bendecido una API que el repo ya no tiene, y en una máquina sin
+        # `make install` habría fallado por no encontrar el archivo.
+        dir_tmp = pathlib.Path(d) / "doc"
+        dir_lib = pathlib.Path(d) / "lib"
+        dir_tmp.mkdir()
+        dir_lib.mkdir()
         for lib in (raiz / "lib").glob("*.mg"):
             shutil.copy(lib, dir_tmp / lib.name)
+            shutil.copy(lib, dir_lib / lib.name)
         for nombre in argv[1:]:
             ruta = pathlib.Path(nombre)
             if not ruta.is_absolute():

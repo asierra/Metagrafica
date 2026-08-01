@@ -850,8 +850,8 @@ prisma(2, 1, 1.5)               % width, height, depth
 ```
 
 The `include` must precede the use, and **compilation fails** if the file doesn't resolve. In `lib/` come
-`pseudo3d.mg` (`prisma` and `lamina`, solid pieces placed in the camera's scene of
-[§13](#13-pseudo-3d-scenes)), two **icons** —`satellite.mg` (`struct Satellite`) and `sun.mg` (`struct Sun`, the Sun: a
+`pseudo3d.mg` (pieces placed in the camera's scene of [§13](#13-pseudo-3d-scenes):
+`prisma` and `lamina`, of flat faces, and `cono` and `cilindro`, whose **silhouette is computed**), two **icons** —`satellite.mg` (`struct Satellite`) and `sun.mg` (`struct Sun`, the Sun: a
 radius-1 disc plus a ring of rays, `rays=` how many)— and three **world maps** in orthographic
 projection, generated from real data (Natural Earth) with `tools/geo2mg.py`: `polar_map.mg`
 (`PolarMap`, seen from the north pole), `fulldisk_map.mg` (`FullDiskMap`, equatorial) and
@@ -865,6 +865,22 @@ All three are ordinary structs normalised to **radius 1**, so they are placed li
 include "../lib/mapa_p30_n55.mg"
 Mapa(scale=5, at=(0, 0.5), grid=false)      % globe of radius 5 centred at (0, 0.5)
 ```
+
+The pieces of `pseudo3d.mg` are placed in **scene coordinates**, with `pos=`, and live under the current
+`view3d`. In `cono` and `cilindro`, `axis` is the vector going from `pos` to the other end: it carries both
+direction and length, so there is no height parameter.
+
+```octave
+include "../lib/pseudo3d.mg"
+view3d(azimuth=-25, elevation=22)
+prisma(1.2, 0.8, 1.0, pos=[0, 0, 0])
+cono(0.9, axis=[0, 3.2, 0], pos=[3.5, 0, 0])
+cilindro(0.85, axis=[2.4, 1.3, -0.6], pos=[6.5, 0.6, 0])
+```
+
+> They are **wireframe**: the edges are drawn, the body is not filled. And a cone's silhouette requires the
+> apex to fall **outside** its projected base; if it does not, you are looking at the cone from the inside
+> and only the base is drawn.
 
 **Where `include` looks:** first **next to your file** (relative path), and then in the **installed
 library** (`make install` copies `lib/*.mg` to `$PREFIX/share/metagrafica/lib`). Local **overrides**
@@ -897,7 +913,7 @@ scene. It pays to look at it part by part and ask, of each one, which of these i
 | a **filled curve**, a wave, markers on it | `plane3d` + the usual primitives | `onda_electromagnetica` |
 | a **ray**, a dimension line, a label hanging off a point: something belonging to no piece | `xyz()` | all three |
 | the **silhouette** of a cone or a cylinder | computed in the `.mg`; the recipe is in the header of `irradiancia` | `irradiancia` |
-| a **box** or a plate | `prisma` / `lamina` from `lib/pseudo3d.mg` ([§12](#12-libraries)) | — |
+| a **box**, a plate, a **cone** or a **cylinder** | `prisma` `lamina` `cono` `cilindro` from `lib/pseudo3d.mg` ([§12](#12-libraries)) | — |
 | an **angle arc**, an arrow, a freehand outline | nothing special: it is drawn on the paper | `irradiancia` |
 
 **Where to start.** If your figure is mostly circles or curves placed on planes, read `angulo_solido`: it
@@ -1190,4 +1206,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 1e4fab0862b97824f23ded04594051b2e67a6617 -->
+<!-- translated-from: referencia.md @ 271165eb9fd3ae487472b6674d940bfbc803ec7e -->
