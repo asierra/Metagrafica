@@ -289,6 +289,71 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       como base WIP** (dormante, `ok=66`; EPS/PDF centran, SVG con bug acotado, inline sin
       hacer). ⚠️ **`\frac` DEPENDE de la Parte A** (usa `TextLine::width()` para dimensionar la
       fracción). Orden: Parte A → (`\frac` y/o Parte B). Detalle en ambos planes.
+- [ ] 🔤 **La fuente math del SVG no tiene lista de respaldo, y en un visor que no cargue el
+      `@font-face` cae a SANS** (hallado 2026-07-31, lo notó Alejandro: «el pi del SVG no se ve
+      tan bonito como el del EPS»). El archivo está BIEN: `SVGDisplay` embebe Latin Modern Math
+      como TTF base64 en un `@font-face`, sus dos subtablas cmap (fmt 4 y fmt 12) coinciden
+      glifo a glifo, y renderizado por un navegador los trazos son **idénticos** a los de EPS y
+      PDF (medido con Chrome sobre `$A = \pi r^2 \rho$`). Lo que falla es el visor.
+      - **Medido:** Chrome y **Firefox** lo honran, y también en el modo `<img src="…svg">`
+        —que es el de un README, y NO es el mismo modo de render que abrir el `.svg` suelto—.
+        Los que caen a sans son **`rsvg-convert` e Inkscape**, o sea herramientas de línea de
+        comandos, no la ruta de publicación.
+      - **Lo que lo empeora, y es lo accionable:** `src/SVGDisplay.cpp` declara la math como
+        `fam = "'MGMath'"` **a secas**, mientras el texto normal sí lleva cadena completa
+        (`'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif`). Sin respaldo,
+        el visor usa **su** default —típicamente sans— que es el peor sustituto posible para
+        matemáticas. Con `'MGMath', serif` el caso degradado se parecería bastante.
+      - **Exposición: BAJA, y hay que decirlo porque la primera lectura fue alarmista.**
+        16 de los 28 `docs/img/*.svg` publicados dependen de ese `@font-face`, pero la ruta de
+        publicación —README y galería de Pages, ambos vistos en un navegador— **sí lo carga**.
+        No hay evidencia de que la portada esté enseñando tipografía equivocada. Queda como
+        mejora de robustez, no como bug de salida.
+      - **Costo:** una línea en `SVGDisplay.cpp`; mueve los goldens SVG con math y obliga a
+        regenerar `docs/img` (`test/run.sh images`). Por tocar salida publicada a cambio de un
+        caso degradado que solo se ve en herramientas de línea de comandos, **probablemente no
+        vale la pena todavía** — se anota para cuando toque otro cambio en `SVGDisplay`.
+      - 💡 **Lo que sí deja como método:** para VER un SVG de MetaGráfica hay que usar un
+        navegador. `rsvg-convert` e Inkscape mienten sobre la tipografía math, y es fácil
+        diagnosticar como bug del compilador lo que es sustitución del visor.
+- [ ] 🐞 **Un arco de BARRIDO CERO tumba el PDF entero** (hallado 2026-07-31 escribiendo
+      `angulo_solido.mg`). Repro mínimo, tres líneas:
+      `arc(1, from=30, to=30) { 2 2 }` → **EPS ok, SVG ok, PDF aborta** con
+      `Error de libharu 0x1051` (`HPDF_PAGE_INVALID_GMODE`) y exit 1: no se genera archivo.
+      - **Es exactamente el sweep 0**, no «sweeps raros»: `from=0 to=360` (círculo completo),
+        `from=0 to=0.5` y `from=10 to=370` compilan en los tres. Solo `to == from` falla.
+      - **Por qué importa aunque suene exótico:** un arco de barrido cero es la salida
+        NATURAL de recortar un arco por visibilidad —`orbita_polar` y `angulo_solido` calculan
+        `from`/`to` con trigonometría—, y significa «no se ve nada», que es un resultado
+        legítimo, no un error del autor. En `angulo_solido` aparece solo con mover la cámara:
+        con elevación 42° el paralelo de −60° queda entero detrás y la figura deja de tener
+        PDF. Hoy hay que esquivarlo con un `if`.
+      - **Ninguna compuerta lo caza**: ningún ejemplo del corpus produce un arco degenerado,
+        y como el PDF no llega a escribirse no hay golden que comparar. La paridad de Capa 3
+        tampoco, porque no hay tres salidas que confrontar.
+      - **Arreglo probable:** que `PDFDisplay` omita el arco cuando el barrido es 0 (o lo
+        emita como un `moveto` sin trazo), igual que hacen EPS y SVG de hecho. Más una prueba
+        negativa/positiva en `test/errors/` que fije la conducta elegida en los TRES.
+- [ ] 📥 **`scale` con DOS FACTORES VARIABLES a media línea: la regla existe, funciona, y no
+      está documentada** (hallado 2026-07-31 escribiendo `angulo_solido.mg`). `scale sx sy`
+      seguido de otra sentencia en el mismo renglón **no toma `sy`**: `parserv3.cpp` solo lo
+      acepta como segundo factor si el identificador **termina la sentencia**, y la salida
+      inequívoca —escrita en el comentario del código— es **`scale sx (sy)`**, porque ninguna
+      sentencia empieza con `(`. La desambiguación es CORRECTA y está bien razonada (un
+      identificador suelto puede ser un comando o una struct; la alternativa fue el bug de
+      descarte silencioso de 2026-07-22). Lo que falta es que se sepa:
+      - **`docs/referencia.md` §9 solo enseña `scale 2 1`**, con literales, que es justo el
+        caso que NO tiene el problema. Un lector no tiene de dónde deducir la regla.
+      - **El diagnóstico apunta al token equivocado.** `{ scale sx sy   shear kk 0 … }` no dice
+        nada de `scale` ni de `sy`: dice **«variable no definida: shear»**, porque `sy` queda en
+        el flujo y arranca una sentencia nueva que se traga lo que sigue. Quien lo lea buscará
+        el error en `shear`, que está bien escrito.
+      - **Costo:** un párrafo en §9 (en los dos idiomas, más re-sellar `reference.md`) y, si se
+        quiere, una prueba negativa con `% EXPECT:` que fije el mensaje. El motor no se toca.
+      - ⚠️ Cuenta para la **condición 4**: es fricción que el autor no ve porque ya sabe
+        esquivarla —escribir cada transformación en su renglón—, y para el lector es un error
+        que señala una línea correcta. Misma clase que el hallazgo de `marker_end` del
+        2026-07-27.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo
