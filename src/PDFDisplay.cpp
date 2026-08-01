@@ -549,6 +549,17 @@ void PDFDisplay::fracRule(double dy, double len, double lw) {
   HPDF_Page_GRestore(page);
 }
 
+void PDFDisplay::penSegment(double dx1, double dy1, double dx2, double dy2, double lw) {
+  // Como fracRule, con los dos extremos libres y sin tocar la pluma.
+  HPDF_Page_GSave(page);
+  HPDF_Page_SetLineWidth(page, lw);
+  applyStrokeColor();
+  HPDF_Page_MoveTo(page, cur_x + dx1, cur_y + dy1);
+  HPDF_Page_LineTo(page, cur_x + dx2, cur_y + dy2);
+  HPDF_Page_Stroke(page);
+  HPDF_Page_GRestore(page);
+}
+
 void PDFDisplay::arc(double x, double y, double w, double h,
                      double startAng, double endAng) {
   if (h == 0) h = w;

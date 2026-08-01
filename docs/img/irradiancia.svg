@@ -19,8 +19,9 @@
 <text x="209.664126" y="-291.251640" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑑𝐴</tspan></text>
 <text x="143.451308" y="-186.064906" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑑</tspan></text>
 <text x="149.691308" y="-186.064906" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">Ω</tspan></text>
-<text x="86.799881" y="-156.094324" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑛</tspan></text>
-<path d="M 76.6379 170.49 L 81.2955 175.995 L 85.9531 170.49 " fill="none" stroke-width="0.5" stroke="#000000" />
+<text x="84.046709" y="-156.094324" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑛</tspan></text>
+<path d="M 84.586709 162.814324 L 87.646709 164.494324" fill="none" stroke="#000000" stroke-width="0.540000"/>
+<path d="M 87.646709 164.494324 L 90.706709 162.814324" fill="none" stroke="#000000" stroke-width="0.540000"/>
 <text x="156.963139" y="-144.588128" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑟</tspan></text>
 <text x="106.762290" y="-145.074752" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">ϕ</tspan></text>
 <text x="128.813059" y="-37.141020" transform="scale(1, -1)" text-anchor="middle" fill="#000000" font-size="12.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑃</tspan></text>

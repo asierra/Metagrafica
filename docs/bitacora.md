@@ -3266,3 +3266,59 @@ de φ (que parecía terminar en la generatriz y termina en el eje, 63.540° los 
 
 Es el contrapeso a la lección de `ver.sh`: **mirar destapa defectos que las compuertas no ven,
 pero también inventa alguno**. El que sobrevive es el que se mide.
+
+---
+
+## 2026-08-01 (octies) — `\hat` y `\vec`, dibujados; y §13 gana su regla de decisión
+
+Dos cosas, y van juntas por el archivo que comparten (la referencia), no por el tema.
+
+### La tabla de §13: la referencia tenía los hechos y no la regla
+
+Alejandro preguntó si las tres figuras pseudo-3D estaban bien explicadas para alguien de fuera.
+Medido: **§13 no hacía ni una referencia a un ejemplo**, contra **22** en el resto del documento
+— justo la sección donde un ejemplo trabajado más falta. Y la regla de decisión (qué alcanzar
+para cada pieza de la figura) existía, pero vivía en `docs/plans/plan_pseudo3d.md`: material de
+mantenedor, que ninguna compuerta compila y que `make install` no reparte.
+
+Es **literalmente el hallazgo de la condición 4** del 2026-07-28: todos los hechos, ninguna
+regla de decisión, y el modelo eligiendo la herramienta equivocada. §13 contestaba «cómo se
+escribe `plane3d`», no «qué uso para esto». Entró una tabla de seis filas —cada una con el
+ejemplo que la demuestra— y un «por dónde empezar». Ahora §13 cita a los tres (2/5/2).
+
+### `\hat` y `\vec`: el acento se dibuja, y hay una razón
+
+`irradiancia` entró al corpus con el sombrero de n̂ hecho a mano: una polilínea de tres puntos
+con desplazamientos literales. Geometría puesta a ojo haciendo de tipografía, en la figura que
+presume de no medir nada a ojo.
+
+**Lo que decidió el diseño fue un dato, no un gusto.** Meter U+0302 al subset de LM Math no
+habría bastado: un acento combinante tiene **avance cero** y se posiciona con las tablas
+GPOS/MATH de la fuente. MG no tiene motor de shaping —coloca glifos por ancho de avance— así
+que el código de posicionado hay que escribirlo **por los dos caminos**. Lo único que cambia es
+de dónde sale la forma de la marca. Siendo así, la geometría cuesta estrictamente menos: no
+toca el subset, no toca la ruta PUA del PDF, y escala con `font_size` por construcción.
+
+Es además el criterio que el proyecto ya había aplicado: la raya de `\frac` es un trazo
+(`Display::fracRule`), no un glifo — como en TeX, que también la dibuja.
+
+**Cómo:** `Accent` es una `Fraction` con un hijo. Reusa toda la mecánica que `\frac` construyó
+—composición inline con neto cero alrededor del hijo, medición de extent vertical, `TextLine`
+como contenedor— y añade `Display::penSegment`, que es `fracRule` generalizado a un trazo
+cualquiera. Un circunflejo son dos segmentos; una flecha, tres.
+
+📌 **La marca se dimensiona por el ancho de la base**, así que sobre una letra ancha sale ancha
+— lo que en TeX obliga a pedir `\widehat` aparte.
+
+⚠️ **Y una heurística acotada, que conviene conocer antes de tocarla.** `childVExtent` usa
+`kGlyphAscent`, que es altura de MAYÚSCULA, porque no hay métricas verticales por glifo. Sobre
+una minúscula sin ascendente —`n̂`, `r̂`, `v̂`: justo el caso de la física— eso dejaba la marca
+flotando un cuarto de em de más. La corrección baja a la altura de la equis **solo** cuando la
+base es una letra suelta, sin script y de las que no suben; cualquier otra cosa conserva el
+extent completo, que nunca queda corto.
+
+**Cero churn** en los 87 goldens salvo `irradiancia`, que es donde se cobró el premio: el
+sombrero dibujado a mano se fue y quedó `text("$\hat{n}$")`.
+
+La familia se queda en dos a propósito. `\bar`, `\tilde` y `\dot` entran cuando una figura los
+pida — la regla de demanda de siempre.

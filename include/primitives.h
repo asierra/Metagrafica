@@ -35,6 +35,7 @@ enum GraphicsItemType {
   GI_TEXTLINE,
   GI_TEXTBLOCK,   // §14.1: varios TextLine apilados (multilínea con /n)
   GI_FRACTION,    // SPIKE \frac: numerador sobre denominador con raya (composición 2-D)
+  GI_ACCENT,      // \hat, \vec: una marca DIBUJADA encima de su base (misma mecánica que GI_FRACTION, con un hijo)
   // GI_TEXTSTRUCT queda RESERVADO para composición bidimensional —fracciones,
   // sumatorios, radicales— o para insertar trozos de LaTeX. Es otro problema:
   // un bloque apila renglones, una estructura los COMPONE (ver text.h).

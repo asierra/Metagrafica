@@ -913,6 +913,29 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
           }
           break;
         }
+        // \hat{X} y \vec{X}: la marca se DIBUJA encima de la base (Accent, en text.h).
+        // Un átomo acentuado sigue siendo Ord para el espaciado — acentuar no cambia
+        // cómo se relaciona la letra con sus vecinas.
+        if (math_mode && (variable == "hat" || variable == "vec")) {
+          double sp = mathAtomSpace(MC_ORD);
+          int j = v_end;
+          string A;
+          if (extractGroup(input, iend, j, A)) {
+            auto acc = std::make_unique<Accent>();
+            acc->setKind(variable == "vec" ? Accent::VEC : Accent::HAT);
+            acc->setBase(parse_sub(A, font_face, using_reencode, using_fontcmmi));
+            acc->setPreSpace(sp);
+            mathSeal();
+            if (!text_line)
+              text_line = std::make_unique<TextLine>();
+            text_line->addItem(std::move(acc));
+            it = j - 1;
+          } else {
+            fprintf(stderr, "Error: \\%s requiere un grupo {..}.\n", variable.c_str());
+            it = v_end - 1;
+          }
+          break;
+        }
         unsigned char code = get_symbol_code(variable, font_face, using_fontcmmi);
         if (code > 0)
           add_symbol(code, font_face, math_mode ? mathAtomSpace(mathClassOfName(variable)) : 0);

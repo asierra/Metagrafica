@@ -310,6 +310,7 @@ Arguments: `align` (`"left"`/`"center"`/`"right"`), `valign` (`"baseline"`/`"top
 | `_x`  `^x`  `_{xy}`  `^{xy}` | sub- and superscript — **only inside `$…$`** |
 | `'` | prime (inside math) |
 | `\frac{a}{b}` | fraction (numerator over denominator) — inside `$…$` |
+| `\hat{n}` `\vec{v}` | accent over its base: unit vector and vector — inside `$…$` |
 | `\,` `\;` `\!` `\quad` | fine math-space adjustment (thin, thick, negative thin, 1 em) |
 
 ```octave
@@ -340,6 +341,20 @@ superscripts clear the bar. They are set at full (display) size and compose inli
 ```octave
 text("$F = G \frac{m_1 m_2}{r^2}$", size=12) { 1 7 }
 ```
+
+**Accents.** `\hat{n}` puts a circumflex and `\vec{v}` an arrow, centred over their base and sized to its
+width — over a wide letter they come out wide, without having to ask for that separately. The height comes
+from the content, so `\hat{n}` rests on the x-height and `\hat{A}` rises to the capital.
+
+```octave
+text("$\vec{F} = m\vec{a}$   $\hat{n} \cdot \hat{r}$") { 1 5 }
+```
+
+> The mark is **drawn**, it does not come from the font, and that is deliberate: a combining accent has zero
+> advance and is placed using the font's internal tables, which MG does not read — the positioning code
+> would have to be written anyway. It is the same criterion by which the bar of `\frac` is a stroke. That is
+> why there are `\hat` and `\vec` and not the whole family: `\bar`, `\tilde` and `\dot` will arrive when a
+> figure asks for them.
 
 ### The symbols written `\command`
 
@@ -871,6 +886,29 @@ the opposite of placing each piece until it looks right.
 > perspective. Paint order is **writing order** —draw the far things first—, and which face of a body ends
 > up behind is your decision. For real 3-D, Blender; MG is not going to replace it.
 
+### What to reach for
+
+One of these figures is almost never *one* thing: it is usually three or four kinds of piece in the same
+scene. It pays to look at it part by part and ask, of each one, which of these it belongs to:
+
+| what you want to draw | with what | worked example |
+|---|---|---|
+| a circle, an arc or a curve that **lives in a plane** of space | `plane3d`, and inside it you draw in 2-D | `angulo_solido` |
+| a **filled curve**, a wave, markers on it | `plane3d` + the usual primitives | `onda_electromagnetica` |
+| a **ray**, a dimension line, a label hanging off a point: something belonging to no piece | `xyz()` | all three |
+| the **silhouette** of a cone or a cylinder | computed in the `.mg`; the recipe is in the header of `irradiancia` | `irradiancia` |
+| a **box** or a plate | `prisma` / `lamina` from `lib/pseudo3d.mg` ([§12](#12-libraries)) | — |
+| an **angle arc**, an arrow, a freehand outline | nothing special: it is drawn on the paper | `irradiancia` |
+
+**Where to start.** If your figure is mostly circles or curves placed on planes, read `angulo_solido`: it
+is the pure case and uses nothing else. If you also need fills or markers, `onda_electromagnetica`. And if
+a round body shows up, `irradiancia`, the only one that computes a silhouette.
+
+> ⚠️ **Two warnings about the last row.** The arc marking an angle is annotation on the **paper**, not on
+> the scene, because the angle between two projected directions is **not** the projection of the angle in
+> space. If you want it to measure for real, draw it in the plane containing both directions —which is what
+> `irradiancia` does with its φ— and then the sweep of the arc *is* the angle.
+
 ### The axes
 
 **x to the right, y up, z towards the viewer.** The plane of the paper is **xy**; the ground, if the figure
@@ -1152,4 +1190,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 3e2aa2ee4b51bab4b70f4726d0fe95988d32d583 -->
+<!-- translated-from: referencia.md @ 1e4fab0862b97824f23ded04594051b2e67a6617 -->

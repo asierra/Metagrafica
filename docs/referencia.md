@@ -313,6 +313,7 @@ Argumentos: `align` (`"left"`/`"center"`/`"right"`), `valign`
 | `_x`  `^x`  `_{xy}`  `^{xy}` | sub y superíndice — **solo dentro de `$…$`** |
 | `'` | prima (dentro de math) |
 | `\frac{a}{b}` | fracción (numerador sobre denominador) — dentro de `$…$` |
+| `\hat{n}` `\vec{v}` | acento sobre la base: versor y vector — dentro de `$…$` |
 | `\,` `\;` `\!` `\quad` | ajuste fino de espacio math (fino, grueso, fino negativo, 1 em) |
 
 ```octave
@@ -345,6 +346,20 @@ componen inline dentro de una fórmula mayor:
 ```octave
 text("$F = G \frac{m_1 m_2}{r^2}$", size=12) { 1 7 }
 ```
+
+**Acentos.** `\hat{n}` pone un circunflejo y `\vec{v}` una flecha, centrados sobre su base y a
+su ancho — sobre una letra ancha salen anchos, sin tener que pedirlo aparte. La altura se toma
+del contenido, así que `\hat{n}` se apoya en la equis y `\hat{A}` sube a la mayúscula.
+
+```octave
+text("$\vec{F} = m\vec{a}$   $\hat{n} \cdot \hat{r}$") { 1 5 }
+```
+
+> La marca se **dibuja**, no sale de la fuente, y es deliberado: un acento combinante tiene
+> avance cero y se coloca con las tablas internas de la fuente, que MG no lee — habría que
+> escribir el posicionado igual. Es el mismo criterio por el que la raya de `\frac` es un trazo.
+> Por eso hay `\hat` y `\vec` y no toda la familia: `\bar`, `\tilde` y `\dot` entrarán cuando
+> una figura los pida.
 
 ### Los símbolos que se escriben `\comando`
 
@@ -891,6 +906,32 @@ número. Es lo contrario de colocar cada pieza hasta que se vea bien.
 > iluminación, ni perspectiva. El orden de pintado es el **orden de escritura** —dibuja primero
 > lo lejano—, y qué cara de un cuerpo queda detrás lo decides tú. Para 3-D de verdad, Blender;
 > MG no lo va a sustituir.
+
+### Qué usar para qué
+
+Una figura de éstas casi nunca es *una* cosa: suele ser tres o cuatro clases de pieza en la
+misma escena. Conviene mirarla por partes y preguntarse, de cada una, a cuál de estas
+pertenece:
+
+| lo que quieres dibujar | con qué | ejemplo trabajado |
+|---|---|---|
+| un círculo, un arco o una curva que **vive en un plano** del espacio | `plane3d`, y dentro dibujas en 2-D | `angulo_solido` |
+| una **curva rellena**, una onda, marcadores sobre ella | `plane3d` + las primitivas de siempre | `onda_electromagnetica` |
+| un **rayo**, una cota, un rótulo colgado de un punto: algo que no pertenece a ninguna pieza | `xyz()` | los tres |
+| la **silueta** de un cono o un cilindro | se calcula en el `.mg`; la receta está en el encabezado de `irradiancia` | `irradiancia` |
+| una **caja** o una placa | `prisma` / `lamina` de `lib/pseudo3d.mg` ([§12](#12-bibliotecas)) | — |
+| un **arco de ángulo**, una flecha, un contorno a mano alzada | nada especial: se dibuja en el papel | `irradiancia` |
+
+**Por dónde empezar.** Si la figura es sobre todo círculos o curvas puestos en planos, lee
+`angulo_solido`: es el caso puro y no usa nada más. Si además hay que rellenar o poner
+marcadores, `onda_electromagnetica`. Y si aparece un cuerpo redondo, `irradiancia`, que es la
+única que calcula una silueta.
+
+> ⚠️ **Dos avisos sobre la última fila.** El arco que marca un ángulo es anotación del **papel**,
+> no de la escena, porque el ángulo entre dos direcciones proyectadas **no** es la proyección del
+> ángulo del espacio. Si quieres que mida de verdad, dibújalo en el plano que contiene a las dos
+> direcciones —es lo que hace `irradiancia` con su φ— y entonces el barrido del arco *es* el
+> ángulo.
 
 ### Los ejes
 

@@ -61,6 +61,7 @@ class SVGDisplay: public Display {
   void line(double, double, double, double) override;
   void rect(double, double, double, double) override;
   void fracRule(double dy, double len, double lw) override;
+  void penSegment(double dx1, double dy1, double dx2, double dy2, double lw) override;
   void curveto(double, double, double, double, double, double) override;
   void text(std::string) override;
   void setFontSize(double p) override;

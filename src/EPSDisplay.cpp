@@ -339,6 +339,14 @@ void EPSDisplay::fracRule(double dy, double len, double lw) {
           lw, dy, len);
 }
 
+void EPSDisplay::penSegment(double dx1, double dy1, double dx2, double dy2, double lw) {
+  // Igual que fracRule pero con los dos extremos libres: gsave/grestore preserva la
+  // pluma y el grosor, y el color vigente es el del texto.
+  fprintf(file,
+          "gsave %f setlinewidth currentpoint newpath moveto %f %f rmoveto %f %f rlineto stroke grestore\n",
+          lw, dx1, dy1, dx2 - dx1, dy2 - dy1);
+}
+
 // §4.11 fase 2: barrido genérico por ángulo (mismo método que
 // PDFDisplay::hatchCurrentPath, no 4 procs PS fijos): centro + diagonal del
 // bbox del path activo (xmin..ymax, ya en dispositivo), líneas paralelas cada

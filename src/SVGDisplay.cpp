@@ -544,6 +544,14 @@ void SVGDisplay::fracRule(double dy, double len, double lw) {
             cur_x, cur_y + dy, len, colorBuf, lw);
 }
 
+void SVGDisplay::penSegment(double dx1, double dy1, double dx2, double dy2, double lw) {
+    // Como fracRule, con los dos extremos libres y sin tocar la pluma.
+    char colorBuf[10];
+    sprintf(colorBuf, "#%06X", dspstate.linecolor);
+    fprintf(file, "<path d=\"M %f %f L %f %f\" fill=\"none\" stroke=\"%s\" stroke-width=\"%f\"/>\n",
+            cur_x + dx1, cur_y + dy1, cur_x + dx2, cur_y + dy2, colorBuf, lw);
+}
+
 void SVGDisplay::dot(double x, double y, double r) {
     // r = RADIO del marcador en unidades de dispositivo (§4.6). La posición la
     // transforma el marco; el tamaño NO (físico). Relleno (disco) o contorno

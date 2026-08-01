@@ -524,6 +524,13 @@ void TextLine::draw(Display &g) {
       item->draw(g);
       continue;
     }
+    if (item->getType() == GI_ACCENT) {         // \hat/\vec: como Fraction, un hijo
+      double ps = static_cast<Accent *>(item.get())->preSpace();
+      if (ps != 0)
+        g.rmoveto(ps * g.getFontSize(), 0);
+      item->draw(g);
+      continue;
+    }
     if (item->getType() != GI_TEXT) {   // otros tipos futuros: se dibujan tal cual
       item->draw(g);
       continue;
@@ -609,6 +616,10 @@ double TextLine::itemWidth(GraphicsItem *g) {
     Fraction *f = static_cast<Fraction *>(g);
     return f->preSpace() + f->width();     // entradilla math + ancho de la fracción
   }
+  if (g->getType() == GI_ACCENT) {
+    Accent *ac = static_cast<Accent *>(g);
+    return ac->preSpace() + ac->width();
+  }
   return 0;   // otros tipos: fuera del modelo de línea
 }
 
@@ -656,6 +667,8 @@ static void childVExtent(GraphicsItem *g, double &ascent, double &descent) {
     static_cast<TextLine *>(g)->vExtent(ascent, descent);
   } else if (g->getType() == GI_FRACTION) {
     static_cast<Fraction *>(g)->vExtent(ascent, descent);
+  } else if (g->getType() == GI_ACCENT) {
+    static_cast<Accent *>(g)->vExtent(ascent, descent);
   }
 }
 
@@ -752,4 +765,78 @@ void Fraction::draw(Display &g) {
 
   // Átomo inline: deja la pluma avanzada por W para el siguiente elemento del renglón.
   g.rmoveto(W, 0);
+}
+
+// Composición \hat / \vec ---------------------------------------------------
+// La marca se DIBUJA (ver el comentario de la clase). Su tamaño se toma del ancho de
+// la base y no de una constante: sobre una letra ancha sale ancha, que es lo que en
+// TeX exige pedir \widehat aparte.
+static constexpr double kGlyphXHeight = 0.46;   // altura de la x aprox. (em)
+static constexpr double kAccGap    = 0.10;   // holgura base ↔ marca (em)
+static constexpr double kAccHeight = 0.14;   // alto del pico del circunflejo (em)
+static constexpr double kAccWidth  = 0.85;   // ancho de la marca, en fracción de la base
+static constexpr double kAccHead   = 0.28;   // largo de las barbas de \vec, en fracción del ancho
+
+double Accent::width() { return Fraction::childWidth(base.get()); }
+
+// Altura (em) a la que empieza la marca. Sale del extent MEDIDO de la base, con una
+// corrección: `childVExtent` usa kGlyphAscent, que es altura de MAYÚSCULA, porque no
+// hay métricas verticales por glifo (los mapas de la fuente solo dan ancho). Sobre una
+// minúscula sin ascendente —justo el caso de la física: n^, r^, v^— eso deja la marca
+// flotando un cuarto de em de más.
+//
+// La corrección es una heurística ACOTADA a propósito: solo cuando la base es UNA letra
+// suelta, sin script, y de las que no suben. Cualquier otra cosa (una mayúscula, una
+// palabra, algo con subíndice, una fórmula) conserva el extent completo, que nunca queda
+// corto. Es del mismo tipo que las tablas de acentos de TeX, sin serlo.
+static double accentBaseTop(GraphicsItem *g) {
+  double asc, desc;
+  childVExtent(g, asc, desc);
+  // Desenvuelve un TextLine de un solo hijo: parse_sub devuelve eso para `\hat{n}`.
+  if (g && g->getType() == GI_TEXTLINE) {
+    TextLine *tl = static_cast<TextLine *>(g);
+    g = (tl->length() == 1) ? tl->itemAt(0) : nullptr;
+  }
+  if (!g || g->getType() != GI_TEXT) return asc;
+  Text *t = static_cast<Text *>(g);
+  const std::string &str = t->getText();
+  if (str.size() != 1 || t->getState().script != 0) return asc;
+  static const std::string kSinAscendente = "acemnorsuvwxz";
+  if (kSinAscendente.find(str[0]) == std::string::npos) return asc;
+  return kGlyphXHeight * t->getState().font_size;
+}
+
+// El acento no cambia el ancho ni el descenso: solo sube el techo, que es lo que
+// necesita un \frac o un renglón que lo contenga para no encimarse.
+void Accent::vExtent(double &ascent, double &descent) {
+  childVExtent(base.get(), ascent, descent);
+  double top = accentBaseTop(base.get()) + kAccGap + kAccHeight;
+  if (top > ascent) ascent = top;            // la misma altura que usa draw()
+}
+
+void Accent::draw(Display &g) {
+  double fs = g.getFontSize();
+  double wb = Fraction::childWidth(base.get()) * fs;
+
+  // La base se dibuja tal cual y avanza la pluma; se vuelve con neto cero, igual que
+  // hace Fraction con cada uno de sus dos hijos.
+  if (base) base->draw(g);
+  g.rmoveto(-wb, 0);
+
+  double y  = accentBaseTop(base.get()) * fs + kAccGap * fs;   // encima del techo de la base
+  double wm = kAccWidth * wb;                // la marca sigue el ancho de la base
+  double x0 = (wb - wm) / 2.0;               // centrada sobre ella
+  double lw = fs * 0.045;                    // el mismo grosor que la raya de \frac
+
+  if (kind == HAT) {
+    g.penSegment(x0, y, x0 + wm/2, y + kAccHeight*fs, lw);
+    g.penSegment(x0 + wm/2, y + kAccHeight*fs, x0 + wm, y, lw);
+  } else {                                   // VEC: asta y dos barbas en la punta
+    double hy = kAccHeight * fs * 0.55;
+    g.penSegment(x0, y, x0 + wm, y, lw);
+    g.penSegment(x0 + wm, y, x0 + wm - kAccHead*wm, y + hy, lw);
+    g.penSegment(x0 + wm, y, x0 + wm - kAccHead*wm, y - hy, lw);
+  }
+
+  g.rmoveto(wb, 0);                          // átomo inline: la pluma queda avanzada
 }

@@ -37,10 +37,6 @@
 % COBERTURA EXCLUSIVA: es el único ejemplo con una SILUETA de revolución calculada, y
 % el único que dibuja un ángulo del espacio en su plano en vez de anotarlo en el
 % papel. También el único usuario de `acos` en el corpus.
-%
-% ⚠️ El sombrero de n^ va DIBUJADO con una polilínea: no hay `\hat` ni acentos
-% combinantes en el modo matemático (U+0302 no tiene glifo y el compilador lo descarta
-% con aviso). Es una carencia del lenguaje, no una decisión de la figura.
 
 % Encuadre medido sobre el render, no acotado a ojo: la tinta cae en
 % x −2.12..3.74, y −1.24..6.09.
@@ -151,11 +147,7 @@ font_size 12
 align "center"
 text("$dA$") { (pC[0]) (pC[1] + 0.2) }
 text("$d\Omega$", align="right") { (pD[0] - 0.05) (pD[1] + 0.05) }
-% El sombrero se dibuja (ver NOTAS), relativo al ancla del rótulo.
-nlx = pNt[0] - 0.32   nly = pNt[1] - 1.05
-text("$n$") { (nlx) (nly) }
-line_width 0.5
-polyline { (nlx - 0.24) (nly + 0.34)   (nlx - 0.13) (nly + 0.47)   (nlx - 0.02) (nly + 0.34) }
+text("$\hat{n}$") { (pNt[0] - 0.30) (pNt[1] - 1.05) }
 align "center"
 % `r` se aparta PERPENDICULARMENTE de su propia cota, en la página, así que sigue
 % puesta si se mueve la cámara.

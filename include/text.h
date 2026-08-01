@@ -151,6 +151,11 @@ public:
 
   size_t length() const { return textline.size(); }
 
+  // Acceso de solo lectura a un item, para las composiciones que necesitan mirar
+  // dentro de su hijo (Accent, que afina la altura de la marca sobre una letra
+  // suelta). No cede propiedad.
+  GraphicsItem *itemAt(size_t i) const { return i < textline.size() ? textline[i].get() : nullptr; }
+
   double width();
 
   // Extensión vertical (em, relativa al tamaño base): cuánto sube (ascent) y baja
@@ -228,10 +233,43 @@ public:
   void setPreSpace(double p) { pre_space = p; }
   double preSpace() const { return pre_space; }
 
+  // Ancho em de un hijo (Text/TextLine). Público porque `Accent` compone con la misma
+  // mecánica y mide igual; no hay razón para dos copias.
+  static double childWidth(GraphicsItem *g);
+
 private:
   std::unique_ptr<GraphicsItem> num, den;
   double pre_space = 0;
-  static double childWidth(GraphicsItem *g);   // ancho em del hijo (Text/TextLine)
+};
+
+
+/**
+   \hat{x}, \vec{x}: una marca DIBUJADA encima de su base.
+
+   Misma mecánica que Fraction —se compone inline en la pluma y la deja avanzada— con
+   un solo hijo. La marca no sale de la fuente A PROPÓSITO: un acento combinante tiene
+   avance cero y se posiciona con las tablas GPOS/MATH, que MG no parsea, así que el
+   código de posicionado hay que escribirlo de todos modos; tomándola de la geometría
+   se ahorra además tocar el subset de LM Math y la ruta PUA del PDF. Es el mismo
+   criterio con el que la raya de \frac es un trazo y no un glifo.
+*/
+class Accent : public GraphicsItem {
+public:
+  enum Kind { HAT, VEC };
+  Accent() : GraphicsItem(GI_ACCENT) { }
+  void draw(Display &) override;
+  void setBase(std::unique_ptr<GraphicsItem> b) { base = std::move(b); }
+  void setKind(Kind k) { kind = k; }
+
+  double width();                                    // = el ancho de la base (la marca no avanza)
+  void vExtent(double &ascent, double &descent);     // el de la base, con la marca sumada arriba
+  void setPreSpace(double p) { pre_space = p; }
+  double preSpace() const { return pre_space; }
+
+private:
+  std::unique_ptr<GraphicsItem> base;
+  Kind kind = HAT;
+  double pre_space = 0;
 };
 
 

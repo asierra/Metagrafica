@@ -126,6 +126,14 @@ public:
   // relativos (rmoveto/rlineto): cada backend la resuelve en su modelo nativo — el
   // currentpoint de PS, cur_x/cur_y en PDF/SVG. (plan_frac.md, Paso 4.)
   virtual void fracRule(double dy, double len, double lw)=0;
+  // Segmento relativo a la PLUMA, que no la mueve. Es `fracRule` generalizado a un
+  // trazo cualquiera, y existe porque la tipografía de MG dibuja lo que TeX también
+  // dibuja en vez de tomarlo de la fuente: la raya de \frac es un rule, y un acento
+  // (\hat, \vec) son dos o tres segmentos. Un acento combinante no serviría aunque
+  // estuviera en el subset — tiene avance CERO y se posiciona con las tablas
+  // GPOS/MATH de la fuente, y MG no tiene motor de shaping: habría que escribir el
+  // posicionado igual. Ver `Accent::draw`.
+  virtual void penSegment(double dx1, double dy1, double dx2, double dy2, double lw)=0;
 
   virtual void curveto(double x1, double y1, double x2, double y2, double x3, double y3)=0;
 
