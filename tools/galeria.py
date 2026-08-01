@@ -20,11 +20,19 @@ que sigue esta convención:
     % Dos a cinco líneas de qué es    ← descripción
     % y qué enseña del lenguaje.
     %
-    % NOTAS ------------------------  ← para quien mantiene; NO se publica
+    % NOTAS ------------------------  ← fuera de la DESCRIPCIÓN (no de la página)
     % ...
 
 Así no hay lista de descripciones que mantener aparte: el archivo se describe a sí
-mismo. Lo que sigue a "% NOTAS" nunca sale de aquí.
+mismo.
+
+⚠ PERO OJO CON LO QUE SE ESCRIBE EN «NOTAS»: quedan fuera de la descripción de la
+tarjeta y **SÍ SE PUBLICAN** dentro del desplegable, porque ahí va el fuente COMPLETO
+del .mg. Corregido el 2026-08-01: este docstring decía «nunca sale de aquí» y CLAUDE.md
+decía que la galería «descarta las NOTAS»; las dos frases eran ciertas de la
+descripción y falsas de la página (se comprobó buscando PROCEDENCIA y COBERTURA en
+docs/gallery.html, y están). Todo lo que va en NOTAS —procedencia, mediciones,
+arqueología— es cara pública.
 
 ⚠ En inglés NO hay de dónde sacarlo: los .mg están comentados en español (política
 del proyecto) y meterles un segundo encabezado los volvería ilegibles. Por eso las

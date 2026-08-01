@@ -3451,6 +3451,40 @@ la itálica del original, no Times-Italic.
 
 ---
 
+## 2026-08-01 (undecies) — La galería SÍ publica las NOTAS, y dos documentos decían lo contrario
+
+Salió de una pregunta de Alejandro —si un modelo menor podría escribir `push_broom` con la
+galería y la referencia como contexto— porque para contestarla había que saber qué lleva
+realmente una tarjeta.
+
+**Lleva el fuente COMPLETO**, `PROCEDENCIA`, `COBERTURA EXCLUSIVA` y las derivaciones incluidas.
+Comprobado buscando esas palabras en `docs/gallery.html`: están.
+
+Y dos documentos afirmaban lo contrario:
+
+- el docstring de `tools/galeria.py`: «lo que sigue a `% NOTAS` nunca sale de aquí»;
+- `CLAUDE.md`: «`tools/galeria.py` publica el título y la descripción, y **descarta las NOTAS**».
+
+Las dos frases son **ciertas de la descripción de la tarjeta y falsas de la página**. El código
+corta en `NOTAS` al extraer la descripción —eso sí— pero el desplegable emite el archivo entero.
+Es un fósil de la misma familia que los otros de esta semana: escrito cuando era verdad de lo
+único que había, y nunca revisado al añadir el bloque de fuente.
+
+⚠️ **La consecuencia práctica es lo que importa: todo lo que se escriba bajo `% NOTAS` es cara
+pública.** La limpieza del 2026-07-23 barrió la arqueología de los CUERPOS justificándose en que
+«sale impresa en la cara pública» — resulta que las NOTAS también.
+
+**Se revisó qué hay hoy ahí**, y sale limpio: de los 29 ejemplos, la única mención a material
+interno es un puntero a `PENDIENTES.md` en `primitives.mg`, que es archivo público del repo y
+apunta a deuda técnica reconocida. Nada confidencial se está publicando.
+
+📌 Y para la pregunta que lo originó: que las NOTAS se publiquen **mejora** las probabilidades de
+un modelo que lea la galería, porque se lleva las derivaciones y no solo la descripción. El
+experimento quedó afinado y anotado en `PENDIENTES.md`, con lo que de verdad mediría: no si
+compila, sino si **usa `plane3d`/`xyz()` o se calcula la proyección a mano**.
+
+---
+
 ## 2026-08-03 — `multietapa` al corpus: una biblioteca sin ejemplo no la compila nadie
 
 `examples/multietapa.mg` (reconstrucción de la fig. 1.25 de Lillesand, Kiefer & Chipman:

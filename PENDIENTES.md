@@ -473,6 +473,24 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
         que si llamara a `cono` tendría que recalcularlos — por eso se quedó con la receta inline
         y es el ejemplo al que §13 manda para VER la derivación. La biblioteca sirve a quien solo
         quiere la forma.
+- [ ] 🔬 **Experimento propuesto y NO corrido: ¿puede un modelo menor escribir una figura con
+      la GALERÍA?** (afinado 2026-08-01; la idea es del 2026-07-28, cuando dos modelos con la
+      referencia y con la bitácora eligieron herramientas distintas y salió la condición 4).
+      - **Sujeto sugerido: `push_broom`** (`richards_1-7`), porque tras el recuento de cobertura
+        es la figura que **no necesita nada nuevo**: plano de la escena + rayos sueltos +
+        anotación, las tres en la tabla de decisión de §13 y demostradas en las tres tarjetas
+        pseudo-3D, con sus trampas marcadas.
+      - **Dar:** `docs/gallery.html`, `docs/referencia.md`, la imagen objetivo, y un `bin/mg`
+        que pueda EJECUTAR. **No dar:** bitácora, `docs/plans/`, ni sesiones previas.
+      - 🔑 **Lo que mide no es «¿compila?» sino: ¿usa `view3d`/`plane3d`/`xyz()`, o se calcula la
+        proyección a mano con senos y cosenos y coloca los puntos ya proyectados?** Ése es el
+        análogo exacto del fallo de la condición 4 (elegir `world_window` en vez de `plot`), y es
+        lo que diría si la tabla de §13 **funciona** o solo está escrita.
+      - ⚠️ La variable que probablemente decide más que el modelo es si puede **ejecutar el
+        compilador**: sin eso cae donde cayeron los dos del 2026-07-28. Con eso, el aviso de
+        lienzo en blanco y los mensajes de error hacen de guía.
+      - Lo que **no** se espera de ningún modelo: elegir cámara y encuadre a nivel de corpus. Eso
+        pidió medir e iterar incluso pudiendo renderizar.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo

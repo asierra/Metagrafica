@@ -208,7 +208,11 @@ sigue sin usuario en el corpus. **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10
 con: **primera línea = título**, párrafo siguiente = **descripción** (2-5 líneas de qué es y
 qué enseña del lenguaje), y a partir de `% NOTAS ———` todo lo que le sirve a **quien
 mantiene** (procedencia bibliográfica, mediciones, verificadores, avisos de cobertura
-exclusiva). `tools/galeria.py` publica el título y la descripción, y **descarta las NOTAS**;
+exclusiva). `tools/galeria.py` publica el título y la descripción, y **deja las NOTAS fuera de la
+descripción de la tarjeta** —pero ⚠️ **NO fuera de la página**: el desplegable lleva el fuente
+COMPLETO, así que todo lo que se escriba bajo `% NOTAS` (procedencia, mediciones, arqueología)
+**es cara pública**. Corregido el 2026-08-01; antes esta línea decía «descarta las NOTAS», que
+era cierto de la descripción y falso de la página—;
 por eso un ejemplo nuevo aparece solo en la galería, sin lista que tocar, pero **un
 encabezado mal formado sale publicado**. La limpieza del 2026-07-23 barrió además la
 arqueología V1 de los cuerpos (`FPATRN`, `SCST/RTST`, `LWIDTH`…) y **todas** las referencias
