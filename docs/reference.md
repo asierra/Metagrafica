@@ -868,12 +868,17 @@ Mapa(scale=5, at=(0, 0.5), grid=false)      % globe of radius 5 centred at (0, 0
 
 The pieces of `pseudo3d.mg` are placed in **scene coordinates**, with `pos=`, and live under the current
 `view3d`. In `cono` and `cilindro`, `axis` is the vector going from `pos` to the other end: it carries both
-direction and length, so there is no height parameter.
+direction and length, so there is no height parameter. `prisma` also takes `ex`/`ey`/`ez`, the directions of its
+three edges, to set it **tilted**: they are given as vectors —the same style in which `plane3d` takes `u`
+and `v`— rather than as an angle, because an angle forces you to choose what to rotate about, and that
+depends on the figure.
 
 ```octave
 include "../lib/pseudo3d.mg"
 view3d(azimuth=-25, elevation=22)
 prisma(1.2, 0.8, 1.0, pos=[0, 0, 0])
+g = rad(14)                                  % the same box, tilted
+prisma(1.2, 0.8, 1.0, pos=[0, 1.4, 0], ex=[cos(g), sin(g), 0], ey=[-sin(g), cos(g), 0])
 cono(0.9, axis=[0, 3.2, 0], pos=[3.5, 0, 0])
 cilindro(0.85, axis=[2.4, 1.3, -0.6], pos=[6.5, 0.6, 0])
 ```
@@ -1206,4 +1211,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 271165eb9fd3ae487472b6674d940bfbc803ec7e -->
+<!-- translated-from: referencia.md @ 932feb31dab2ce3bf75b6c98e11e08648c5ac399 -->

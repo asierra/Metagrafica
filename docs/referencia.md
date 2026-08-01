@@ -888,12 +888,17 @@ Mapa(scale=5, at=(0, 0.5), grid=false)      % globo de radio 5 centrado en (0, 0
 
 Las piezas de `pseudo3d.mg` se colocan en **coordenadas de la escena**, con `pos=`, y viven bajo
 la `view3d` vigente. En `cono` y `cilindro`, `axis` es el vector que va de `pos` al otro extremo:
-lleva dirección y longitud juntas, así que no hay parámetro de altura.
+lleva dirección y longitud juntas, así que no hay parámetro de altura. `prisma` acepta además `ex`/`ey`/`ez`,
+las direcciones de sus tres aristas, para ponerlo **inclinado**: se dan como vectores —el mismo
+estilo con que `plane3d` toma `u` y `v`— y no como un ángulo, porque un ángulo obliga a elegir
+alrededor de qué, y eso depende de la figura.
 
 ```octave
 include "../lib/pseudo3d.mg"
 view3d(azimuth=-25, elevation=22)
 prisma(1.2, 0.8, 1.0, pos=[0, 0, 0])
+g = rad(14)                                  % la misma caja, inclinada
+prisma(1.2, 0.8, 1.0, pos=[0, 1.4, 0], ex=[cos(g), sin(g), 0], ey=[-sin(g), cos(g), 0])
 cono(0.9, axis=[0, 3.2, 0], pos=[3.5, 0, 0])
 cilindro(0.85, axis=[2.4, 1.3, -0.6], pos=[6.5, 0.6, 0])
 ```

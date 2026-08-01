@@ -289,8 +289,23 @@ figura, escrito una sola vez.
   se dibujan estas figuras. Dibujar lo lejano primero.
 - **Sin iluminación ni sombreado automático.** El sombreado de caras se sigue eligiendo a mano
   (`prisma` ya lo hace con tres grises).
-- **Sin perspectiva**, de entrada. Es la misma función con un divisor más; se añade si una figura
-  la pide, no antes.
+- **Sin perspectiva**, y ⚠️ **CORREGIDO el 2026-08-01: NO es «la misma función con un divisor
+  más»**, como decía este plan. Es caro por dos razones estructurales, y conviene no
+  re-litigarlo:
+  - `plane3d` cuesta **cero cambios de backend** porque la proyección restringida a un plano es
+    **afín**, y `Matrix::ellipse_frame` es su forma cerrada. Bajo perspectiva el centro de un
+    círculo **no** va al centro de su elipse imagen: se rompe «un `circle` sale como la elipse
+    exacta», que es la mejor propiedad de todo este diseño.
+  - Y no hay dónde apoyarse: los tres backends solo aceptan matrices **afines de 6 elementos**
+    (`concat` de PostScript, `matrix()` de SVG, `HPDF_Page_Concat`). **Ningún lenguaje de página
+    tiene transformación proyectiva.** Habría que transformar punto por punto en el motor, lo
+    que sirve para polilíneas pero **no** para arcos y elipses, que los backends trazan
+    nativamente desde el marco.
+
+  Es el mismo error de estimación que este plan cometió con la silueta (que resultó no pedir
+  motor), pero al revés: allí sobreestimó, aquí subestima. 📌 La figura que la pediría —`fig2-7b`,
+  cuya pantalla es un trapecio con el punto de fuga EN el cristal— se decidió dejar fuera del
+  corpus en vez de pagar esto (medición en `PENDIENTES.md`).
 - **Sin recorte por volumen.** La escena se proyecta a las coordenadas del documento y ahí acaba;
   no hay ventana 3-D.
 - **Sin 3-D de verdad.** Ver el aviso 🚧 del encabezado: eso es Blender.

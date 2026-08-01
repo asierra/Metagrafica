@@ -41,19 +41,31 @@
 %   lo que dan `view3d` con elevación positiva o la oblicua con `angle` entre 0 y 90).
 %   Con la cámara del otro lado hay que reordenar: es MODELADO, no algo que la
 %   biblioteca pueda adivinar sin un z-buffer.
-struct prisma(w, h, d, pos=[0,0,0],
+% ORIENTACIÓN: `ex`, `ey` y `ez` son las direcciones de las tres aristas, y por default
+% son los ejes del mundo. Se dan como vectores —el mismo estilo con el que `plane3d`
+% toma `u` y `v`— en vez de como un ángulo, porque un ángulo obliga a elegir alrededor
+% de QUÉ, y la respuesta depende de la figura: una caja puede estar inclinada respecto
+% del haz, respecto de la vertical o respecto de la línea de visión.
+%
+% ⚠️ NO se comprueba que sean ortonormales. Si no lo son sale un paralelepípedo
+%   oblicuo, que a veces es justo lo que se quiere; la biblioteca no tiene por qué
+%   decidir eso. Lo que SÍ hay que cuidar es el orden de pintado (ver abajo).
+struct prisma(w, h, d, pos=[0,0,0], ex=[1,0,0], ey=[0,1,0], ez=[0,0,1],
               frente=gray(0.85), techo=gray(0.7), lado=gray(0.55),
               contorno="black", lw=0.6) {
     px = pos[0]   py = pos[1]   pz = pos[2]
+    ax = w*ex[0]   ay = w*ex[1]   az = w*ex[2]      % arista de ancho
+    bx = h*ey[0]   by = h*ey[1]   bz = h*ey[2]      % arista de alto
+    cx = d*ez[0]   cy = d*ez[1]   cz = d*ez[2]      % arista de profundidad
     line_width lw
-    % techo (y = py+h), extendido hacia atrás en profundidad
-    { plane3d(at=[px, py+h, pz], u=[w, 0, 0], v=[0, 0, d])
+    % techo (la cara desplazada por la arista de alto), extendido en profundidad
+    { plane3d(at=[px+bx, py+by, pz+bz], u=[ax, ay, az], v=[cx, cy, cz])
       polygon(fill=techo, color=contorno) { 0 0  1 0  1 1  0 1 } }
-    % costado derecho (x = px+w)
-    { plane3d(at=[px+w, py, pz], u=[0, 0, d], v=[0, h, 0])
+    % costado (la cara desplazada por la arista de ancho)
+    { plane3d(at=[px+ax, py+ay, pz+az], u=[cx, cy, cz], v=[bx, by, bz])
       polygon(fill=lado, color=contorno) { 0 0  1 0  1 1  0 1 } }
-    % frente (z = pz+d): la cara más cercana, al final
-    { plane3d(at=[px, py, pz+d], u=[w, 0, 0], v=[0, h, 0])
+    % frente (la cara desplazada por la profundidad): la más cercana, al final
+    { plane3d(at=[px+cx, py+cy, pz+cz], u=[ax, ay, az], v=[bx, by, bz])
       polygon(fill=frente, color=contorno) { 0 0  1 0  1 1  0 1 } }
 }
 

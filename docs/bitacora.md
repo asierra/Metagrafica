@@ -3376,3 +3376,75 @@ pasa contra el del repo.
 otras dos: el harness de errores compilando solo a SVG, y §13 sin una sola referencia a un
 ejemplo). El patrón que las une es que **ninguna fallaba**: había que preguntarles qué estaban
 mirando.
+
+---
+
+## 2026-08-01 (decies) — `fig2-7b`: el original no es coherente consigo mismo, y se queda fuera
+
+Alejandro señaló que las dos piezas pseudo-3D de la figura están simuladas de formas distintas, y
+que la pantalla no es un paralelogramo en un espacio afín. **Las dos cosas son ciertas, y se
+midieron.**
+
+### La medición
+
+Con las dos aristas verticales de la pantalla bien localizadas (mi primer intento las buscó con
+extremos de `x±y` y capturó otra tinta — dio 0.845, y **estaba mal**):
+
+| | |
+|---|---|
+| lado lejano | 415 px |
+| lado cercano | 602 px |
+| **razón** | **0.689** (un paralelogramo daría 1.000) |
+| aristas superior / inferior | −28.54° / +28.80° — **convergen** |
+| **punto de fuga** | **(353, 366)** |
+| el cristal ocupa | x 300..439, y 320..449 |
+| centro de la pantalla | y = 368 |
+
+📌 **El punto de fuga cae DENTRO del cristal, a la altura exacta del centro de la pantalla.** La
+pantalla está construida como la ve el punto de dispersión: la perspectiva no es adorno, es el
+cono de difracción abriéndose. Y el cristal, en cambio, es un paralelepípedo afín.
+
+O sea que **el original mezcla dos geometrías proyectivas en la misma figura**. Es el hallazgo de
+la Fase C un nivel más abajo —allí eran dos *cámaras* distintas (73.3° contra 35.0°), aquí son
+dos *geometrías*— y de él se sigue que **ninguna escena coherente puede reproducirlo**. Eso es
+propiedad de la fuente, no límite de MG.
+
+### Se intentó la versión afín, y quedó mejor
+
+Midiendo razones contra el alto de la pantalla, el port tenía: la pantalla corta para la escena
+(1.06 contra 0.885 del original), poco profunda (0.238 contra 0.284), las láminas **más bajas**
+que la pantalla cuando el original las tiene **más altas** (0.80 contra 1.055), el lienzo
+demasiado ancho (1.717 contra 1.243), el cristal chico, gris y sin girar, y dos rótulos
+encabalgados. Todo eso se corrigió.
+
+Para el giro del cristal, **`prisma` ganó orientación**: `ex`/`ey`/`ez`, las direcciones de sus
+tres aristas, en el mismo estilo con que `plane3d` toma `u` y `v`. Se dan como vectores y no como
+un ángulo **porque un ángulo obliga a elegir alrededor de qué**, y la respuesta depende de la
+figura. El giro tampoco es adorno: la lámina es *poli*cristalina, así que el cristalito orientado
+al azar es lo que la figura dice.
+
+**Decisión de Alejandro: no entra al corpus.** Queda una sola diferencia y es la que un motor
+afín no puede dar. Lo pulido se conserva en `local/`; si algún día entra, entrará por la figura y
+no por cobertura. El hueco de `lib/pseudo3d.mg` sigue abierto.
+
+### El bug que salió por el camino, y por qué no se arregló
+
+Los rótulos del port salían en redonda contra la itálica del original. La causa: **`font
+"italic"` como SENTENCIA es un no-op mudo**. `text(..., font="italic")` funciona; la sentencia
+no, y **no avisa** (`font "noexiste"` sí avisa), así que dos maneras de escribir lo mismo dan
+resultados distintos y una calla.
+
+Causa exacta: `TextStmt::exec` hornea `FN_DEFAULT` cuando no hay `font=` por-primitiva, y eso
+gana sobre la cara ambiente; solo se hereda con `FN_NOFACE`, que es como nacen los rótulos de
+`axis`/`legend`. El comentario del código lo justificaba como «idéntico al comportamiento
+previo» — inercia, no decisión.
+
+⚠️ **El arreglo obvio se probó y NO es seguro:** cambiar el default a `FN_NOFACE` da `fail=30`,
+`c3fail=2` e `imgfail=9`. Y no viene de los tres ejemplos que usan la sentencia —`fig4-4`,
+`symbols` y `turning_points` piden `roman`/`Times-Roman`, o sea el default, así que ahí el no-op
+es invisible—. Viene de otro sitio, y **que rompa la paridad entre backends** es lo que obliga a
+averiguar de dónde antes de tocarlo. Revertido y anotado.
+
+En la figura se resolvió por la vía correcta y de paso mejor: los rótulos son símbolos, así que
+van en **modo matemático** (`$L$`, `$O$`, `$R$`, `$P$`) y salen de LM Math — que es exactamente
+la itálica del original, no Times-Italic.

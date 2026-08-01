@@ -421,6 +421,41 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       - 🔎 Queda la duda de si `polygon(&p)` debería **avisar** cuando el trayecto trae aritmética
         3k+1 de Bézier. Sería un aviso con falsos positivos (un trayecto de 4 puntos es legítimo
         como polígono), así que probablemente no; se anota para no re-litigarlo.
+- [ ] 📐 **`fig2-7b` NO entra al corpus, y la razón está MEDIDA** (2026-08-01, decisión de
+      Alejandro). Se pulió la versión afín —proporciones, láminas, cristal, rótulos— y quedó
+      mejor; lo que la deja fuera es una sola cosa, y es la que un motor afín no puede dar.
+      **No re-diagnosticar: aquí están los números.**
+      - La pantalla del original es un **TRAPECIO**, no un paralelogramo. Con las dos aristas
+        verticales bien localizadas: lado lejano 415 px contra 602 del cercano → **razón
+        0.689** (un paralelogramo daría 1.000), y las aristas superior e inferior a −28.54° y
+        +28.80°, o sea que **convergen**.
+      - 📌 **El punto de fuga cae en (353, 366) y el cristal ocupa x 300..439, y 320..449**: el
+        punto de fuga está DENTRO del cristal, a la altura exacta del centro de la pantalla
+        (368). La pantalla está construida como la ve **el punto de dispersión** — la
+        perspectiva tiene sentido físico, es el cono de difracción abriéndose.
+      - ⚠️ **El original mezcla dos geometrías proyectivas**: el cristal es un paralelepípedo
+        afín y la pantalla es perspectiva de un punto. Es el hallazgo de la Fase C un nivel más
+        abajo (allí eran dos CÁMARAS distintas, 73.3° contra 35.0°). **Ninguna escena coherente
+        puede reproducirlo**, y eso es propiedad de la fuente, no límite de MG.
+      - ⚠️ Mi primera medición dio 0.845 y **estaba mal**: identifiqué las esquinas con extremos
+        de `x±y` y capturaron otra tinta. El número bueno es 0.689.
+      - Lo pulido se conserva en `local/simulate3d/fig2-7b-v3.mg`. Si algún día entra, entra por
+        la figura, no por cobertura.
+- [ ] 🐞 **`font "italic"` como SENTENCIA es un no-op MUDO** (hallado 2026-08-01 puliendo
+      `fig2-7b`). `text(..., font="italic")` funciona; `font "italic"` no hace nada **y no
+      avisa** —`font "noexiste"` sí avisa—, así que dos maneras de escribir lo mismo dan
+      resultados distintos y una calla. Es la clase de bug que el proyecto ya cerró tres veces.
+      - **Causa exacta:** `TextStmt::exec` (`parserv3.cpp`) hornea `FN_DEFAULT` cuando no hay
+        `font=` por-primitiva, y eso GANA sobre la cara ambiente; solo se hereda con
+        `FN_NOFACE`, que es como nacen los rótulos de `axis`/`legend`. El comentario del código
+        lo justificaba como «idéntico al comportamiento previo», o sea inercia, no decisión.
+      - ⚠️ **El arreglo obvio NO es seguro, y está medido:** cambiar el default a `FN_NOFACE` da
+        **`fail=30`, `c3fail=2` e `imgfail=9`**. Y no viene de los tres ejemplos que usan la
+        sentencia (`fig4-4`, `symbols`, `turning_points` piden `roman`/`Times-Roman`, o sea el
+        default: ahí el no-op es invisible). Viene de otro lado y hay que averiguar de dónde
+        antes de tocarlo — que rompa la PARIDAD ENTRE BACKENDS es lo que más pesa.
+      - **Rodeo mientras tanto:** para símbolos, el modo matemático (`$L$`) es además lo
+        correcto —salen de LM Math, no de Times-Italic—; para prosa, `text(..., font="italic")`.
 - [ ] 🕳️ **`lib/pseudo3d.mg` sigue SIN CLIENTE en el corpus** (anotado 2026-08-01). Cuatro piezas
       —`prisma`, `lamina`, y desde hoy `cono` y `cilindro`— committeadas, instaladas por
       `make install` y documentadas en §12 y §13 de la referencia, y **ningún ejemplo las
@@ -429,9 +464,10 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       - **Cobertura parcial conseguida hoy:** el bloque ```octave de §12 las invoca, así que
         `docfail` verifica que **parsean y evalúan**. Lo que no verifica es el DIBUJO — para eso
         hace falta un golden, o sea una figura.
-      - **Las candidatas son las dos aparcadas:** `fig2-7b` (usa `prisma` y `lamina`; pospuesta
-        porque la figura aún no convence) y `fig18-5` (usaría `cilindro`). Cualquiera de las dos
-        cierra el hueco; ninguna es urgente.
+      - **Las candidatas siguen siendo dos, y una ya se descartó:** `fig2-7b` **no entra**
+        (ver el ítem de arriba, con la medición), y queda `fig18-5`, que usaría `cilindro`.
+        Ninguna es urgente. Desde hoy `prisma` acepta orientación (`ex`/`ey`/`ez`), así que la
+        biblioteca tiene una pieza más que nadie compila.
       - ⚠️ **Y una limitación que salió al extraer:** una struct de MG **no puede devolver lo que
         calculó**. `irradiancia` necesita los puntos de tangencia para colocar el rótulo de φ, así
         que si llamara a `cono` tendría que recalcularlos — por eso se quedó con la receta inline
