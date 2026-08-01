@@ -312,11 +312,30 @@ Los rayos y los segmentos que cruzan planos. **Criterio:** el abanico de rayos d
 `richards_1-7`, del sensor a las celdas del suelo. Y, cerrando A+B, el rayo difractado de
 `fig2-7b` aterrizando **sobre** el anillo por construcción, no por ajuste.
 
-### Fase C — reescribir `lib/pseudo3d.mg` sobre el espacio
-`plano` **se retira**: es `plane3d`. `prisma` se reescribe como estrategia D —sus tres caras
-son tres planos de la escena— y gana una posición 3-D en vez de un `at=` 2-D. **Criterio:**
-`fig10-2v3` y `fig2-7b-v3` se reproducen —calibradas contra sus `.png` como ya lo estaban— y
-**cambiar la cámara mueve todo junto**, que es la prueba de que el refactor sirvió de algo.
+### ✅ Fase C — reescribir `lib/pseudo3d.mg` sobre el espacio — HECHA 2026-07-31
+`plano` **se retiró**: era `plane3d` con menos generalidad. `prisma` se reescribió como
+estrategia D —sus tres caras son tres planos de la escena— y toma `pos=[x,y,z]` en vez de un
+`at=` 2-D (`at=` sigue siendo palabra de colocación de la struct, §8). Entró además `lamina`,
+la placa de una sola cara con trama, que es lo que pedían las láminas policristalinas.
+
+⚠️ **Corrección al criterio que decía este plan:** `fig10-2v3` **no usa la biblioteca** —tiene
+su propio `shear` y sus propias structs—, así que el único cliente y único oráculo es
+`fig2-7b-v3`. Y ahí **0 px era imposible por construcción**, no por falta de cuidado: las
+piezas de esa figura no compartían cámara, y se puede medir —la pantalla (`plano k=0.3`)
+recedía a **73.3°** y el cristal (`prisma a=35`) a **35.0°**, treinta y ocho grados de
+diferencia—. Meterlas en una escena común OBLIGA a cambiar el dibujo; ese cambio *es* el
+arreglo. (Contrástese con `angulo_solido`, que sí dio 0 px porque ya era escena-derivada.)
+
+📌 **Y el puerto salió MÁS FIEL al original publicado.** Una pantalla perpendicular al haz es
+un plano y-z, y en las dos proyecciones el eje y va vertical en la página: la pantalla tiene
+lados **verticales** y arriba/abajo inclinados, que es lo que muestra `meta/fig2-7b.png` y lo
+contrario de lo que producía `plano`. La pieza llevaba años girada 90° en carácter respecto de
+su fuente, y nadie lo había visto porque no había con qué compararla.
+
+**Criterio cumplido:** la cámara de la figura se **despejó del `.png`** (borde de la pantalla →
+`angle=44°`; razón del anillo → `foreshorten=0.375`, dos medidas independientes que caen sobre
+la misma cámara), y la figura compila con `gs` y paridad geométrica bajo **cuatro cámaras
+distintas**, dos de ellas axonométricas — que la versión anterior no podía ni expresar.
 
 ### Fase D — documentar en `docs/referencia.md`
 Sección nueva con la convención de ejes (§4.1), las dos proyecciones, `plane3d`, `xyz()` y el
