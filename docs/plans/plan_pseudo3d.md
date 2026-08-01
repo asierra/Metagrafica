@@ -1,15 +1,31 @@
 # Plan para simulación pseudo-3D (2.5D) en MG V3
 
-> **Reescrito el 2026-07-28.** El plan anterior (2026-07-12) daba una **biblioteca de
-> piezas**; las figuras que ahora lo piden necesitan un **espacio compartido**. Sus fases 0-2
-> están hechas y siguen siendo válidas —`lib/pseudo3d.mg`, `fig10-2v3`, `fig2-7b-v3`
-> compilan hoy—; lo que cambia es que la **Fase 3, que se difirió como especulativa, pasa a
-> ser el núcleo**, porque ya tiene clientes concretos.
+> **Actualizado el 2026-07-31.** La revisión del 2026-07-28 derivaba todo su diseño de **tres
+> clientes abstractos** del libro de Percepción Remota (Fig. I.2, II.11, II.10) que nadie había
+> visto, y de ahí sacaba una sola necesidad —malla de suelo + rayos—, una sola adición al motor
+> y un orden de fases que la seguía. Ahora hay **nueve figuras concretas** (`local/simulate3d/meta/`)
+> y **no piden todas lo mismo**: dentro de una misma figura la pantalla y el prisma son
+> estrategias distintas, dos figuras de libros distintos son la misma, y en varias más de la
+> mitad del dibujo es anotación 2-D que ya se sabe hacer. Lo que cambia: entra la **§2 nueva**
+> (vocabulario de estrategias + tabla figura×estrategia), se cierran las cuatro decisiones que
+> §7 dejaba abiertas, y **son dos las adiciones al motor, no una**.
+>
+> De la revisión anterior sigue en pie todo lo demás: las fases 0-2 del plan de 2026-07-12
+> están hechas (`lib/pseudo3d.mg`, `fig10-2v3`, `fig2-7b-v3` compilan hoy) y son el punto de
+> partida, no trabajo perdido.
 
 Objetivo: dar soporte fiel a la ilustración científica 2.5D —planos que receden, prismas,
-pantallas inclinadas, mallas de terreno— manteniendo la filosofía 2D del lenguaje: espacio
-isométrico por construcción (§3.1), ortogonalidad forma/posición, y la regla sagrada
-`Subpath ::= (Coord Coord)+` **intacta**.
+pantallas inclinadas, mallas de terreno, esferas reticuladas— manteniendo la filosofía 2D del
+lenguaje: espacio isométrico por construcción (§3.1), ortogonalidad forma/posición, y la regla
+sagrada `Subpath ::= (Coord Coord)+` **intacta**.
+
+🚧 **Y el límite del objetivo, dicho de una vez para no volver a discutirlo:** todo esto es
+**simulación** de 3-D hecha en 2-D. Figuras que se *ven* tridimensionales porque su geometría
+se calculó en el espacio, no una escena tridimensional. Si algún día hace falta 3-D de verdad
+—superficies ocultas, iluminación, cámara libre, mallas densas— eso es **Blender** u otra
+herramienta, y **MG no la va a sustituir**. El valor de MG aquí es que la figura sale de un
+`.mg` de treinta líneas que se lee, se versiona y se recompila; no que compita con un motor de
+render.
 
 ---
 
@@ -32,101 +48,242 @@ es un **espacio**.
 
 ---
 
-## 2. Los clientes (por qué esto deja de ser especulación)
+## 2. Las figuras y lo que pide cada una
 
-La regla del proyecto es no construir sin una figura que lo pida. Ahora las hay, y son de dos
-fuentes: varias del libro de mecánica cuántica, y las del curso de Percepción Remota
-(`Libro_PR_P.pdf`). Las que fijan el requisito:
+La regla del proyecto es no construir sin una figura que lo pida. Estas son las nueve, en
+`local/simulate3d/meta/`:
 
-| figura | qué exige |
+| archivo | figura |
 |---|---|
-| **Fig. I.2** — generación de una imagen multiespectral | escena en el suelo, rayos al sensor, **pila de planos** espectrales recediendo |
-| **Fig. II.11** — arreglo bidimensional de detectores | arreglo en un plano, óptica, **escena como malla** con franjas |
-| **Fig. II.10** — medida de varios CIV en bandas | **la que rompe el diseño actual**, ver abajo |
+| `fig10-2.png` | planos paralelos que receden, con cotas (IMQ) |
+| `fig2-7b.png` | difracción de electrones: láminas, cristal, pantalla, anillo (IMQ) |
+| `fig18-5.png` | sección eficaz: triada x/y/z, blanco, detector cilíndrico, dΩ (IMQ) |
+| `lira_II-1_senal_u_onda_electromagnetica.png` | E y B senoidales en planos perpendiculares |
+| `lira_II-4_proyeccion_del_angulo_solido.png` | esfera de meridianos y paralelos |
+| `lira_II-7_esquema_de_la_ley_de_la_irradiancia.png` | cono de ángulo sólido sobre una superficie |
+| `richards_1-6_image_formation_by_mechanical_line_scann.png` | escáner de línea: suelo, rayos, rejillas |
+| `richards_1-7_image_formation_by_push_broom_scanning.png` | push-broom: suelo, abanico de rayos |
+| `waves.png` | senoide rellena sobre una malla de suelo |
 
-**Fig. II.10 es el caso decisivo**, por dos razones que `plano`/`prisma` no pueden cubrir:
+*(Las Fig. I.2 / II.11 / II.10 del libro de PR que citaba la revisión anterior siguen siendo
+clientes plausibles, pero **no hay imagen a la vista** y por tanto no gobiernan el diseño: lo
+que pedían —malla de suelo y rayos— lo piden ya `richards_1-6` y `1-7`, que sí se pueden
+verificar.)*
 
-1. **El suelo es una malla**: decenas de líneas cuyos extremos comparten la misma proyección. No
-   es una «pieza» con contorno — lo que importa es la retícula. Precomputarla a mano es inviable.
-2. **Los rayos unen un punto en el aire con una celda del suelo.** Ese segmento **no pertenece a
-   ninguna forma**: no hay `plano` ni `prisma` al que colgarlo. Necesita que **ambos extremos
-   sean nombrables en el espacio de la escena**.
+### 2.1 Seis estrategias, porque no es una sola cosa
+
+| | estrategia | mecanismo | ¿motor nuevo? |
+|---|---|---|---|
+| **A** | **Plano de la escena** | `plane3d(at=, u=, v=)`: un dibujo 2-D corriente vive en un plano del espacio. Un `circle` sobre él sale como la **elipse exacta** (§3.2). | `plane3d` |
+| **B** | **Puntos y rayos sueltos** | `xyz(x,y,z)`: segmentos y mallas cuyos extremos **no pertenecen a ninguna pieza** — un rayo del sensor a una celda del suelo. | `xyz()` |
+| **C** | **Curva y relleno en un plano** | A + los generadores de siempre: dentro de un `plane3d`, `sine`/`smooth`/`bezier`/`polygon` funcionan sin enterarse (§4.4). | ninguno |
+| **D** | **Sólido de caras planas** | N polígonos de A, pintados **de atrás a adelante**. Es lo que hace `prisma` hoy. | ninguno (`lib/`) |
+| **E** | **Silueta de revolución** | cono/cilindro = dos círculos de A + sus **dos tangentes comunes**. | geometría nueva → **diferida, §5 Fase F** |
+| **F** | **Anotación en el papel** | arcos de ángulo, cotas, flechas, rótulos, contornos a mano alzada. | **ya existe** |
+
+📌 **F merece su renglón aunque exista, y por dos razones.** Primera: es **más de la mitad** de
+`richards_1-6`, `richards_1-7` y `fig18-5` —el sensor, las rejillas de salida, las flechas
+curvas, los rótulos—, así que reconocerla es lo que mantiene chico el alcance de todo lo demás.
+Segunda: **no se sube a la escena**. Un arco que marca φ se dibuja en el papel, porque el
+ángulo entre dos direcciones proyectadas **no** es la proyección del ángulo 3-D (familia
+`plan_anisotropia.md`); en las figuras publicadas ese arco es decorativo, y pretender
+calcularlo sería entrar en la familia por la puerta grande.
+
+### 2.2 La tabla
+
+| figura | A | B | C | D | E | F | lo que la hace particular |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|---|
+| `fig10-2` | ● | ● | | | | ● | Planos **xy** a distintas z. Las cotas y las líneas de enlace punteadas van **sin proyectar**. Ya compila (`fig10-2v3.mg`, con `shear`). |
+| `fig2-7b` | ● | ● | | ● | | ● | **Cuatro estrategias en una figura**, y por eso es el mejor caso de integración. Pantalla y láminas = A; **anillo = círculo sobre la pantalla** → elipse exacta (hoy `ellipse(0.6, 1.3)`, medida contra el `.png`); **cristal = D**; haz y rayo difractado = B, y **P tiene que caer sobre el anillo**. |
+| `lira_II-1` (onda EM) | ● | | ● | | | ● | E en el plano **xy**, B en el **xz**, propagación en x. Los peines punteados y sus flechas **viven cada uno en el plano de su onda** → son 2-D, no necesitan `xyz()`. |
+| `waves` | ● | | ● | | | ● | Misma estrategia que `lira_II-1`, más dos cosas: **relleno partido en los cruces por cero** (dos colores, un `polygon` por medio ciclo) y **orden de pintado** — las medias ondas tapan la malla y se tapan entre sí. |
+| `lira_II-4` (ángulo sólido) | ● | ● | | | | ● | **A en bruto**: ~14 círculos de la escena = 14 elipses exactas, en dos `for`. Meridiano de longitud λ = plano `u=[cos λ,0,sin λ] v=[0,1,0]`; paralelo de latitud β = plano `at=[0,R·sin β,0] u=[1,0,0] v=[0,0,1]` con radio `R·cos β`. Sin oclusión en el original. Radios ρ y r punteados = B. |
+| `richards_1-6` (line scan) | ● | ● | | | | ● | Suelo = plano **xz**; celda resaltada = rectángulo del suelo; rayos IFOV/FOV = B. **Sensor, rejillas, flechas curvas y rótulos son F.** |
+| `richards_1-7` (push broom) | ● | ● | | | | ● | **Misma estrategia que `1-6`** + abanico de rayos en un `for`. Una sola figura de prueba cubre las dos. |
+| `lira_II-7` (irradiancia) | ● | ● | | | **●** | ● | dA y dΩ = discos de la escena; ΔP = parche plano; **la superficie irregular es un `smooth` del papel (F), no 3-D**. Falta **E** para la silueta del cono. |
+| `fig18-5` (sección eficaz) | ● | ● | | | **●** | ● | Triada de ejes = tres segmentos B + rótulos (la forma **mínima** del `box_axis` diferido); blanco y dΩ = A; **detector cilíndrico = E**. ⚠️ Los rótulos `x`/`y`/`z` **son contenido de la figura**, no el marco de la escena: con la convención de §4.1 no coinciden, y confundirlos costaría una figura mal armada. |
+
+### 2.3 Lo que la tabla hace visible
+
+- **`lira_II-1` ≡ `waves`** → C. Idéntica estrategia; `waves` solo añade relleno y orden de
+  pintado.
+- **`richards_1-6` ≡ `richards_1-7`** → B. Una figura de prueba cubre las dos.
+- **`lira_II-7` ≡ `fig18-5`** → E, y por eso **se difieren juntas**: comparten la única pieza
+  que pide geometría nueva.
+- **Dentro de `fig2-7b`: pantalla = A, cristal = D.** Son estrategias distintas dentro de un
+  mismo dibujo — que es precisamente lo que el plan anterior no tenía dónde registrar.
+- **A y F aparecen en las nueve.** Eso, y no la malla de suelo, es lo que fija el orden de las
+  fases (§5).
+
+⚠️ **Antes de reintentar `fig18-5`:** su original V1, `local/simulate3d/fig19-5.mg`, abre con
+`%% OJO Las matrices de transformacion trabajan mal`. Esa figura ya había topado con esto en
+1998; conviene mirar qué le fallaba antes de rehacerla, no después.
 
 ---
 
 ## 3. El límite concreto que justifica tocar el motor
 
-El plan anterior puso la barra, y conviene citarla porque se cumple exactamente:
+El plan de 2026-07-12 puso la barra, y conviene citarla porque se cumple exactamente:
 
 > *«Solo se consideraría subir algo a builtin si un límite concreto del lenguaje lo impide, y se
 > anotaría aquí antes de hacerlo.»*
 
-**El límite: MG no tiene funciones de usuario.** Tiene `struct`, y una struct **dibuja**, no
-**devuelve**. Así que una función que proyecte `(x,y,z)` a un punto **no puede escribirse en un
-`.mg`**. Es la única pieza que obliga a bajar al compilador — y es pequeña.
+### 3.1 El límite: MG no tiene funciones de usuario
+
+Tiene `struct`, y una struct **dibuja**, no **devuelve**. Así que una función que proyecte
+`(x,y,z)` a un punto **no puede escribirse en un `.mg`**. Es la pieza que obliga a bajar al
+compilador, y es pequeña: `xyz()`.
 
 ✅ **Y lo que NO hace falta cambiar, verificado el 2026-07-28:** un bloque de coordenadas **ya
 acepta términos que valen un punto** (una lista de dos), que es lo que hace `point_at(&p, t)` y
 lo que ejercita `examples/path_sample.mg`. Por tanto la gramática **no se toca** y la regla
 sagrada `Subpath ::= (Coord Coord)+` queda intacta.
 
+### 3.2 Y una segunda pieza, que resultó ser la más barata de las dos
+
+**Una elipse del motor ya *es* un círculo proyectado.** `Matrix::ellipse_frame` (`matrix.cpp`)
+entrega centro + **semidiámetros conjugados** `u, v`, con `P(t) = C + u·cos t + v·sin t`. Esa
+es, literalmente, la forma cerrada de la proyección ortográfica de un círculo del espacio: `u`
+y `v` son las proyecciones de la base del plano, escaladas por el radio. Y los tres backends
+**ya consumen esa forma** — es lo que quedó de la reconstrucción de arcos y elipses del
+2026-07-27.
+
+📌 **Consecuencia:** una sentencia `plane3d` que empuje la matriz del plano hace que un
+`circle(r)` sobre un plano de la escena salga como **la elipse exacta**, con **cero cambios en
+los backends**. Se implementa como un `Stmt` que reusa `OPMPUSH`/`Transform` igual que ya hace
+la sentencia de transformación (`parserv3.cpp`), más `g_flags.using_ellipse = true` como hace
+`shear`. No hace falta una op nueva de `Matrix` ni tocar `matrix.h`.
+
+Es la pieza con **más clientes de todo el plan (9 de 9 figuras)** y la más barata. Sin ella,
+cada elipse se sigue midiendo a ojo, como hoy en `fig2-7b-v3.mg`. Con ella, el anillo de
+difracción, los catorce círculos de `lira_II-4`, los discos dA y dΩ y el parche ΔP salen de la
+geometría y no de la regla.
+
+**Corolario:** bajo `plane3d`, el `from`/`to` de un `arc` sigue siendo **ángulo del plano**, no
+de la página. O sea que recortar un círculo de la escena —dibujar solo la mitad que se ve— es
+el mismo truco cerrado que ya usa `orbita_polar`, sin medir nada sobre el dibujo.
+
 ---
 
 ## 4. Diseño
 
-Dos piezas, y todo lo demás sigue igual.
+Dos sentencias y una función; todo lo demás sigue igual.
 
-### 4.1 `view3d` — la cámara, como sentencia de estado con alcance
+### 4.1 Convención de ejes: `z` es la PROFUNDIDAD
+
+**x a la derecha, y arriba, z hacia el observador.** El plano del papel es **xy**.
+
+Se eligió así (2026-07-31) porque hace que **`view3d(azimuth=0, elevation=0)` sea la
+identidad**: la vista frontal de `fig10-2` y `fig2-7b` —donde la cara que importa conserva su
+forma real— es el caso por default, sin caso especial. El suelo de `richards_1-6/1-7` y de
+`waves` es entonces el plano **xz**, y una altura es `y`.
+
+⚠️ Es la primera pregunta que hará quien lo use, así que va **en `docs/referencia.md`** cuando
+se documente (§5, Fase D). Y ojo con `fig18-5`: los rótulos `x`/`y`/`z` de esa figura son de la
+física que ilustra, **no** de este marco.
+
+### 4.2 `view3d` — la cámara, como sentencia de estado con alcance
 
 Igual que `translate`/`rotate`: vale desde donde aparece hasta el fin del bloque. **No** como
 atributo por-primitiva (no duplicar el concepto, misma decisión que tomó el plan anterior).
 
+<!-- ilustrativo: sintaxis que aún NO existe -->
 ```octave
-view3d(azimuth=35, elevation=25)          % axonométrica (ortográfica)
-view3d(type="oblique", angle=45, foreshorten=0.5)   % caballera/gabinete
+view3d(azimuth=35, elevation=25)                     % axonométrica (ortográfica)
+view3d(type="oblique", angle=45, foreshorten=0.5)    % caballera/gabinete
 ```
 
-**Dos proyecciones, porque el corpus tiene las dos:**
+**Dos proyecciones, porque el corpus tiene las dos.** Con la convención de §4.1:
 
-- **Axonométrica ortográfica** — la de las figuras del libro de PR. Con acimut θ y elevación φ:
+- **Axonométrica ortográfica** — la de las figuras de PR y de `lira_II-4`. Acimut θ (giro sobre
+  la vertical) y elevación φ (cámara levantada sobre el plano horizontal):
 
-      X = −x·sin θ + y·cos θ
-      Y = −(x·cos θ + y·sin θ)·sin φ + z·cos φ
+      X = x·cos θ + z·sin θ
+      Y = y·cos φ + (x·sin θ − z·cos θ)·sin φ
+
+  Comprobaciones que tienen que salir: **θ=φ=0 ⇒ identidad**; θ=0, φ=90° ⇒ vista en planta
+  (`X=x`, `Y=−z`); θ=90°, φ=0 ⇒ vista desde +x (`X=z`, `Y=y`).
 
 - **Oblicua (caballera/gabinete)** — la de `fig10-2` y `fig2-7b`: la cara frontal conserva su
-  forma real y la profundidad recede a un ángulo `angle` con factor `foreshorten` (1 = caballera,
-  0.5 = gabinete). Es lo que `lib/pseudo3d.mg` hace hoy con `shear`.
+  forma real y la profundidad recede a un ángulo `angle` con factor `foreshorten` (1 =
+  caballera, 0.5 = gabinete). Lo lejano es `z < 0` y recede hacia `angle`:
 
-⚠️ **Decisión pendiente (§7):** si son un solo constructo con `type=` o dos sentencias. Recomiendo
-uno solo: la figura declara *una* cámara y no debería poder tener dos semánticas activas.
+      X = x − z·f·cos(angle)
+      Y = y − z·f·sin(angle)
 
-### 4.2 `xyz(x, y, z)` — un punto del espacio de la escena
+  El plano xy **siempre** conserva su forma, sea cual sea `angle`. Es lo que `lib/pseudo3d.mg`
+  hace hoy con `shear`.
 
-Función del evaluador que devuelve el punto 2-D proyectado con la `view3d` vigente:
+**Una sola sentencia con `type=`, no dos** (decisión 2026-07-31): la figura declara *una*
+cámara y no debería poder tener dos semánticas activas.
+
+### 4.3 `plane3d` — dibujar en un plano de la escena
+
+Sentencia de estado con alcance, como `translate`. Empuja la matriz que lleva las coordenadas
+locales del plano a la página, con la `view3d` vigente:
+
+<!-- ilustrativo: sintaxis que aún NO existe -->
+```octave
+plane3d(at=[x,y,z], u=[ux,uy,uz], v=[vx,vy,vz])
+```
+
+`at` es el origen local; `u` y `v` son los dos vectores del plano y **llevan la escala**: el
+local `(0,0)` cae en `at`, el `(1,0)` en `at+u` y el `(0,1)` en `at+v`. Defaults: `at=[0,0,0]`,
+`u=[1,0,0]`, `v=[0,1,0]` — o sea, el plano del papel.
 
 ```octave
 view3d(azimuth=35, elevation=25)
 
-% la malla del suelo: dos renglones
-for i = 0 to n {
-    polyline { xyz(i*d, 0, 0)   xyz(i*d, m*d, 0) }
-    polyline { xyz(0, i*d, 0)   xyz(n*d, i*d, 0) }
+% la pantalla ES un plano del espacio, y el anillo un círculo SOBRE ella
+{ plane3d(at=[8,0,0], u=[0,0,1], v=[0,1,0])
+  rectangle { 0 0  1.4 4.2 }
+  circle(0.6) { 0.7 2.1 }            % → la elipse EXACTA, sin medir
 }
 
+% los meridianos de una esfera: catorce elipses en dos renglones
+for k = 0 to 6 {
+    lam = k * pi / 7
+    { plane3d(u=[cos(lam), 0, sin(lam)], v=[0, 1, 0])   circle(R) { 0 0 } }
+}
+```
+
+### 4.4 Lo que sale gratis, y el footgun que trae
+
+📌 **Dentro de un `plane3d`, el dibujo 2-D corriente sigue funcionando.** `sine()`, `smooth`,
+`bezier`, `polygon` relleno, `place` de una struct: todo se proyecta solo, porque lo único que
+cambió es la matriz vigente. Por eso **`lira_II-1` y `waves` no necesitan muestrear nada a
+mano y no necesitan `xyz()`**: cada onda es un `sine()` corriente dentro de su plano, y cada
+medio ciclo relleno es un `polygon` cerrado sobre el eje.
+
+⚠️ **Y de ahí sale el footgun.** `xyz()` devuelve un punto **ya proyectado**, en coordenadas del
+documento. Dentro de un bloque `plane3d` se transformaría **dos veces**. La regla, que va a la
+referencia junto con la sintaxis:
+
+> `xyz()` se usa **fuera** de todo `plane3d`. Dentro de un `plane3d` se dibuja en coordenadas
+> locales del plano.
+
+### 4.5 `xyz(x, y, z)` — un punto del espacio de la escena
+
+Función del evaluador que devuelve el punto 2-D proyectado con la `view3d` vigente. Es para lo
+que **no pertenece a ningún plano**: los rayos.
+
+```octave
+view3d(azimuth=35, elevation=25)
+
 % un rayo: óptica → celda del suelo. No pertenece a ninguna «pieza».
-polyline { xyz(0, 0, altura)   xyz(3*d, 5*d, 0) }
+polyline { xyz(0, h, 0)   xyz(3*d, 0, 5*d) }
 
 % y todo lo demás sigue funcionando sin enterarse
-text("CIV") { xyz(3*d, 5*d, 0) }
-place(Detector, at=(xyz(0, 0, altura)))
+text("CIV") { xyz(3*d, 0, 5*d) }
+place(Detector, at=(xyz(0, h, 0)))
 ```
 
 📌 **Lo que se gana no es sintaxis, es que la cámara pasa a ser un PARÁMETRO.** Cambias
 `elevation` y la malla, los rayos y las piezas se mueven juntos. Es la misma propiedad que ganó
-`orbita_polar` el 2026-07-27 al derivar la órbita de kilómetros: el número que gobierna la figura,
-escrito una sola vez.
+`orbita_polar` el 2026-07-27 al derivar la órbita de kilómetros: el número que gobierna la
+figura, escrito una sola vez.
 
-### 4.3 Lo que este plan NO incluye
+### 4.6 Lo que este plan NO incluye
 
 - **Sin z-buffer ni superficies ocultas.** Orden de pintado = orden de escritura, que es como ya
   se dibujan estas figuras. Dibujar lo lejano primero.
@@ -134,31 +291,67 @@ escrito una sola vez.
   (`prisma` ya lo hace con tres grises).
 - **Sin perspectiva**, de entrada. Es la misma función con un divisor más; se añade si una figura
   la pide, no antes.
-- **Sin recorte por volumen.**
+- **Sin recorte por volumen.** La escena se proyecta a las coordenadas del documento y ahí acaba;
+  no hay ventana 3-D.
+- **Sin 3-D de verdad.** Ver el aviso 🚧 del encabezado: eso es Blender.
 
 ---
 
 ## 5. Fases
 
-### Fase A — `view3d` + `xyz()` en el evaluador
-Lo mínimo para que las mallas y los rayos existan. **Criterio de aceptación:** reproducir la
-malla del suelo de Fig. II.10 con el `for` de arriba, y un haz de rayos de la óptica a celdas
-concretas. Sin biblioteca todavía.
+El orden lo fija la tabla de §2.2, no la malla de suelo: **A y F aparecen en las nueve
+figuras**, y A es además la más barata (§3.2).
 
-### Fase B — reescribir `lib/pseudo3d.mg` sobre el espacio
-`plano` y `prisma` dejan de hornear la proyección y **calculan sus vértices con `xyz()`**. Ganan
-una posición 3-D en vez de un `at=` 2-D. **Criterio:** `fig10-2v3` y `fig2-7b-v3` se reproducen
-—calibradas contra sus `.png` como ya lo estaban— y **cambiar la cámara mueve todo junto**, que
-es la prueba de que el refactor sirvió de algo.
+### Fase A — `view3d` + `plane3d`
+Las dos que todo necesita. **Criterio de aceptación: `lira_II-4`** — los ~14 círculos generados
+en dos `for`, todos elipses exactas, y **cambiar `elevation` los mueve juntos**. Es el caso
+puro: cero `xyz()`, cero números medidos.
 
-### Fase C — las figuras del libro entran al corpus
-Con encabezado a la convención de 2026-07-23. Ahí ganan goldens en tres backends, `docs/img`,
-galería y paridad geométrica. ⚠️ Hoy `local/simulate3d/` **no está trackeado**: mientras siga así,
-nada vigila estas figuras.
+### Fase B — `xyz()`
+Los rayos y los segmentos que cruzan planos. **Criterio:** el abanico de rayos de
+`richards_1-7`, del sensor a las celdas del suelo. Y, cerrando A+B, el rayo difractado de
+`fig2-7b` aterrizando **sobre** el anillo por construcción, no por ajuste.
 
-### Fase D — diferidas
-Perspectiva; jaula 3-D con ejes y marcas (`box_axis`); líneas ocultas discontinuas. Ninguna la
-pide el corpus.
+### Fase C — reescribir `lib/pseudo3d.mg` sobre el espacio
+`plano` **se retira**: es `plane3d`. `prisma` se reescribe como estrategia D —sus tres caras
+son tres planos de la escena— y gana una posición 3-D en vez de un `at=` 2-D. **Criterio:**
+`fig10-2v3` y `fig2-7b-v3` se reproducen —calibradas contra sus `.png` como ya lo estaban— y
+**cambiar la cámara mueve todo junto**, que es la prueba de que el refactor sirvió de algo.
+
+### Fase D — documentar en `docs/referencia.md`
+Sección nueva con la convención de ejes (§4.1), las dos proyecciones, `plane3d`, `xyz()` y el
+footgun del doble transform. ⚠️ Va en la **referencia**, no aquí: ahí los bloques ```octave los
+compila `docfail` (`tools/docblocks.py`), mientras que a `docs/plans/` **no lo mira ninguna
+compuerta** —`test/run.sh` solo le pasa `referencia.md` y `reference.md`—, y por eso los
+ejemplos de este documento van marcados como ilustrativos. Al cerrar: traducir `reference.md`
+o re-sellar su hash (compuerta `trfail`).
+
+### Fase E — figuras al corpus, **selectivo**
+
+⚠️ **No entran las siete, y el plan anterior lo decía mal.** Tres frenos:
+
+- **`local/` es confidencial a propósito** (`.gitignore`: «figuras de artículos sin publicar…
+  se queda aquí por confidencialidad»). Los `.png` de referencia **nunca** salen de ahí. El
+  precedente del corpus (`franck_condon`, `turning_points`, `fig4-4`) es que la **reproducción**
+  sí entra, con su procedencia en el encabezado; el escaneo, no.
+- **Una figura entra por cobertura de MOTOR, no de tema** — la regla que dejó fuera a
+  `efectos_atmosfera` y que metió a `elevacion_solar`. Recomendación: **tres**, no siete —
+  `lira_II-4` (única usuaria de A en bruto), `richards_1-7` (única de B), `waves` (única de C,
+  y la única que ejercita el orden de pintado). Las demás se quedan en `local/`.
+- **Nomenclatura:** un ejemplo del corpus **no puede llamarse `lira_II-4`**. El número de figura
+  solo se usa cuando la edición es verificable por un lector (Cambridge 2025); si no, va
+  **nombre de la física**: `angulo_solido`, `push_broom`, `onda_3d`.
+
+Lo que entre gana goldens en tres backends, `docs/img`, galería y paridad geométrica, con
+encabezado a la convención de 2026-07-23.
+
+### Fase F — diferidas
+- **Silueta de revolución** (estrategia E): cono/cilindro = dos círculos de A + sus dos
+  tangentes comunes. La piden `lira_II-7` y `fig18-5`, y **se difieren juntas** porque comparten
+  exactamente esta pieza. Es lo único del plan que necesita geometría nueva (tangencia desde un
+  punto a una elipse proyectada, en forma cerrada o con una aproximación documentada).
+- Perspectiva; jaula 3-D con ejes y marcas (`box_axis`; su forma **mínima** —tres segmentos
+  rotulados— ya la cubre B en `fig18-5`); líneas ocultas discontinuas.
 
 ---
 
@@ -168,40 +361,61 @@ pide el corpus.
 por la matriz de mundo sin problema. Pero en cuanto se calcule una **dirección**, una
 **perpendicular** o un **radio** en el espacio de la escena, se entra de lleno en la familia
 «fórmula isótropa aplicada al caso anisótropo»: la tangente de una curva 3-D proyectada **no** es
-la proyección de la tangente 3-D salvo casos particulares. Leer ese plan antes de que `xyz()`
-crezca hacia marcadores orientados o normales.
+la proyección de la tangente 3-D salvo casos particulares. **El caso concreto que ya está en la
+tabla es el arco de φ** de `lira_II-7` y `fig18-5`: es estrategia F —se dibuja en el papel,
+decorativo— y **no** debe intentar medir el ángulo del espacio. Leer ese plan antes de que
+`xyz()` crezca hacia marcadores orientados o normales.
 
-⚠️ **Esto AÑADE sintaxis antes de congelar la gramática** (condición 1 del 1.0). Es legítimo por
-la regla de demanda —hay figuras que lo piden—, pero conviene decidir los nombres **con el mismo
-cuidado que los de §13**, porque después del 1.0 renombrar cuesta una migración.
+⚠️ **`plane3d` tiene que encender `using_ellipse`**, como ya hace `shear`, o el EPS sale
+byte-estable y **revienta al interpretarse** (`/undefined in ellipse`). Es exactamente la clase
+de bug para la que existe la compuerta `psfail`, así que está cubierta — pero es lo primero que
+hay que comprobar al escribir la sentencia.
+
+⚠️ **Ceros residuales y portabilidad.** La matriz de un plano sale de trigonometría y sus
+términos llegan a los mismos sitios de `snap_zero` que ya usan `rotate` y `shear` (el marco de
+elipse en EPS, `deviceRotate` en PDF, el SVD en SVG). **No es una clase de riesgo nueva** —hay
+que *verificarlo* en la Fase A, no rediseñar nada—, pero sí es de las que ningún golden caza,
+porque el golden se genera en una sola plataforma. Ver la nota de `CLAUDE.md` sobre la
+identidad byte a byte Linux/Windows.
+
+⚠️ **Esto AÑADE sintaxis antes de congelar la gramática** (condición 1 del 1.0), y ahora son
+**dos** sentencias y una función, no una. Es legítimo por la regla de demanda —hay nueve figuras
+que lo piden—, pero conviene decidir los nombres **con el mismo cuidado que los de §13**, porque
+después del 1.0 renombrar cuesta una migración.
 
 ⚠️ **El footgun de siempre:** un identificador desnudo seguido de `(` se parsea como llamada a
 función. En coordenadas, parentizar la variable: `(dx) (h+dy)`.
 
 ---
 
-## 7. Decisiones pendientes (nombres y forma)
+## 7. Decisiones tomadas (2026-07-31)
 
-Antes de escribir código, con el mismo criterio que se usó en §13 —comparar con lo que ya usa
-todo el mundo—:
+Las cuatro que §7 dejaba abiertas, cerradas con el mismo criterio que se usó en §13 —comparar
+con lo que ya usa todo el mundo—:
 
-1. **`xyz(x,y,z)` vs `point3(x,y,z)` vs `p3(x,y,z)`.** La casa usa nombres descriptivos
-   (`point_at`, `angle_at`, `path_width`), lo que empujaría a `point3`. Pero en un bloque de
-   coordenadas se lee mejor lo corto: `polyline { xyz(0,0,0) xyz(1,0,0) }`. Recomiendo **`xyz`**.
-2. **`view3d` vs `camera` vs `scene3d`.** `view3d` describe lo que hace —fija el punto de
-   vista— sin sugerir que abre un ámbito de escena.
-3. **Una sentencia con `type=` o dos.** Recomiendo una.
-4. **Nombres de los ejes.** ¿`z` es la vertical (convención de terreno, y la que piden estas
-   figuras) o la profundidad (convención de pantalla)? Elegir y documentarlo en la referencia:
-   es la primera pregunta que hará quien lo use.
+1. **`xyz(x,y,z)`**, no `point3` ni `p3`. La casa usa nombres descriptivos (`point_at`,
+   `angle_at`, `path_width`), lo que empujaría a `point3`; pero en un bloque de coordenadas se
+   lee mejor lo corto: `polyline { xyz(0,0,0) xyz(1,0,0) }`.
+2. **`view3d`**, no `camera` ni `scene3d`: describe lo que hace —fija el punto de vista— sin
+   sugerir que abre un ámbito de escena. Y **`plane3d`** por simetría con él.
+3. **Una sola sentencia con `type=`** para las dos proyecciones. Una figura declara *una*
+   cámara.
+4. **`z` = profundidad**, x derecha, y arriba (§4.1). Se eligió por la identidad en
+   `azimuth=0, elevation=0`, que hace del caso frontal el default y no un caso especial.
+
+Y una quinta, que el plan anterior no tenía planteada:
+
+5. **Son dos adiciones al motor, no una:** `xyz()` **y** `plane3d`. La segunda resultó ser la
+   más barata de las dos y la de más clientes (§3.2).
 
 ---
 
 ## 8. Lo que sigue vigente del plan anterior
 
 - **La cizalla ya es ciudadana de primera clase** (`shear` §11.1, `transform=` §17); no hace
-  falta construirla.
+  falta construirla. Es lo que sostiene `fig10-2v3` hoy.
 - **Nomenclatura:** no llamar `isometric(...)` a nada. El motor ya es «isométrico por
   construcción» (§3.1) y reusar el término confunde.
 - **Fases 0-2 hechas:** `lib/pseudo3d.mg`, `fig10-2v3.mg` y `fig2-7b-v3.mg` compilan y están
-  calibradas. Son el punto de partida de la Fase B, no trabajo perdido.
+  calibradas. Son el punto de partida de la Fase C, no trabajo perdido — con la corrección de
+  que `plano` **desaparece** en esa fase, absorbida por `plane3d`.

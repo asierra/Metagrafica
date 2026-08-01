@@ -2695,3 +2695,72 @@ ubicación instalada —`orbita_polar`, `gravitacion_orbita` (dos `../lib/`), `f
 `curvas3.mg`) y `elevacion_solar` **desde otro cwd**, que confirma que `g_baseDir` sale de la ruta
 del archivo y no del cwd—. `uninstall` refleja todo y deja `share/doc` (compartido) intacto. Solo se
 tocó el `Makefile`; el motor y los ejemplos quedaron sin cambiar, así que no movió ningún golden.
+
+---
+
+## 2026-07-31 — `plan_pseudo3d.md`: nueve figuras en vez de tres clientes abstractos
+
+Sesión de **documento, no de motor** (`ok=78 … docfail=0` sin moverse; único archivo tocado
+además de este, `docs/plans/plan_pseudo3d.md`).
+
+El plan de pseudo-3D derivaba todo su diseño de tres figuras del libro de Percepción Remota
+(Fig. I.2, II.11, II.10) **que nadie había visto**, y de ahí sacaba una sola necesidad —malla de
+suelo + rayos—, una sola adición al motor (`xyz()`) y un orden de fases que la seguía. Alejandro
+juntó **nueve imágenes** en `local/simulate3d/meta/` con las figuras que se aspira a poder hacer,
+y al mirarlas una por una **no piden todas lo mismo**. El plan no tenía dónde registrar eso, así
+que se le añadió una §2 con un **vocabulario de seis estrategias (A–F) y una tabla
+figura×estrategia**.
+
+📌 **Lo que la tabla hace visible, y era el punto:** dentro de `fig2-7b` la **pantalla y el
+cristal son estrategias distintas** (plano de la escena vs. sólido de caras); `lira_II-1` y
+`waves`, de libros distintos, son **la misma**; `richards_1-6` y `1-7` también, así que una sola
+figura de prueba cubre las dos; y `lira_II-7` con `fig18-5` comparten la única pieza que pide
+geometría nueva, así que **se difieren juntas**. También aparece que en tres figuras **más de la
+mitad del dibujo es anotación 2-D que ya se sabe hacer** (estrategia F) — reconocerlo es lo que
+mantiene chico el alcance de todo lo demás.
+
+**Hallazgo que cambió el diseño: una elipse del motor YA ES un círculo proyectado.**
+`Matrix::ellipse_frame` entrega centro + semidiámetros conjugados `P(t) = C + u·cos t + v·sin t`,
+que es literalmente la forma cerrada de la proyección ortográfica de un círculo del espacio (`u`,
+`v` = proyecciones de la base del plano por el radio), y los tres backends **ya la consumen**
+desde la reconstrucción de arcos del 2026-07-27. Consecuencia: una sentencia `plane3d` que empuje
+la matriz del plano hace que `circle(r)` sobre un plano de la escena salga como **la elipse
+exacta, con cero cambios en los backends** — se implementa reusando `OPMPUSH`/`Transform` como ya
+hace la sentencia de transformación, más `using_ellipse` como hace `shear`. Es la pieza **más
+barata del plan y la de más clientes (9 de 9 figuras)**: sin ella cada elipse se sigue midiendo a
+ojo, como hoy en `fig2-7b-v3.mg` (`ellipse(0.6, 1.3)`, calibrada contra el `.png`). Por eso las
+adiciones al motor pasaron de una a **dos** (`xyz()` **y** `plane3d`) y el orden de fases se
+invirtió: primero el plano, después los rayos.
+
+**Corolario gratis:** dentro de un `plane3d` el dibujo 2-D corriente funciona sin enterarse
+(`sine`, `smooth`, `polygon` relleno, `place`), así que `lira_II-1` y `waves` **no necesitan
+muestrear nada a mano ni usar `xyz()`**. ⚠️ Y de ahí el footgun a documentar: `xyz()` devuelve un
+punto **ya proyectado**, o sea que dentro de un `plane3d` se transformaría **dos veces**.
+
+**Decisión de ejes: `z` = PROFUNDIDAD** (x derecha, y arriba, z hacia el observador), no `z`
+vertical. La razón es que hace de **`view3d(azimuth=0, elevation=0)` la identidad**: la vista
+frontal de `fig10-2`/`fig2-7b` —donde la cara que importa conserva su forma real— queda como el
+caso por default y no como un caso especial. El suelo de `richards`/`waves` es entonces el plano
+**xz**. ⚠️ Ojo con `fig18-5`: sus rótulos `x`/`y`/`z` son de la física que ilustra, no de este
+marco. Con eso quedan cerradas las cuatro decisiones que §7 dejaba abiertas (`xyz`, `view3d`,
+una sola sentencia con `type=`, y los ejes).
+
+⚠️ **Se corrigió también la fase «las figuras entran al corpus», que estaba mal escrita.** No
+entran las siete: `local/` es confidencial **a propósito** (`.gitignore`: «figuras de artículos
+sin publicar»), y el precedente del corpus (`franck_condon`, `turning_points`, `fig4-4`) es que
+entra la **reproducción** con su procedencia en el encabezado, nunca el escaneo. Y una figura
+entra por cobertura **de motor**, no de tema —la regla que dejó fuera a `efectos_atmosfera`—, así
+que la recomendación es **tres**: `lira_II-4` (única usuaria del plano en bruto, ~14 círculos en
+dos `for`), `richards_1-7` (única de los rayos) y `waves` (única del relleno en un plano y del
+orden de pintado). Con nombre de la física (`angulo_solido`, `push_broom`, `onda_3d`): el número
+de figura solo se usa cuando la edición es verificable por un lector, y estas no lo son.
+
+🚧 **Y una frase de alcance que faltaba, dicha por Alejandro y ahora escrita en el encabezado del
+plan:** todo esto es *simulación* de 3-D hecha en 2-D. Si algún día hace falta 3-D de verdad, eso
+es Blender u otra herramienta, y **MG no la va a sustituir**. El valor de MG aquí es que la figura
+sale de un `.mg` que se lee, se versiona y se recompila — no competir con un motor de render.
+
+⚠️ **Los bloques ```octave de este plan son ILUSTRATIVOS** (sintaxis que aún no existe) y van
+marcados como tales, porque a `docs/plans/` **no lo mira ninguna compuerta**: `test/run.sh` solo
+le pasa `referencia.md` y `reference.md` a `docblocks.py`. Por eso la documentación de verdad es
+una fase aparte del plan, en la referencia, donde `docfail` sí la compila.
