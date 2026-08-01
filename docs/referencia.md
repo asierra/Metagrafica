@@ -205,7 +205,7 @@ sobre el dibujo ni partir la curva a mano.
 % Órbita de semiejes a, b concéntrica con un globo de radio R. El tramo oculto es el
 % que va por detrás Y cae dentro del disco; los cruces salen de |P(t)|² = R².
 s  = sqrt((R*R - a*a)/(b*b - a*a))
-tc = atan2(s, sqrt(1 - s*s)) * 180/pi           % = asin(s), en grados
+tc = deg(asin(s))                               % el semiángulo, en grados
 arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % se salta el tramo t ∈ (180−tc, 180+tc)
 ```
 
@@ -402,14 +402,24 @@ xs = [0, 1.5, 3, 4.5]                  % lista
 primero = xs[0]
 ```
 
-**Funciones:** `sin` `cos` `tan` `atan2(y,x)` `sqrt` `abs` `exp` `ln` `mod(a,b)` `len(lista)`
-`str(x)` `str(x,decimales)` `gray(g)`. Los ángulos van en **radianes** (`cos(a*pi/180)`).
+**Funciones:** `sin` `cos` `tan` `asin` `acos` `atan` `atan2(y,x)` `sqrt` `abs` `exp` `ln`
+`mod(a,b)` `deg(radianes)` `rad(grados)` `len(lista)` `str(x)` `str(x,decimales)` `gray(g)`.
 Constantes: `pi`, `true`, `false`.
 
-> **No hay `asin` ni `acos`**, pero `atan2` los expresa: el arcoseno de `s` es
-> `atan2(s, sqrt(1-s*s))`, y el arcocoseno, `atan2(sqrt(1-s*s), s)`. Con eso se resuelven en
-> el `.mg` los ángulos de una construcción geométrica —por ejemplo dónde recortar un arco
-> ([§4](#4-primitivas))— en vez de medirlos sobre el dibujo.
+Las trigonométricas trabajan en **radianes**, y los ángulos de las primitivas (`arc`, `rotate`,
+`view3d`…) en **grados**: `deg` y `rad` son el puente, y conviene usarlas en vez de multiplicar
+a mano por `180/pi` — llevan la misma constante que el compilador, así que un ángulo escrito
+por ti y uno calculado por él no pueden separarse en el último dígito.
+
+Con `asin`/`acos` se resuelven **en el `.mg`** los ángulos de una construcción geométrica —por
+ejemplo dónde recortar un arco ([§4](#4-primitivas))— en vez de medirlos sobre el dibujo.
+
+> ⚠️ **`sqrt`, `asin`, `acos` y `ln` ABORTAN fuera de su dominio**, diciendo qué valor
+> recibieron. Es deliberado: fuera de rango no dan un resultado raro, dan `NaN`, y un `NaN` que
+> entra en una coordenada se propaga sin ruido hasta el archivo de salida. Si tu construcción
+> puede salirse por redondeo, o porque el caso límite es legítimo —un arco que queda entero
+> oculto—, acota tú el valor antes: es lo que hace `angulo_solido` con su recorte a [−1, 1], y
+> esa saturación **es** la geometría, no un parche.
 
 **Operadores:** `+ - * / ^`, comparación `== != < <= > >=`, lógicos `and` `or` `not`.
 
@@ -1165,5 +1175,6 @@ foreshorten=)` · `plane3d(at=, u=, v=)` · función `xyz(x, y, z)`
 **Gráficas** · `plot` `xaxis` `yaxis` `axis` `rule` `legend`/`entry` `table`/`row` `grid`
 `numbers` `ticks`
 
-**Funciones** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` `xyz`
+**Funciones** · `sin` `cos` `tan` `asin` `acos` `atan` `atan2` `sqrt` `abs` `exp` `ln` `mod`
+`deg` `rad` `len` `str` `gray` `xyz`
 · constantes `pi` `true` `false`

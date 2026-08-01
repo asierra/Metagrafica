@@ -3028,3 +3028,76 @@ Se consideraron las dos formas de marcar que ésta es «de las 3-D». Ninguna se
 La distinción se puso donde un lector la consume: un **grupo editorial** «Escenas pseudo-3D» en
 la galería, que es el mecanismo que ya existía para esto y que costó una entrada en `GRUPOS`.
 Queda además junto a §13 de la referencia, que es a donde salta quien vea la tarjeta.
+
+---
+
+## 2026-08-01 (quater) — `asin`/`acos`/`atan`, `deg`/`rad`, y la guarda que faltaba en `sqrt`
+
+Salió de una pregunta de Alejandro —«¿valdría la pena implementar `acos` y simplificar el
+código de algunas figuras?»— y la respuesta corta es sí, pero **no por lo que la pregunta
+suponía**. El ahorro de código es de dos líneas en todo el corpus. La razón real es otra.
+
+### El rodeo no era feo, era inseguro
+
+La referencia **enseñaba** el rodeo en §14: «no hay `asin` ni `acos`, pero `atan2` los
+expresa». Medido:
+
+```
+q = 1.3
+t = atan2(sqrt(1 - q*q), q)     →  <circle cx="-nan" cy="-nan">, exit 0
+```
+
+`sqrt` no tenía guarda de dominio —`ln` sí—, así que `sqrt(negativo)` devolvía NaN callando,
+`atan2` lo propagaba y las coordenadas salían `-nan` con **código 0 y archivo escrito**. Es
+exactamente el modo de falla que `evalError` se volvió fatal para eliminar el 2026-07-15,
+sobreviviendo en este rincón. En la prueba solo lo delató el aviso de lienzo en blanco, y
+porque *todo* era NaN; con un punto malo entre cien no habría dicho nada.
+
+O sea que la documentación estaba recomendando la forma insegura de escribir un ángulo. Eso es
+lo que decidió el cambio, no la legibilidad.
+
+Entran entonces **`asin`, `acos`** (con guarda de dominio al estilo de `ln`), **`atan`** de un
+argumento —`atan2(y,1)` lo expresa, pero quien lo busca lo busca por su nombre— y la **guarda de
+`sqrt`**, que es la que cierra la clase entera y no solo este rodeo. Se eligió error DURO y no
+tolerar un −1e−16 de redondeo: la cultura del proyecto es que el autor acote a mano cuando la
+geometría lo pide (el `clamp` de `angulo_solido` es justo eso, y **es** geometría, no un parche).
+El corpus entero pasa con la guarda puesta, que es la evidencia de que no hay falsos positivos
+hoy.
+
+### `deg` y `rad`, con la constante del motor
+
+Quince conversiones `* 180 / pi` escritas a mano en el corpus, **diez en una sola figura**.
+Entran `deg` y `rad` usando `deg2rad` de `matrix.h` —la misma constante que usa el compilador,
+no una copia—, que fue la condición que puso Alejandro y resultó ser más que higiene.
+
+### Lo que destapó: el nº de segmentos de un arco lo decidía el ruido
+
+Al portar `angulo_solido` a `deg`/`rad` la salida se movió, y no por donde se esperaba. El SVG
+salió **byte-idéntico** en las dos figuras; el PDF de `angulo_solido` no: un meridiano pasó de
+**3 segmentos de Bézier a 2**.
+
+La causa es que `arc_bezier` usa `ceil(|barrido| / 90)`, de modo que un arco de **exactamente
+180°** cae justo en la frontera. Con `v0 = psi − 90` y `v1 = psi + 90`, la resta
+`(psi+90) − (psi−90)` **no** da 180 exacto en coma flotante para cualquier `psi`: daba
+`180.00000000000003`, y ese ε de más pedía un tercer segmento. Con `deg()` el barrido sale
+exacto y quedan dos, que es lo que la regla pretende.
+
+Medido con `tools/ver.sh --diff` (mismo formato, piso de ruido 0 px): **471 px**, todos
+antialiasing a lo largo de esa única curva, sub-píxel. El dibujo es el mismo. Anotado en
+`PENDIENTES.md` junto al ítem de las constantes de Mortensen, porque es del mismo vecindario:
+si algún día se toca `arc_bezier`, ahí está el argumento de que esa frontera merece un epsilon.
+
+📌 Vale la pena quedarse con la forma del hallazgo: **el tercer segmento era un accidente**, y
+por casualidad daba un poco más de precisión que la regla. Nadie lo habría encontrado buscándolo;
+apareció porque un cambio que se creía cosmético movió bytes y hubo que explicar por qué.
+
+### Las pruebas
+
+Cuatro fixtures nuevos (`err_ok` 47 → 51): `dominio_acos`, `dominio_asin` y `dominio_sqrt` fijan
+que aborten con su mensaje —van los tres porque son **tres guardas distintas** en el código y
+una podría perderse sin que las otras lo noten—, y `deg_rad` fija que el par exista y compile en
+los tres backends, cerrando el círculo dentro del propio fixture (`deg(rad(x))` devuelve `x`).
+
+La referencia perdió el ⚠️ que enseñaba el rodeo y ganó, en los dos idiomas, la lista nueva de
+funciones, el puente grados/radianes y un aviso de que las cuatro funciones con dominio
+**abortan** — con el porqué, que es que un NaN en una coordenada no hace ruido.

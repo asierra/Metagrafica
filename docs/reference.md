@@ -204,7 +204,7 @@ hand.
 % Orbit with semi-axes a, b, concentric with a globe of radius R. The hidden stretch is
 % the one that runs behind AND falls inside the disc; the crossings come from |P(t)|² = R².
 s  = sqrt((R*R - a*a)/(b*b - a*a))
-tc = atan2(s, sqrt(1 - s*s)) * 180/pi           % = asin(s), in degrees
+tc = deg(asin(s))                               % the half-angle, in degrees
 arc(a, b, from=(180+tc), to=(540-tc)) { 0 0 }   % skips the stretch t ∈ (180−tc, 180+tc)
 ```
 
@@ -396,13 +396,25 @@ xs = [0, 1.5, 3, 4.5]                  % list
 first = xs[0]
 ```
 
-**Functions:** `sin` `cos` `tan` `atan2(y,x)` `sqrt` `abs` `exp` `ln` `mod(a,b)` `len(list)` `str(x)`
-`str(x,decimals)` `gray(g)`. Angles are in **radians** (`cos(a*pi/180)`). Constants: `pi`, `true`, `false`.
+**Functions:** `sin` `cos` `tan` `asin` `acos` `atan` `atan2(y,x)` `sqrt` `abs` `exp` `ln`
+`mod(a,b)` `deg(radians)` `rad(degrees)` `len(list)` `str(x)` `str(x,decimals)` `gray(g)`.
+Constants: `pi`, `true`, `false`.
 
-> **There is no `asin` or `acos`**, but `atan2` expresses them: the arcsine of `s` is
-> `atan2(s, sqrt(1-s*s))`, and the arccosine, `atan2(sqrt(1-s*s), s)`. With those you solve the
-> angles of a geometric construction inside the `.mg` —where to trim an arc, for instance
-> ([§4](#4-primitives))— instead of measuring them on the drawing.
+The trigonometric functions work in **radians**, while the angles of the primitives (`arc`,
+`rotate`, `view3d`…) are in **degrees**: `deg` and `rad` are the bridge, and it is worth using
+them instead of multiplying by `180/pi` by hand — they carry the same constant the compiler
+does, so an angle you write and one it computes cannot drift apart in the last digit.
+
+With `asin`/`acos` you solve the angles of a geometric construction **inside the `.mg`** —where
+to trim an arc, for instance ([§4](#4-primitives))— instead of measuring them on the drawing.
+
+> ⚠️ **`sqrt`, `asin`, `acos` and `ln` ABORT outside their domain**, saying which value they
+> got. This is deliberate: out of range they do not give an odd result, they give `NaN`, and a
+> `NaN` that enters a coordinate propagates silently all the way to the output file. If your
+> construction can step outside through rounding, or because the limiting case is legitimate
+> —an arc that ends up entirely hidden—, clamp the value yourself first: that is what
+> `angulo_solido` does with its clamp to [−1, 1], and that saturation **is** the geometry, not
+> a patch.
 
 **Operators:** `+ - * / ^`, comparison `== != < <= > >=`, logical `and` `or` `not`.
 
@@ -1129,8 +1141,8 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 
 **Charts** · `plot` `xaxis` `yaxis` `axis` `rule` `legend`/`entry` `table`/`row` `grid` `numbers` `ticks`
 
-**Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` `xyz` ·
-constants `pi`
+**Functions** · `sin` `cos` `tan` `asin` `acos` `atan` `atan2` `sqrt` `abs` `exp` `ln` `mod`
+`deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 7e34f28170bdd24e37b3c2c8f51946c9ec4a8e09 -->
+<!-- translated-from: referencia.md @ 87519ecf0a8f08dcf946bb6195d43d5ba65b8aee -->

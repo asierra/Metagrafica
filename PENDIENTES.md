@@ -265,6 +265,15 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 - [ ] *(opcional)* Constantes de **Mortensen** en `arc_bezier` (~5× menos deriva radial) y
       subir la precisión de impresión del SVG. Ambas con contraindicación anotada en
       `plan_orbita_polar.md`; ninguna es defecto.
+      - 🔎 **Dato nuevo (2026-08-01), del mismo vecindario:** el nº de segmentos de Bézier de un
+        arco es `ceil(|barrido| / 90)`, así que un arco de **exactamente 180°** cae en la
+        frontera y **el ruido de coma flotante decide** si le tocan 2 o 3. Se vio al cambiar
+        `atan2(...) * 180/pi` por `deg(...)` en `angulo_solido`: el barrido pasó de
+        `180.00000000000003` a `180` exacto y un meridiano perdió su tercer segmento —una hebra
+        **sub-píxel**, medida: 471 px de diferencia, todos de antialiasing en esa curva—. El
+        resultado nuevo es el que la regla pretende; el tercer segmento era un accidente que
+        además daba (por casualidad) algo más de precisión. Si algún día se toca `arc_bezier`,
+        éste es el argumento de que la frontera merece un epsilon o un redondeo explícito.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
@@ -378,6 +387,34 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
         esquivarla —escribir cada transformación en su renglón—, y para el lector es un error
         que señala una línea correcta. Misma clase que el hallazgo de `marker_end` del
         2026-07-27.
+- [ ] 🐞 **`sine` se TRAGA EN SILENCIO todos sus atributos por-primitiva** (hallado 2026-08-01
+      escribiendo `onda_3d.mg`). `sine(half_cycles=1, amplitude=1, fill="red") { … }` compila sin
+      una queja y sale `fill="none"`. No es solo `fill`: `parseSineArgs` (`parserv3.cpp`) acepta
+      **cualquier** nombre sin validar, y `SineStmt::exec` solo llama a `sinePathFromArgs`
+      (half_cycles/amplitude/phase/squared) y empuja una `Polyline` pelada — así que `color=`,
+      `line_width=`, `dash=` y `marker_*=` corren la misma suerte.
+      - **Es exactamente la clase de bug que el proyecto ya cerró DOS veces** («las primitivas
+        tragan argumentos nombrados desconocidos en silencio», 2026-07-22): el typo parece puesto
+        y no hace nada. `sine` se salvó de aquella pasada porque **tiene su propio parser**
+        (`parseSine`), no `PrimStmt`, y por eso no heredó `isKnownPrimAttr`.
+      - **Dos salidas, y es DECISIÓN DE SEMÁNTICA, no un parche obvio:** (a) que `sine` honre los
+        atributos por-primitiva como todas las demás —lo que un lector espera, y §7.5 de la
+        referencia parece prometer—, o (b) que RECHACE los que no entiende. Sospecho que la
+        buena es (a) para los de estilo, porque `bezier(&p, fill=)` **sí** los honra y tener dos
+        conductas para la misma curva es lo confuso.
+      - ⚠️ **Ninguna compuerta lo ve** y por partida doble: la salida es byte-estable (el atributo
+        no llega a la salida) y ningún ejemplo del corpus le pone atributos a un `sine`.
+- [ ] 📥 **`polygon(&p)` sobre una curva GENERADA da una cometa, sin avisar** (hallado el mismo
+      día). `path p = sine(…)` devuelve puntos de **control de Bézier**, y `polygon` los toma como
+      vértices: el relleno sale con esquinas rectas en vez del lóbulo. Lo correcto es
+      `bezier(&p, fill=)`, que los interpreta como lo que son y cierra el relleno por la cuerda.
+      - **La conducta es defendible** —`polygon` significa polígono— pero el trapiezo es fácil:
+        §13 de la referencia dice que dentro de un `plane3d` funciona «un `polygon` relleno», que
+        es cierto y **engañoso** cuando el trayecto viene de un generador. Cuesta una línea en
+        §10 y otra en §13: *para rellenar una curva generada va `bezier(&p, fill=)`*.
+      - 🔎 Queda la duda de si `polygon(&p)` debería **avisar** cuando el trayecto trae aritmética
+        3k+1 de Bézier. Sería un aviso con falsos positivos (un trayecto de 4 puntos es legítimo
+        como polígono), así que probablemente no; se anota para no re-litigarlo.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo

@@ -26,8 +26,7 @@
 % o sea  cos(t - psi) > -A/M,  con  M = sqrt(B²+D²)  y  psi = atan2(D, B).
 % El arco visible es t en (psi - tc, psi + tc) con tc = acos(-A/M). Se dibuja con un
 % `arc(from=, to=)` DENTRO del mismo `plane3d`, porque ahí el from/to sigue siendo
-% ángulo DEL PLANO, no de la página. No hay `acos` en el evaluador: se escribe
-% atan2(sqrt(1-q²), q).
+% ángulo DEL PLANO, no de la página.
 %
 % 📌 Los cortes caen sobre el LIMBO por construcción: el borde de visibilidad es el
 % plano P.w = 0, y su intersección con la esfera ES el limbo. No hay nada que ajustar.
@@ -81,8 +80,8 @@ world_window -1.08 1.45 -1.28 1.30
 azd = 15                           % acimut
 eld = 20                           % elevación
 view3d(azimuth=azd, elevation=eld)
-th = azd * pi / 180
-ph = eld * pi / 180
+th = rad(azd)
+ph = rad(eld)
 st = sin(th)   ct = cos(th)
 sp = sin(ph)   cp = cos(ph)
 
@@ -97,8 +96,8 @@ circle(1) { 0 0 }
 % e2 = rho^ x e1. Se dibuja más abajo, después de la retícula.
 rho = 0.62
 rr  = 0.56
-uu  = -40 * pi / 180               % = th - gam;  uu < 0 lo pone en el hemisferio cercano
-bb  = 6.5 * pi / 180
+uu  = rad(-40)               % = th - gam;  uu < 0 lo pone en el hemisferio cercano
+bb  = rad(6.5)
 gam = th - uu
 sb = sin(bb)   cb = cos(bb)
 sg = sin(gam)  cg = cos(gam)
@@ -120,8 +119,8 @@ lam0 = atan2(ccz + ss*wz, ccx + ss*wx)
 % --- meridianos: el plano contiene el eje polar, girado la longitud lam ---
 line_width 0.3
 for i = -1 to 2 {
-    lam = lam0 + i * 45 * pi / 180
-    psi = atan2(sp, cp * sin(lam - th)) * 180 / pi
+    lam = lam0 + rad(i * 45)
+    psi = deg(atan2(sp, cp * sin(lam - th)))
     v0  = psi - 90
     v1  = psi + 90
     {
@@ -132,12 +131,12 @@ for i = -1 to 2 {
 
 % --- paralelos: plano horizontal a la altura sin(bet), radio cos(bet) ---
 for j = 0 to 4 {
-    bet = (j - 2) * 30 * pi / 180
+    bet = rad((j - 2) * 30)
     rp  = cos(bet)
     qq  = -sin(bet) * sp / (rp * cp)
     qc  = (abs(qq + 1) - abs(qq - 1)) / 2      % clamp a [-1,1]
-    tc  = atan2(sqrt(1 - qc*qc), qc) * 180 / pi
-    psi = atan2(ct, -st) * 180 / pi
+    tc  = deg(acos(qc))
+    psi = deg(atan2(ct, -st))
     v0  = psi - tc
     v1  = psi + tc
     {
@@ -154,7 +153,7 @@ line_width 0.5
 }
 
 % --- las cotas: no pertenecen a ningún plano, así que van con xyz() ---
-ps = 168 * pi / 180                            % el borde al que apunta r
+ps = rad(168)                            % el borde al que apunta r
 tpx = ccx + rr*p2x   tpy = ccy + rr*p2y   tpz = ccz + rr*p2z    % borde "arriba"
 bpx = ccx - rr*p2x   bpy = ccy - rr*p2y   bpz = ccz - rr*p2z    % borde "abajo"
 epx = ccx + rr*(cos(ps)*p1x + sin(ps)*p2x)

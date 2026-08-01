@@ -25,8 +25,8 @@
 % Oculto = lejano ∩ dentro del disco = t ∈ (180−tc, 180+tc); aquí tc ≈ 56.8°, o sea un
 % tramo oculto de 113.6°. Los cortes caen sobre el limbo por construcción: el
 % disco del mapa es un `circle(1)` escalado por `scale=earth_radius`, o sea el mismo R
-% y el mismo centro de la ecuación. No hay `asin` en el lenguaje; atan2(s, √(1−s²)) lo
-% expresa. NO hace falta álgebra booleana de paths: la oclusión es profundidad, y una
+% y el mismo centro de la ecuación. NO hace falta álgebra booleana de paths: la
+% oclusión es profundidad, y una
 % intersección de contornos en 2-D no sabe qué mitad está detrás.
 %
 % CUÁL MITAD VA DETRÁS es modelado, no geometría: la 2-D admite las dos. Se eligieron
@@ -84,7 +84,7 @@ polyline(dash="dashed", line_width=0.4, color="gray") { 0 (earth_y + earth_radiu
   % Semiángulo del tramo oculto: el arco entra al disco en 180−tc y sale en 180+tc.
   % La derivación, en las NOTAS.
   s  = sqrt((earth_radius*earth_radius - axis_x*axis_x)/(axis_y*axis_y - axis_x*axis_x))
-  tc = atan2(s, sqrt(1 - s*s)) * 180/pi
+  tc = deg(asin(s))
   % El giro es alrededor del centro de la Tierra: `rotate` gira el plano entero, así
   % que primero se lleva el origen al centro y las órbitas van ya en {0 0}. Las
   % sentencias componen en el orden escrito: esto es T·R.

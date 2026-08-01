@@ -13,6 +13,7 @@
 #include <cstdlib>   // std::exit (evalError es fatal)
 
 #include "tokens.h"   // códigos de operador (T_PLUS, T_MINUS, …)
+#include "matrix.h"   // deg2rad: la MISMA constante que usa el motor, no una copia
 
 // --- Valor V3: número, cadena o lista (una tupla es una lista de 2) ---------
 struct Value {
@@ -255,9 +256,45 @@ struct CallExpr : Expr {         // función builtin: sin(x), mod(a,b), len(l)�
     if (fn == "sin"   && need(1)) return Value(std::sin(a[0].num));
     if (fn == "cos"   && need(1)) return Value(std::cos(a[0].num));
     if (fn == "tan"   && need(1)) return Value(std::tan(a[0].num));
-    if (fn == "sqrt"  && need(1)) return Value(std::sqrt(a[0].num));
+    // sqrt con GUARDA (2026-08-01). Era el último hueco por donde un NaN entraba
+    // sin ruido: `sqrt(negativo)` devolvía NaN callando, y de ahí salían coordenadas
+    // `-nan` con exit 0 — exactamente el modo de falla que evalError se volvió fatal
+    // para eliminar. Se eligió error DURO y no tolerar un −1e−16 de redondeo: la
+    // cultura del proyecto es que el autor acote a mano cuando la geometría lo pide
+    // (el clamp de `angulo_solido` es eso), y una tolerancia silenciosa taparía el
+    // caso real. Si alguna figura tropieza con un cero por redondeo, se revisa.
+    if (fn == "sqrt"  && need(1)) {
+      if (a[0].num < 0)
+        return evalError("sqrt: argumento negativo: ", std::to_string(a[0].num));
+      return Value(std::sqrt(a[0].num));
+    }
     if (fn == "abs"   && need(1)) return Value(std::fabs(a[0].num));
     if (fn == "atan2" && need(2)) return Value(std::atan2(a[0].num, a[1].num));
+    // asin/acos/atan (2026-08-01): antes solo estaba atan2, y la referencia ENSEÑABA
+    // el rodeo —`asin(s)` = `atan2(s, sqrt(1-s*s))`—. Que la documentación tenga que
+    // enseñar un rodeo para algo que cabe en cuatro líneas ya era señal; lo que lo
+    // decidió es que el rodeo es INSEGURO: fuera de [-1,1] el sqrt daba NaN mudo,
+    // atan2 lo propagaba y la figura salía con coordenadas -nan y código 0. Con
+    // guarda de dominio el mismo error aborta diciendo qué pasó.
+    if (fn == "asin"  && need(1)) {
+      if (a[0].num < -1 || a[0].num > 1)
+        return evalError("asin: argumento fuera de [-1, 1]: ", std::to_string(a[0].num));
+      return Value(std::asin(a[0].num));
+    }
+    if (fn == "acos"  && need(1)) {
+      if (a[0].num < -1 || a[0].num > 1)
+        return evalError("acos: argumento fuera de [-1, 1]: ", std::to_string(a[0].num));
+      return Value(std::acos(a[0].num));
+    }
+    // `atan` de un argumento entra aunque `atan2` lo exprese: quien lo busca lo
+    // busca por su nombre, y `atan2(y, 1)` no se le ocurre a nadie.
+    if (fn == "atan"  && need(1)) return Value(std::atan(a[0].num));
+    // deg/rad: el corpus llevaba 15 conversiones `* 180 / pi` escritas a mano, diez
+    // de ellas en una sola figura. Usan `deg2rad` de matrix.h —la misma constante
+    // que el motor— para que un ángulo escrito en el .mg y uno calculado por el
+    // compilador no puedan divergir en el último dígito.
+    if (fn == "deg"   && need(1)) return Value(a[0].num / deg2rad);
+    if (fn == "rad"   && need(1)) return Value(a[0].num * deg2rad);
     // exp/ln (§5.2): entran porque el corpus las exige — un potencial de Morse,
     // D(1-exp(-a(r-re)))², no es escribible sin ellas, y con ellas sus puntos de
     // retorno salen en forma cerrada en vez de medirse sobre la curva dibujada.
