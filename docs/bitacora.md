@@ -2971,3 +2971,60 @@ fuente y el compilador se atraganta con él. Salió al documentar de paso la reg
 —el menor que quedaba anotado en `PENDIENTES.md`—, y la salida fue poner esos ejemplos **en
 línea**, que es como el resto del documento escribe sus avisos. No se tocó el extractor: hoy no
 hay ningún otro bloque en esa posición, y el estilo del documento no la pide.
+
+---
+
+## 2026-08-01 (ter) — La primera figura pseudo-3D entra al corpus
+
+`angulo_solido` es el ejemplo 27: **`ok=81`**, ocho compuertas en verde. Reproduce la fig. II-4
+de Lira (proyección del ángulo sólido) y es la única del corpus que ejercita `view3d`, `plane3d`
+y `xyz()` — si sale, las tres se quedan sin una sola prueba. Aporta además el caso duro de la
+invariante (c) de la Capa 3: sus elipses tienen semidiámetros conjugados **genuinamente
+oblicuos** (`u·v ≠ 0`), que es donde los tres backends toman caminos distintos —EPS traza con
+matriz, SVG resuelve un SVD 2×2, PDF transforma puntos de control—.
+
+### El detalle que la separaba del original, y por qué el camino evidente no sirve
+
+En la figura publicada un meridiano parte el casquete por la mitad. Conseguirlo **no** es poner
+el casquete sobre el plano de un meridiano (`gam = lam`): ese plano corta el disco por su centro
+en el ESPACIO, cierto, pero la circunferencia dibujada va a radio 1 mientras el centro del disco
+está a `rho = 0.62`, así que el arco pasa **por encima**, descentrado unos 0.29. Es la trampa
+natural del problema: la condición correcta en 3-D no es la condición correcta en la página.
+
+Lo que hace falta es que el arco cruce el centro **proyectado**, y eso no es un plano sino un
+**punto de la esfera**: el rayo visual que pasa por el centro del casquete la corta en dos
+puntos, y el **delantero** —el que no se oculta— fija la longitud del meridiano que hay que
+dibujar,
+
+    |C + s·w| = 1   ⟹   s = −(C·w) + √((C·w)² + 1 − ρ²)
+
+📌 **Y lo que midiendo apareció:** el meridiano de 135° **ya pasaba** por el centro proyectado,
+con 0.0067 de error, o sea prácticamente exacto — **pero en su mitad oculta**, que es justo la
+que la figura recorta. El problema nunca fue la geometría; era de qué lado caía. Sin medirlo, lo
+más probable habría sido mover el casquete a ojo hasta que se viera bien, que es exactamente lo
+que esta figura existe para no hacer.
+
+**Qué parámetro gastar fue la decisión de modelado:** se movió la **fase de la retícula**, no el
+casquete. La fase de los meridianos es libre —nada en la física elige la longitud cero— mientras
+que la posición del casquete es el asunto de la figura. Y como `lam0` sale de la cámara, la
+propiedad **sobrevive a cambiarla**: verificado a 35°/38°, el meridiano sigue partiendo el
+casquete. Un número puesto a ojo no lo haría, y esa es la tesis entera de la figura.
+
+### Ni prefijo ni subcarpeta: la familia se distingue en la galería
+
+Se consideraron las dos formas de marcar que ésta es «de las 3-D». Ninguna se sostuvo:
+
+- **Prefijo `pseudo3d_`** — choca con la regla de nombres del proyecto: los ejemplos se llaman
+  por su **asunto**, no por su técnica (`franck_condon`, `turning_points`, `elevacion_solar`), y
+  por esa lógica `quickstart` sería `plot_quickstart` y `fig2-1` sería `struct_fig2-1`. Trae
+  además un problema de frontera sin final: `orbita_polar` y `gravitacion_orbita` ya son escenas
+  espaciales resueltas con trigonometría, y habría que decidir si entran.
+- **Subcarpeta `examples/pseudo3d/`** — cuesta cuatro piezas de maquinaria **plana**, y una de
+  ellas falla en silencio: `make install` usa `install -m 644 examples/*.mg`, así que no las
+  instalaría. Las otras tres son la profundidad `examples/../lib` —que ese layout existe para
+  garantizar, y que pasaría a tener dos convenciones conviviendo—, el `glob("*.mg")` de
+  `galeria.py` y el `cd "$EXDIR"` de `run.sh`. Todo arreglable; ninguna razón para hacerlo.
+
+La distinción se puso donde un lector la consume: un **grupo editorial** «Escenas pseudo-3D» en
+la galería, que es el mecanismo que ya existía para esto y que costó una entrada en `GRUPOS`.
+Queda además junto a §13 de la referencia, que es a donde salta quien vea la tarjeta.

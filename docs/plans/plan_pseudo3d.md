@@ -377,6 +377,32 @@ poner esos dos ejemplos en línea, que es como el resto del documento escribe su
 Lo que entre gana goldens en tres backends, `docs/img`, galería y paridad geométrica, con
 encabezado a la convención de 2026-07-23.
 
+**✅ `angulo_solido` ENTRÓ el 2026-08-01** — la primera, y con ella `ok=81` (27 ejemplos). Es la
+única que ejercita `view3d`, `plane3d` y `xyz()`, y aporta el caso duro de la invariante (c) de
+la Capa 3: semidiámetros conjugados **genuinamente oblicuos**. Antes de entrar se le cerró el
+detalle que la separaba del original —que un meridiano parta el casquete por la mitad—, y la
+solución vale la pena anotarla porque el camino evidente **no funciona**: poner el casquete
+sobre el plano de un meridiano (`gam = lam`) lo corta por el centro en el ESPACIO, pero la
+circunferencia dibujada va a radio 1 mientras el centro del disco está a `rho`, así que el arco
+pasa por encima, descentrado ~0.29. Lo que hace falta es que cruce el centro **proyectado**, y
+eso es un PUNTO de la esfera: el rayo visual por el centro del casquete la corta en dos y la
+raíz **delantera** —la que no se oculta— fija la longitud. Se gasta el parámetro de la
+**retícula** y no el del casquete, porque la fase de los meridianos es libre y la posición del
+casquete es el asunto de la figura. Y como sale de la cámara, la propiedad sobrevive a cambiarla
+(verificado a 35°/38°). 📌 Medido al llegar: el meridiano de 135° ya pasaba por el centro
+proyectado con 0.0067 de error, **pero en su mitad oculta** — el problema no era la geometría
+sino de qué lado caía.
+
+**⚠️ Decisión de nomenclatura (2026-08-01): ni prefijo `pseudo3d_` ni subcarpeta.** Se
+consideraron las dos. El prefijo choca con la regla del proyecto —los ejemplos se nombran por su
+**asunto**, no por su técnica; por esa lógica `quickstart` sería `plot_quickstart`— y obliga a
+decidir si `orbita_polar` y `gravitacion_orbita` entran, discusión que no termina. La subcarpeta
+cuesta cuatro piezas de maquinaria plana: el glob de `make install` (que no las instalaría, en
+silencio), la profundidad `examples/../lib` que ese layout existe para garantizar, el
+`glob("*.mg")` de `galeria.py` y el `cd "$EXDIR"` de `run.sh`. La familia se distingue donde un
+lector la consume: un **grupo editorial** en la galería, que es el mecanismo que ya existía para
+esto.
+
 ### Fase F — diferidas
 - **Silueta de revolución** (estrategia E): cono/cilindro = dos círculos de A + sus dos
   tangentes comunes. La piden `lira_II-7` y `fig18-5`, y **se difieren juntas** porque comparten

@@ -65,6 +65,15 @@ GRUPOS = [
       "geometry follows. Change one number and the whole figure rearranges itself."),
      ["orbita_polar", "gravitacion_orbita", "elevacion_solar", "fractal_tree",
       "franck_condon", "turning_points"]),
+    (("Escenas pseudo-3D", "Pseudo-3D scenes"),
+     ("Se declara una cámara y la figura se describe en coordenadas del espacio: "
+      "cada círculo del dibujo es un círculo de la escena, y la elipse exacta de "
+      "su proyección la calcula el compilador. Cambia la cámara y todo se mueve junto.",
+      "You declare a camera and describe the figure in coordinates of space: every "
+      "circle in the drawing is a circle of the scene, and the exact ellipse of its "
+      "projection is worked out by the compiler. Change the camera and it all moves "
+      "together."),
+     ["angulo_solido"]),
     (("Gráficas de datos", "Data plots"),
      ("El plot mapea unidades de datos a una caja en centímetros; los ejes "
       "heredan los rangos y se rotulan solos.",
@@ -90,6 +99,16 @@ GRUPOS = [
 # lo único que hay que escribir a mano al añadir un ejemplo (y si no se escribe,
 # la tarjeta sale en español con un aviso).
 TRAD = {
+    "angulo_solido": (
+        "Projection of the solid angle — a wire sphere and the cap A = πr²",
+        "A wire sphere in orthographic axonometry, with the circular cap that subtends a "
+        "solid angle from its centre. The whole drawing is made of CIRCLES OF SPACE "
+        "—every meridian, every parallel and the rim of the cap— and not one "
+        "semi-axis is computed here: `view3d` sets the camera, `plane3d` puts the "
+        "coordinates on a plane of the scene, and a `circle` drawn there comes out as the "
+        "exact ellipse of its projection. What belongs to no plane —the three dotted "
+        "dimension lines— uses `xyz()`. Change `azd` or `eld` and the whole figure "
+        "moves together."),
     "espectro": (
         "The electromagnetic spectrum, with the infrared window expanded",
         "An outreach figure made of rectangles, text and arrows. What sets it apart is "
