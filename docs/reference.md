@@ -627,6 +627,13 @@ path curve  = smooth { 0 0  1 2  3 1  4 3 }                   % passes through t
 > Smoothing a path you already hold in a variable **is not possible today**; its nodes have to
 > be written literally.
 
+> ⚠️ **To FILL a generated curve use `bezier(&p, fill=)`, not `polygon(&p, fill=)`.** `sine` and
+> `smooth` return Bézier **control** points, and `polygon` reads them as vertices: the fill comes
+> out with straight corners —a kite instead of the lobe— and nothing warns you, because both are
+> legitimate readings of the same list of points. `bezier` interprets them as what they are, and
+> the fill closes itself along the chord joining the ends. It is what
+> `onda_electromagnetica` does to paint each half-cycle.
+
 **Accumulate in a loop** — for a curve whose number of pieces depends on a variable, something `concat`
 doesn't cover, because its pieces must be written one by one:
 
@@ -1145,4 +1152,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 87519ecf0a8f08dcf946bb6195d43d5ba65b8aee -->
+<!-- translated-from: referencia.md @ 3e2aa2ee4b51bab4b70f4726d0fe95988d32d583 -->

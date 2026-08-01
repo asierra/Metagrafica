@@ -639,6 +639,13 @@ path suave = smooth { 0 0  1 2  3 1  4 3 }                   % pasa por esos NOD
 > `polygon(&p)`, `bezier(&p)`, como en §3—, no de las que lo generan. Suavizar un trayecto que
 > ya tienes en una variable **no se puede hoy**; sus nodos hay que escribirlos literales.
 
+> ⚠️ **Para RELLENAR una curva generada va `bezier(&p, fill=)`, no `polygon(&p, fill=)`.**
+> `sine` y `smooth` devuelven puntos de **control** de Bézier, y `polygon` los lee como
+> vértices: el relleno sale con esquinas rectas —una cometa en vez del lóbulo— y nada avisa,
+> porque las dos son lecturas legítimas de la misma lista de puntos. `bezier` los interpreta
+> como lo que son, y el relleno cierra solo por la cuerda que une los extremos. Es lo que hace
+> `onda_electromagnetica` para pintar cada media onda.
+
 **Acumular en un lazo** — para una curva cuyo número de piezas depende de una variable, algo
 que `concat` no cubre, porque sus piezas hay que escribirlas una por una:
 

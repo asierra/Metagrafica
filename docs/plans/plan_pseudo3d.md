@@ -377,6 +377,16 @@ poner esos dos ejemplos en línea, que es como el resto del documento escribe su
 Lo que entre gana goldens en tres backends, `docs/img`, galería y paridad geométrica, con
 encabezado a la convención de 2026-07-23.
 
+**✅ `onda_electromagnetica` ENTRÓ el 2026-08-01** (Lira fig. II-1) — la segunda, `ok=84`
+(28 ejemplos). Cubre lo que `angulo_solido` no: un **generador** y un **relleno** dentro de un
+`plane3d` —la promesa de §13 que no tenía prueba— y **marcadores bajo una matriz no conforme**,
+la familia de `plan_anisotropia.md`, que aquí sale limpia (las puntas de E salen verticales, las
+de B arriba-derecha). Sus dos amplitudes son distintas **derivando el factor de la cámara**: el
+plano de B se escorza, y dibujar los dos campos igual de largos diría algo falso.
+Le precedió `waves`/`onda_3d` como **ejercicio preliminar**, que resultó ser la misma figura sin
+peines ni cota; **se descartó** al existir la buena, y de él salieron dos hallazgos de motor
+(`sine` tragándose sus atributos, y `polygon(&p)` sobre curva generada).
+
 **✅ `angulo_solido` ENTRÓ el 2026-08-01** — la primera, y con ella `ok=81` (27 ejemplos). Es la
 única que ejercita `view3d`, `plane3d` y `xyz()`, y aporta el caso duro de la invariante (c) de
 la Capa 3: semidiámetros conjugados **genuinamente oblicuos**. Antes de entrar se le cerró el

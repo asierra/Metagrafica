@@ -3157,3 +3157,56 @@ todos). `docs/img/sines.svg` se regeneró: es cara pública.
 los puntos de control como vértices y rellena una cometa. La conducta es defendible; lo que
 falta es una línea en §10 y otra en §13 diciendo que para rellenar una curva generada va
 `bezier(&p, fill=)`.
+
+---
+
+## 2026-08-01 (sexies) — `onda_electromagnetica` al corpus, y el ejercicio se descarta
+
+Segunda figura pseudo-3D del corpus: **`ok=84`**, 28 ejemplos. Reproduce la fig. II-1 de Lira —E
+y B en planos perpendiculares— y cubre exactamente lo que `angulo_solido` no: un **generador**
+(`sine`) y un **relleno** dentro de un `plane3d`, que es la promesa de §13 de la referencia —«ahí
+dentro funciona el dibujo 2-D de siempre»— que hasta hoy no tenía una sola prueba, y
+**marcadores bajo una matriz no conforme**.
+
+Esto último merece anotarse porque era una pregunta abierta, no una casilla: los marcadores bajo
+una matriz que no conserva ángulos son de la familia de `plan_anisotropia.md`, la más recurrente
+del proyecto. **Sale limpia**: las puntas de los peines de E salen verticales —su dirección es
+`proj(ŷ) = (0, cos φ)`— y las de B arriba-derecha, `proj(−ẑ)`. Ahora hay una figura del corpus
+que lo vigila.
+
+### Las dos amplitudes son distintas, y el factor se deriva
+
+El plano de B es el horizontal, que la cámara escorza. Con la misma amplitud que E, B saldría
+más corto y la figura **diría algo falso**: que un campo es menor que el otro. Se pide que las
+dos se vean igual de largas y el factor se despeja de la cámara:
+
+    ampb = amp · cos(el) / hypot(sin(az), cos(az)·sin(el))
+
+Lo comparable en el dibujo es la **longitud**: E y B tienen unidades distintas y su razón física
+no es dibujable, así que igualar lo que se ve es la lectura honesta. Y como sale de la cámara,
+sigue valiendo si se cambia — la misma propiedad que `angulo_solido` con la fase de su retícula.
+
+📌 **La cota de λ va DENTRO del plano de E, no en la página.** Así queda paralela al eje —que
+desciende con esta cámara— y sus dos patas miden lo mismo sin una sola cuenta: bajo `plane3d` un
+segmento vertical del plano se proyecta con la misma longitud sea cual sea su x. Verificado
+porque *pareció* que no: a ojo la pata izquierda se veía más larga, y midiendo en el SVG salieron
+26.458 y 26.457 pt. La lección es la de siempre al revés — mirar destapa defectos, pero también
+inventa alguno; el que sobrevive es el que se mide.
+
+### El ejercicio se descarta, habiendo servido
+
+`onda_3d.mg` (de `waves.png`) se escribió como ejercicio preliminar y **se borró** al existir la
+figura buena: era la misma escena sin peines, sin cota y sin rótulos. No se pierde nada porque lo
+que valía ya está capitalizado en otra parte — la cámara medida quedó en la bitácora, y los **dos
+hallazgos de motor que produjo** (que `sine` se tragaba sus atributos, y que `polygon(&p)` sobre
+una curva generada rellena una cometa) están arreglado el primero y documentado el segundo.
+
+Es el mismo criterio de la política V1: antes de borrar, lo que debe sobrevivir son las
+**medidas**, no el archivo.
+
+### De paso, el segundo hallazgo cerrado
+
+§10 de la referencia gana, en los dos idiomas, el aviso de que para **rellenar una curva
+generada** va `bezier(&p, fill=)` y no `polygon(&p, fill=)`. Lo que lo hace digno de un ⚠️ y no
+de una nota al pie es que **nada avisa**: las dos son lecturas legítimas de la misma lista de
+puntos —vértices contra puntos de control—, así que el error no falla, dibuja otra cosa.

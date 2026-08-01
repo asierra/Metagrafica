@@ -73,7 +73,7 @@ GRUPOS = [
       "circle in the drawing is a circle of the scene, and the exact ellipse of its "
       "projection is worked out by the compiler. Change the camera and it all moves "
       "together."),
-     ["angulo_solido"]),
+     ["angulo_solido", "onda_electromagnetica"]),
     (("Gráficas de datos", "Data plots"),
      ("El plot mapea unidades de datos a una caja en centímetros; los ejes "
       "heredan los rangos y se rotulan solos.",
@@ -109,6 +109,16 @@ TRAD = {
         "exact ellipse of its projection. What belongs to no plane —the three dotted "
         "dimension lines— uses `xyz()`. Change `azd` or `eld` and the whole figure "
         "moves together."),
+    "onda_electromagnetica": (
+        "Electromagnetic wave — E and B in perpendicular planes",
+        "Two waves in phase, each in its own plane: the electric field in the vertical one, "
+        "the magnetic in the horizontal, propagating along x. Each wave is an ordinary `sine` "
+        "INSIDE a `plane3d`, filled half-cycle by half-cycle, and its combs and its λ dimension "
+        "are plain 2-D polylines of the same plane: nothing is sampled or projected by hand, "
+        "and the arrowheads orient themselves. The only thing belonging to no plane is the "
+        "axis, which uses `xyz()`. The two amplitudes differ on purpose, and the factor comes "
+        "from the camera: the horizontal plane is foreshortened, so drawing both with the same "
+        "amplitude would suggest one field is smaller than the other."),
     "espectro": (
         "The electromagnetic spectrum, with the infrared window expanded",
         "An outreach figure made of rectangles, text and arrows. What sets it apart is "
