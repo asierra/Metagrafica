@@ -2501,8 +2501,35 @@ struct TextStmt : Stmt {
         if (f != FN_NOFACE) tface = f;
       }
     }
-    for (size_t i = 0; i + 1 < coords.size(); i += 2) {
-      point p(coords[i]->eval(s).num, coords[i + 1]->eval(s).num);
+    // Una coordenada puede ser un PUNTO ya hecho —una lista de dos, como devuelven
+    // `xyz()` o `point_at()`— y entonces vale por las dos. Misma regla que las
+    // primitivas (PrimStmt::evalPath), y por la misma razón: el rótulo de un punto
+    // calculado es el caso natural (`text("CIV") { xyz(x,y,z) }`,
+    // `text("A") { point_at(&p, 0.5) }`), y sin esto había que partir el punto a
+    // mano en dos expresiones. La paridad se valida AQUÍ y no en parse-time: un
+    // punto guardado en variable no se distingue de un número hasta evaluar.
+    Path pts;
+    {
+      bool pending = false;
+      double px = 0;
+      for (size_t i = 0; i < coords.size(); i++) {
+        Value v = coords[i]->eval(s);
+        if (v.type == Value::LIST) {
+          if (v.items.size() != 2)
+            evalError("una coordenada-lista debe ser un punto [x,y] (2 valores), en text");
+          if (pending)
+            evalError("coordenada suelta sin pareja antes de un punto [x,y], en text");
+          pts.push_back(point(v.items[0].num, v.items[1].num));
+        } else {
+          if (!pending) { px = v.num; pending = true; }
+          else { pts.push_back(point(px, v.num)); pending = false; }
+        }
+      }
+      if (pending)
+        evalError("número impar de coordenadas (una quedó sin pareja), en text");
+    }
+    for (size_t i = 0; i < pts.size(); i++) {
+      point p = pts[i];
       auto gs = std::make_unique<GraphicsState>();
       gs->setPosition(p);                                  // GS_PLUMEPOSITION
       out.push_back(std::move(gs));
@@ -3963,7 +3990,10 @@ static StmtPtr parseStatement(Lexer &lx) {
         if (lx.accept(T_SEMICOLON) || lx.accept(T_NEWLINE)) continue;
         st->coords.push_back(parseTerm(lx));
       }
-      checkCoordPairs(lx, "text", st->coords, {});   // bloque vacío = pluma (§12.1); 0 es par
+      // allowsPoints=true: una coordenada puede ser un punto [x,y] (xyz, point_at),
+      // que vale por dos siendo un término, así que la paridad se difiere al
+      // eval-time de TextStmt, que sí conoce el tipo. (Bloque vacío = pluma, §12.1.)
+      checkCoordPairs(lx, "text", st->coords, {}, /*allowsPoints=*/true);
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
     return st;

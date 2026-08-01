@@ -26,8 +26,9 @@ polyline { 0 0  2 1 }
 
 **What MG is not.** It is not a general-purpose programming language: it has variables, expressions, `for`,
 `if` and little more. It does not analyze data — `polybar` receives already-counted intervals, not
-observations; to get from a spreadsheet to a `.mg` there is `tools/hist2mg.py`. It does no 3D. It does not
-typeset paragraphs.
+observations; to get from a spreadsheet to a `.mg` there is `tools/hist2mg.py`. It does no 3D —what
+[§13](#13-pseudo-3d-scenes) has is a camera that projects, with no hidden surfaces and no lighting—. It
+does not typeset paragraphs.
 
 ---
 
@@ -53,7 +54,7 @@ That is why `dot` is the right marker inside a distorted chart: it lands where i
 into an ellipse.
 
 > ⚠️ **If you see nothing, or half a figure, check `world_window` before anything else:** it is a fixed
-> crop, it does not adjust to your data. It is stumble #1 ([details](#14-common-mistakes)).
+> crop, it does not adjust to your data. It is stumble #1 ([details](#15-common-mistakes)).
 
 **The engine is isometric:** the scale is the same in x and y. If the proportion of `world_window` does not
 match that of `display_size`, the figure ends up centered with margins (*letterbox*); to fill the canvas,
@@ -72,7 +73,7 @@ match the two proportions.
 > isometric rule governs the **plane of the figure** —centimeters against world units—; a `plot`'s data
 > mapping is another thing ([§11](#11-charts)).
 
-> ⚠️ **Shrinking `display_size` does not shrink the text** — it enlarges it relatively ([details](#14-common-mistakes)).
+> ⚠️ **Shrinking `display_size` does not shrink the text** — it enlarges it relatively ([details](#15-common-mistakes)).
 
 ---
 
@@ -105,7 +106,7 @@ That is enough to draw. A path can also be **operated on** —chained, mirrored,
 lives apart, in §10: it is not needed to start.
 
 > ⚠️ **`&path` goes as the FIRST argument, always**, with the rest named after: `dot(&p, size=2)` ✅,
-> `dot(2, &p)` ❌ ([details](#14-common-mistakes)).
+> `dot(2, &p)` ❌ ([details](#15-common-mistakes)).
 
 ---
 
@@ -133,7 +134,7 @@ sine(half_cycles=2, amplitude=1) { 0 0  4 0 }
 
 > ⚠️ **The `{` goes on the SAME LINE as the primitive.** Inside them, both `( )` and `{ }` may
 > span as many lines as you like; what you cannot have is a line break **before** the `{`
-> ([details](#14-common-mistakes)).
+> ([details](#15-common-mistakes)).
 
 `polyline`, `polygon` and `bezier` accept **disjoint subpaths** separated by `;`:
 
@@ -420,7 +421,7 @@ if r > 2 and n < 100 { text("large") { 0 0 } } else { text("small") { 0 0 } }
 > in two: `{ 12 y-11 }` is **three** terms (`12`, `y`, `-11`); what you want is `{ 12 (y-11) }`.
 > **Parenthesize any coordinate that adds or subtracts**; products, quotients, powers and a leading minus
 > go bare (`x*2`, `x/n`, `x^2`, `-x`). Mixing bare variables with parenthesized coordinates is fine:
-> `{ x y (x+1) (y+1) }` ([details](#14-common-mistakes)).
+> `{ x y (x+1) (y+1) }` ([details](#15-common-mistakes)).
 
 > ⚠️ **A function call is GLUED to its parenthesis: `f(x)`.** With a space in between —`f (x)`— the `(`
 > is a separate term, not a call; that's why in `{ x y (x+1) }` the `y` doesn't swallow the following
@@ -451,7 +452,7 @@ more** points, `place` is exactly that for **structs**, which don't fit in a coo
 two ideas, they are one with two names, and the separate name exists because a struct is not a primitive.
 
 > ⚠️ **With TWO points `place` is another thing: a guide line with something on top, and it draws the
-> line.** To seed copies, give 3 or more points, or use `count=` ([details](#14-common-mistakes)).
+> line.** To seed copies, give 3 or more points, or use `count=` ([details](#15-common-mistakes)).
 
 💡 **What justifies `repeat` is accumulation.** It is the only one that composes the transform: with
 `transform=rotate(30)` copy *k* is turned 30°·*k* from the previous one, and out of that come fans and
@@ -556,6 +557,17 @@ Also as a per-primitive or placement argument: `polyline(transform=rotate(30)) {
 > Under a `transform`, text moves its **anchor**; the glyphs are not deformed (except `rotate`, which does
 > turn them).
 
+> ⚠️ **`scale` with two VARIABLE factors: parentheses on the second one if another statement follows on the
+> same line.** `scale` is the only transformation of variable arity (one or two factors), so a bare
+> identifier behind it is ambiguous: it may be its second factor or it may be the start of the next
+> statement. The rule is that it is taken as a factor only if it **ends the statement**; to force it, use
+> parentheses, since no statement begins with `(`: `{ scale sx sy }` ✅ (`sy` ends the statement, it is
+> taken) and `{ scale sx (sy)   shear kk 0 }` ✅ (with another statement behind, parentheses).
+>
+> Without them, `sy` starts a new statement and swallows what follows; the error talks about what came
+> after —"undefined variable: shear"— and points at a line that is written correctly. With literals
+> (`scale 2 1`) there is no ambiguity and nothing is needed.
+
 A `rotate`, a `scale` with different factors in x and y, or a `shear` applied to a `circle`, an
 `arc` or an `ellipse` yield the **rotated** ellipse they should, with their angles intact: the
 whole figure is transformed, not its radii separately. This holds in all three output formats.
@@ -614,7 +626,7 @@ for k = 0 to n {
 ```
 
 > ⚠️ **`+=` WELDS relative pieces**: each is translated to continue where the previous ended, so they are
-> written relative, not absolute ([details](#14-common-mistakes)).
+> written relative, not absolute ([details](#15-common-mistakes)).
 
 **A computed curve, point by point.** It is the most common case in the language —the curve comes from a
 formula, not from measured coordinates— and has its own form, because a **single-point piece is added
@@ -648,7 +660,7 @@ want (`polyline` for a polygonal line, `bezier` or `smooth` for a curve). It's w
 > in a `path` as above.
 
 > ⚠️ **`path x = …` is evaluated at DRAW time; `path x += …` on the spot.** That's why the seed of an
-> accumulator must be a literal, with no variables the loop will overwrite ([details](#14-common-mistakes)).
+> accumulator must be a literal, with no variables the loop will overwrite ([details](#15-common-mistakes)).
 
 **Path→number reductions** — read a measure from a path: `path_width(&p)`, `path_x_min_at_y(&p, y [, expand])`,
 `path_x_max_at_y(&p, y [, expand])`. They operate on the control polygon, so they are exact on monotone
@@ -728,7 +740,7 @@ the line crosses the whole box**, which is usually what's wanted; `to=` cuts it 
 
 > ⚠️ **"Nonlinear" doesn't mean "log".** The log scale is for *multiplicative* data and doesn't exist at
 > values ≤ 0; if your points are just poorly spread, what you want are guide lines, not a scale
-> ([details](#14-common-mistakes)).
+> ([details](#15-common-mistakes)).
 
 **With a logarithmic axis, `plot` maps positions, not shapes.** A linear axis wraps the content in a
 matrix and transforms all of it; log cannot —it is not an affine transformation— so it remaps
@@ -804,8 +816,8 @@ prisma(2, 1, 1.5)               % width, height, depth
 ```
 
 The `include` must precede the use, and **compilation fails** if the file doesn't resolve. In `lib/` come
-`pseudo3d.mg` (volume simulated by oblique projection, without a z-buffer: the paint order is the writing
-order), two **icons** —`satellite.mg` (`struct Satellite`) and `sun.mg` (`struct Sun`, the Sun: a
+`pseudo3d.mg` (`prisma` and `lamina`, solid pieces placed in the camera's scene of
+[§13](#13-pseudo-3d-scenes)), two **icons** —`satellite.mg` (`struct Satellite`) and `sun.mg` (`struct Sun`, the Sun: a
 radius-1 disc plus a ring of rays, `rays=` how many)— and three **world maps** in orthographic
 projection, generated from real data (Natural Earth) with `tools/geo2mg.py`: `polar_map.mg`
 (`PolarMap`, seen from the north pole), `fulldisk_map.mg` (`FullDiskMap`, equatorial) and
@@ -827,12 +839,132 @@ is written (`include "../lib/satellite.mg"`).
 
 ---
 
-## 13. How the compiler fails
+## 13. Pseudo-3D scenes
+
+MG draws in the plane. What this section adds is a **camera**: you declare it once and then describe the
+figure in coordinates of space, instead of working out by hand where each thing lands on the paper.
+
+What you gain is not syntax, it is that **the camera becomes a parameter**: change the elevation and the
+grid, the rays and the solid pieces all move together, because they all come from the same number. It is
+the opposite of placing each piece until it looks right.
+
+> ⚠️ This is a **simulation** of 3-D in 2-D: there is no z-buffer, no hidden surfaces, no lighting and no
+> perspective. Paint order is **writing order** —draw the far things first—, and which face of a body ends
+> up behind is your decision. For real 3-D, Blender; MG is not going to replace it.
+
+### The axes
+
+**x to the right, y up, z towards the viewer.** The plane of the paper is **xy**; the ground, if the figure
+has a ground, is **xz**, and a height is `y`.
+
+The convention was chosen so that `view3d(azimuth=0, elevation=0)` is the **identity**: with no camera —or
+with the camera head-on— the language behaves exactly as in the rest of this reference, and a flat figure
+pays nothing for this existing.
+
+### `view3d` — the camera
+
+A state statement with scope, like `translate` or `rotate` ([§9](#9-transformations)): it holds from where
+it appears to the end of the block. There are two projections and **a single statement**, with `type=`: a
+figure declares *one* camera.
+
+```octave
+view3d(azimuth=35, elevation=25)                     % axonometric — the default
+view3d(type="oblique", angle=45, foreshorten=0.5)    % oblique (cavalier/cabinet)
+```
+
+**Orthographic axonometric** (`type="axonometric"`, or nothing) — azimuth θ, which spins the scene about
+the vertical, and elevation φ, which lifts the camera above the horizon:
+
+    X = x·cos θ + z·sin θ
+    Y = y·cos φ + (x·sin θ − z·cos θ)·sin φ
+
+The cases worth keeping at hand to orient yourself: θ=φ=0 is the identity; θ=0, φ=90° gives the **plan**
+view (seen from above); θ=90°, φ=0 gives the view from +x.
+
+**Oblique** (`type="oblique"`) — the front face, the one at `z=0`, **always keeps its true shape**,
+whatever `angle` is; only depth recedes, in the direction `angle` and shortened by `foreshorten`
+(1 = cavalier, 0.5 = cabinet):
+
+    X = x − z·f·cos(angle)
+    Y = y − z·f·sin(angle)
+
+It is the projection of textbook figures where one face has to be measurable. Defaults: `azimuth=0
+elevation=0`; `angle=45 foreshorten=0.5`. Angles are in **degrees**.
+
+### `plane3d` — drawing on a plane of the scene
+
+A statement with scope, like the transformations: inside the block, coordinates are **local to the plane**
+and ordinary drawing projects itself.
+
+```octave
+plane3d(at=[0,0,0], u=[1,0,0], v=[0,1,0])   % the defaults: the plane of the paper
+```
+
+`at` is the local origin, and `u` and `v` are the two vectors of the plane, which **carry the scale**:
+local `(0,0)` lands on `at`, `(1,0)` on `at+u` and `(0,1)` on `at+v`.
+
+```octave
+view3d(azimuth=35, elevation=25)
+
+% an upright screen, and a ring drawn ON it
+{ plane3d(at=[8,0,0], u=[0,0,1], v=[0,1,0])
+  rectangle { 0 0  1.4 4.2 }
+  circle(0.6) { 0.7 2.1 } }
+
+% the meridians of a sphere: seven ellipses in two lines
+for k = 0 to 6 {
+    lam = k * pi / 7
+    { plane3d(u=[cos(lam), 0, sin(lam)], v=[0, 1, 0])
+      circle(2) { 0 0 } }
+}
+```
+
+📌 **That `circle` comes out as the exact ellipse of its projection**, not as an approximation nor as an
+ellipse someone had to measure: the engine represents an ellipse by its centre and its conjugate
+semi-diameters, which is precisely the closed form of projecting a circle of space. It holds equally in
+EPS, SVG and PDF.
+
+📌 **Inside a `plane3d` the usual 2-D drawing works** —`sine`, `smooth`, `bezier`, a filled `polygon`,
+`place` of a struct—, because the only thing that changed is the current matrix. A wave on a plane of
+space is an ordinary `sine`; nothing has to be sampled by hand. And the `from`/`to` of an `arc` is still
+an angle **of the plane**, not of the page.
+
+### `xyz(x, y, z)` — a loose point of space
+
+For what belongs to no plane: rays, construction lines, the label hanging off a point. It returns the
+point **already projected**, so it is written where a coordinate goes.
+
+```octave
+view3d(azimuth=35, elevation=25)
+h = 6   d = 1.2
+
+polyline { xyz(0, h, 0)   xyz(3*d, 0, 5*d) }     % a ray, from the optics to the ground
+text("CIV") { xyz(3*d, 0, 5*d) }
+```
+
+> ⚠️ **`xyz()` goes OUTSIDE every `plane3d`.** The point it returns is already in document coordinates;
+> inside a `plane3d` it would be transformed **twice** and land anywhere. Inside a plane you draw in local
+> coordinates, which is exactly what makes `xyz()` unnecessary there.
+
+### Solid pieces
+
+`lib/pseudo3d.mg` ([§12](#12-libraries)) brings two, built on the above: `prisma(w, h, d, pos=[x,y,z])`, a
+box of three visible faces shaded from light to dark, and `lamina(h, d, pos=…)`, the single-face plate
+with hatching. Both are placed in **scene** coordinates with `pos=` — `at=` is still the placement word of
+a struct ([§8](#8-structures)), and serves to shift the piece on the page *after* projecting it.
+
+⚠️ The order in which `prisma` paints its faces is the right one for a viewer up and to the right
+(positive elevation, or an oblique `angle` between 0 and 90°). With the camera on the other side you have
+to reorder by hand: with no z-buffer that is **modelling**, and no library can guess it.
+
+---
+
+## 14. How the compiler fails
 
 MG **aborts** rather than producing a half-figure: an evaluation error, an `include` that doesn't resolve or
 an odd count of coordinates end compilation with code 1. **Non-fatal warnings** do continue, and go to
 `stderr`: an unknown color (falls back to black), a character with no glyph (dropped), or a figure whose
-entire drawing landed off the canvas ([§14](#14-common-mistakes)) — there the compiler has nothing to fix,
+entire drawing landed off the canvas ([§15](#15-common-mistakes)) — there the compiler has nothing to fix,
 but you do have something to look at.
 
 This is deliberate: **an inconsistent document should produce no output**. In a figure derived from
@@ -855,11 +987,11 @@ polygon { 2 2   3 2        % half-written: brace not closed, and one coord too m
 > `if` of §8.
 
 > ⚠️ **`exit` silences the syntax errors further down, but not the lexical ones** (a stray `@`, an accented
-> letter outside a string) ([details](#14-common-mistakes)).
+> letter outside a string) ([details](#15-common-mistakes)).
 
 ---
 
-## 14. Common mistakes
+## 15. Common mistakes
 
 The stumbles that recur, symptom first — because when they happen you don't yet know the cause. The first
 three are, by far, the most frequent.
@@ -972,7 +1104,7 @@ below the `exit` goes in a `%` comment.
 
 ---
 
-## 15. Quick reference
+## 16. Quick reference
 
 **Primitives** · `polyline` `polygon` `rectangle` `circle` `ellipse` `arc` `dot` `marker` `bezier` `smooth`
 `polybar` `sine` `compound` `text`
@@ -984,6 +1116,9 @@ below the `exit` goes in a `%` comment.
 
 **Transformations** · `translate` `rotate` `scale` `shear`
 
+**Pseudo-3D scene** · `view3d(azimuth=, elevation=)` / `view3d(type="oblique", angle=, foreshorten=)` ·
+`plane3d(at=, u=, v=)` · function `xyz(x, y, z)`
+
 **Control** · `for … to … [step …] { }` · `if … { } else { }` · `struct` (recursive) · `include`
 
 **Placement** · `place` `fit` `repeat` · invocation `Name(at=, scale=, rotate=, transform=)`
@@ -994,7 +1129,8 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 
 **Charts** · `plot` `xaxis` `yaxis` `axis` `rule` `legend`/`entry` `table`/`row` `grid` `numbers` `ticks`
 
-**Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` · constants `pi`
+**Functions** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` `xyz` ·
+constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 91fbd360701289323075c795921fc16cc333fe47 -->
+<!-- translated-from: referencia.md @ 7e34f28170bdd24e37b3c2c8f51946c9ec4a8e09 -->

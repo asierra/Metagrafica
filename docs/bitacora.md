@@ -2912,3 +2912,62 @@ Que un paralelo entero oculto dé barrido cero **no es un caso a esquivar**: es 
 cuenta. «No se ve nada» es un resultado legítimo de recortar por visibilidad, y el motor tenía
 que aceptarlo sin que el autor lo envolviera en un condicional — sobre todo si la figura va a
 entrar al corpus, donde el `if` habría quedado enseñando a esquivar un bug.
+
+---
+
+## 2026-08-01 (bis) — Fase D: la referencia aprende 3-D, y `docfail` cobra su primer ejemplo del plan
+
+**§13 «Escenas pseudo-3D»**, nueva y en los dos idiomas. Contenido: la convención de ejes y por
+qué es ésa, las dos proyecciones con sus fórmulas y los casos de comprobación que orientan
+(θ=φ=0 identidad, φ=90° planta), `plane3d`, `xyz()`, el footgun del doble transform y las piezas
+de `lib/pseudo3d.mg`.
+
+### Dónde ponerla, y qué se renumeró
+
+Entró **después de §12 Bibliotecas**, no después de §9 Transformaciones —que es donde encaja
+conceptualmente, porque `plane3d` es una transformación—, por una razón concreta: ahí habría
+renumerado seis encabezados y nueve referencias cruzadas **en dos idiomas**, y después de §12
+renumera tres. La adyacencia con Bibliotecas tampoco es arbitraria: `lib/pseudo3d.mg` se
+describe en §12 y ahora se apoya en §13.
+
+Lo que sí hubo que barrer son las **anclas**: diez `#14-errores-comunes` que el renumerado dejó
+apuntando a nada. Un enlace roto en Markdown no falla, solo no lleva a ningún sitio — y ninguna
+compuerta los mira. (Anotado como candidato barato: `grep -o '(#[0-9]' vs los encabezados.)
+
+Se tocaron además dos sitios fuera de la sección, y los dos importan más de lo que parecen: la
+**referencia rápida** de §16, que es la tabla que alguien consulta sin leer nada más, y el «**No
+hace 3D**» de §1 — que es de lo primero que lee alguien de fuera y a partir de hoy es medio
+falso. Ahora dice qué es y qué no: una cámara que proyecta, sin superficies ocultas ni
+iluminación.
+
+### `docfail` cobró su primer ejemplo del plan, y el hallazgo no era de 3-D
+
+El ejemplo `text("CIV") { xyz(3*d, 0, 5*d) }`, copiado tal cual de §4.5 de `plan_pseudo3d.md`,
+**no compilaba**. `text` validaba la paridad de sus coordenadas en **parse-time contando
+términos**, así que un punto `[x,y]` contaba como **uno** y el diagnóstico decía «número impar de
+coordenadas (1)» señalando una línea perfectamente correcta.
+
+Lo revelador es que **no era un hueco del 3-D**: `text("A") { point_at(&p, 0.5) }` fallaba
+exactamente igual, y rotular un punto calculado sobre una curva es de lo más natural que se
+puede querer. Las primitivas aceptaban puntos desde siempre (`PrimStmt::evalPath`); `text` era
+la excepción, y nadie lo había notado porque quien tropieza parte el punto a mano en dos
+expresiones y sigue. Se arregló difiriendo la paridad a eval-time, igual que las primitivas.
+
+Eso obligó a **mudar una comprobación de fase**, que es justo cuando una comprobación se pierde
+sin que nadie lo note. De ahí los dos fixtures y no uno: `text_punto_calculado.mg` fija que
+compile, y `text_impar.mg` fija que el error de coordenada impar **siga existiendo** en su fase
+nueva. `coords_impares.mg` vigila el de las primitivas y no habría dicho nada.
+
+📌 El plan había escrito ese ejemplo marcándolo como ilustrativo, y ahí estuvo bien: a
+`docs/plans/` no lo compila nadie, y por eso el plan dice explícitamente que la documentación va
+en la **referencia**. El valor de la compuerta no es que la documentación esté bien escrita: es
+que una afirmación falsa sobre el lenguaje no sobreviva a su primer commit. Un humano tropieza y
+desconfía del documento; un modelo obedece.
+
+### Un límite de `docblocks.py`, anotado
+
+Un bloque ```octave **dentro de un blockquote `>`** no se extrae bien: el `> ` se cuela en el
+fuente y el compilador se atraganta con él. Salió al documentar de paso la regla `scale sx (sy)`
+—el menor que quedaba anotado en `PENDIENTES.md`—, y la salida fue poner esos ejemplos **en
+línea**, que es como el resto del documento escribe sus avisos. No se tocó el extractor: hoy no
+hay ningún otro bloque en esa posición, y el estilo del documento no la pide.

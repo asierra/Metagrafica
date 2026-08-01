@@ -337,13 +337,26 @@ su fuente, y nadie lo había visto porque no había con qué compararla.
 la misma cámara), y la figura compila con `gs` y paridad geométrica bajo **cuatro cámaras
 distintas**, dos de ellas axonométricas — que la versión anterior no podía ni expresar.
 
-### Fase D — documentar en `docs/referencia.md`
-Sección nueva con la convención de ejes (§4.1), las dos proyecciones, `plane3d`, `xyz()` y el
-footgun del doble transform. ⚠️ Va en la **referencia**, no aquí: ahí los bloques ```octave los
-compila `docfail` (`tools/docblocks.py`), mientras que a `docs/plans/` **no lo mira ninguna
-compuerta** —`test/run.sh` solo le pasa `referencia.md` y `reference.md`—, y por eso los
-ejemplos de este documento van marcados como ilustrativos. Al cerrar: traducir `reference.md`
-o re-sellar su hash (compuerta `trfail`).
+### ✅ Fase D — documentar en `docs/referencia.md` — HECHA 2026-08-01
+**§13 «Escenas pseudo-3D»**, nueva, en los **dos idiomas** (`reference.md` traducido y
+re-sellado): convención de ejes, las dos proyecciones con sus fórmulas y sus casos de
+comprobación, `plane3d`, `xyz()`, el footgun del doble transform y las piezas de
+`lib/pseudo3d.mg`. Entró después de §12 —renumerando 13→14, 14→15, 15→16 y sus anclas—, más
+`view3d`/`plane3d`/`xyz` en la referencia rápida y el matiz al «No hace 3D» de §1, que era
+justo lo que un lector de fuera leería primero.
+
+📌 **La compuerta `docfail` valió lo que costó, en su primera exposición a esto:** el ejemplo
+`text("CIV") { xyz(3*d, 0, 5*d) }` —copiado tal cual de §4.5 de este plan— **no compilaba**.
+`text` validaba la paridad de sus coordenadas en parse-time contando TÉRMINOS, así que un punto
+[x,y] contaba como uno y el error decía «número impar de coordenadas (1)» señalando una línea
+correcta. No era un hueco del 3-D: `text("A") { point_at(&p, 0.5) }` fallaba igual, y las
+primitivas ya lo aceptaban desde siempre (`PrimStmt::evalPath`). Se arregló —`text` expande
+puntos en eval-time, como las primitivas— con dos fixtures: `text_punto_calculado.mg` (que
+compile) y `text_impar.mg` (que el error impar NO se perdiera al mudarse de fase).
+
+⚠️ **Un `​```octave` dentro de un blockquote `>` no lo sabe extraer `docblocks.py`**: el `> ` se
+cuela en el fuente. Se descubrió al documentar de paso la regla `scale sx (sy)`; la salida fue
+poner esos dos ejemplos en línea, que es como el resto del documento escribe sus avisos.
 
 ### Fase E — figuras al corpus, **selectivo**
 

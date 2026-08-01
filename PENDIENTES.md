@@ -355,8 +355,11 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       - **Arreglo probable:** que `PDFDisplay` omita el arco cuando el barrido es 0 (o lo
         emita como un `moveto` sin trazo), igual que hacen EPS y SVG de hecho. Más una prueba
         negativa/positiva en `test/errors/` que fije la conducta elegida en los TRES.
-- [ ] 📥 **`scale` con DOS FACTORES VARIABLES a media línea: la regla existe, funciona, y no
-      está documentada** (hallado 2026-07-31 escribiendo `angulo_solido.mg`). `scale sx sy`
+- [x] ~~📥 **`scale` con DOS FACTORES VARIABLES a media línea: la regla existe, funciona, y no
+      está documentada**~~ — **DOCUMENTADA 2026-08-01**, §9 en los dos idiomas (`scale sx (sy)`,
+      por qué la ambigüedad es real y qué error engañoso da si faltan los paréntesis), con
+      `reference.md` re-sellado. El motor no se tocó. Queda sin hacer lo opcional: la prueba
+      negativa que fije el mensaje. Lo hallado, para memoria: `scale sx sy`
       seguido de otra sentencia en el mismo renglón **no toma `sy`**: `parserv3.cpp` solo lo
       acepta como segundo factor si el identificador **termina la sentencia**, y la salida
       inequívoca —escrita en el comentario del código— es **`scale sx (sy)`**, porque ninguna

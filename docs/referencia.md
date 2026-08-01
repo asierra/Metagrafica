@@ -24,7 +24,8 @@ polyline { 0 0  2 1 }
 **Lo que MG no es.** No es un lenguaje de programación de propósito general:
 tiene variables, expresiones, `for`, `if` y poco más. No analiza datos — `polybar` recibe
 intervalos ya contados, no observaciones; para llegar de una hoja de cálculo a un `.mg` está
-`tools/hist2mg.py`. No hace 3D. No compone párrafos.
+`tools/hist2mg.py`. No hace 3D —lo de [§13](#13-escenas-pseudo-3d) es una cámara que proyecta,
+sin superficies ocultas ni iluminación—. No compone párrafos.
 
 ---
 
@@ -50,7 +51,7 @@ Por eso `dot` es el marcador correcto dentro de una gráfica deformada: cae dond
 se convierte en elipse.
 
 > ⚠️ **Si no ves nada, o ves la figura a medias, mira `world_window` antes que nada:** es un
-> recorte fijo, no se ajusta a tus datos. Es el tropiezo nº 1 ([detalle](#14-errores-comunes)).
+> recorte fijo, no se ajusta a tus datos. Es el tropiezo nº 1 ([detalle](#15-errores-comunes)).
 
 **El motor es isométrico:** la escala es la misma en x y en y. Si la proporción de
 `world_window` no coincide con la de `display_size`, la figura queda centrada con márgenes
@@ -71,7 +72,7 @@ se convierte en elipse.
 > —centímetros contra unidades de mundo—; el mapeo de datos de un `plot` es otra cosa
 > ([§11](#11-gráficas)).
 
-> ⚠️ **Achicar `display_size` no achica el texto** — lo agranda relativamente ([detalle](#14-errores-comunes)).
+> ⚠️ **Achicar `display_size` no achica el texto** — lo agranda relativamente ([detalle](#15-errores-comunes)).
 
 ---
 
@@ -104,7 +105,7 @@ Con eso basta para dibujar. Un trayecto además se puede **operar** —encadenar
 suavizar, muestrear— y eso vive aparte, en §10: no hace falta para empezar.
 
 > ⚠️ **`&trayecto` va como PRIMER argumento, siempre**, y el resto nombrado detrás:
-> `dot(&p, size=2)` ✅, `dot(2, &p)` ❌ ([detalle](#14-errores-comunes)).
+> `dot(&p, size=2)` ✅, `dot(2, &p)` ❌ ([detalle](#15-errores-comunes)).
 
 ---
 
@@ -132,7 +133,7 @@ sine(half_cycles=2, amplitude=1) { 0 0  4 0 }
 
 > ⚠️ **El `{` va en la MISMA LÍNEA que la primitiva.** Por dentro, tanto los `( )` como los
 > `{ }` pueden ocupar cuantas líneas quieras; lo que no puede haber es un salto de línea
-> **antes** del `{` ([detalle](#14-errores-comunes)).
+> **antes** del `{` ([detalle](#15-errores-comunes)).
 
 `polyline`, `polygon` y `bezier` admiten **subtrayectos disjuntos** separados por `;`:
 
@@ -427,7 +428,7 @@ if r > 2 and n < 100 { text("grande") { 0 0 } } else { text("chica") { 0 0 } }
 > una coordenada la parte en dos: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`); lo que
 > quieres es `{ 12 (y-11) }`. **Encierra en `( )` toda coordenada que sume o reste**; productos,
 > cocientes, potencias y un menos inicial van sueltos (`x*2`, `x/n`, `x^2`, `-x`). Mezclar variables
-> sueltas con coordenadas entre paréntesis es correcto: `{ x y (x+1) (y+1) }` ([detalle](#14-errores-comunes)).
+> sueltas con coordenadas entre paréntesis es correcto: `{ x y (x+1) (y+1) }` ([detalle](#15-errores-comunes)).
 
 > ⚠️ **Una llamada a función va PEGADA al paréntesis: `f(x)`.** Con un espacio de por medio —`f (x)`—
 > el `(` es un término aparte, no una llamada; por eso en `{ x y (x+1) }` la `y` no se traga el
@@ -460,7 +461,7 @@ dos ideas, es una con dos nombres, y el nombre aparte existe porque una struct n
 primitiva.
 
 > ⚠️ **Con DOS puntos `place` es otra cosa: una línea guía con algo encima, y dibuja la
-> línea.** Para sembrar copias, da 3 o más puntos, o usa `count=` ([detalle](#14-errores-comunes)).
+> línea.** Para sembrar copias, da 3 o más puntos, o usa `count=` ([detalle](#15-errores-comunes)).
 
 💡 **Lo que justifica `repeat` es la acumulación.** Es el único que compone la
 transformación: con `transform=rotate(30)` la copia *k* va girada 30°·*k* respecto a la
@@ -569,6 +570,18 @@ También como argumento por-primitiva o de colocación: `polyline(transform=rota
 > Bajo un `transform`, el texto mueve su **ancla**; los glifos no se deforman (salvo
 > `rotate`, que sí los gira).
 
+> ⚠️ **`scale` con dos factores VARIABLES: paréntesis en el segundo si sigue otra sentencia en
+> el mismo renglón.** `scale` es la única transformación de aridad variable (uno o dos
+> factores), así que un identificador suelto detrás es ambiguo: puede ser su segundo factor o
+> puede ser el comienzo de la sentencia siguiente. La regla es que solo se toma como factor si
+> **termina la sentencia**; para forzarlo, paréntesis, que ninguna sentencia empieza por `(`:
+> `{ scale sx sy }` ✅ (`sy` termina la sentencia, se toma) y
+> `{ scale sx (sy)   shear kk 0 }` ✅ (con otra sentencia detrás, paréntesis).
+>
+> Sin ellos, `sy` arranca una sentencia nueva y se traga lo que siga; el error habla de lo que
+> venía después —«variable no definida: shear»— y señala una línea que está bien escrita. Con
+> literales (`scale 2 1`) no hay ambigüedad y no hace falta nada.
+
 Un `rotate`, un `scale` con factores distintos en x e y o un `shear` sobre un `circle`, un
 `arc` o una `ellipse` dan la elipse **girada** que corresponde, con sus ángulos intactos: se
 transforma la figura entera, no sus radios por separado. Vale en los tres formatos de salida.
@@ -627,7 +640,7 @@ for k = 0 to n {
 ```
 
 > ⚠️ **`+=` SUELDA piezas relativas**: cada una se traslada para continuar donde acabó la
-> anterior, así que se escriben relativas, no absolutas ([detalle](#14-errores-comunes)).
+> anterior, así que se escriben relativas, no absolutas ([detalle](#15-errores-comunes)).
 
 **Una curva calculada, punto por punto.** Es el caso más común del lenguaje —la curva sale
 de una fórmula, no de coordenadas medidas— y tiene su propia forma, porque una pieza de **un
@@ -661,7 +674,7 @@ hace [`examples/tiro_parabolico.mg`](../examples/tiro_parabolico.mg).
 > sentencias. Para generar puntos con un lazo, se acumulan en un `path` como arriba.
 
 > ⚠️ **`path x = …` se evalúa al DIBUJAR; `path x += …` en el acto.** Por eso la semilla de un
-> acumulador tiene que ser un literal, sin variables que el lazo vaya a pisar ([detalle](#14-errores-comunes)).
+> acumulador tiene que ser un literal, sin variables que el lazo vaya a pisar ([detalle](#15-errores-comunes)).
 
 **Reducciones trayecto→número** — leen una medida de un trayecto: `path_width(&p)`,
 `path_x_min_at_y(&p, y [, expand])`, `path_x_max_at_y(&p, y [, expand])`. Operan sobre el
@@ -745,7 +758,7 @@ quererse; `to=` la corta en ese valor de datos.
 
 > ⚠️ **«No lineal» no quiere decir «log».** La escala log es para datos *multiplicativos* y
 > no existe en valores ≤ 0; si tus puntos solo están mal repartidos, lo que quieres son
-> líneas guía, no una escala ([detalle](#14-errores-comunes)).
+> líneas guía, no una escala ([detalle](#15-errores-comunes)).
 
 **Con un eje logarítmico, `plot` mapea posiciones, no formas.** Un eje lineal envuelve el
 contenido en una matriz y lo transforma entero; el log no puede —no es una transformación
@@ -824,8 +837,8 @@ prisma(2, 1, 1.5)               % ancho, alto, profundidad
 ```
 
 El `include` debe preceder al uso, y **falla el compilado** si el archivo no resuelve. En
-`lib/` vienen `pseudo3d.mg` (volumen simulado por proyección oblicua, sin z-buffer: el orden
-de pintado es el de escritura), dos **iconos** —`satellite.mg` (`struct Satellite`) y `sun.mg`
+`lib/` vienen `pseudo3d.mg` (`prisma` y `lamina`, piezas sólidas puestas en la escena de la
+cámara de [§13](#13-escenas-pseudo-3d)), dos **iconos** —`satellite.mg` (`struct Satellite`) y `sun.mg`
 (`struct Sun`, el Sol: disco de radio 1 y un anillo de rayos, `rays=` cuántos)— y tres **mapas
 del mundo** en proyección ortográfica, generados de datos reales (Natural Earth) con
 `tools/geo2mg.py`: `polar_map.mg` (`PolarMap`, vista desde el polo norte),
@@ -847,13 +860,138 @@ sistema, y en el repo se escribe la ruta relativa (`include "../lib/satellite.mg
 
 ---
 
-## 13. Cómo falla el compilador
+## 13. Escenas pseudo-3D
+
+MG dibuja en el plano. Lo que esta sección añade es una **cámara**: la declaras una vez y
+después describes la figura con coordenadas del espacio, en vez de calcular a mano dónde cae
+cada cosa en el papel.
+
+Lo que se gana no es sintaxis, es que **la cámara pasa a ser un parámetro**: cambias la
+elevación y la malla, los rayos y las piezas se mueven juntos, porque todos salen del mismo
+número. Es lo contrario de colocar cada pieza hasta que se vea bien.
+
+> ⚠️ Esto es **simulación** de 3-D en 2-D: no hay z-buffer, ni superficies ocultas, ni
+> iluminación, ni perspectiva. El orden de pintado es el **orden de escritura** —dibuja primero
+> lo lejano—, y qué cara de un cuerpo queda detrás lo decides tú. Para 3-D de verdad, Blender;
+> MG no lo va a sustituir.
+
+### Los ejes
+
+**x a la derecha, y arriba, z hacia el observador.** El plano del papel es **xy**; el suelo, si
+la figura tiene suelo, es **xz**, y una altura es `y`.
+
+La convención se eligió para que `view3d(azimuth=0, elevation=0)` sea la **identidad**: sin
+cámara —o con la cámara al frente— el lenguaje se comporta exactamente como en el resto de esta
+referencia, y una figura plana no paga nada por que esto exista.
+
+### `view3d` — la cámara
+
+Sentencia de estado con alcance, como `translate` o `rotate` ([§9](#9-transformaciones)): vale
+desde donde aparece hasta el fin del bloque. Hay dos proyecciones y **una sola sentencia**, con
+`type=`: una figura declara *una* cámara.
+
+```octave
+view3d(azimuth=35, elevation=25)                     % axonométrica — la de default
+view3d(type="oblique", angle=45, foreshorten=0.5)    % oblicua (caballera/gabinete)
+```
+
+**Axonométrica ortográfica** (`type="axonometric"`, o nada) — acimut θ, que gira la escena sobre
+la vertical, y elevación φ, que levanta la cámara sobre el horizonte:
+
+    X = x·cos θ + z·sin θ
+    Y = y·cos φ + (x·sin θ − z·cos θ)·sin φ
+
+Los casos que conviene tener a mano para orientarse: θ=φ=0 es la identidad; θ=0, φ=90° da la
+**planta** (se ve desde arriba); θ=90°, φ=0 da la vista desde +x.
+
+**Oblicua** (`type="oblique"`) — la cara frontal, la de `z=0`, **conserva su forma real
+siempre**, sea cual sea `angle`; solo la profundidad recede, en la dirección `angle` y acortada
+por `foreshorten` (1 = caballera, 0.5 = gabinete):
+
+    X = x − z·f·cos(angle)
+    Y = y − z·f·sin(angle)
+
+Es la proyección de las figuras de libro donde una cara tiene que poder medirse. Defaults:
+`azimuth=0 elevation=0`; `angle=45 foreshorten=0.5`. Los ángulos van en **grados**.
+
+### `plane3d` — dibujar sobre un plano de la escena
+
+Sentencia con alcance, como las transformaciones: dentro del bloque, las coordenadas son
+**locales al plano** y el dibujo corriente se proyecta solo.
+
+```octave
+plane3d(at=[0,0,0], u=[1,0,0], v=[0,1,0])   % los defaults: el plano del papel
+```
+
+`at` es el origen local, y `u` y `v` son los dos vectores del plano, que **llevan la escala**:
+el local `(0,0)` cae en `at`, el `(1,0)` en `at+u` y el `(0,1)` en `at+v`.
+
+```octave
+view3d(azimuth=35, elevation=25)
+
+% una pantalla vertical, y un anillo dibujado SOBRE ella
+{ plane3d(at=[8,0,0], u=[0,0,1], v=[0,1,0])
+  rectangle { 0 0  1.4 4.2 }
+  circle(0.6) { 0.7 2.1 } }
+
+% los meridianos de una esfera: siete elipses en dos renglones
+for k = 0 to 6 {
+    lam = k * pi / 7
+    { plane3d(u=[cos(lam), 0, sin(lam)], v=[0, 1, 0])
+      circle(2) { 0 0 } }
+}
+```
+
+📌 **Ese `circle` sale como la elipse exacta de su proyección**, no como una aproximación ni
+como una elipse que hubo que medir: el motor representa una elipse por su centro y sus
+semidiámetros conjugados, que es precisamente la forma cerrada de proyectar un círculo del
+espacio. Vale igual en EPS, SVG y PDF.
+
+📌 **Dentro de un `plane3d` funciona el dibujo 2-D de siempre** —`sine`, `smooth`, `bezier`, un
+`polygon` relleno, `place` de una struct—, porque lo único que cambió es la matriz vigente. Una
+onda sobre un plano del espacio es un `sine` corriente; no hay que muestrear nada a mano. Y el
+`from`/`to` de un `arc` sigue siendo el ángulo **del plano**, no el de la página.
+
+### `xyz(x, y, z)` — un punto suelto del espacio
+
+Para lo que no pertenece a ningún plano: los rayos, las líneas de construcción, el rótulo que
+cuelga de un punto. Devuelve el punto **ya proyectado**, así que se escribe donde va una
+coordenada.
+
+```octave
+view3d(azimuth=35, elevation=25)
+h = 6   d = 1.2
+
+polyline { xyz(0, h, 0)   xyz(3*d, 0, 5*d) }     % un rayo, de la óptica al suelo
+text("CIV") { xyz(3*d, 0, 5*d) }
+```
+
+> ⚠️ **`xyz()` va FUERA de todo `plane3d`.** El punto que devuelve ya está en coordenadas del
+> documento; dentro de un `plane3d` se transformaría **dos veces** y caería en cualquier parte.
+> Dentro de un plano se dibuja en coordenadas locales, que es justo lo que hace innecesario a
+> `xyz()` ahí.
+
+### Piezas sólidas
+
+`lib/pseudo3d.mg` ([§12](#12-bibliotecas)) trae dos, construidas sobre lo anterior: `prisma(w,
+h, d, pos=[x,y,z])`, una caja de tres caras visibles sombreadas de claro a oscuro, y
+`lamina(h, d, pos=…)`, la placa de una sola cara con trama. Ambas se colocan en coordenadas de
+la **escena** con `pos=` — `at=` sigue siendo la palabra de colocación de una struct
+([§8](#8-estructuras)), y sirve para correr la pieza en la página *después* de proyectarla.
+
+⚠️ El orden en que `prisma` pinta sus caras es el correcto para un observador arriba y a la
+derecha (elevación positiva, o `angle` oblicuo entre 0 y 90°). Con la cámara del otro lado hay
+que reordenar a mano: sin z-buffer, eso es **modelado**, y ninguna biblioteca puede adivinarlo.
+
+---
+
+## 14. Cómo falla el compilador
 
 MG **aborta** en vez de producir una figura a medias: un error de evaluación, un `include`
 que no resuelve o un conteo impar de coordenadas terminan la compilación con código 1. Los
 **avisos** no fatales sí siguen, y salen por `stderr`: un color desconocido (cae a negro), un
 carácter sin glifo (se descarta) o una figura cuyo dibujo entero quedó fuera del lienzo
-([§14](#14-errores-comunes)) — ahí no hay nada que corregir por el compilador, pero sí algo
+([§15](#15-errores-comunes)) — ahí no hay nada que corregir por el compilador, pero sí algo
 que mirar.
 
 Eso es deliberado: **un documento inconsistente no debe producir salida**. En una figura
@@ -877,11 +1015,11 @@ polygon { 2 2   3 2        % a medio escribir: sin cerrar la llave, y sobra una 
 > recursión — para eso, el `if` de §8.
 
 > ⚠️ **`exit` calla los errores de sintaxis de más abajo, pero no los léxicos** (un `@`
-> suelto, una letra acentuada fuera de una cadena) ([detalle](#14-errores-comunes)).
+> suelto, una letra acentuada fuera de una cadena) ([detalle](#15-errores-comunes)).
 
 ---
 
-## 14. Errores comunes
+## 15. Errores comunes
 
 Los tropiezos que se repiten, con el síntoma primero — porque cuando ocurren no se sabe
 todavía cuál es la causa. Los tres primeros son, con diferencia, los más frecuentes.
@@ -1001,7 +1139,7 @@ un comentario `%`.
 
 ---
 
-## 15. Referencia rápida
+## 16. Referencia rápida
 
 **Primitivas** · `polyline` `polygon` `rectangle` `circle` `ellipse` `arc` `dot` `marker`
 `bezier` `smooth` `polybar` `sine` `compound` `text`
@@ -1012,6 +1150,9 @@ un comentario `%`.
 **Configuración** · `display_size` `world_window` `max_depth` `exit`
 
 **Transformaciones** · `translate` `rotate` `scale` `shear`
+
+**Escena pseudo-3D** · `view3d(azimuth=, elevation=)` / `view3d(type="oblique", angle=,
+foreshorten=)` · `plane3d(at=, u=, v=)` · función `xyz(x, y, z)`
 
 **Control** · `for … to … [step …] { }` · `if … { } else { }` · `struct` (recursivo) · `include`
 
@@ -1024,5 +1165,5 @@ un comentario `%`.
 **Gráficas** · `plot` `xaxis` `yaxis` `axis` `rule` `legend`/`entry` `table`/`row` `grid`
 `numbers` `ticks`
 
-**Funciones** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray`
+**Funciones** · `sin` `cos` `tan` `atan2` `sqrt` `abs` `exp` `ln` `mod` `len` `str` `gray` `xyz`
 · constantes `pi` `true` `false`
