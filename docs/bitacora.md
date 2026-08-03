@@ -3448,3 +3448,47 @@ averiguar de dónde antes de tocarlo. Revertido y anotado.
 En la figura se resolvió por la vía correcta y de paso mejor: los rótulos son símbolos, así que
 van en **modo matemático** (`$L$`, `$O$`, `$R$`, `$P$`) y salen de LM Math — que es exactamente
 la itálica del original, no Times-Italic.
+
+---
+
+## 2026-08-03 — `multietapa` al corpus: una biblioteca sin ejemplo no la compila nadie
+
+`examples/multietapa.mg` (reconstrucción de la fig. 1.25 de Lillesand, Kiefer & Chipman:
+el mismo punto del terreno visto desde satélite, avión alto, avión bajo y suelo) entró al
+golden. `ok=87 → **ok=90**`, con las ocho compuertas en cero.
+
+**Por qué entra, si no ejercita nada nuevo.** Se revisó característica por característica y
+no aporta ninguna en exclusiva: `include` de biblioteca ya está en `gravitacion_orbita`,
+`polygon` en `irradiancia`/`path_sample`/`primitives`, `dashdot` en `line_patterns` y
+`angulo_solido`, `gray()` en tres más, el texto multilínea (`/n`) en cuatro. Entra por la
+razón de `elevacion_solar`: es el **único usuario de `lib/aircraft.mg` y `lib/people.mg`**,
+los dos iconos que llegaron el 2026-08-02 (`c6495e2`).
+
+📌 **Una biblioteca de `lib/` sin ejemplo que la incluya no la compila ninguna compuerta.** Se
+pudre en silencio y el aviso llega el día que alguien la usa —o sea, en la peor sesión posible,
+la de quien la estrena—. `lib/` es código publicado por `make install` y ninguna de las ocho
+compuertas mira un `.mg` de ahí directamente: solo lo alcanzan **a través** del ejemplo que lo
+incluye. Con esto, de los ocho `.mg` de `lib/` solo `pseudo3d.mg` sigue sin usuario en el
+corpus — el hueco que dejó abierto la sesión del 2026-08-01 (decies).
+
+**Lo que hubo que tocar, y lo que no.** Cero motor: el ejemplo compilaba ya a los tres
+backends. Los `include` pasaron de `"satellite.mg"` a `"../lib/satellite.mg"`, que es la forma
+que resuelve igual en el árbol e instalada (los ejemplos son hermanos de `lib/` a propósito).
+Se añadió `multietapa` a `$EXAMPLES` en `test/run.sh` —lista explícita, no glob—, se generó
+`docs/img/multietapa.svg` **a mano la primera vez** (la compuerta `imgfail` itera sobre
+`docs/img/*.svg`: la presencia del archivo ES la declaración, así que `images` no puede crear
+el primero) y se le escribió su tarjeta inglesa en la tabla `TRAD` de `tools/galeria.py`, en el
+grupo editorial «Ilustraciones y diagramas».
+
+**Dos afirmaciones falsas en el encabezado, cazadas al publicarlo.** Las NOTAS citaban
+`barredor_mecanico.mg` como precedente de la rejilla en perspectiva, y ese archivo **no existe
+en el repo** — es de otro árbol. Se reescribió la frase para que se sostenga sola. Y el título
+y la descripción venían sin acentos (`Observacion multietapa`, `satelite`, `MAS detalle`):
+inofensivo en un comentario, salvo que esas dos primeras líneas son justo lo que `galeria.py`
+**publica**. Es la misma clase de la limpieza del 2026-07-23: un encabezado mal formado sale
+publicado, y `galfail` vigila que la galería esté al día, no que el encabezado esté bien.
+
+**Verificado mirando** (`tools/ver.sh`, rasterizado con Chrome): los tres formatos coinciden y
+la figura se lee. Las dos aeronaves son de clase distinta —reactor arriba, avioneta abajo— y
+esa es media figura: antes eran la misma silueta y solo los rótulos separaban «gran altitud»
+de «baja altitud», o sea que la figura afirmaba dos plataformas y dibujaba una.

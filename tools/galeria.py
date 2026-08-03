@@ -85,7 +85,7 @@ GRUPOS = [
       "colocación y los marcadores que se orientan solos.",
       "Apparatus diagrams and schematics, where what matters is structures, "
       "placement and markers that orient themselves."),
-     ["espectro", "fig2-5", "fig2-1", "fig4-1", "rpstest"]),
+     ["espectro", "multietapa", "fig2-5", "fig2-1", "fig4-1", "rpstest"]),
     (("Láminas de referencia", "Reference sheets"),
      ("Catálogos: cada forma, cada relleno y cada símbolo en su expresión más "
       "simple, para copiar y pegar.",
@@ -127,6 +127,16 @@ TRAD = {
         "axis, which uses `xyz()`. The two amplitudes differ on purpose, and the factor comes "
         "from the camera: the horizontal plane is foreshortened, so drawing both with the same "
         "amplitude would suggest one field is smaller than the other."),
+    "multietapa": (
+        "Multistage observation — the same scene seen from four altitudes",
+        "One point of the ground observed from the satellite, from a high-altitude "
+        "aircraft, from a low-altitude one and from the ground itself. Going down a "
+        "level, each source covers LESS area with MORE detail, and what is measured at "
+        "one level is extrapolated to the one above. The column of platforms is not "
+        "placed by eye: it falls on the centre of the terrain because the same bilinear "
+        "formula that draws the parallelogram is evaluated there, and the levels are "
+        "spaced by a formula rather than one at a time. The two aircraft and the human "
+        "figures come from `lib/` via `include`."),
     "espectro": (
         "The electromagnetic spectrum, with the infrared window expanded",
         "An outreach figure made of rectangles, text and arrows. What sets it apart is "

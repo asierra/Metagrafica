@@ -132,7 +132,7 @@ FORMATS="eps svg pdf"
 # extent vertical medido), `include` de una biblioteca (lib/satellite.mg), `rectangle`
 # centro+tamaño y el DEFAULT de marcador-hereda-color-de-línea (flechas roja/verde sin
 # marker_color). Entró al golden el 2026-07-24, cuando `\frac` quedó completo.
-EXAMPLES="angulo_solido curvas3 elevacion_solar espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita irradiancia line_patterns markers-demo onda_electromagnetica orbita_polar path_sample primitives quickstart rpstest sines symbols texto tiro_parabolico turning_points"
+EXAMPLES="angulo_solido curvas3 elevacion_solar espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita irradiancia line_patterns markers-demo multietapa onda_electromagnetica orbita_polar path_sample primitives quickstart rpstest sines symbols texto tiro_parabolico turning_points"
 
 export LC_ALL=C
 

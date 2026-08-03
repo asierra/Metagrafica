@@ -1,12 +1,13 @@
-% Observacion multietapa: la misma escena vista desde cuatro alturas
+% Observación multietapa: la misma escena vista desde cuatro alturas
 %
-% Un mismo punto del terreno observado desde el satelite, desde una aeronave a
+% Un mismo punto del terreno observado desde el satélite, desde una aeronave a
 % gran altitud, desde otra a baja altitud y desde el suelo. Al bajar de nivel,
-% cada fuente cubre MENOS superficie con MAS detalle, y lo que se extrae en un
-% nivel se extrapola al de arriba. Es el argumento de que ninguna fuente basta
-% por si sola: el enfoque multietapa es una de las cuatro maneras de mirar
-% varias veces la misma escena, junto con la multiespectral, la multitemporal
-% y la multisensor.
+% cada fuente cubre MENOS superficie con MÁS detalle, y lo que se extrae en un
+% nivel se extrapola al de arriba. La columna de plataformas no está colocada a
+% ojo: cae sobre el centro del terreno porque se evalúa la misma fórmula
+% bilineal que dibuja el paralelogramo, y los niveles se reparten por una
+% fórmula, no uno por uno. Las dos aeronaves y las figuras humanas salen de
+% `lib/` con `include`.
 %
 % NOTAS ---------------------------------------------------------------------
 % ORIGEN: reconstruccion de la Fig. 1.25 de Lillesand, Kiefer & Chipman,
@@ -42,16 +43,21 @@
 % cambio de punto de vista entre dos peldanos de la misma columna se lee como
 % error, no como variedad.
 %
-% EL TERRENO ES UN PARALELOGRAMO CON REJILLA, la perspectiva de caballo barata
-% que ya usa `barredor_mecanico.mg`. Se prefirio a la malla de puntos del
-% original, que a tamano de proyeccion se convierte en ruido.
+% EL TERRENO ES UN PARALELOGRAMO CON REJILLA, perspectiva de caballero barata:
+% dos familias de polilineas generadas por la misma formula bilineal, sin motor
+% 3-D de por medio. Se prefirio a la malla de puntos del original, que a tamano
+% de proyeccion se convierte en ruido.
+%
+% COBERTURA EXCLUSIVA: es el UNICO usuario de `lib/aircraft.mg` y de
+% `lib/people.mg`. Si sale del corpus, esas dos bibliotecas dejan de compilarse
+% en cada `check` y nada vuelve a mirarlas.
 
 display_size 12 10.73
 world_window -0.6 14.6 -0.3 13.3
 
-include "satellite.mg"
-include "aircraft.mg"
-include "people.mg"
+include "../lib/satellite.mg"
+include "../lib/aircraft.mg"
+include "../lib/people.mg"
 
 % ===========================================================================
 %  El terreno, y el eje que sale de su centro
