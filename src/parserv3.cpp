@@ -844,9 +844,17 @@ struct AssignStmt : Stmt {
     // MG no tiene declaración explícita (let/var), así que la asignación es el
     // único mecanismo y esta es la semántica intuitiva. (Las lecturas ya subían
     // vía Scope::find.) Evalúa antes de asignar.
+    //
+    // ⚠️ …pero la subida NO cruza el cuerpo de una struct (`findAssignable`, no
+    // `find`). Hasta el 2026-08-03 sí lo cruzaba, y era un bug: una struct que
+    // asignara `qx` se llevaba por delante el `qx` de quien la invocaba, sin error
+    // y sin aviso. Grave por `lib/`, donde los nombres son cortos y el usuario no
+    // ve el cuerpo. Los PARÁMETROS ya estaban aislados, así que la asimetría era
+    // además engañosa: leías la firma y concluías, razonablemente, que el interior
+    // no te tocaba nada.
     Value v = val->eval(s);
-    if (Value *p = s.find(name)) *p = std::move(v);
-    else                         s.vars[name] = std::move(v);
+    if (Value *p = s.findAssignable(name)) *p = std::move(v);
+    else                                   s.vars[name] = std::move(v);
   }
 };
 
@@ -970,6 +978,11 @@ static std::map<std::string, std::unique_ptr<StructDef>> g_structs;
 // proceso.
 static void execStructBody(const StructDef *def, Scope &local, MetaGrafica &mg,
                            GraphicsItemList &out) {
+  // El cuerpo de una struct es una FRONTERA para las escrituras: lo que se asigne
+  // aquí dentro es local y no alcanza al llamador. Se marca en este único punto por
+  // la misma razón que la guarda de profundidad — los cinco sitios pasan por aquí y
+  // así ninguno se lo puede saltar.
+  local.barrier = true;
   if (g_structDepth >= g_maxDepth) {
     evalError("profundidad de recursión excedida (§18) en la struct: ",
               def->name + " — max_depth = " + std::to_string(g_maxDepth) +

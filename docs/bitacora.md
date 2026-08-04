@@ -3653,3 +3653,49 @@ Es exactamente la familia de `plan_anisotropia.md`: escala anisótropa compuesta
 cerrada en V3 el 2026-07-27 con los semidiámetros conjugados. **El bug con el que topó esa
 figura en 1998 ya no existe**, y hoy ni siquiera hay que componer matrices: `plane3d` da la
 elipse exacta. La pregunta llevaba abierta desde julio y queda cerrada.
+
+---
+
+## 2026-08-03 (ter) — El cuerpo de una struct deja de escribir en el ámbito de quien la llama
+
+Decisión de Alejandro, el mismo día que salió el hallazgo: **es un bug, y todo lo asignado
+dentro de una struct debe ser local**. Con la predicción incluida —«como los parámetros y las
+variables son nuevos, dudo que eso arruine el golden»—, que resultó exacta.
+
+**El arreglo, en tres puntos.** `Scope` gana una bandera `barrier`; la pone `execStructBody`,
+que ya era el único sitio por el que pasan los cinco lugares que expanden un cuerpo (invoke,
+repeat, fit, buildStructure y el volcado del plot-log) — la misma razón por la que ahí vive la
+guarda de profundidad. Y `AssignStmt` pasa de `find` a `findAssignable`, que sube por la cadena
+igual que una lectura pero **se detiene al salir del cuerpo de una struct**.
+
+Lo que se conserva a propósito:
+
+- **Las lecturas siguen cruzando la frontera.** Una struct ve las variables del archivo (§8), y
+  cerrarlo del todo habría roto cualquier struct que las use como configuración ambiente.
+  Verificado: `config = 3.7` fuera, `config*2` dentro da 7.400.
+- **Dentro de un `if`/`for` la asignación sigue subiendo.** Es lo que hace que
+  `if … { w = 3 }` altere el `w` de fuera del if, que está documentado y es deliberado. La
+  frontera es la struct, no el bloque.
+
+**Cero churn: `ok=93 fail=0` sin re-bendecir nada**, y traductor `ok=14`. Ninguno de los 31
+ejemplos dependía de la fuga.
+
+### 🔒 Y de ahí sale la parte que importa
+
+Ese cero es una buena noticia y una mala a la vez: **si arreglarlo no movió un golden, perderlo
+tampoco lo movería.** La regresión de este arreglo es invisible para las ocho compuertas — misma
+familia que la Lección 6.
+
+La red que se construyó no cuesta nada: **`examples/seccion_eficaz.mg` devuelve sus variables a
+los nombres que COLISIONAN con `lib/pseudo3d.mg`** (`qx`, `qy`, `qz`, `cx`, `cy`, `cz`), que era
+justo lo que la mitigación había prefijado. Con el bug arreglado el renombre es **puro** —salida
+byte-idéntica al golden, comprobado— así que la guardia sale gratis; y si la fuga vuelve, el
+rótulo de φ se mueve y el golden falla.
+
+**Verificada como se verifican aquí las compuertas: reintroduciendo el bug a propósito.** Con
+`find` en vez de `findAssignable`, `seccion_eficaz` falla en **los tres backends**. Restaurado,
+vuelve a `ok=93`.
+
+📌 Queda anotado en tres sitios —el encabezado del ejemplo, el de `lib/pseudo3d.mg` y
+`CLAUDE.md`— que **esas variables no se renombran**. Un nombre «mejor» ahí desarma la única red
+que hay.

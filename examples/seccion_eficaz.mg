@@ -48,14 +48,17 @@
 % las generatrices del cono dejarían de morir TANGENTES sobre el círculo que dibuja
 % el cilindro, y se vería. Hoy mueren donde deben.
 %
-% ⚠️ POR QUÉ LAS VARIABLES LLEVAN PREFIJO (`tqx`, `dcx`, `trx`) Y NO EL NOMBRE OBVIO.
-% Las asignaciones del CUERPO de una struct escriben en el ámbito de quien la llama.
-% Los parámetros sí están aislados; las asignaciones internas no. `cono` y `cilindro`
-% asignan `qx`/`qy` para su retro-proyección, así que un `qx` del llamador se pierde
-% en la invocación, sin aviso y sin error: la figura simplemente sale mal. Aquí costó
-% un rato — el rótulo de φ caía a 58° cuando la cuenta daba 102°, y θ salía bien
-% porque no depende de `q`. Anotado en PENDIENTES.md; mientras siga así, un `.mg` que
-% incluya una biblioteca no puede usar nombres cortos con confianza.
+% 🔒 ESTA FIGURA ES EL GUARDIÁN DE UN BUG DE ÁMBITO, y sus nombres de variable
+% CHOCAN A PROPÓSITO con los de `lib/pseudo3d.mg`. No los renombres.
+% Hasta el 2026-08-03 las asignaciones del cuerpo de una struct escribían en el ámbito
+% de quien la llamaba (los parámetros no: la asimetría era lo engañoso). `cono` y
+% `cilindro` asignan `qx`/`qy` y `cx`/`cy`/`cz` para su retro-proyección, así que se
+% llevaban por delante los de aquí — sin error y sin aviso, con la figura saliendo mal:
+% el rótulo de φ caía a 58° cuando la cuenta daba 102°, y θ salía bien por no depender
+% de `q`. Ya está arreglado (el cuerpo de una struct es frontera para las escrituras).
+% ⚠️ Y NINGUNA COMPUERTA PUEDE CAZAR SU REGRESO: arreglarlo no movió un solo golden,
+% así que perderlo tampoco lo movería. Por eso estos nombres se dejan colisionando: si
+% la fuga vuelve, φ se mueve y el golden de esta figura falla. Es la única red que hay.
 %
 % COBERTURA EXCLUSIVA: único usuario de `lib/pseudo3d.mg` en el corpus, y por tanto
 % de `cono` y `cilindro`. Esa biblioteca era la última de `lib/` sin ningún ejemplo
@@ -97,18 +100,18 @@ nz = cos(th)*ezz + sin(th)*cos(ph)*exz + sin(th)*sin(ph)*eyz
 % q^: la componente transversal de n^, ya unitaria (es cos φ·x^ + sin φ·y^).
 % Sirve para dos cosas: el segundo eje del plano donde vive el arco de θ, y la
 % dirección de la cateta del triángulo que hace visible a φ.
-% ⚠️ Los nombres llevan prefijo a propósito — ver las NOTAS sobre el ámbito.
-tqx = cos(ph)*exx + sin(ph)*eyx
-tqy = cos(ph)*exy + sin(ph)*eyy
-tqz = cos(ph)*exz + sin(ph)*eyz
+% ⚠️ `qx`/`qy` chocan a propósito con los de `cono` y `cilindro` — ver las NOTAS.
+qx = cos(ph)*exx + sin(ph)*eyx
+qy = cos(ph)*exy + sin(ph)*eyy
+qz = cos(ph)*exz + sin(ph)*eyz
 
 % Centro de la cara del detector
-dcx = RR*nx   dcy = RR*ny   dcz = RR*nz
+cx = RR*nx   cy = RR*ny   cz = RR*nz
 
 % El triángulo que hace visible a φ se construye a un radio CORTO, no hasta el
 % detector: es andamio, y llevado hasta RR cruzaba el cono de lado a lado.
 L0 = 3.4
-trx = L0*sin(th)*tqx   try = L0*sin(th)*tqy   trz = L0*sin(th)*tqz
+trx = L0*sin(th)*qx   try = L0*sin(th)*qy   trz = L0*sin(th)*qz
 tcx = L0*nx   tcy = L0*ny   tcz = L0*nz
 
 % --- el haz incidente, detrás de todo ---
@@ -159,7 +162,7 @@ polyline(marker_end="arrow", marker_size=4) { xyz(0,0,0)   xyz(3.0*eyx, 3.0*eyy,
 % Los dos arcos nacen sobre un eje dibujado y mueren sobre otro, que es la condición
 % para que midan algo a la vista y no solo en la cuenta.
 line_width 0.5
-polyline(dash="dashed") { xyz(0,0,0)   xyz(dcx + Ld*nx, dcy + Ld*ny, dcz + Ld*nz) }
+polyline(dash="dashed") { xyz(0,0,0)   xyz(cx + Ld*nx, cy + Ld*ny, cz + Ld*nz) }
 % El triángulo rectángulo: del origen a la proyección transversal, y de ahí paralelo
 % al haz hasta el eje de observación. Discontinuo porque es andamio, pero NEGRO: en
 % gris claro el arco de φ parecía morir en la nada.
@@ -184,8 +187,8 @@ line_width 0.6
 % ⚠️ El cono va FINO como el haz incidente, no grueso: en el original el haz dispersado
 % es `LWIDTH 0` igual que el incidente, y solo el BARRIL del detector es `LWIDTH 3`. Los
 % dos haces son lo mismo —trayectorias—; el detector es el único objeto sólido.
-cono(rd, axis=[dcx, dcy, dcz], pos=[0, 0, 0], base=false, lw=0.4)
-cilindro(rd, axis=[Ld*nx, Ld*ny, Ld*nz], pos=[dcx, dcy, dcz], lw=0.9)
+cono(rd, axis=[cx, cy, cz], pos=[0, 0, 0], base=false, lw=0.4)
+cilindro(rd, axis=[Ld*nx, Ld*ny, Ld*nz], pos=[cx, cy, cz], lw=0.9)
 
 % dΩ es la sección del cono a la fracción tt del recorrido: mismo eje, radio tt·rd.
 % Va como disco PROPIO y no sobre la boca del detector —que es lo que hace el
@@ -198,14 +201,14 @@ hn  = sqrt(nz*nz + nx*nx)
 w1x = nz/hn            w1y = 0                w1z = -nx/hn
 w2x = ny*w1z - nz*w1y  w2y = nz*w1x - nx*w1z  w2z = nx*w1y - ny*w1x
 line_width 0.5
-{ plane3d(at=[tt*dcx, tt*dcy, tt*dcz],
+{ plane3d(at=[tt*cx, tt*cy, tt*cz],
           u=[tt*rd*w1x, tt*rd*w1y, tt*rd*w1z], v=[tt*rd*w2x, tt*rd*w2y, tt*rd*w2z])
   circle(1) { 0 0 } }
 
 % --- los dos ángulos, cada uno en SU plano ---
 % θ: el plano de z^ y n^. Su segundo eje es q^, así que el barrido es θ directo.
 line_width 0.5
-{ plane3d(u=[2.1*ezx, 2.1*ezy, 2.1*ezz], v=[2.1*tqx, 2.1*tqy, 2.1*tqz])
+{ plane3d(u=[2.1*ezx, 2.1*ezy, 2.1*ezz], v=[2.1*qx, 2.1*qy, 2.1*qz])
   arc(1, from=0, to=(thd)) { 0 0 } }
 % φ: el plano transversal. Sus ejes son x^ e y^, así que el barrido es φ directo.
 { plane3d(u=[1.35*exx, 1.35*exy, 1.35*exz], v=[1.35*eyx, 1.35*eyy, 1.35*eyz])
@@ -217,7 +220,7 @@ line_width 0.5
 pZ = xyz(ezx, ezy, ezz)
 pN = xyz(nx, ny, nz)
 pX = xyz(exx, exy, exz)
-pQ = xyz(tqx, tqy, tqz)
+pQ = xyz(qx, qy, qz)
 
 font_size 12
 align "center"
@@ -226,9 +229,9 @@ align "center"
 % cuarto de la cuña, no a la mitad—. Se toma el punto del arco a esa fracción y se sale
 % un poco por el radio, igual que los rótulos de los ejes.
 fTh = 0.32
-pTh = xyz(2.1*(cos(fTh*th)*ezx + sin(fTh*th)*tqx),
-          2.1*(cos(fTh*th)*ezy + sin(fTh*th)*tqy),
-          2.1*(cos(fTh*th)*ezz + sin(fTh*th)*tqz))
+pTh = xyz(2.1*(cos(fTh*th)*ezx + sin(fTh*th)*qx),
+          2.1*(cos(fTh*th)*ezy + sin(fTh*th)*qy),
+          2.1*(cos(fTh*th)*ezz + sin(fTh*th)*qz))
 hTh = sqrt(pTh[0]*pTh[0] + pTh[1]*pTh[1])
 text("$\theta$") { (pTh[0] + 0.44*pTh[0]/hTh) (pTh[1] + 0.44*pTh[1]/hTh - 0.12) }
 amf = (atan2(pX[1], pX[0]) + atan2(pQ[1], pQ[0])) / 2
@@ -247,7 +250,7 @@ text("$y$") { (pEy[0] + 0.42*pEy[0]/hy) (pEy[1] + 0.42*pEy[1]/hy - 0.12) }
 
 % dΩ rotula SU disco, apartándose perpendicularmente del eje en la página — arriba a
 % la izquierda, del lado libre, como en el original.
-pC = xyz(tt*dcx, tt*dcy, tt*dcz)
+pC = xyz(tt*cx, tt*cy, tt*cz)
 hC = sqrt(pC[0]*pC[0] + pC[1]*pC[1])
 text("$d\Omega$", align="right") { (pC[0] - 0.62*pC[1]/hC - 0.10) (pC[1] + 0.62*pC[0]/hC + 0.10) }
 
@@ -266,6 +269,6 @@ font_size 11
 align "left"
 text("blanco") { 0.50 -0.70 }
 text("haz incidente") { -4.95 2.85 }
-pD = xyz(dcx + Ld*nx, dcy + Ld*ny, dcz + Ld*nz)
+pD = xyz(cx + Ld*nx, cy + Ld*ny, cz + Ld*nz)
 align "left"
 text("detector") { (pD[0] - 0.38) (pD[1] - 1.58) }

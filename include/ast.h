@@ -111,12 +111,29 @@ struct Scope {
   std::map<std::string, Value> vars;
   std::map<std::string, PathBinding> pathBindings;   // parámetros &onda (§8.x)
   Scope *parent = nullptr;
+  // Frontera de ámbito, que marca el cuerpo de una struct (la pone execStructBody).
+  // Las LECTURAS la cruzan —una struct ve las variables del archivo—; las ESCRITURAS
+  // no. Ver findAssignable.
+  bool barrier = false;
   explicit Scope(Scope *p = nullptr) : parent(p) {}
 
   Value *find(const std::string &name) {
     for (Scope *s = this; s; s = s->parent) {
       auto it = s->vars.find(name);
       if (it != s->vars.end()) return &it->second;
+    }
+    return nullptr;
+  }
+
+  // Como `find`, pero para ASIGNAR: sube por la cadena igual que una lectura y se
+  // detiene al SALIR del cuerpo de una struct. Dentro de un if/for sigue subiendo
+  // —eso es lo que hace que `if … { w = 3 }` altere el `w` de fuera del if—, pero
+  // una asignación del cuerpo de una struct no puede alcanzar al llamador.
+  Value *findAssignable(const std::string &name) {
+    for (Scope *s = this; s; s = s->parent) {
+      auto it = s->vars.find(name);
+      if (it != s->vars.end()) return &it->second;
+      if (s->barrier) break;
     }
     return nullptr;
   }

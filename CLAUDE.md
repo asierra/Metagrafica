@@ -210,11 +210,15 @@ lleva número de figura a propósito**: se RECONSTRUYÓ, tomando del original la
 y no las coordenadas, y el número es una promesa de fidelidad que una reconstrucción no
 puede hacer. ⚠️ Su lección no es
 gráfica sino del **lenguaje**: escribiéndola se encontró que **las asignaciones del cuerpo de
-una struct escriben en el ámbito del llamador** (los parámetros no), así que un `.mg` que
-incluya una biblioteca pierde sin aviso cualquier variable cuyo nombre la biblioteca reuse
-—`pseudo3d.mg` asigna `qx`, `qy`, `cx`, `ux`…—. **Ninguna compuerta lo caza** (la salida es
-determinista, así que el golden bendice la figura equivocada); está en `PENDIENTES.md` con
-repro mínimo, y la decisión de semántica queda abierta. **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
+una struct escribían en el ámbito del llamador** (los parámetros no), así que un `.mg` que
+incluyera una biblioteca perdía sin aviso cualquier variable cuyo nombre ésta reusara
+—`pseudo3d.mg` asigna `qx`, `qy`, `cx`, `ux`…—. **ARREGLADO el mismo día** (2026-08-03): el
+cuerpo de una struct es ahora **frontera para las escrituras** (`Scope::barrier` +
+`findAssignable`), las lecturas la siguen cruzando, y no movió un solo golden.
+🔒 **Y por eso este ejemplo es el GUARDIÁN de esa regresión: sus variables COLISIONAN A
+PROPÓSITO con las de `lib/pseudo3d.mg` — no las renombres.** Si arreglar la fuga no movió un
+golden, perderla tampoco lo movería: ninguna compuerta puede cazarla, y esta figura es la
+única red. Verificado reintroduciendo el bug (falla en los tres backends). **Poda 2026-07-17** (`arrow`, `fig2-3`, `fig4-10`, `fig6-1`, `fig6-10` eliminados: redundantes o `arrow.mg` que renderizaba vacío tras migrar sus flechas a marcadores built-in). `fig6-4` (renombrado desde `fig6-4v3-clean` el 2026-07-15) entró el 2026-07-14: es el único que ejercita eje **log** + `fit(stretch)` + math con superíndices + `extend` + ticks-in, y el único **sin `font` explícito** — por eso es el que caza el bug de cara ambiente en PDF.
 
 **Encabezado de un ejemplo — convención (2026-07-23).** Los 31 `.mg` del golden de `examples/` abren
 con: **primera línea = título**, párrafo siguiente = **descripción** (2-5 líneas de qué es y

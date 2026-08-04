@@ -26,14 +26,13 @@
 %    (2026-08-03), así que `cono` y `cilindro` se recompilan en cada `check`. Antes no
 %    la miraba nadie y podía pudrirse en silencio.
 %
-%  ⚠️⚠️ CUIDADO CON LOS NOMBRES DE VARIABLE, y no es cosa de esta biblioteca sino del
-%    lenguaje: las asignaciones del CUERPO de una struct escriben en el ámbito de QUIEN
-%    LA LLAMA (los parámetros no; solo las asignaciones internas). Este archivo asigna
-%    `qx qy ux uy vx vy dx dy dz cx cy cz px py pz aa bb dd DD g k t0 dt g1 g2 axl hh
-%    e1* e2* pO pU pV pA pB c2*`, así que un `.mg` que use esos nombres los PIERDE al
-%    invocar una pieza de aquí, sin aviso y sin error — la figura sale mal y ya.
-%    Mientras eso no se arregle, prefija tus variables (ver `seccion_eficaz.mg`).
-%    Anotado en PENDIENTES.md.
+%  ✅ LOS NOMBRES DE VARIABLE YA NO SE PISAN (arreglado el 2026-08-03). Este archivo
+%    asigna nombres cortísimos —`qx qy ux uy vx vy dx dy dz cx cy cz aa bb dd g k`…— y
+%    hasta esa fecha se llevaban por delante los del `.mg` que invocaba una pieza, sin
+%    error y sin aviso. Ahora el cuerpo de una struct es FRONTERA para las escrituras,
+%    así que estos nombres son de verdad internos y puedes usar los que quieras fuera.
+%    ⚠️ `examples/seccion_eficaz.mg` colisiona con ellos A PROPÓSITO: es el guardián de
+%    esa regresión, y ninguna otra cosa la cazaría.
 % =====================================================================
 
 % --- prisma(w, h, d): caja de w×h×d puesta en la ESCENA ----------------
