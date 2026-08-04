@@ -22,9 +22,18 @@
 %  ⚠️ Sin z-buffer: el orden de PINTADO es el orden de escritura. Dibuja de atrás
 %    hacia adelante (primero lo lejano).
 %
-%  ⚠️ NINGUNA COMPUERTA MIRA ESTE ARCHIVO: `test/run.sh` compila `examples/`, y hoy
-%    ningún ejemplo del corpus incluye esta biblioteca (su único cliente,
-%    `fig2-7b-v3`, vive en `local/`). Si algo de aquí se rompe, se nota al usarlo.
+%  ✅ YA HAY COMPUERTA: `examples/seccion_eficaz.mg` la incluye y está en el corpus
+%    (2026-08-03), así que `cono` y `cilindro` se recompilan en cada `check`. Antes no
+%    la miraba nadie y podía pudrirse en silencio.
+%
+%  ⚠️⚠️ CUIDADO CON LOS NOMBRES DE VARIABLE, y no es cosa de esta biblioteca sino del
+%    lenguaje: las asignaciones del CUERPO de una struct escriben en el ámbito de QUIEN
+%    LA LLAMA (los parámetros no; solo las asignaciones internas). Este archivo asigna
+%    `qx qy ux uy vx vy dx dy dz cx cy cz px py pz aa bb dd DD g k t0 dt g1 g2 axl hh
+%    e1* e2* pO pU pV pA pB c2*`, así que un `.mg` que use esos nombres los PIERDE al
+%    invocar una pieza de aquí, sin aviso y sin error — la figura sale mal y ya.
+%    Mientras eso no se arregle, prefija tus variables (ver `seccion_eficaz.mg`).
+%    Anotado en PENDIENTES.md.
 % =====================================================================
 
 % --- prisma(w, h, d): caja de w×h×d puesta en la ESCENA ----------------
@@ -151,8 +160,11 @@ struct cono(r, axis=[0,1,0], pos=[0,0,0], base=true, contorno="black", lw=0.6) {
 }
 
 % --- cilindro ---
-% `pos` es el centro de una base y `axis` lleva a la otra. Se trazan los dos círculos
-% enteros (alambre) y las dos tangentes comunes.
+% `pos` es el centro de una base y `axis` lleva a la otra. Se trazan las dos tangentes
+% comunes, la tapa que MIRA al observador entera, y de la otra solo la media luna que
+% asoma: un cilindro con los dos bordes completos se lee como DOS PLATOS, no como un
+% cuerpo. (Así lo resolvía ya el `detector` de la fig. 20.5 de IMQ en 1998: medio arco
+% en la tapa que se oculta, círculo entero en la que se ve.)
 struct cilindro(r, axis=[0,1,0], pos=[0,0,0], contorno="black", lw=0.6) {
     axl = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2])
     dx = axis[0]/axl   dy = axis[1]/axl   dz = axis[2]/axl
@@ -163,13 +175,8 @@ struct cilindro(r, axis=[0,1,0], pos=[0,0,0], contorno="black", lw=0.6) {
     if hh > 0.001 { e1x = dz/hh   e1z = -dx/hh }
     e2x = dy*e1z - dz*e1y   e2y = dz*e1x - dx*e1z   e2z = dx*e1y - dy*e1x
 
-    line_width lw
-    color contorno
-    { plane3d(at=[pos[0], pos[1], pos[2]], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
-      circle(1) { 0 0 } }
-    { plane3d(at=[c2x, c2y, c2z], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
-      circle(1) { 0 0 } }
-
+    % La retro-proyección va ANTES de dibujar, porque el signo de su determinante es
+    % lo que decide cuál tapa se dibuja entera.
     pO = xyz(pos[0], pos[1], pos[2])
     pU = xyz(pos[0] + r*e1x, pos[1] + r*e1y, pos[2] + r*e1z)
     pV = xyz(pos[0] + r*e2x, pos[1] + r*e2y, pos[2] + r*e2z)
@@ -180,6 +187,33 @@ struct cilindro(r, axis=[0,1,0], pos=[0,0,0], contorno="black", lw=0.6) {
     qx = pB[0] - pO[0]   qy = pB[1] - pO[1]
     aa = ( qx*vy - qy*vx) / dd
     bb = (-qx*uy + qy*ux) / dd
+    ga = deg(atan2(bb, aa))       % dirección pos → otra base, en el marco de la base
+
+    line_width lw
+    color contorno
+
+    % --- las dos tapas ---
+    % ⚠️ CUÁL mira al observador lo dice el SIGNO de `dd`, sin profundidad y sin
+    % z-buffer: `(e1, e2, eje)` es un triedro DERECHO, así que su proyección conserva
+    % la orientación —`dd > 0`— exactamente cuando el eje apunta hacia acá. Es la
+    % información de un back-face culling, sacada del determinante 2x2 que la
+    % retro-proyección ya tenía calculado. 📌 Y por eso esto NO contradice la regla de
+    % `prisma` («qué cara queda detrás es MODELADO»): allí hay tres caras planas y la
+    % respuesta depende de cuál se quiera creer opaca; aquí el cuerpo se tapa a sí
+    % mismo, y eso sí lo decide la geometría.
+    % La media luna visible es la que va de tangente a tangente por el lado de FUERA,
+    % o sea la centrada en la dirección que se aleja de la tapa cercana.
+    if dd > 0 {
+        { plane3d(at=[pos[0], pos[1], pos[2]], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+          arc(1, from=(ga + 90), to=(ga + 270)) { 0 0 } }
+        { plane3d(at=[c2x, c2y, c2z], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+          circle(1) { 0 0 } }
+    } else {
+        { plane3d(at=[c2x, c2y, c2z], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+          arc(1, from=(ga - 90), to=(ga + 90)) { 0 0 } }
+        { plane3d(at=[pos[0], pos[1], pos[2]], u=[r*e1x, r*e1y, r*e1z], v=[r*e2x, r*e2y, r*e2z])
+          circle(1) { 0 0 } }
+    }
 
     % Las tangentes comunes de dos círculos IGUALES son perpendiculares a la línea de
     % centros: no hay nada que resolver, solo girar 90°.

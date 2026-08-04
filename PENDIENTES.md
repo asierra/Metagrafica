@@ -491,6 +491,34 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
         lienzo en blanco y los mensajes de error hacen de guía.
       - Lo que **no** se espera de ningún modelo: elegir cámara y encuadre a nivel de corpus. Eso
         pidió medir e iterar incluso pudiendo renderizar.
+- [ ] 🐞 **Las asignaciones del CUERPO de una struct escriben en el ámbito del LLAMADOR**
+      (hallado 2026-08-03 escribiendo `seccion_eficaz.mg`). Los **parámetros** sí están
+      aislados; las asignaciones internas no, y esa asimetría es lo que lo vuelve
+      traicionero: quien lee la firma de una struct concluye, razonablemente, que su
+      interior no le puede tocar nada.
+      - **Repro mínimo** (el testigo debería salir en `x=3` y sale en `x=99`):
+        ```
+        struct Caja(w) { qx = 99   circle(w) { 1 1 } }
+        qx = 3
+        Caja(1)
+        circle(0.2) { (qx) 5 }
+        ```
+      - **Medido, para no re-diagnosticarlo:** el parámetro `w` NO se fuga (un `w` del
+        llamador sobrevive intacto), y el cuerpo SÍ lee las variables del llamador. O sea
+        que hoy una struct es «parámetros locales + resto global».
+      - ⚠️ **Lo que lo hace grave es `lib/`.** Las bibliotecas usan nombres cortos
+        —`pseudo3d.mg` asigna `qx`, `qy`, `ux`, `uy`, `vx`, `vy`, `dx`, `dy`, `dz`, `cx`,
+        `cy`, `cz`, `aa`, `bb`, `dd`, `g`, `k`…— y el `.mg` que las incluye también. La
+        colisión no da error ni aviso: la figura sale mal, y el usuario no tiene ni una
+        pista. En `seccion_eficaz` costó un rato hasta medir el rótulo de φ (58° reales
+        contra 102° calculados) y ver que θ salía bien por no depender de `q`.
+      - **Ninguna compuerta lo caza**, y no puede: la salida es determinista y byte-estable,
+        así que el golden bendice la figura equivocada. Es de la familia de la Lección 6.
+      - 📌 **La decisión es de semántica y NO la tomo yo:** hacer local toda asignación del
+        cuerpo es lo obvio, pero rompería cualquier struct que hoy exporte un resultado por
+        esa vía, y hay que decidir si `include` y el cuerpo de una struct comparten ámbito.
+        Mitigación mientras tanto: prefijar los nombres en los `.mg` que incluyan
+        bibliotecas (lo que hace `seccion_eficaz`) y avisarlo en el encabezado de `lib/`.
 - [ ] 📥 **`exit` (§18) NO está implementado** (hallado 2026-07-22 repasando `ideas.txt`).
       `exit` da hoy un error de sintaxis («se esperaba una expresión… se encontró un fin de
       línea»): cae al catch-all de sentencia de estado, que exige un argumento. §18 lo

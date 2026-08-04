@@ -3526,3 +3526,130 @@ publicado, y `galfail` vigila que la galería esté al día, no que el encabezad
 la figura se lee. Las dos aeronaves son de clase distinta —reactor arriba, avioneta abajo— y
 esa es media figura: antes eran la misma silueta y solo los rótulos separaban «gran altitud»
 de «baja altitud», o sea que la figura afirmaba dos plataformas y dibujaba una.
+
+---
+
+## 2026-08-03 (bis) — `seccion_eficaz`: la última biblioteca sin cliente, y un bug de ámbito
+
+`examples/seccion_eficaz.mg` entró al corpus: `ok=90 → **ok=93**`, 31 ejemplos, ocho
+compuertas en cero. Es la figura estándar de la sección eficaz diferencial dσ/dΩ —haz por el
+eje z, blanco, detector cilíndrico y el cono que subtiende dΩ— y es la cuarta pseudo-3D.
+
+**Por qué entra:** es el **único usuario de `lib/pseudo3d.mg`**, la última biblioteca de `lib/`
+que ningún ejemplo incluía. Con ella, las ocho tienen cliente y se recompilan en cada `check`.
+Es la misma regla que metió a `multietapa` dos commits antes, aplicada al hueco que quedaba.
+
+**No lleva número de figura**, y es deliberado. Se escribió primero **sin original**: el que el
+plan llama `fig18-5` vivía en `local/`, que no está en git y no sobrevivió al re-clon del
+sábado. Alejandro lo repuso después —`fig19-5.mg` (V1, 1998) y el EPS de la edición de
+Cambridge— y entonces sí hubo con qué comparar. Resultó ser la **Fig. 20.5 de IMQ 3ª ed.**,
+«Significado geométrico de la seccion eficaz»; el `target` en inglés del EPS es la edición de
+Cambridge, y la 3ª española lleva los rótulos en español, que es lo que usa el port.
+
+Aun con el original delante **sigue sin número**, y por otra razón: la figura se reconstruyó
+tomando la **composición** y no las coordenadas. Un número de figura promete fidelidad y una
+reconstrucción no puede hacer esa promesa.
+
+📌 **Lo que la comparación cambió de verdad.** Escrita a ciegas, la figura ilustraba «un
+detector en (θ, φ)» — una figura legítima que NO era la del título. Le faltaban las tres piezas
+que hacen al *significado geométrico*: el **parámetro de impacto `b`**, el **área efectiva `A`**
+y el **`a`** del blanco. Se añadieron, y con ellas dos decisiones de composición que el original
+resuelve y yo no había visto:
+
+- **El haz es ASIMÉTRICO** (más rayos por encima del eje que por debajo) y **los rayos se
+  detienen antes de que empiece el eje `y`**. No es estética: es cómo se evita que los rayos
+  bajos crucen el eje que se va hacia el observador. Con el haz simétrico se cruzaban.
+- **El canal estrecho sí llega hasta el blanco** aunque los rayos no. Ése es el punto de `A`:
+  el tubo de sección A muere exactamente sobre el disco de área A, que es la misma área vista
+  de canto y de frente. Sin el canal, `A` es un circulito sin sentido.
+- **El blanco va sin relleno.** Con relleno se tragaba el punto donde convergen los rayos —el
+  suceso que la figura cuenta— y escondía la `A` que va justo encima.
+
+⚠️ Y una diferencia que se conserva a sabiendas: el original dibuja **arcos planos**, así que
+sus ángulos se leen más abiertos (43.7° y 39.9° en la página) que los de aquí, que miden de
+verdad en su propio plano y se proyectan a 33° y 24°. Medido y anotado en el `.mg`: si hicieran
+falta más abiertos se suben θ y φ o se abre la cámara; lo que no se hace es aplanar el arco.
+
+**La estrategia E no era geometría nueva.** El plan la daba por diferida, pero `irradiancia`
+la había cerrado el 08-01, y ahí estaba escrito que el cilindro es el hermano fácil: dos
+círculos iguales en planos paralelos, tangentes comunes en `atan2(s) ± 90°`, sin `acos`. La
+figura solo tuvo que invocar `cono` y `cilindro`. 📌 El plan estaba **desactualizado en la
+dirección buena**: decía que faltaba trabajo que ya se había hecho.
+
+### 🐞 El hallazgo que vale más que la figura
+
+Escribiéndola, el rótulo de φ caía a 58° cuando la cuenta daba 102°, y el de θ salía exacto
+(11.3° medidos contra 11.85° calculados). La diferencia entre los dos: φ depende de `q`, que se
+calcula **antes** de invocar `cono`/`cilindro` y se lee **después**.
+
+**Las asignaciones del CUERPO de una struct escriben en el ámbito del LLAMADOR.** Medido con un
+repro mínimo: los **parámetros** sí están aislados (un `w` de fuera sobrevive a un `w` de
+dentro), el cuerpo **lee** las variables del llamador, y sus asignaciones **las pisan**. Una
+struct es hoy «parámetros locales + resto global», y esa asimetría es lo traicionero: quien lee
+la firma concluye, razonablemente, que el interior no le toca nada.
+
+⚠️ **Lo que lo vuelve grave es `lib/`.** Las bibliotecas usan nombres cortos —`pseudo3d.mg`
+asigna `qx qy ux uy vx vy cx cy cz dx dy dz aa bb dd g k…`— y el `.mg` que las incluye también.
+La colisión no da error ni aviso: la figura sale mal y ya.
+
+📌 **Y ninguna de las ocho compuertas puede cazarlo**, que es lo que lo emparenta con la Lección
+6: la salida es determinista y byte-estable, así que el golden **bendice la figura equivocada**.
+Salió midiendo la posición del rótulo en el SVG, no mirando el render — a ojo, un φ a 58° es
+perfectamente plausible.
+
+La decisión de semántica queda **abierta y no la tomé**: hacer local toda asignación del cuerpo
+es lo obvio, pero rompe cualquier struct que hoy exporte un resultado por esa vía, y hay que
+decidir antes si `include` y el cuerpo de una struct comparten ámbito. Está en `PENDIENTES.md`
+con el repro. Mitigación aplicada mientras tanto: prefijar las variables en el `.mg` (lo que
+hace esta figura) y un ⚠️ en el encabezado de `lib/pseudo3d.mg` listando los nombres que asigna.
+
+### Lo demás
+
+**Verificador incorporado:** la base del cono y la cara delantera del cilindro son el mismo
+círculo, calculado por dos caminos distintos dentro de la biblioteca —el cono retro-proyecta el
+ápice y resuelve un `acos`; el cilindro retro-proyecta el otro centro y gira 90°—. El cono va
+con `base=false`, así que lo comprobable es que sus generatrices mueran **tangentes** sobre el
+círculo que dibuja el cilindro. Mueren donde deben.
+
+**Los ejes rotulados `x`/`y`/`z` son contenido, no el marco de la escena**, que es la trampa que
+el plan traía marcada para esta figura. Se resuelve escribiendo los tres versores de la física
+en coordenadas de la escena **una vez, arriba**; el resto se deriva de ellos y reorientar la
+figura es cambiar tres líneas.
+
+**Encuadre medido, no a ojo** (`gs -sDEVICE=bbox` sobre el EPS, convertido a unidades de mundo):
+la tinta cae en x −5.98..6.43, y −1.42..3.32.
+
+**El cilindro se leía como dos platos**, y lo hizo notar Alejandro. `lib/pseudo3d.mg` trazaba
+los dos bordes enteros. Ahora la tapa que mira al observador va entera y de la otra solo la
+media luna que asoma más allá de las generatrices. 🔑 **Cuál mira al observador lo dice el
+SIGNO del determinante `dd`** que la retro-proyección ya calculaba: `(e1, e2, eje)` es un
+triedro derecho, así que su proyección conserva la orientación exactamente cuando el eje apunta
+hacia acá. Es la información de un back-face culling, gratis, sin profundidad y sin z-buffer.
+📌 Y no contradice la regla de `prisma` («qué cara queda detrás es MODELADO»): allí hay tres
+caras planas y depende de cuál se quiera creer opaca; aquí el cuerpo se tapa a sí mismo.
+Verificado describiendo el mismo cilindro al revés (`pos` y `axis` intercambiados): **2 px de
+590×354**, el redondeo de los extremos del arco. El original ya lo resolvía así en 1998 —su
+struct `detector` usa `ARCO2` (medio arco) en la tapa oculta y `ARCO4` (entero) en la visible—.
+
+**Ángulos que morían en el aire.** Los dos arcos caían geométricamente exactos, pero θ terminaba
+en el vacío entre las generatrices porque **no estaba dibujado el eje del haz dispersado**, y φ
+moría sobre una cateta en gris claro, que a la vista es nada. Se añadió el eje (discontinuo,
+como el original) y las líneas de construcción pasaron a negro. 📌 La regla que deja: un arco
+que mide un ángulo tiene que **nacer sobre una línea dibujada y morir sobre otra**; si no, mide
+en la cuenta y no en la página.
+
+### ✅ Y la advertencia de 1998, contestada
+
+`plan_pseudo3d.md` pedía mirar, ANTES de rehacerla, qué le fallaba al original — abre con
+`%% OJO Las matrices de transformacion trabajan mal`. El fuente trae su propio control:
+
+| colocación | transformación | ¿se queja? |
+|---|---|---|
+| `disco` = dΩ | `SCST .44 .44` — isótropa, sin giro | no |
+| `disco` = blanco | `SCST 2.3 3` + `RTST -40` — anisótropa + giro | **«TRABAJA MAL»** |
+| `detector` | `SCST .9 1` + `RTST 44` | (aviso de archivo) |
+
+Es exactamente la familia de `plan_anisotropia.md`: escala anisótropa compuesta con rotación,
+cerrada en V3 el 2026-07-27 con los semidiámetros conjugados. **El bug con el que topó esa
+figura en 1998 ya no existe**, y hoy ni siquiera hay que componer matrices: `plane3d` da la
+elipse exacta. La pregunta llevaba abierta desde julio y queda cerrada.

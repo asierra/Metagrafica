@@ -464,13 +464,15 @@ colocar el rótulo: puesto en la bisectriz **del espacio** caía sobre la flecha
 proyección tampoco conserva la bisección. El arco mide; el rótulo señala, y va en la bisectriz
 de la página.
 
-Queda de E únicamente `fig18-5`, que suma el **cilindro** a lo ya resuelto.
+✅ **E CERRADA DEL TODO el 2026-08-03.** El cilindro no necesitó nada nuevo —es el caso sin
+`acos` descrito arriba— y entró al corpus con **`examples/seccion_eficaz.mg`**, que invoca
+`cono` y `cilindro` de `lib/pseudo3d.mg` y es su primer y único cliente. ⚠️ **No se llama
+`fig18-5`:** el original vivía en `local/`, que no está en git y se perdió al re-clonar el
+repo; sin imagen objetivo no hay fidelidad que prometer, así que la figura se reconstruyó
+desde la física y toma nombre de la física. La tabla de §2.2 conserva la fila `fig18-5` como
+el ANÁLISIS que la guio, no como trabajo pendiente.
 
 ### Fase F — diferidas
-- **Silueta de revolución** (estrategia E): cono/cilindro = dos círculos de A + sus dos
-  tangentes comunes. La piden `lira_II-7` y `fig18-5`, y **se difieren juntas** porque comparten
-  exactamente esta pieza. Es lo único del plan que necesita geometría nueva (tangencia desde un
-  punto a una elipse proyectada, en forma cerrada o con una aproximación documentada).
 - Perspectiva; jaula 3-D con ejes y marcas (`box_axis`; su forma **mínima** —tres segmentos
   rotulados— ya la cubre B en `fig18-5`); líneas ocultas discontinuas.
 
