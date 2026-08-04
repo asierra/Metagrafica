@@ -3699,3 +3699,122 @@ vuelve a `ok=93`.
 📌 Queda anotado en tres sitios —el encabezado del ejemplo, el de `lib/pseudo3d.mg` y
 `CLAUDE.md`— que **esas variables no se renombran**. Un nombre «mejor» ahí desarma la única red
 que hay.
+
+## 2026-08-04 — MetaGráfica 3.1.0-beta: dos preguntas destaparon más que la red de pruebas
+
+Sesión de release. Salió publicada la **3.1.0-beta** —binarios para los tres sistemas, con
+`comparados 93 archivos, difieren 0` en macOS y en Windows— pero lo que vale registrar no es el
+release, sino que **tres de los cuatro hallazgos del día los destapó una pregunta y no una
+compuerta**.
+
+**El número es 3.1 y no 3.0.1** porque desde `v3.0.0-beta` entró SINTAXIS nueva (`view3d`,
+`plane3d`, `xyz()`, degradados, `asin`/`acos`/`atan`/`deg`/`rad`, `\hat`, `\vec`). Un `.0.1`
+diría «solo arreglos» y sería falso.
+
+### 1. La versión estaba en 16 archivos y cuatro convenciones
+
+Salió de preguntar por qué el bump tocaba tantos `include/*.h` si solo `main.cpp` lee
+`MG_VERSION`. La línea `Version:` del banner la llevaban **16 de 28 archivos**, ya derivada en
+cuatro convenciones a la vez: doce headers al día, `src/Display.cpp` una versión atrás, tres
+`.cpp` todavía en «2024» y `main.cpp` en prosa. Los otros doce nunca la tuvieron —`parserv3.cpp`
+entre ellos— ni `version.h`, que es el único que de verdad la define.
+
+⚠️ **La prueba de que era insostenible la dio la propia sesión:** la primera barrida se dejó
+`src/Display.cpp` porque el `grep` filtraba por extensión y no incluía `*.cpp`. Nada la lee,
+nada la comprueba, y quien la mantiene se deja una copia. Se fueron las 16. Se quedan el
+copyright y el bloque `Antecedents`: eso es historia, y la historia no se pudre.
+
+Y **la galería la llevaba hardcodeada**, anunciando `3.0.0-beta` en las dos páginas que sirve
+GitHub Pages. ⚠️ `galfail` **no puede cazar eso**: compara el HTML publicado contra lo que
+`galeria.py` regenera, y los dos lados coincidían en la versión equivocada — es una compuerta de
+**consistencia, no de verdad**. Por eso no se parcheó la cadena: `galeria.py` ahora **deriva** la
+versión de `include/version.h` y aborta si no la encuentra.
+
+### 2. El `%%Title` del EPS: la premisa era falsa y por eso importaba
+
+La pregunta fue si convenía eliminarlo, «que en realidad nadie usa». Medido con `ps2pdf`:
+**Ghostscript lo propaga a los metadatos `/Title` del PDF**. O sea que la **ruta absoluta del
+disco de quien compilaba viajaba dentro de la figura publicada**, en un proyecto que existe para
+producir figuras de libro. No era decoración inerte: su contenido estaba mal.
+
+Ahora `%%Title` lleva el `.mg` de origen y `%%Creator` la versión. Verificado compilando los 31
+ejemplos a dos rutas y dos nombres distintos: **31 comparados, 0 difieren**.
+
+📌 Y con eso caen **dos rodeos construidos para tolerarlo**: `normalize()` en `test/run.sh`
+reescribía la línea para poder comparar goldens —se RETIRA, no se deja como no-op: mientras
+estuviera, bendeciría a quien devolviera la ruta, que era justo la única línea que el golden no
+podía ver— y `release.yml` exigía rutas relativas idénticas entre plataformas.
+
+Consecuencia asumida: al llevar `MG_VERSION`, **cada subida de versión mueve los 31 goldens
+EPS**. SVG y PDF no lo emiten.
+
+### 3. El ángulo de 4.77e-15 que paró el release
+
+El tag disparó el workflow y **falló en macOS**: `IMGFAIL docs/img/angulo_solido.svg`. Linux y
+Windows compilaban bien.
+
+⚠️ **No lo causó ningún cambio de la sesión.** El workflow no corría desde el 2026-07-28 y
+`angulo_solido` entró el 2026-08-01: macOS **nunca la había visto**, ni a ella ni a las otras
+cuatro figuras nuevas. La divergencia llevaba tres días publicada.
+
+Y la compuerta dijo solo «rancio», con el archivo en una máquina que nadie del proyecto tiene:
+**diagnóstico cero**. Se arregló eso primero —es la regla que `release.yml` ya enuncia, «una
+compuerta que falla sin decir por qué es una mala compuerta»— y la corrida siguiente dio el dato:
+
+    Linux:  A 56.0207 19.1602 4.77083e-15 1 0 …
+    macOS:  A 56.0207 19.1602 0           1 0 …
+
+Los paralelos de la esfera son elipses **alineadas con los ejes**: `uy` y `vx` valen cero en
+teoría y ~1e-17 tras la proyección 3-D, los dos `atan2` del SVD no se cancelan del todo y el
+ángulo sale en 1e-15 grados. **Quien estaba mal era Linux**, que es donde se generó el archivo
+committeado.
+
+Lo que lo vuelve visible es el formateador: el `<<` de `SVGDisplay` usa 6 cifras significativas,
+que **colapsan un `90.0000000000001` a `90` pero no colapsan un diminuto a `0`**. Por eso solo se
+delata el caso que debía valer cero — y por eso conviene sospechar de esa asimetría en cualquier
+número que una fórmula deba dar exacto.
+
+Arreglado en `Matrix::ellipse_axes` redondeando **acerca** del valor exacto, nunca alejándose,
+igual que `PDFDisplay::deviceRotate` con el `cos(90°)` del 2026-07-27: **misma familia**. Umbral
+1e-9 grados; a un radio de 10⁴ pt desplaza 2e-7 pt. Cambian cuatro líneas de `docs/img` y ninguna
+más de los 33 renders.
+
+### 🔒 Lo que esto dice de la red, y que no se arregló hoy
+
+**Ningún golden puede cazar esta familia, porque el golden se genera en UNA plataforma.** La
+única red son `smoke-macos` y `smoke-windows`, que comparan byte a byte… y **ni se ejecutaron**:
+dependen de `build`, y `build` corre antes las ocho compuertas locales. Lo cazó `imgfail` al
+correr por primera vez en macOS, o sea **la compuerta equivocada por accidente**.
+
+⚠️ Peor de lo que parece: si el fallo local hubiera estado en Linux, `build` habría muerto ahí y
+**la divergencia habría seguido invisible**. Anotado en `PENDIENTES.md` con el arreglo probable
+—que los smoke dependan solo de que el binario ENLACE—, sin presión hasta el próximo release.
+
+### 4. Vitrina y plan de promoción
+
+Se contrastó `plan_promocion.md` contra una lista genérica de crecimiento open source. De ~13
+consejos: **cinco ya hechos**, **cuatro descartados con su razón** (Product Hunt, AlternativeTo,
+Dev.to, y la FAQ escrita antes de tener preguntas reales) y **cuatro incorporados**. ⚠️ La lista
+optimizaba **adopción** —descargas, votos, alcance—, que es exactamente la métrica que §0 declara
+equivocada; lo que sobrevivió lo hizo por servir a la condición 4, no por venir recomendado.
+
+Medido contra la API pública: los *topics* estaban **vacíos** y el campo *Website* también,
+mientras las dos galerías se servían con HTTP 200 desde julio. Los dos aplicados y verificados
+—**contra la API, no contra la respuesta de `gh`**: la herramienta que hace el cambio no es buen
+testigo de que el cambio se hizo—. Y generada la vista previa social
+(`tools/social_preview.sh` → `docs/img/social-preview.png`), con `seccion_eficaz` porque su
+lienzo 13×5.98 = **2.17:1** es casi el 2:1 del formato.
+
+⚠️ Los tres son **configuración del repositorio y no del árbol**: no hay commit que los haga y
+**ninguna compuerta puede vigilarlos**. Queda escrito el `curl` que los comprueba.
+
+### Las notas de release, versionadas
+
+Pasan a `docs/notas_release.md`, que `release.yml` publica arriba de su cuerpo genérico. Van en
+el repo y no en el workflow porque **ese cuerpo es el mismo para todos los tags**: lo que dijera
+de una versión concreta quedaría mintiendo en la siguiente. El archivo viaja CON el tag, así que
+describe la versión que lo publica y no puede describir otra. Estrenado en producción sin
+incidencias.
+
+📌 De paso, «72 archivos idénticos byte a byte» pasa a **93**: era la cifra de cuando el corpus
+tenía 24 ejemplos, y es el argumento central del §3 del plan de promoción.
