@@ -5,7 +5,6 @@
 MetaGrafica:  Human descriptive language to generate publication quality graphics.
               Display in PostScript.
      Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 */
 #include <cmath>       // M_PI, cos/sin (ángulo fijo de marcador)

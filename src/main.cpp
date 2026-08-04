@@ -3,13 +3,13 @@
 MetaGrafica:  Human descriptive language to generate publication quality
               Display in PostScript/SVG/PDF.
      Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2026 (V3, post-cutover §22.6)
 Antecedents: 2011, 1999 C++ STL, 1991 C. Original: 1988, Pascal and Assembler.
 
 Entry point del compilador V3: lee el .mg, llama a buildFromSource() (parserv3.
 cpp, vía parserv3.h) y elige el backend (EPS/SVG/PDF) por la extensión de
-salida. El front-end V1 (Parser.cpp/mgpp.l) que este archivo reemplazó sigue en
-el árbol como referencia del traductor mg1to2.py, pero fuera del build.
+salida. El front-end V1 (Parser.cpp/mgpp.l) que este archivo reemplazó se borró
+del árbol el 2026-07-27; la semántica V1 que consulta tools/mg1to2.py vive en la
+rama v1-legacy (git show v1-legacy:src/Parser.cpp).
 */
 
 #include <clocale>   // setlocale: la salida numérica no depende del entorno

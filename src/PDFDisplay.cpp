@@ -4,7 +4,6 @@
 MetaGrafica:  Human descriptive language to generate publication quality
               graphics.
      Author:  Alejandro Aguilar Sierra, UNAM
-    Version:  2024
 */
 #include "PDFDisplay.h"
 #include "markers.h"
