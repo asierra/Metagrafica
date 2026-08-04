@@ -70,6 +70,24 @@ Si preguntan, ahí está la lista de renombres que hay que hacer **antes** de co
 
 Material listo: la galería sirve de guion, y los ejemplos son copiables.
 
+📦 **El instrumento está escrito: `taller_material.md`** (2026-08-04) — anuncio, boleto de
+entrada, tres encargos de reserva, hoja de conteo y la disciplina del facilitador. Tres
+decisiones de ahí que conviene no deshacer al adaptarlo:
+
+- **Dos sesiones separadas por dos semanas, no una.** La condición 4 pide *«un periodo»*, y las
+  dos semanas de en medio son parte del instrumento: es donde se mide qué se rompe sin el autor
+  delante. La sesión 1 da fricción de primer contacto; la 2 dice **quién volvió**.
+- **Los encargos no nombran un solo comando.** Están escritos en el lenguaje del problema. Un
+  encargo que diga «usa `xaxis`» deja de poder medir si alguien habría dado con `xaxis`.
+- **Se mide descubribilidad, no memoria:** la referencia va abierta, porque un usuario real
+  siempre la tiene. Eso pone a prueba de paso `docs/referencia.md` con humanos, que es algo que
+  ninguna compuerta hace — `docfail` verifica que sus ejemplos compilen, no que alguien encuentre
+  lo que busca.
+
+⚠️ Y el dato que más se olvida registrar: **qué nombre INTENTÓ la persona**. Un nombre que
+alguien adivina es un candidato a nombre nuevo; sin esa columna sabes que hubo fricción pero no
+hacia dónde renombrar, que es la mitad útil.
+
 ### (b) TUGboat (TeX Users Group) — el mejor encaje internacional
 
 Su público es exactamente el nuestro: gente que se preocupa por la calidad tipográfica de una
