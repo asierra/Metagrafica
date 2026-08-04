@@ -3879,9 +3879,17 @@ contrario de lo que hace el compilador:
 | `circle`, `square`, `diamond`, `triangle`, `cross` | **el centro** | `marker_size` pt |
 
 O sea: **una flecha NO invade lo que señala**; los simétricos sí, y solo se ve ampliando. La
-regla llevaba semanas siendo el contexto de un agente, y `modelfile_llm.txt` la repetía cinco
-veces mientras `docs/referencia.md` no decía nada del anclaje —**el agente estaba mejor informado
-que el humano, y con un dato equivocado**—.
+regla llevaba semanas siendo el contexto de un agente en un curso, mientras el anclaje **no
+estaba documentado en ninguna parte del repo** —ni en `docs/referencia.md` ni en el
+`modelfile_llm.txt`—: el único sitio donde existía era el skill, y ahí estaba mal.
+
+✍️ **Corrección (misma sesión).** Esta entrada afirmó primero que `modelfile_llm.txt` «la repetía
+cinco veces». Es **falso** y salió de comparar los dos archivos con patrones de `grep` distintos:
+el del Modelfile incluía la palabra suelta `punta`, que casa con «apunta» y «punta de línea» en
+los comentarios de los ejemplos embebidos. Ninguna de las cinco coincidencias era la regla. Se
+deja escrito porque el error es instructivo y del mismo tipo que la sesión estuvo cazando: **una
+medición mal hecha sostuvo una conclusión cómoda** —«el agente estaba mejor informado que el
+humano»— que sonaba a hallazgo y no lo era.
 
 🔎 **Segundo hueco, de propina:** `marker_start_shift`/`marker_end_shift` estaban documentados
 como «correr el marcador a lo largo de la línea», sin unidad. Confirmado **en el código**
