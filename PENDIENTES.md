@@ -1011,6 +1011,17 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 - [ ] **#5** — el detector "línea rellena" de la Capa 3 depende del orden de atributos del
       SVG (`d="…" fill="…"`); si SVGDisplay reordena, el gate deja de cazar en silencio.
 - [ ] **#6** — `parsePlot` sobrescribe un 2º `xaxis`/`yaxis` sin avisar.
+- [ ] **El ORDEN de los trabajos en `release.yml` esconde la compuerta que importa** (2026-08-04).
+      `smoke-macos` y `smoke-windows` comparan la salida **byte a byte entre plataformas**, que es
+      la única red contra la familia «fórmula que debe dar cero y da 1e-15» —ningún golden puede
+      verla, porque el golden se genera en UNA plataforma—. Pero dependen de `build`, y `build`
+      corre primero las ocho compuertas locales: si una falla, los dos smoke **ni se ejecutan**.
+      Eso pasó con el ángulo de la elipse alineada: lo cazó `imgfail` al correr por primera vez en
+      macOS, o sea la compuerta equivocada por accidente, y de la diseñada para esto no se supo
+      nada. ⚠️ Peor de lo que parece: si el fallo local hubiera sido en Linux, `build` habría
+      muerto ahí y **la divergencia habría seguido invisible**. Arreglo probable: que los smoke
+      dependan solo de que el binario ENLACE, no de que pasen las compuertas locales. *Cero
+      presión hasta el próximo release; anotado para no redescubrirlo.*
 - [x] ~~**Barrer los `compound` con arcos**~~ — HECHO 2026-07-20. Barrido de los 19
       ejemplos comparando EPS y PDF **en la misma rejilla de píxeles** (clave: el
       `%%BoundingBox` del EPS es ENTERO y la página PDF no, así que recortar y reescalar
