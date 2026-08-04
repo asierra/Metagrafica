@@ -3818,3 +3818,98 @@ incidencias.
 
 📌 De paso, «72 archivos idénticos byte a byte» pasa a **93**: era la cifra de cuando el corpus
 tenía 24 ejemplos, y es el argumento central del §3 del plan de promoción.
+
+## 2026-08-04 (bis) — El contexto del agente entra al repo, y traía una regla falsa
+
+Segunda mitad de la sesión del release. Salió de un comentario de Alejandro: **los usuarios
+humanos van a querer la asistencia de un agente**, y quizá eso tiene que estar en el taller. La
+respuesta corta es que sí; la larga cambió el diseño del instrumento y destapó dos defectos de
+documentación.
+
+### El instrumento del taller
+
+`docs/plans/taller_material.md`: anuncio, boleto de entrada, tres encargos de reserva, hoja de
+conteo y disciplina del facilitador. Tres decisiones que lo gobiernan:
+
+- **DOS sesiones separadas por dos semanas.** La condición 4 pide literalmente *«un periodo de
+  figuras escritas por otras personas»*, así que las dos semanas de en medio **son parte del
+  instrumento**: ahí se mide qué se rompe sin el autor delante. La sesión 1 da fricción de primer
+  contacto; la 2 dice **quién volvió**, que es lo que predice el periodo.
+- **Los encargos no nombran un solo comando.** Si el encargo dice «usa `xaxis`», ya no se puede
+  medir si alguien habría dado con `xaxis`. ⚠️ Al verificarlo se vio que las notas de cada encargo
+  **sí** los nombran y están pegadas al texto entregable: se añadió una convención explícita —lo
+  que va en cita se entrega, lo demás se queda con el facilitador—. Es el tipo de detalle que
+  arruina el instrumento en silencio.
+- **Se mide DESCUBRIBILIDAD, no memoria.** La referencia va abierta, porque un usuario real
+  siempre la tiene. De paso eso prueba `docs/referencia.md` con humanos, que no lo hace ninguna
+  compuerta: `docfail` verifica que sus ejemplos compilen, **no que alguien encuentre lo que
+  busca**.
+
+### El bloque de agente, y por qué va DESPUÉS
+
+No es una concesión a la realidad: **es el instrumento que más ha rendido.** Los dos únicos datos
+que ha dado la condición 4 salieron de ahí (ver 2026-07-28): `marker_end` indescubrible en la
+documentación, y la ausencia de degradados — que se publicó como novedad en la 3.1.0 esta misma
+mañana.
+
+⚠️ **El orden no es negociable:** un agente entrega el nombre en tres segundos, y una vez visto
+no se puede des-ver. Todo el conteo de fricción se hace antes o no se hace.
+
+Lo que el taller añade a los experimentos de julio: que **promptee alguien que no es el autor**
+(quien prompteaba ya sabía qué pedir); un **lazo cerrado**, porque tienen el binario y el modelo
+itera contra errores REALES del compilador —y nadie ha medido nunca si a un modelo le sirven,
+siendo que `docblocks.py` existe porque *un humano desconfía y un modelo obedece*—; y diez
+contextos distintos en paralelo, cuando el accidente de julio (pegarle la bitácora en vez de la
+referencia) quedó registrado como el más informativo de los dos.
+
+📌 **El dato que más se olvida registrar: qué comando INVENTÓ el modelo.** Un modelo escribe el
+nombre que le dicta *todo* lenguaje que ha visto, así que es un candidato a renombre con un prior
+mucho mayor que la corazonada de una persona. Cruzarlo con lo que buscaron los humanos da
+renombres sin discusión.
+
+### El skill estaba fuera del repo, y traía una regla FALSA
+
+Existía `~/Dropbox/cursos/…/.claude/skills/figuras-mg/`, bien construido y **con conocimiento del
+lenguaje que el repo no tenía**. Al traerlo se midió su regla 11 antes de copiarla, y decía lo
+contrario de lo que hace el compilador:
+
+| forma | ancla | rebasa el vértice |
+|---|---|---|
+| `arrow` | **la punta** | +0.000 pt (medido a 6 y 14 pt) |
+| `circle`, `square`, `diamond`, `triangle`, `cross` | **el centro** | `marker_size` pt |
+
+O sea: **una flecha NO invade lo que señala**; los simétricos sí, y solo se ve ampliando. La
+regla llevaba semanas siendo el contexto de un agente, y `modelfile_llm.txt` la repetía cinco
+veces mientras `docs/referencia.md` no decía nada del anclaje —**el agente estaba mejor informado
+que el humano, y con un dato equivocado**—.
+
+🔎 **Segundo hueco, de propina:** `marker_start_shift`/`marker_end_shift` estaban documentados
+como «correr el marcador a lo largo de la línea», sin unidad. Confirmado **en el código**
+(`parserv3.cpp:2278`, `lerp(adj → anchor, shift)`) y no por inferencia, que es lo que salvó el
+dato: con líneas de dos puntos las mediciones hacían parecer que era *fracción del recorrido*,
+cuando es **fracción del SEGMENTO DEL EXTREMO**, con default 1. Con tres o más puntos solo actúa
+sobre el último segmento.
+
+Ambos a la referencia en los dos idiomas, con el ejemplo de retiro verificado: el borde del
+marcador cae en el de la caja **al centésimo de punto**.
+
+### 🔒 Lo que el traslado enseña sobre las compuertas
+
+El skill se partió **por pertenencia**: al repo las reglas del lenguaje y la lista de
+comprobación de `revisar-figura.md` —que es la respuesta a la pregunta que `tools/ver.sh` declara
+sin respuesta, *«¿se ve bien?»*—; al curso la bibliografía, los assets y las convenciones. Se
+reparte con `make install` bajo `share/metagrafica/skills`, viaja en el paquete del release y se
+anuncia en los dos README.
+
+Lo que lo distingue de copiar y pegar es que **sus bloques pasan por `docblocks.py`**. Verificada
+metiéndole un `#` de comentario: `docfail=1`, con línea y columna.
+
+⚠️ **Y verificado su LÍMITE, que importa más:** con `\text{}` —que el propio skill declara
+inexistente— la compuerta **NO falla**, porque eso produce un aviso y no un error. La compuerta
+vigila que lo que el skill enseña **compile**, no que sea **buen consejo**: no habría cazado la
+regla 11. Eso lo cazó medir, y no hay compuerta que lo sustituya.
+
+📌 Queda abierto: el skill del curso todavía apunta a su propia copia y debería referenciar la
+instalada —es lo que él mismo advierte sobre la referencia—, y `docs/modelfile_llm.txt` pasa a
+ser el menos completo de los dos artefactos de contexto; lo natural sería que
+`tools/generar_modelfile.py` derive del skill.
