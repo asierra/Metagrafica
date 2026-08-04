@@ -323,8 +323,20 @@ bin/mg examples/fig6-4.mg out.svg
 If you use a coding agent, [`skills/figuras-mg/`](skills/figuras-mg/) is the context to give it:
 the hard rules of the language — each one a **measured** mistake, not a precaution — plus the
 review checklist for the step no compiler performs, deciding whether the figure is actually
-right. Copy it into your project's `.claude/skills/`; it also ships in the release package and in
-`share/metagrafica/skills/` after `make install`.
+right.
+
+If you installed with `make install`, **link it rather than copying it** — a copy falls behind
+with nothing to warn you, and a link updates itself with every install:
+
+```bash
+mkdir -p ~/.claude/skills
+ln -sfn /usr/local/share/metagrafica/skills/figuras-mg ~/.claude/skills/figuras-mg
+```
+
+At user level it is available in every project, and **outside any folder you sync** — a symlink
+inside Dropbox or the like tends to end up flattened into a copy. If you use the release package
+without installing, copy `skills/figuras-mg/` into your project's `.claude/skills/`, knowing that
+is a snapshot of that version.
 
 ⚠️ **Point it at the installed reference, do not copy the reference into your project** — a copy
 goes stale with nothing to warn you. The skill's own code blocks are compiled by the test harness

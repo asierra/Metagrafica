@@ -3978,3 +3978,31 @@ contra su fuente. El proyecto ya tenía el patrón resuelto para `docs/img`, la 
 traducción; lo que faltaba era **darse cuenta de que el contexto de un agente es salida
 publicada igual que un `.svg`**, y se pudre igual. Con la diferencia de que un `.svg` rancio se
 ve, y un contexto rancio hace que un modelo escriba con confianza algo que ya no es cierto.
+
+## 2026-08-04 (quater) — Enlazar el skill, no copiarlo: los README decían lo contrario
+
+Nota corta, y **el motivo por el que existe importa más que el cambio**: salió de trabajo hecho
+FUERA del repo —reestructurar el skill de un curso— que no tiene por qué estar en esta bitácora.
+Pero produjo una consecuencia que sí es del repo, y era una contradicción.
+
+Los dos README, escritos esta misma mañana, decían **«cópialo al `.claude/skills/` de tu
+proyecto»**. Es exactamente la operación que la sesión entera estuvo desmontando: una copia de
+material derivado que nadie coteja contra su fuente. El proyecto acababa de arreglar tres
+instancias de ese fallo y su propia portada recomendaba una cuarta.
+
+Ahora recomiendan **enlazar** contra la copia instalada, y a **nivel de usuario**
+(`~/.claude/skills/`), no de proyecto. Tres razones, en orden de peso:
+
+1. **Un enlace se actualiza solo** con cada `make install`; una copia se queda atrás sin que nada
+   avise. Es la misma razón por la que el skill le dice al usuario que no copie la referencia.
+2. **Fuera de cualquier carpeta sincronizada.** Un enlace dentro de Dropbox suele acabar resuelto
+   y aplanado a copia en la siguiente máquina —el fallo reaparece sin que nadie lo pida—.
+3. Un skill del **lenguaje** no es de un proyecto: a nivel de usuario sirve en todos.
+
+Se mantiene la instrucción de copiar para quien use el paquete del release sin instalar, dicho
+con lo que es: **una foto fija de esa versión**.
+
+📌 La lección se repite por tercera vez hoy y ya conviene enunciarla sola: **cada copia de algo
+derivado es una compuerta que no existe.** El repo lo tenía resuelto para `docs/img`, la galería,
+la traducción y —desde hoy— el Modelfile; lo que faltaba era no recomendarle al usuario la
+práctica que el propio proyecto evita.
