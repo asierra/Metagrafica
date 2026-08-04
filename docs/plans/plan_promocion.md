@@ -1,8 +1,20 @@
 # Plan: dónde y cómo buscar usuarios
 
-> **Estado (2026-07-28):** abierto. La **infraestructura ya está**; lo que falta es gente.
+> **Estado (act. 2026-08-04):** abierto. La **infraestructura ya está**; lo que falta es gente.
 > Documento de decisión, no de código: no bloquea ninguna condición del 1.0 por sí mismo,
 > pero es el único camino a la **condición 4** (§22.7, `PENDIENTES.md`).
+>
+> **Revisión 2026-08-04.** Se contrastó el plan contra una lista genérica de «cómo conseguir
+> usuarios para tu proyecto de código abierto» (generada por un LLM, fuera del contexto del
+> proyecto). El saldo, que vale la pena registrar porque es reproducible: de sus ~13 consejos,
+> **cinco ya estaban hechos** (gancho sin jerga, prueba visual, instalación de un paso, HN,
+> traducción — esta última **al revés** de como la suponía), **cuatro se descartaron con razón**
+> (Product Hunt, AlternativeTo, Dev.to, y la FAQ escrita antes de tener preguntas reales) y
+> **cuatro entraron**: los *topics* de GitHub y la vista previa social (§5), el clip del cambio
+> de parámetro (§5), los foros de TeX en Reddit (§2f) y el compromiso de responder issues (§6).
+> ⚠️ **La lista optimizaba adopción —descargas, votos, alcance— que es exactamente la métrica
+> que §0 declara equivocada.** Lo que sobrevivió, sobrevivió por servir a la condición 4, no por
+> venir recomendado; y ese filtro es el que hay que volver a aplicar la próxima vez.
 
 ---
 
@@ -31,7 +43,7 @@ orden de abajo sale de eso, no de alcance.
 
 No hay que volver a discutirlo; está hecho y verificado:
 
-- **Binarios para los tres sistemas** en Releases (`v3.0.0-beta`): `mg.exe` de Windows —el caso
+- **Binarios para los tres sistemas** en Releases (`v3.1.0-beta`): `mg.exe` de Windows —el caso
   extremo, ahí no hay compilador de sistema—, Linux y macOS. Probar MetaGráfica ya no exige
   compilar, que era el filtro que se llevaba por delante a casi todo el que llegaba.
 - **Galería bilingüe** (`docs/galeria.html` / `docs/gallery.html`) con caja «Pruébalo».
@@ -91,6 +103,15 @@ byte a byte en tres sistemas.
 comentario será que la documentación está en español. Aun así puede traer **el tipo de usuario que
 abre buenos issues**, que es lo que buscamos.
 
+### (f) r/LaTeX y foros de TeX — el mismo público de TUGboat, sin el artículo
+
+Costo casi cero y **el mismo encaje que (b)**: gente que ya describe figuras en vez de dibujarlas
+y que conoce MetaPost. La diferencia con TUGboat es el costo —un post contra un artículo en
+inglés— y lo que devuelve: comentarios sueltos en vez de lectores. Sirve de **ensayo del ángulo**
+antes de escribir (b): si el mensaje de §3 no engancha ahí, no va a enganchar en TUGboat.
+
+⚠️ Declarar la autoría siempre, y llegar con una figura, no con un anuncio.
+
 ### Descartados, con su razón
 
 - **SIGGRAPH** — premia investigación en rendering y 3D. MG no compite ahí y el costo de asistir
@@ -99,6 +120,18 @@ abre buenos issues**, que es lo que buscamos.
   mi herramienta» se cierra por autopromoción. Lo único legítimo es contestar preguntas reales
   donde MG sea una respuesta —«figuras de calidad de publicación sin arrastrar LaTeX», «figuras
   reproducibles»— declarando la autoría. Rendimiento bajo, fricción alta.
+- **Product Hunt** (2026-08-04) — su público busca **productos terminados** que resuelvan algo hoy,
+  y su moneda son los votos del día del lanzamiento. Un compilador de línea de comandos, en beta,
+  para figuras científicas, no tiene ahí ni audiencia ni forma. Y el fracaso sería del tipo
+  caro: gastar el único lanzamiento que se puede hacer en el foro equivocado.
+- **AlternativeTo** (2026-08-04) — su gancho es «alternativa libre a software propietario caro», y
+  las alternativas reales de MG —TikZ, MetaPost, matplotlib— **son todas libres y gratuitas**. El
+  encuadre no aplica, así que el listado no diría nada cierto ni útil.
+- **Dev.to / Hashnode** (2026-08-04) — el consejo genérico («escribe artículos titulados por el
+  problema») es bueno, pero **el foro está mal elegido para este público**: quien compone figuras
+  de física no lee blogs de desarrollo web. El mismo esfuerzo puesto en (b), (c) o (d) llega a
+  los lectores correctos. El *método* sí se adopta: ver §3, titular por el problema y no por la
+  herramienta.
 
 ---
 
@@ -108,7 +141,7 @@ abre buenos issues**, que es lo que buscamos.
 
 Y con eso viene una afirmación rara y **verificable**, que casi nadie puede hacer de sus figuras:
 
-> El mismo `.mg` produce los **72 archivos idénticos byte a byte en Linux, Windows y macOS**,
+> El mismo `.mg` produce los **93 archivos idénticos byte a byte en Linux, Windows y macOS**,
 > medido por CI en cada release, no por confianza.
 
 Es exactamente el problema que las revistas empujan sin que nadie lo resuelva para la parte
@@ -141,7 +174,83 @@ gráfica. Tres apoyos más:
 
 ---
 
-## 5. Siguiente paso concreto
+## 5. La vitrina: lo que ve quien llega, antes de decidir si se queda
+
+Nada de esto trae visitantes; decide qué pasa con los que ya llegaron. Es barato y **está a
+medias**, que es la peor combinación posible.
+
+**Hecho, y conviene no re-litigarlo:** la frase de una línea sin jerga encabeza los dos README;
+la prueba visual son **figuras renderizadas** —cuatro en el README, la galería completa— que para
+este proyecto valen más que un GIF de demostración, porque lo que hay que enseñar no es una
+interfaz moviéndose sino una figura de calidad publicable; y la instalación de un paso son los
+binarios de §1.
+
+**Lo que falta (medido el 2026-08-04 contra `api.github.com/repos/asierra/Metagrafica`, que
+responde sin autenticar — así que esto se vuelve a comprobar en un comando), en orden de costo:**
+
+- [x] ~~**Los *topics* del repositorio**~~ — **HECHO 2026-08-04.** Estaban en `[]`. Es el buscador
+  propio de la plataforma y es donde se busca por problema; sin *topics* el repo solo aparecía si
+  ya sabías su nombre — o sea, solo para quien no necesita encontrarlo. Quedaron doce:
+  `vector-graphics`, `scientific-visualization`, `eps`, `svg`, `pdf`, `latex`, `postscript`,
+  `metapost`, `figures`, `plotting`, `cpp`, `compiler`. ⚠️ **`metapost` y `latex` son los que
+  importan**: son los que busca el público de §2b y §2f, y los únicos que traen a alguien que ya
+  piensa en describir figuras en vez de dibujarlas. `cpp` y `compiler` describen la herramienta,
+  no el problema, y por eso valen menos (§3).
+- [x] ~~**El campo *Website* del repositorio**~~ — **HECHO 2026-08-04**, apuntando a
+  `docs/gallery.html` (la inglesa, por alcance; la página enlaza a la española). Estaba vacío
+  mientras las dos galerías **sí se servían** (HTTP 200): la galería llevaba publicada y
+  funcionando desde el 2026-07-23 y el enlace que GitHub reserva justo para eso —arriba a la
+  derecha, el primero que se ve— estaba en blanco.
+- 📌 **La imagen de vista previa social** (Settings → Social preview) — **lo único que queda de
+  esta lista.** Medido: el `og:image` de la
+  página apunta a `opengraph.githubassets.com`, que es **la tarjeta autogenerada** — cada enlace
+  que alguien comparta sale con texto sobre gris, no con una figura. La imagen no hay que
+  diseñarla: **es una figura del corpus**, que es justo el argumento. Diez minutos.
+
+⚠️ Los tres son ajustes de **configuración del repositorio**, no del árbol; no hay commit que los
+haga, y por eso **ninguna compuerta puede vigilarlos** — si alguien los borra, nada avisa. El
+`curl` de arriba es la única verificación, y no cuesta nada repetirlo. Los dos primeros se
+aplicaron con `gh repo edit` (requiere el alcance `repo`) y se comprobaron **contra la API
+pública**, no contra la respuesta de `gh`: la herramienta que hace el cambio no es buen testigo
+de que el cambio se hizo.
+- **Un clip de 20 segundos del cambio de un parámetro.** `franck_condon` con `xe1` de `0.028` a
+  `0.045`: el pozo se hace menos profundo, la línea de disociación baja, los niveles se
+  reacomodan y el número de estados ligados cae de 17 a 10 — **de cambiar un carácter**. Ya está
+  en los dos README como par de imágenes; en movimiento es el argumento entero de «paramétrica,
+  no medida a ojo» sin una palabra de explicación, y sirve igual en (a), (e) y (f).
+  `tools/ver.sh` ya rasteriza, así que el costo es de edición, no de infraestructura.
+
+⚠️ **Una FAQ o guía de resolución de problemas NO entra todavía, a propósito.** La documentación
+de errores comunes que existe (§15 de la referencia) la escribió quien ya sabe el lenguaje, y ese
+es exactamente el sesgo que la condición 4 existe para corregir. **Las preguntas de la FAQ hay
+que cosecharlas del taller (§2a)**, no inventarlas: escribirla antes es adivinar, y adivinar mal
+la deja rancia desde el primer día.
+
+---
+
+## 6. Retener a los primeros: la responsividad ES la condición 4
+
+Un consejo genérico de promoción que aquí **cambia de categoría**. En un proyecto normal contestar
+rápido los issues es buena educación de mantenedor; aquí es el mecanismo de medición: cada issue
+es un dato sobre nombres y ergonomía, y **el que no se contesta no trae el segundo**, que suele ser
+el bueno. Quien abre «no encontré cómo hacer X» y no recibe respuesta en unos días concluye —con
+razón— que el proyecto está muerto, y esa persona era la evidencia.
+
+Compromiso, mientras los issues se cuenten con los dedos: **respuesta en 48 horas**, aunque sea
+para decir «lo estoy viendo». Cuesta cero y es lo único de esta lista que no depende de nadie más.
+
+📌 **La localización, invertida.** El consejo genérico supone un proyecto en inglés que debe
+traducirse; MG nació en español y **ya está traducido al inglés** (README, referencia con compuerta
+`trfail`, galería). El techo de idioma que queda —bitácora, planes, comentarios de los ejemplos—
+es **política del proyecto** (§4) y no un pendiente.
+
+---
+
+## 7. Siguiente paso concreto
 
 Fijar fecha para el taller (§2a). Es el único de la lista que produce la evidencia que bloquea
 el 1.0; todo lo demás es alcance, y el alcance sin retroalimentación no mueve ninguna condición.
+
+De los tres ítems de configuración de §5, dos quedaron hechos el 2026-08-04 (*topics* y campo
+*Website*). **Falta la vista previa social**, que va por la web porque la API no la expone: subir
+un PNG de una figura del corpus. Es lo único del documento que no requiere fecha ni permiso.

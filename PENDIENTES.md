@@ -6,7 +6,7 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-07-29**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-08-04**.
 >
 > También reemplaza a **`ideas.txt`** (borrador fundacional de V3, borrado el 2026-07-22).
 > Se repasaron sus 18 puntos contra el código: 14 están superados —varios muy por encima de
@@ -21,18 +21,20 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=78 … docfail=0** (9 compuertas,
-> razonadas una por una en `CLAUDE.md`; la 5ª son 42 pruebas NEGATIVAS en `test/errors/`,
+> Build/test: `make` + `bash test/run.sh check` → **ok=93 … docfail=0** (31 ejemplos × 3
+> backends; **ocho** compuertas,
+> razonadas una por una en `CLAUDE.md`; la 5ª son 53 pruebas NEGATIVAS en `test/errors/`,
 > ampliadas el 2026-07-28 a los diagnósticos NO fatales con `EXPECT_WARN`/`EXPECT_NO_WARN`;
 > la 6ª vigila que `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva
 > incrustado el código de cada ejemplo, así que **editar un comentario la desactualiza** y
 > ninguna de las otras puede verlo; la 7ª, que `docs/reference.md` no sea una traducción
-> VIEJA; y la 9ª, nueva el 2026-07-29, compila los bloques ```octave de la referencia en los
+> VIEJA; y la 8ª, nueva el 2026-07-29, compila los bloques ```octave de la referencia en los
 > dos idiomas: **la documentación también puede mentir**, y a un modelo de lenguaje le miente
-> con éxito). La Capa 3 ganó el 2026-07-27 una **tercera** invariante:
+> con éxito). La Capa 3 tiene **cuatro** invariantes: la 3ª, del 2026-07-27, es la
 > paridad **geométrica** de arcos entre los tres backends (`tools/arcparity.py`) — la
 > única sin escapatoria por bendición, porque no compara contra un golden sino un backend
-> contra otro. Ver `plan_anisotropia.md`.
+> contra otro (ver `plan_anisotropia.md`); la 4ª, del 2026-07-28, cuenta los **rellenos
+> degradados** en los tres formatos.
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
