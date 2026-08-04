@@ -201,8 +201,15 @@ responde sin autenticar — así que esto se vuelve a comprobar en un comando), 
   mientras las dos galerías **sí se servían** (HTTP 200): la galería llevaba publicada y
   funcionando desde el 2026-07-23 y el enlace que GitHub reserva justo para eso —arriba a la
   derecha, el primero que se ve— estaba en blanco.
-- 📌 **La imagen de vista previa social** (Settings → Social preview) — **lo único que queda de
-  esta lista.** Medido: el `og:image` de la
+- **La imagen de vista previa social** (Settings → Social preview) — **generada 2026-08-04, falta
+  SUBIRLA**: es el único de los tres que la API no expone, así que el último paso es a mano.
+  `docs/img/social-preview.png` (1280×640), y `tools/social_preview.sh` la rehace. La figura es
+  `seccion_eficaz` porque su lienzo es 13×5.98 = **2.17:1**, casi el 2:1 que pide el formato: llena
+  el marco sin blanco muerto, donde las candidatas 16:9 dejan bandas. Lleva el nombre abajo a la
+  izquierda. ⚠️ **Se descartó `angulo_solido`, que era casi neutra de idioma** (solo `A = πr²`, `ρ`,
+  `r`) frente a los rótulos españoles de ésta — a sabiendas, porque llenaba peor el marco; si el
+  público internacional pesa más adelante, ahí está la alternativa y la razón. Medido antes: el
+  `og:image` de la
   página apunta a `opengraph.githubassets.com`, que es **la tarjeta autogenerada** — cada enlace
   que alguien comparta sale con texto sobre gris, no con una figura. La imagen no hay que
   diseñarla: **es una figura del corpus**, que es justo el argumento. Diez minutos.
@@ -251,6 +258,6 @@ es **política del proyecto** (§4) y no un pendiente.
 Fijar fecha para el taller (§2a). Es el único de la lista que produce la evidencia que bloquea
 el 1.0; todo lo demás es alcance, y el alcance sin retroalimentación no mueve ninguna condición.
 
-De los tres ítems de configuración de §5, dos quedaron hechos el 2026-08-04 (*topics* y campo
-*Website*). **Falta la vista previa social**, que va por la web porque la API no la expone: subir
-un PNG de una figura del corpus. Es lo único del documento que no requiere fecha ni permiso.
+De los tres ítems de configuración de §5 (2026-08-04): *topics* y campo *Website* quedaron
+**aplicados**, y la vista previa **generada** (`docs/img/social-preview.png`). Queda un solo gesto
+manual: **subirla** en Settings → Social preview, porque es lo único que la API no expone.
