@@ -97,6 +97,20 @@ void Matrix::ellipse_axes(double ux, double uy, double vx, double vy,
   // número que no afecta al dibujo y que ataría los goldens a un dato irrelevante.
   angDeg = (R <= 1e-12 * Q) ? 0.0
                             : 0.5 * (atan2(G, F) + atan2(H, E)) / deg2rad;
+  // Una elipse ALINEADA con los ejes tiene uy y vx exactamente cero en teoría, y
+  // del orden de 1e-17 después de una proyección 3-D: los dos atan2 no se cancelan
+  // del todo y el ángulo sale ~1e-15 grados en vez de 0. No es una rotación, es
+  // ruido — y el `<<` de SVGDisplay lo publica ENTERO (`4.77083e-15`) porque las
+  // 6 cifras significativas colapsan un 90.0000000000001 a `90` pero no un
+  // diminuto a `0`. Redondear ACERCA del valor exacto, nunca alejándose, como ya
+  // hace PDFDisplay::deviceRotate con el coseno de un giro recto.
+  //
+  // ⚠️ Es una divergencia ENTRE PLATAFORMAS y ningún golden la caza, porque el
+  // golden se genera en una sola: paró el release de v3.1.0-beta desde macOS
+  // —que daba el 0 limpio mientras Linux publicaba el ruido— y llevaba tres días
+  // en docs/img sin que nada la viera. El umbral es 1e-9 grados: a un radio de
+  // 10⁴ pt desplaza 2e-7 pt, por debajo de lo que cualquier backend imprime.
+  if (fabs(angDeg) < 1e-9) angDeg = 0.0;
 }
 
 Matrix Matrix::operator*(const Matrix& B) {
