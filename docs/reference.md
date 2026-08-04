@@ -178,6 +178,37 @@ The arrow is **oriented to the local tangent** without being asked, so a polylin
 it properly turned — which is why stamping a loose `marker` at the tip is worse: you have to
 repeat the coordinate and work out the angle by hand.
 
+**Where the marker is anchored, which depends on the shape.** Measured:
+
+| shape | anchored by | overshoot past the vertex |
+|---|---|---|
+| `arrow` | **its tip** | none: the tip lands *on* the vertex and the body stays behind |
+| `circle`, `square`, `diamond`, `triangle`, `cross` | **its centre** | `marker_size` pt |
+
+⚠️ **With a symmetric shape, half the marker sticks out past the vertex.** If the line ends right
+against a box or another element, the marker eats into it by `marker_size` pt. It only shows when
+you zoom in; at full size it passes for correct. An arrow does **not** have this problem.
+
+There are two ways to pull it back. The direct one is to shorten the line, and since
+`marker_size` is a **physical** quantity while coordinates are in **world** units, it has to be
+converted:
+
+```octave
+display_size 12 6
+world_window 0 10 0 5
+% marker_size (pt) -> world units
+pullback = 5/72*2.54 / (12 / 10)
+rectangle { 6 1  9 4 }
+polyline(marker_end="circle", marker_size=5) { 1 2.5  (6 - pullback) 2.5 }
+```
+
+**`marker_start_shift` / `marker_end_shift`** is the other way, and its unit is not obvious: it is
+a **fraction of the end segment**, interpolating from the adjacent vertex towards the marker's own
+vertex. **The default is 1** — the marker at its vertex — `0` puts it on the adjacent vertex,
+`0.5` at the midpoint of that segment, and a value greater than 1 extrapolates beyond it. On a
+path of three or more points it acts on the **last** segment only (or the first, for
+`marker_start`), not on the whole path.
+
 **Markers on an arc or an ellipse (`marker_at`).** `arc`, `ellipse` and `circle` take markers at
 **parametric** positions, not just at the ends, each one oriented to the local tangent:
 
@@ -1211,4 +1242,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 932feb31dab2ce3bf75b6c98e11e08648c5ac399 -->
+<!-- translated-from: referencia.md @ 1bdb9a3fb82c9554d8013270769b3c33610eb322 -->

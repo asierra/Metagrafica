@@ -178,6 +178,36 @@ La flecha se **orienta a la tangente local** sin que se lo pidas, así que una l
 un arco la reciben bien girada — por eso estampar un `marker` suelto en la punta es peor: hay
 que repetir la coordenada y calcular el ángulo a mano.
 
+**Dónde se ancla el marcador, que depende de la forma.** Medido:
+
+| forma | se ancla por | rebasa el vértice |
+|---|---|---|
+| `arrow` | **la punta** | nada: la punta cae *en* el vértice y el cuerpo queda atrás |
+| `circle`, `square`, `diamond`, `triangle`, `cross` | **el centro** | `marker_size` pt |
+
+⚠️ **Con una forma simétrica, medio marcador se sale por delante del vértice.** Si la línea
+termina justo contra una caja o contra otro dibujo, el marcador la invade `marker_size` pt. Solo
+se nota ampliando; a tamaño completo pasa por buena. Una flecha **no** tiene ese problema.
+
+Para retirarlo hay dos caminos. El directo es acortar la línea, y como `marker_size` es una
+cantidad **física** y las coordenadas son de **mundo**, hay que convertir:
+
+```octave
+display_size 12 6
+world_window 0 10 0 5
+% marker_size (pt) -> unidades de mundo
+retiro = 5/72*2.54 / (12 / 10)
+rectangle { 6 1  9 4 }
+polyline(marker_end="circle", marker_size=5) { 1 2.5  (6 - retiro) 2.5 }
+```
+
+**`marker_start_shift` / `marker_end_shift`** es el otro camino, y su unidad no es obvia: **es
+una fracción del segmento del extremo**, interpolando desde el vértice contiguo hacia el vértice
+del marcador. **El default es 1** —el marcador en su vértice—, `0` lo lleva al vértice contiguo,
+`0.5` al punto medio de ese segmento y un valor mayor que 1 lo extrapola más allá. En un trayecto
+de tres o más puntos actúa solo sobre el **último** segmento (o el primero, para `marker_start`),
+no sobre el recorrido entero.
+
 **Marcadores sobre un arco o una elipse (`marker_at`).** `arc`, `ellipse` y `circle` aceptan
 marcadores en posiciones **paramétricas**, no solo en los extremos, cada uno orientado a la
 tangente local:
