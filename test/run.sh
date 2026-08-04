@@ -430,6 +430,24 @@ else
     echo "WARN: python3 no encontrado; se omite la compuerta de la galería"
 fi
 
+# --- Compuerta 6-bis: el Modelfile del agente al día (galfail) ---------------
+# docs/modelfile_llm.txt es GENERADO y committeado, como docs/img y la galería, y
+# hasta el 2026-08-04 no lo miraba nada: se encontró con 7.4k bytes de atraso —la
+# §15 de la referencia y los ejemplos habían cambiado— sin que ninguna compuerta
+# pudiera verlo.
+#
+# ⚠️ Es el asset derivado de MÁS fuentes del repo: la §15 de docs/referencia.md, los
+# ocho ejemplos de su lista, y desde el 2026-08-04 las reglas duras de
+# skills/figuras-mg/SKILL.md. Cualquiera de las tres lo deja rancio, y ninguna avisa.
+# Cuenta en galfail porque es la misma clase de fallo —salida generada que se pudre—
+# y no merece un contador propio.
+if command -v python3 >/dev/null 2>&1; then
+    if ! mfout="$(python3 "$ROOT/tools/generar_modelfile.py" --check 2>&1)"; then
+        echo "GALFAIL modelfile del agente ($mfout)"
+        galfail_count=$((galfail_count + 1))
+    fi
+fi
+
 # --- Compuerta 7: la referencia en INGLÉS al día (trfail) --------------------
 # docs/reference.md es la traducción de docs/referencia.md y, a diferencia de
 # docs/img o la galería, NO SE PUEDE REGENERAR: traducir es trabajo humano. Así

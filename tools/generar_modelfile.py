@@ -5,6 +5,9 @@ Genera el Modelfile de ollama para el agente que escribe MetaGráfica.
 Emite el archivo COMPLETO (parámetros + SYSTEM) en `docs/modelfile_llm.txt`, listo para
 `ollama create mg -f docs/modelfile_llm.txt`.
 
+    python3 tools/generar_modelfile.py            # regenera
+    python3 tools/generar_modelfile.py --check    # falla (1) si quedó rancio
+
 ⚠ Las tres decisiones de este archivo salieron del experimento de tres brazos del
 2026-07-29 (mismo modelo, tres SYSTEM, tres tareas cortas, `bin/mg` como juez):
 
@@ -22,11 +25,25 @@ Emite el archivo COMPLETO (parámetros + SYSTEM) en `docs/modelfile_llm.txt`, li
    se mandaba, ruido para quien escribe una figura. Es la misma decisión que ya había
    tomado `tools/galeria.py` para el caso gemelo.
 
-Las REGLAS DURAS de abajo no son precauciones inventadas: cada una es un fallo que
-cometieron los TRES brazos del experimento.
+Las REGLAS DURAS no son precauciones inventadas: cada una es un fallo que cometieron los
+TRES brazos del experimento.
+
+⚠ **Desde el 2026-08-04 las reglas NO viven aquí: se derivan de `skills/figuras-mg/SKILL.md`.**
+Estuvieron duplicadas —el mismo conocimiento en dos archivos que nadie cotejaba— y esa es
+exactamente la forma en que se pudre algo en este proyecto. El skill es la fuente porque es
+el único de los dos que una compuerta compila (`docfail`, vía `tools/docblocks.py`), así que
+sus ejemplos no pueden quedarse mintiendo cuando la gramática se mueva.
+
+El reparto es por NATURALEZA, no por comodidad:
+
+  · del skill  → lo que es verdad sobre el LENGUAJE (reglas duras, geometría calculada).
+  · de aquí    → lo que es propio de ESTE agente y de este runtime: el papel que se le pide,
+                 el formato de respuesta y los parámetros de ollama. Nada de eso es
+                 conocimiento del lenguaje y no tiene por qué viajar en el skill.
 """
 
 import pathlib
+import re
 import sys
 
 # Elegidos por cobertura de DECISIONES, no de características: cuándo usar `plot` en vez
@@ -44,34 +61,21 @@ EJEMPLOS = [
     "elevacion_solar",      # geometría derivada de parámetros, iconos, str()
 ]
 
-PREAMBULO = """Eres un ingeniero de software experto y el asistente definitivo para MetaGráfica (MG), un lenguaje descriptivo escrito en C++ que genera figuras técnicas, científicas y geométricas (EPS, SVG, PDF).
+# El PAPEL. Propio de este agente, no del lenguaje: por eso no se deriva del skill.
+PAPEL = """Eres un ingeniero de software experto y el asistente definitivo para MetaGráfica (MG), un lenguaje descriptivo escrito en C++ que genera figuras técnicas, científicas y geométricas (EPS, SVG, PDF).
 
-Tu objetivo es escribir código .mg impecable, calculando la geometría analíticamente en lugar de medir a ojo. Entiendes física, percepción remota, órbitas satelitales y visualización de datos, así que tus figuras deben ser matemáticamente correctas.
+Tu objetivo es escribir código .mg impecable, calculando la geometría analíticamente en lugar de medir a ojo. Entiendes física, percepción remota, órbitas satelitales y visualización de datos, así que tus figuras deben ser matemáticamente correctas."""
 
-REGLAS DURAS. Cada una es un error que se midió, no una precaución: rómpela y la figura sale mal o no compila.
-
-1. `world_window` es la geometría de la PÁGINA, nunca las unidades de tus datos. Escribir `world_window 0.4 2.5 0 100` porque tus datos van de 0.4 a 2.5 y de 0 a 100 produce una figura ilegible: el motor es isométrico y el eje más grande aplasta al otro. Los datos van en `x=`/`y=` de `plot`, y `box=(x0,y0,x1,y1)` es la región de la VENTANA que ocupa la caja. Ejemplo correcto: `world_window 0 10 0 7` con `plot(x=(0.4,2.5), y=(0,100), box=(1.2,1, 9,6))`.
-
-2. Un rótulo de varios renglones es UN SOLO `text()`, no varios, y el corte de renglón se escribe con la secuencia de dos caracteres BARRA-DIAGONAL-ENE, o sea `/n`, con la misma barra que `/b` (negrita) y `/e` (énfasis). Ejemplo exacto, cópialo: `text("Radiancia total/n$L_{tot} = \\frac{\\rho E T}{\\pi} + L_p$")`.
-
-3. En MG no existe `\\text{}`, ni ningún comando de LaTeX que no esté en la referencia rápida. Un subíndice de varias letras se escribe con llaves: `$L_{tot}$`. Si escribes `\\text{tot}` el compilador avisa «symbol name unknown text» y el rótulo sale mal.
-
-4. Las letras griegas y los símbolos van por su NOMBRE con barra invertida y dentro de `$…$`: `$\\mu$`, `$\\rho$`, `$\\pi$`, `$\\theta$`. Nunca pegues el glifo Unicode (µ, ρ, π): la fuente no lo tiene por esa vía y el compilador lo descarta con aviso.
-
-5. Los comentarios empiezan con `%`. Un `#` es un error léxico fatal.
-
-MÁS REGLAS DE SINTAXIS:
-6. `display_size` fija el tamaño físico en centímetros; `world_window` fija el recorte del plano. No los mezcles.
-7. Si los ejes x e y miden cosas distintas o difieren mucho en magnitud, USA `plot` (ver la regla 1). Si comparten unidad —un plano, una órbita, un mapa, una figura geométrica— usa `world_window` directo.
-8. Un trayecto nombrado (`path`) se pasa siempre como PRIMER argumento y con `&`: `polyline(&mi_ruta, color="red")`.
-9. Dentro de un bloque de coordenadas `{ }` los valores se separan por espacios, sin comas. Toda suma o resta va entre paréntesis: `{ (x+1) (y-2) }`. Las llamadas a función van pegadas al paréntesis: `sqrt(x)`.
-10. Las flechas y los marcadores sobre una línea son un ATRIBUTO de la primitiva, que los coloca y los orienta sola: `polyline(marker_end="arrow") { … }`. No los dibujes con `polygon`.
-
-ESTILO DE RESPUESTA:
+# El FORMATO DE RESPUESTA. Instrucciones de chat: tampoco son del lenguaje.
+# ⚠ El punto de "no inventes mobiliario" NO se repite aquí: viene del skill, donde está
+# con su medición al lado. Repetirlo sería reabrir la duplicación que este cambio cerró.
+ESTILO = """ESTILO DE RESPUESTA:
 - Directo y profesional. Sin saludos, introducciones ni conclusiones genéricas.
 - Muestra el código .mg de inmediato, en un bloque ```octave.
-- No inventes argumentos ni añadas mobiliario que no se pidió (leyendas, tablas, retículas): si no lo viste en los ejemplos ni en la referencia rápida, no existe.
 - Si deduces un ángulo o una coordenada con trigonometría, explica brevemente el razonamiento antes del código."""
+
+# Secciones del skill que SON conocimiento del lenguaje. El orden es el del archivo.
+SECCIONES_SKILL = ["Reglas duras", "Geometría calculada, no puesta a ojo"]
 
 
 def encabezado(texto):
@@ -112,6 +116,46 @@ def sin_notas(texto):
     return "\n".join(salida).strip()
 
 
+def reglas_del_skill(raiz):
+    """Las secciones de SECCIONES_SKILL de `skills/figuras-mg/SKILL.md`, en su orden.
+
+    Se limpia lo que es del REPO y no del lenguaje: la nota de que el archivo lo compila
+    una compuerta le sirve a quien mantiene, no a quien escribe una figura. Los bloques
+    ```octave se conservan enteros — son ejemplos concretos, y el experimento del
+    2026-07-29 midió que lo que hace alucinar es el CATÁLOGO, no el ejemplo.
+    """
+    ruta = raiz / "skills" / "figuras-mg" / "SKILL.md"
+    if not ruta.exists():
+        print(f"error: falta {ruta}; las reglas duras salen de ahí desde el 2026-08-04",
+              file=sys.stderr)
+        return None
+
+    texto = ruta.read_text(encoding="utf-8")
+    # Fuera el frontmatter YAML: `name`/`description` son para el cargador de skills.
+    texto = re.sub(r"\A---\n.*?\n---\n", "", texto, flags=re.S)
+
+    partes, faltan = [], []
+    for titulo in SECCIONES_SKILL:
+        m = re.search(r"^## " + re.escape(titulo) + r"\s*$(.*?)(?=^## |\Z)",
+                      texto, flags=re.S | re.M)
+        if not m:
+            faltan.append(titulo)
+            continue
+        cuerpo = m.group(1)
+        # Las citas en bloque del skill son notas de mantenimiento (dónde vive el archivo,
+        # qué compuerta lo mira). Ninguna es conocimiento del lenguaje.
+        cuerpo = "\n".join(l for l in cuerpo.split("\n") if not l.startswith(">"))
+        partes.append(titulo.upper() + "\n" + cuerpo.strip())
+
+    if faltan:
+        # Si alguien renombra una sección del skill, esto se entera en vez de emitir un
+        # Modelfile mutilado en silencio — que es como se pierde una regla sin avisar.
+        print("error: no encontré en SKILL.md la(s) sección(es): " + ", ".join(faltan),
+              file=sys.stderr)
+        return None
+    return "\n\n".join(partes)
+
+
 def referencia_rapida(raiz):
     """La §15 de la referencia, tal cual. Es el destilado que va PRIMERO (decisión 2)."""
     texto = (raiz / "docs" / "referencia.md").read_text(encoding="utf-8")
@@ -126,7 +170,11 @@ def referencia_rapida(raiz):
 def main():
     raiz = pathlib.Path(__file__).resolve().parent.parent
 
-    partes = [PREAMBULO, ""]
+    reglas = reglas_del_skill(raiz)
+    if reglas is None:
+        return 1   # sin las reglas el Modelfile no sirve: mejor no escribir nada
+
+    partes = [PAPEL, "", reglas, "", ESTILO, ""]
 
     rapida = referencia_rapida(raiz)
     if rapida:
@@ -155,10 +203,27 @@ def main():
                  '\nSYSTEM """\n' + cuerpo + '\n"""\n')
 
     destino = raiz / "docs" / "modelfile_llm.txt"
+
+    # --check: regenera EN MEMORIA y compara, igual que galeria.py. `docs/modelfile_llm.txt`
+    # es un asset generado y committeado, y hasta el 2026-08-04 no lo miraba nada: se
+    # encontró con 7.4k bytes de atraso —la §15 de la referencia y los ejemplos habían
+    # cambiado— sin que ninguna compuerta pudiera verlo. Ahora lo mueve CUALQUIER cambio
+    # en la referencia, en los ejemplos de la lista o en el skill, que es justo el punto:
+    # es derivado de cuatro fuentes y ninguna avisa cuando se mueve.
+    if "--check" in sys.argv:
+        actual = destino.read_text(encoding="utf-8") if destino.exists() else ""
+        if actual != modelfile:
+            print("modelfile_llm.txt RANCIO: corre python3 tools/generar_modelfile.py")
+            return 1
+        print("modelfile al día")
+        return 0
+
     destino.write_text(modelfile, encoding="utf-8")
     print(f"escrito {destino}")
     print(f"  {len(modelfile)} bytes, ~{len(modelfile)//35*10} tokens, "
           f"{len(EJEMPLOS)} ejemplos sin NOTAS, §15 al frente")
+    print(f"  reglas duras: derivadas de skills/figuras-mg/SKILL.md "
+          f"({len(SECCIONES_SKILL)} secciones)")
     print("  crear el modelo:  ollama create mg -f docs/modelfile_llm.txt")
     return 0
 
