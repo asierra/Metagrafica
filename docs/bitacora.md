@@ -3921,3 +3921,60 @@ regla 11. Eso lo cazó medir, y no hay compuerta que lo sustituya.
 instalada —es lo que él mismo advierte sobre la referencia—, y `docs/modelfile_llm.txt` pasa a
 ser el menos completo de los dos artefactos de contexto; lo natural sería que
 `tools/generar_modelfile.py` derive del skill.
+
+## 2026-08-04 (ter) — El Modelfile deja de repetir al skill, y resulta que estaba rancio
+
+Cierre del hilo del agente. Las **reglas duras estaban duplicadas a mano**: el mismo
+conocimiento del lenguaje en `tools/generar_modelfile.py` y en `skills/figuras-mg/SKILL.md`, dos
+archivos que nadie cotejaba. Ahora se derivan del skill.
+
+**El skill es la fuente por un criterio, no por gusto:** es el único de los dos que una compuerta
+compila (`docfail`), así que sus ejemplos no pueden quedarse mintiendo cuando la gramática se
+mueva.
+
+**El reparto es por NATURALEZA:**
+
+- **del skill** → lo que es verdad sobre el LENGUAJE: reglas duras, geometría calculada.
+- **del script** → lo propio de ESTE agente y este runtime: el papel que se le pide, el formato
+  de respuesta y los parámetros de ollama. Nada de eso es conocimiento del lenguaje y no tiene
+  por qué viajar en el skill.
+
+📌 Se quitó de `ESTILO` el punto de «no inventes mobiliario»: ahora viene del skill, donde está
+con su medición al lado. Dejarlo habría reabierto la duplicación que el cambio cierra.
+
+**Verificado que no se pierde nada:** los **once** conceptos del preámbulo anterior sobreviven
+—se comprobaron uno por uno— y entran **cuatro** que no estaban: el bloque de coordenadas en la
+misma línea, `to` inclusivo, el anclaje del marcador y geometría calculada. Y si alguien renombra
+una sección del skill, el script **aborta con código 1** en vez de emitir un Modelfile mutilado
+en silencio; verificado renombrando «Reglas duras».
+
+### 🔎 Regenerarlo destapó que estaba RANCIO, y la cuenta importa
+
+Creció **10.2k bytes**, y la tentación era atribuirlo al cambio. Midiendo:
+
+| origen del crecimiento | bytes |
+|---|---|
+| derivar las reglas del skill | **+2.8k** |
+| la §15 de la referencia y los ejemplos, cambiados desde la última generación | **+7.4k** |
+
+O sea que **el 73 % del crecimiento era atraso acumulado**, no el cambio de hoy. Resultó ser el
+asset derivado de **más fuentes del repo** —la §15 de `docs/referencia.md`, los ocho ejemplos de
+su lista, y desde hoy el skill— y **el único generado sin compuerta**, a diferencia de `docs/img`
+y la galería, que sí la tienen desde julio.
+
+Lo cierra **`generar_modelfile.py --check`**, que regenera en memoria y compara, mismo patrón que
+`galeria.py`. **Cuenta en `galfail`** en vez de estrenar contador: es la misma clase de fallo
+—salida generada que se pudre— y ocho compuertas con nueve contadores se leen peor.
+
+**Verificada por las DOS vías**, que es lo que importa en un derivado de varias fuentes:
+ensuciando el propio Modelfile (un `temperature` cambiado a mano) y tocando **el skill**, que es
+la fuente nueva. Las dos dan `galfail=1` con las otras siete en cero.
+
+### La lección, que no es sobre el Modelfile
+
+Las tres cosas que se arreglaron hoy en este hilo —la regla falsa del skill, el Modelfile rancio
+y la duplicación entre ambos— **son la misma**: conocimiento derivado sin nadie que lo coteje
+contra su fuente. El proyecto ya tenía el patrón resuelto para `docs/img`, la galería y la
+traducción; lo que faltaba era **darse cuenta de que el contexto de un agente es salida
+publicada igual que un `.svg`**, y se pudre igual. Con la diferencia de que un `.svg` rancio se
+ve, y un contexto rancio hace que un modelo escriba con confianza algo que ya no es cierto.
