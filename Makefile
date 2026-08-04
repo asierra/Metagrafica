@@ -165,6 +165,11 @@ install: $(BINDIR)/mg$(EXE) $(MANDIR)/mg.1
 	install -m 644 lib/*.mg $(LIBDIR)
 	install -d $(DATADIR)/examples
 	install -m 644 examples/*.mg $(DATADIR)/examples
+	# El skill del agente va bajo $(DATADIR), hermano de examples/ y lib/, porque es
+	# material que se COPIA a otro proyecto (a su .claude/skills/), no doc que se lee.
+	install -d $(DATADIR)/skills/figuras-mg/references
+	install -m 644 skills/figuras-mg/SKILL.md $(DATADIR)/skills/figuras-mg
+	install -m 644 skills/figuras-mg/references/*.md $(DATADIR)/skills/figuras-mg/references
 	install -d $(DOCDIR) $(DOCDIR)/img
 	install -m 644 docs/referencia.md docs/reference.md docs/calcular_en_vez_de_medir.md $(DOCDIR)
 	install -m 644 docs/galeria.html docs/gallery.html $(DOCDIR)
@@ -177,6 +182,10 @@ uninstall:
 	-rmdir $(LIBDIR)
 	rm -f $(DATADIR)/examples/*.mg
 	-rmdir $(DATADIR)/examples
+	rm -f $(DATADIR)/skills/figuras-mg/references/*.md $(DATADIR)/skills/figuras-mg/SKILL.md
+	-rmdir $(DATADIR)/skills/figuras-mg/references
+	-rmdir $(DATADIR)/skills/figuras-mg
+	-rmdir $(DATADIR)/skills
 	-rmdir $(DATADIR)
 	rm -f $(DOCDIR)/img/*.svg $(DOCDIR)/referencia.md $(DOCDIR)/reference.md \
 	      $(DOCDIR)/calcular_en_vez_de_medir.md $(DOCDIR)/galeria.html $(DOCDIR)/gallery.html

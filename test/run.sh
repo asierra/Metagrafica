@@ -476,7 +476,13 @@ fi
 # contraejemplo deliberado), y no hay lista aquí que se desincronice. Se omite con
 # aviso si no hay python3, igual que gs.
 if command -v python3 >/dev/null 2>&1; then
-    if ! docout="$(python3 "$ROOT/tools/docblocks.py" docs/referencia.md docs/reference.md 2>&1)"; then
+    # skills/figuras-mg/SKILL.md entra aquí por la MISMA razón que la referencia, y con
+    # más motivo: es el contexto que se le da a un agente, y un agente OBEDECE. Nació
+    # fuera del repo (en una carpeta de curso) y al traerlo se le encontró una regla
+    # FALSA —decía que una flecha invade lo que señala; se midió y su punta cae en el
+    # vértice—. Vivía sin que nada la compilara. Ver bitácora 2026-08-04.
+    if ! docout="$(python3 "$ROOT/tools/docblocks.py" docs/referencia.md docs/reference.md \
+                          skills/figuras-mg/SKILL.md 2>&1)"; then
         echo "DOCFAIL bloques de código de la documentación:"
         echo "$docout" | sed 's/^/        /'
         docfail_count=$((docfail_count + 1))

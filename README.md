@@ -318,6 +318,18 @@ bin/mg examples/fig6-4.mg out.svg
 | `espectro.mg` | **gradient** fills |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | reference sheets |
 
+## Writing figures with an AI assistant
+
+If you use a coding agent, [`skills/figuras-mg/`](skills/figuras-mg/) is the context to give it:
+the hard rules of the language — each one a **measured** mistake, not a precaution — plus the
+review checklist for the step no compiler performs, deciding whether the figure is actually
+right. Copy it into your project's `.claude/skills/`; it also ships in the release package and in
+`share/metagrafica/skills/` after `make install`.
+
+⚠️ **Point it at the installed reference, do not copy the reference into your project** — a copy
+goes stale with nothing to warn you. The skill's own code blocks are compiled by the test harness
+on every change, so it cannot quietly drift from the language while the grammar is still in beta.
+
 If you want to work on the compiler itself, [`CONTRIBUTING.md`](CONTRIBUTING.md) has the
 rules and the test gates.
 

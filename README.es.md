@@ -281,6 +281,18 @@ bin/mg examples/fig6-4.mg sal.svg
 | `espectro.mg` | rellenos **degradados** |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | láminas de referencia |
 
+## Escribir figuras con un asistente
+
+Si usas un agente de código, [`skills/figuras-mg/`](skills/figuras-mg/) es el contexto que hay
+que darle: las reglas duras del lenguaje —cada una un error **medido**, no una precaución— y la
+lista de comprobación para el paso que ningún compilador hace, decidir si la figura está de
+verdad bien. Cópialo al `.claude/skills/` de tu proyecto; también viaja en el paquete del release
+y en `share/metagrafica/skills/` tras un `make install`.
+
+⚠️ **Apúntalo a la referencia instalada, no la copies a tu proyecto** — una copia se pudre sin
+que nada avise. Los bloques de código del propio skill los compila la red de pruebas en cada
+cambio, así que no puede alejarse en silencio del lenguaje mientras la gramática siga en beta.
+
 Si quieres trabajar en el compilador, [`CONTRIBUTING.md`](CONTRIBUTING.md) tiene las reglas
 y las compuertas de prueba.
 

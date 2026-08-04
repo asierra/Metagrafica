@@ -87,6 +87,8 @@ jobs:
           cp -r lib "$dir/"
           mkdir -p "$dir/examples"
           cp examples/*.mg "$dir/examples/"
+          # El skill del agente: se copia al .claude/skills/ del proyecto de quien lo use.
+          cp -r skills "$dir/"
           cp README.md README.es.md LICENSE docs/referencia.md "$dir/" 2>/dev/null || true
           if [ "${{ matrix.binario }}" = "mg.exe" ]; then
             zip -r "$dir.zip" "$dir"
