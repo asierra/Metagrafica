@@ -2591,7 +2591,7 @@ ejemplo, el `rectangle` transformable (§4.4).
 
 ### 22.7 Qué falta para salir de beta
 
-`MG_VERSION` es **3.0.0-beta**. La palabra dice dos cosas a la vez: el lenguaje **todavía
+`MG_VERSION` es **3.1.0-beta**. La palabra dice dos cosas a la vez: el lenguaje **todavía
 puede cambiar** (nombres y argumentos no están congelados) y **faltan piezas** de esta
 spec. Lo que sí está se ejercita con el corpus en cada cambio y ha compuesto libros.
 

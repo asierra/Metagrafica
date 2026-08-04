@@ -1,7 +1,7 @@
 ---
 title: mg
 section: 1
-footer: mg 3.0.0-beta
+footer: mg 3.1.0-beta
 date: 2026
 author: Alejandro Aguilar Sierra <algsierra@gmail.com>
 ---
@@ -45,7 +45,7 @@ keep for a complicated figure.
 
 ## Beta
 
-This is version 3.0.0-**beta**, and both halves of that word matter:
+This is version 3.1.0-**beta**, and both halves of that word matter:
 
 *  **The language can still change.** Names and arguments are not frozen: `axis`
    recently renamed `title` to `label` and `labels` to `tick_labels`. A figure that

@@ -2,7 +2,7 @@
 
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-14-blue.svg)
 ![License](https://img.shields.io/badge/License-GPL%203.0-green.svg)
-![Version](https://img.shields.io/badge/version-3.0.0--beta-orange.svg)
+![Version](https://img.shields.io/badge/version-3.1.0--beta-orange.svg)
 
 **English** · [Español](README.es.md)
 
@@ -163,6 +163,37 @@ names the character, because the glyph simply is not in the font. Supporting the
 embedding a Unicode text font, the way Latin Modern Math is embedded for mathematics.
 Greek in *mathematics* works today: write `$\alpha$`, not a literal α.
 
+## Pseudo-3D scenes
+
+You describe the **space**, not the projection. `view3d` fixes the camera once for the whole
+figure, `plane3d` turns ordinary 2-D drawing into drawing *on a plane of the scene*, and
+`xyz()` places a point that belongs to no plane at all.
+
+```octave
+view3d(azimuth=35, elevation=25)
+
+plane3d(u=[1, 0, 0], v=[0, 0, 1]) {
+    circle(1) { 0 0 }        % comes out as the exact ellipse of its projection
+}
+polyline(dash="dotted") { xyz(0,0,0)  xyz(0,1.5,0) }
+```
+
+![Solid angle subtended by a spherical cap](docs/img/angulo_solido.svg)
+
+Every meridian, every parallel and the rim of the cap above is a **circle of the space**, and
+not one semi-axis is computed anywhere: a `circle` drawn inside a `plane3d` projects to the
+right ellipse on its own. The whole 2-D language keeps working in there — `sine`, fills,
+markers, arcs, text — so a wave drawn on a plane is just a `sine`
+([`onda_electromagnetica.mg`](examples/onda_electromagnetica.mg)).
+
+It is deliberately **pseudo**-3D: there is no hidden-surface engine and no lighting model.
+What is in front of what is decided in the source, in closed form, which is what a book figure
+usually wants anyway — [`irradiancia.mg`](examples/irradiancia.mg) computes the silhouette of a
+cone as the tangents from a point to the rim of a disc, and
+[`seccion_eficaz.mg`](examples/seccion_eficaz.mg) builds its solids of revolution from
+[`lib/pseudo3d.mg`](lib/pseudo3d.mg). Changing `azimuth` or `elevation` moves the entire figure
+together. The details are in [§13 of the reference](docs/reference.md).
+
 ## The language in one minute
 
 A **point** is a pair of coordinates; a **path** is a list of points. Every primitive
@@ -282,6 +313,9 @@ bin/mg examples/fig6-4.mg out.svg
 | `franck_condon.mg`, `turning_points.mg` | **fully computed figures**: you give the physical parameters and the geometry follows |
 | `fig_polybar.mg` | bar histogram with hatching |
 | `fractal_tree.mg` | **recursion**: a structure that contains itself |
+| `angulo_solido.mg`, `onda_electromagnetica.mg` | **pseudo-3D**: `view3d`, `plane3d`, `xyz()` |
+| `irradiancia.mg`, `seccion_eficaz.mg` | pseudo-3D with **computed silhouettes** and solids of revolution |
+| `espectro.mg` | **gradient** fills |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | reference sheets |
 
 If you want to work on the compiler itself, [`CONTRIBUTING.md`](CONTRIBUTING.md) has the
@@ -289,7 +323,7 @@ rules and the test gates.
 
 ## Project status
 
-**This version is still beta** (`MG_VERSION 3.0.0-beta`). Two things follow from that,
+**This version is still beta** (`MG_VERSION 3.1.0-beta`). Two things follow from that,
 and both matter to you directly:
 
 1. **The language can still change.** The names of commands and of their arguments are not

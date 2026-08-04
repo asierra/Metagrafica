@@ -5,7 +5,7 @@
 # Windows es el caso extremo —no hay compilador de sistema— así que ahí lo que se
 # reparte tiene que ser un .exe ya hecho.
 #
-# Cómo se dispara:  git tag v3.0.0-beta.1 && git push origin v3.0.0-beta.1
+# Cómo se dispara:  git tag v3.1.0-beta && git push origin v3.1.0-beta
 # (o a mano desde la pestaña Actions, con workflow_dispatch).
 #
 # El .exe se CRUZA desde Linux con MinGW-w64, que es como se armó también la
@@ -272,41 +272,65 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v8
         with: { path: dist }
+
+      # Las novedades de ESTA versión viven en el repo (`docs/notas_release.md`) y no
+      # aquí, por una razón: este cuerpo es el mismo para todos los tags, así que lo
+      # que escribiera de una versión concreta quedaría mintiendo en la siguiente. El
+      # archivo, en cambio, viaja CON el tag — describe la versión que lo publica y no
+      # puede describir otra. Si falta, la página sale solo con el texto genérico.
+      - name: Armar el cuerpo de la página
+        run: |
+          set -e
+          : > cuerpo.md
+          if [ -f docs/notas_release.md ]; then
+            # El encabezado y la nota de mantenimiento del archivo son para quien lo
+            # edita, no para quien descarga: se publica lo que va DESPUÉS del marcador
+            # (`tail -n +2` se come la línea del marcador). El marcador es explícito y
+            # no una heurística sobre encabezados, que es justo lo que se rompería al
+            # reescribir el archivo en el próximo release.
+            sed -n '/^<!-- publicar -->$/,$p' docs/notas_release.md | tail -n +2 >> cuerpo.md
+            printf '\n---\n\n' >> cuerpo.md
+          fi
+          cat >> cuerpo.md <<'FIN'
+          **MetaGráfica RELEASE_TAG**
+
+          Beta se refiere a los **nombres**, no a la salida. El lenguaje crece
+          añadiendo, y lo que la etiqueta reserva es poder renombrar algo antes
+          del 1.0; los nombres viejos fallan de forma **ruidosa, nunca en
+          silencio**.
+
+          La salida sí es estable, y está medida: cada cambio pasa por una red
+          de regresión sobre el corpus completo, y los mismos **93 archivos
+          salen idénticos byte a byte en Linux, Windows y macOS**.
+
+          Si escribes figuras con ella ahora, tu opinión sobre los nombres y la
+          ergonomía es exactamente lo que falta para congelar la gramática.
+
+          | archivo | para |
+          |---|---|
+          | `metagrafica-windows-x86_64.zip` | Windows — descomprime y corre `mg.exe`, sin instalar nada |
+          | `metagrafica-linux-x86_64.tar.gz` | Linux |
+          | `metagrafica-macos-arm64.tar.gz` | macOS (Apple Silicon) |
+
+          Cada paquete lleva el binario, `lib/` (la biblioteca de `include`,
+          que debe quedar junto al binario), los ejemplos y la referencia.
+
+              mg figura.mg            → figura.eps
+              mg figura.mg fig.svg    → SVG
+              mg figura.mg fig.pdf    → PDF
+          FIN
+          sed -i "s/RELEASE_TAG/${GITHUB_REF_NAME}/" cuerpo.md
+
       - uses: softprops/action-gh-release@v3
         with:
           # Solo los PAQUETES. `dist/**/*` subiría también el artefacto
-          # `salidas-linux` —72 archivos de referencia de la comparación entre
+          # `salidas-linux` —93 archivos de referencia de la comparación entre
           # plataformas— a la página de descarga, que no es para eso.
           files: |
             dist/**/metagrafica-*.tar.gz
             dist/**/metagrafica-*.zip
           generate_release_notes: true
-          body: |
-            **MetaGráfica ${{ github.ref_name }}**
-
-            Beta se refiere a los **nombres**, no a la salida. El lenguaje crece
-            añadiendo, y lo que la etiqueta reserva es poder renombrar algo antes
-            del 1.0; los nombres viejos fallan de forma **ruidosa, nunca en
-            silencio**.
-
-            La salida sí es estable, y está medida: cada cambio pasa por una red
-            de regresión sobre el corpus completo, y los mismos **72 archivos
-            salen idénticos byte a byte en Linux, Windows y macOS**.
-
-            Si escribes figuras con ella ahora, tu opinión sobre los nombres y la
-            ergonomía es exactamente lo que falta para congelar la gramática.
-
-            | archivo | para |
-            |---|---|
-            | `metagrafica-windows-x86_64.zip` | Windows — descomprime y corre `mg.exe`, sin instalar nada |
-            | `metagrafica-linux-x86_64.tar.gz` | Linux |
-            | `metagrafica-macos-arm64.tar.gz` | macOS (Apple Silicon) |
-
-            Cada paquete lleva el binario, `lib/` (la biblioteca de `include`,
-            que debe quedar junto al binario), los ejemplos y la referencia.
-
-                mg figura.mg            → figura.eps
-                mg figura.mg fig.svg    → SVG
-                mg figura.mg fig.pdf    → PDF
+          body_path: cuerpo.md

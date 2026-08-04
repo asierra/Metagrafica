@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-MetaGráfica is a 2D descriptive vector graphics language. The `mg` binary compiles `.mg` source files into EPS, SVG or PDF (chosen by output extension). Versioning follows the project's publication history (see `include/structures.h` header): V1 (grammar of two-letter commands, 1999–2024) is frozen on the `v1-legacy` branch; `main` is the **V3** development line. `include/version.h` holds the version **by hand** (`MG_VERSION "3.0.0-beta"`, nothing is derived from git) and must stay consistent with the `structures.h` header. V3 is **beta**: the grammar can still change (it did on 2026-07-16: `title`→`label`, `labels`→`tick_labels`) and parts of the spec are unbuilt.
+MetaGráfica is a 2D descriptive vector graphics language. The `mg` binary compiles `.mg` source files into EPS, SVG or PDF (chosen by output extension). Versioning follows the project's publication history (see `include/structures.h` header): V1 (grammar of two-letter commands, 1999–2024) is frozen on the `v1-legacy` branch; `main` is the **V3** development line. `include/version.h` holds the version **by hand** (`MG_VERSION "3.1.0-beta"`, nothing is derived from git) — and it is the **only** place in the code that carries it. ⚠️ **Do not reintroduce a `Version:` line into per-file banners** (removed 2026-08-04): sixteen files used to repeat it and it had already drifted into **four** conventions — twelve headers on the current version, `src/Display.cpp` a release behind, three `src/*.cpp` still on `2024`, `main.cpp` on a prose variant — while the other twelve files, `parserv3.cpp` and `version.h` among them, never had one. A per-file version is decoration shaped like data: nothing reads it, nothing checks it, and a release sweep misses a copy (this one did, on the first pass). The `Antecedents` block and the copyright line stay; they are history, and history does not go stale. Bumping a release is now `include/version.h` plus the prose that quotes it: `README.md`/`README.es.md` (badge and status section), `man/mg.1.md` (footer and the "This is version" line), `CLAUDE.md`, `especificacion_mg.md` §22.7 and `docs/plans/plan_promocion.md` §1. **None of it reaches the output** — `MG_VERSION` is printed only by `mg -v` — so bumping the version moves no golden. The release notes for the tag being cut live in `docs/notas_release.md`, which `.github/workflows/release.yml` publishes above its generic body. V3 is **beta**: the grammar can still change (it did on 2026-07-16: `title`→`label`, `labels`→`tick_labels`) and parts of the spec are unbuilt.
 
 The forward-looking design lives in `especificacion_mg.md`: §3.1 (isometric space), §16 (nested windows), §22 (engine continuity plan), §22.6 (work order). Read §22 before large engine changes.
 
@@ -183,6 +183,22 @@ coseno de un giro recto —`cos(pi/2)` da 6.123e-17, y quien lo imprimía era `H
 libharu, que hereda la libm de la plataforma—. Redondear ACERCA al valor exacto (`0 1 -1 0`),
 no se aleja. Es una divergencia que se reintroduce sola con cualquier `printf` que dependa de
 la plataforma, y **no la caza ningún golden**, porque el golden se genera en una sola.
+(El 72/72 es la medición de esa fecha, con 24 ejemplos; hoy el workflow compara **93**.)
+
+⚠️ **La cabecera DSC del EPS: `%%Title` lleva el `.mg` de ORIGEN, `%%Creator` la versión**
+(2026-08-04). **No devuelvas `%%Title` a la ruta de salida**, que es lo que llevaba antes: se
+midió que **Ghostscript propaga `%%Title` a los metadatos `/Title` del PDF**, o sea que la ruta
+absoluta del disco de quien compilaba acababa dentro de la figura publicada —y este proyecto
+existe para producir figuras de libro—. Además hacía la salida dependiente del directorio, y por
+eso había **dos rodeos**: `normalize()` en `test/run.sh` reescribía la línea para poder comparar
+goldens (retirado: mientras estuvo, era la única línea que el golden no podía ver) y
+`release.yml` exigía rutas relativas idénticas entre plataformas. Con el nombre del fuente, el
+mismo `.mg` da el mismo EPS se escriba donde se escriba y se llame como se llame —verificado
+compilando a dos rutas y nombres distintos y comparando con `cmp`—. En la misma pasada se borró
+`ps_creator`, una variable global muerta que declaraba `MetaGrafica v4.0 2023`, una versión que
+nunca existió. ⚠️ **Consecuencia asumida de `%%Creator`:** al llevar `MG_VERSION`, **cada subida
+de versión mueve los 31 goldens EPS** (SVG y PDF no lo emiten y no se mueven); es el precio de
+que una figura publicada diga con qué se hizo.
 
 ## Layout
 

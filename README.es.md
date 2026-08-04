@@ -2,7 +2,7 @@
 
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-14-blue.svg)
 ![License](https://img.shields.io/badge/License-GPL%203.0-green.svg)
-![Version](https://img.shields.io/badge/version-3.0.0--beta-orange.svg)
+![Version](https://img.shields.io/badge/version-3.1.0--beta-orange.svg)
 
 **Español** · [English](README.md)
 
@@ -139,6 +139,37 @@ Los archivos fuente son **UTF-8**.
 
 **El techo es el repertorio de la fuente, no la codificación.** Otros sistemas de escritura —griego *en prosa*, cirílico, CJK, o los tonos del vietnamita— se descartan con un aviso que nombra el carácter, porque el glifo sencillamente no está en la fuente. Soportarlos implica embeber una fuente de texto Unicode, igual que se embebe Latin Modern Math para las matemáticas. El griego *matemático* funciona hoy: se escribe `$\alpha$`, no una α literal.
 
+## Escenas pseudo-3D
+
+Se describe el **espacio**, no la proyección. `view3d` fija la cámara una vez para toda la
+figura, `plane3d` convierte el dibujo 2-D corriente en dibujo *sobre un plano de la escena*, y
+`xyz()` coloca un punto que no pertenece a ningún plano.
+
+```octave
+view3d(azimuth=35, elevation=25)
+
+plane3d(u=[1, 0, 0], v=[0, 0, 1]) {
+    circle(1) { 0 0 }        % sale como la elipse exacta de su proyección
+}
+polyline(dash="dotted") { xyz(0,0,0)  xyz(0,1.5,0) }
+```
+
+![Ángulo sólido que subtiende un casquete esférico](docs/img/angulo_solido.svg)
+
+Cada meridiano, cada paralelo y el borde del casquete de arriba es un **círculo del espacio**, y
+no se calcula ni un semieje: un `circle` dibujado dentro de un `plane3d` se proyecta solo a la
+elipse que le toca. Ahí dentro sigue funcionando todo el lenguaje 2-D —`sine`, rellenos,
+marcadores, arcos, texto—, así que una onda sobre un plano es simplemente un `sine`
+([`onda_electromagnetica.mg`](examples/onda_electromagnetica.mg)).
+
+Es **pseudo**-3D a propósito: no hay motor de superficies ocultas ni modelo de iluminación. Qué
+va delante de qué se decide en el fuente, en forma cerrada, que es lo que suele querer una
+figura de libro — [`irradiancia.mg`](examples/irradiancia.mg) calcula la silueta de un cono como
+las tangentes desde un punto al borde de un disco, y
+[`seccion_eficaz.mg`](examples/seccion_eficaz.mg) arma sus sólidos de revolución con
+[`lib/pseudo3d.mg`](lib/pseudo3d.mg). Cambiar `azimuth` o `elevation` mueve la figura entera
+junta. El detalle está en [§13 de la referencia](docs/referencia.md).
+
 ## El lenguaje en un minuto
 
 Un **punto** es una pareja de coordenadas; un **path** es una lista de puntos. Cada primitiva lleva su path entre `{ }` y su estilo entre `( )`:
@@ -245,6 +276,9 @@ bin/mg examples/fig6-4.mg sal.svg
 | `franck_condon.mg`, `turning_points.mg` | **figuras enteramente calculadas**: se dan los parámetros físicos y la geometría se deduce |
 | `fig_polybar.mg` | histograma de barras con trama |
 | `fractal_tree.mg` | **recursión**: una estructura que se contiene a sí misma |
+| `angulo_solido.mg`, `onda_electromagnetica.mg` | **pseudo-3D**: `view3d`, `plane3d`, `xyz()` |
+| `irradiancia.mg`, `seccion_eficaz.mg` | pseudo-3D con **siluetas calculadas** y sólidos de revolución |
+| `espectro.mg` | rellenos **degradados** |
 | `primitives.mg`, `fill_styles.mg`, `line_patterns.mg` | láminas de referencia |
 
 Si quieres trabajar en el compilador, [`CONTRIBUTING.md`](CONTRIBUTING.md) tiene las reglas
@@ -252,7 +286,7 @@ y las compuertas de prueba.
 
 ## Estado del proyecto
 
-**Esta versión es aún beta** (`MG_VERSION 3.0.0-beta`). Esto tiene dos implicaciones directas para los usuarios:
+**Esta versión es aún beta** (`MG_VERSION 3.1.0-beta`). Esto tiene dos implicaciones directas para los usuarios:
 
 1. **El lenguaje todavía puede cambiar.** Los nombres de los comandos y de sus argumentos no están congelados, así que una figura que compila hoy puede necesitar un ajuste menor más adelante; los nombres viejos fallan de forma ruidosa, nunca en silencio. Cada cambio pasa por una red de regresión sobre todo el corpus: «beta» no quiere decir que la salida se mueva sola, quiere decir que un nombre puede cambiar — y siempre avisando.
 

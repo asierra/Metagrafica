@@ -54,7 +54,28 @@ de datos que compila a una página en blanco.
 
 import html
 import pathlib
+import re
 import sys
+
+
+def _version():
+    """MG_VERSION, leída de include/version.h.
+
+    Estuvo escrita a mano en las dos cadenas "beta" de TRAD y se quedó en
+    3.0.0-beta (encontrado el 2026-08-04, al subir a 3.1.0). ⚠️ La compuerta
+    `galfail` NO puede cazar eso: compara el HTML publicado contra lo que este
+    mismo archivo regenera, así que los dos lados coincidían en la versión
+    equivocada. Derivarla es la única forma de que no vuelva a pasar — y la
+    galería es donde más se ve, porque la sirve GitHub Pages.
+    """
+    vh = pathlib.Path(__file__).resolve().parent.parent / "include" / "version.h"
+    m = re.search(r'#define\s+MG_VERSION\s+"([^"]+)"', vh.read_text(encoding="utf-8"))
+    if not m:
+        sys.exit("galeria.py: no pude leer MG_VERSION de %s" % vh)
+    return m.group(1)
+
+
+VERSION = _version()
 
 # Orden de presentación, y es una decisión editorial: ABRE con las figuras que
 # mejor explican de qué se trata esto —una órbita que se oculta sola detrás del
@@ -334,7 +355,7 @@ T = {
         "probar_code": "git clone https://github.com/asierra/Metagrafica\n"
                        "cd Metagrafica && make\n"
                        "bin/mg examples/orbita_polar.mg figura.svg",
-        "beta": "Versión 3.0.0-beta: la gramática todavía puede cambiar, y cambia "
+        "beta": f"Versión {VERSION}: la gramática todavía puede cambiar, y cambia "
                 "cuando una figura nueva lo pide. Si escribes figuras con ella, lo "
                 "que te resulte incómodo puede acabar en el lenguaje.",
         "nav_repo": "Repositorio",
@@ -368,7 +389,7 @@ T = {
         "probar_code": "git clone https://github.com/asierra/Metagrafica\n"
                        "cd Metagrafica && make\n"
                        "bin/mg examples/orbita_polar.mg figure.svg",
-        "beta": "Version 3.0.0-beta: the grammar can still change, and it does "
+        "beta": f"Version {VERSION}: the grammar can still change, and it does "
                 "change when a new figure asks for it. If you write figures with "
                 "it, whatever you find awkward may well end up in the language.",
         "nav_repo": "Repository",
