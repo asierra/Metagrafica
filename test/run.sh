@@ -393,6 +393,15 @@ for svg in "$IMGDIR"/*.svg; do
        && [ -s "$imgtmp/$name.svg" ]; then
         if ! diff -q "$svg" "$imgtmp/$name.svg" >/dev/null 2>&1; then
             echo "IMGFAIL docs/img/$name.svg (rancio: no es lo que compila hoy; './run.sh images' lo regenera)"
+            # Una compuerta que falla sin decir POR QUÉ es una mala compuerta: es
+            # la regla que release.yml aplica a la comparación entre plataformas,
+            # y aquí faltaba. Se añadió el 2026-08-04, cuando esta compuerta paró
+            # un release desde macOS diciendo solo «rancio» — con el archivo en
+            # una máquina que nadie del proyecto tiene, o sea sin diagnóstico
+            # posible. Se acotan líneas y ancho porque un path de SVG es enorme.
+            echo "  líneas que difieren: $(diff "$svg" "$imgtmp/$name.svg" | grep -c '^[<>]')"
+            diff "$svg" "$imgtmp/$name.svg" | grep '^[<>]' | head -6 | cut -c1-200 \
+                | sed 's/^/  /'
             imgfail_count=$((imgfail_count + 1))
         fi
     else
