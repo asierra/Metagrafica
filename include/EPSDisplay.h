@@ -30,6 +30,16 @@ class EPSDisplay: public Display {
 
   MGFlags flags;
 
+  // Nombre del .mg de origen, para %%Title. Lo pone main.cpp, como flags.
+  // ⚠️ El origen y NO la ruta de salida, que es lo que iba antes (2026-08-04):
+  // Ghostscript propaga %%Title a los metadatos /Title del PDF, así que la ruta
+  // absoluta del disco de quien compiló acababa dentro de la figura publicada.
+  // Además hacía la salida dependiente del directorio: el harness tenía que
+  // normalizar la línea para comparar goldens y release.yml exigía rutas
+  // relativas idénticas entre plataformas. El nombre del fuente no depende de
+  // dónde se compile ni de cómo se llame la salida, y dice algo cierto.
+  std::string source_name;
+
   ~EPSDisplay() {
     if (file) { fflush(file); fclose(file); file = nullptr; }
   }

@@ -98,6 +98,11 @@ int main(int argc, char **argv) {
   } else {
     EPSDisplay g(outname);
     g.flags = g_flags;
+    // Solo el nombre del .mg, sin directorio: %%Title no debe depender de dónde
+    // se compiló (ver EPSDisplay.h). Con `\` además de `/` para que el .exe de
+    // Windows produzca el mismo byte que Linux, que es lo que vigila release.yml.
+    size_t sep = inname.find_last_of("/\\");
+    g.source_name = (sep == std::string::npos) ? inname : inname.substr(sep + 1);
     mg->draw(g);
   }
 

@@ -94,10 +94,14 @@ jobs:
             tar czf "$dir.tar.gz" "$dir"
           fi
 
-      # Salidas de referencia para la comparación entre plataformas de abajo. Se
-      # escriben con una ruta RELATIVA idéntica a la que usará Windows, y eso no es
-      # un detalle: el EPS lleva la ruta de salida dentro, en %%Title, así que dos
-      # rutas distintas darían archivos distintos por una razón que no importa.
+      # Salidas de referencia para la comparación entre plataformas de abajo.
+      #
+      # Antes del 2026-08-04 esto exigía escribir con una ruta RELATIVA idéntica a
+      # la de Windows, porque el EPS llevaba la ruta de salida dentro, en %%Title:
+      # dos rutas distintas daban archivos distintos por una razón que no importa.
+      # Ya no: %%Title lleva el nombre del .mg de origen y la salida no depende de
+      # dónde se escriba. Se conserva la ruta simétrica por claridad, no por
+      # necesidad — si algún día vuelve a hacer falta, es que se rompió algo.
       - name: Salidas de referencia (Linux)
         if: matrix.nombre == 'linux-x86_64'
         run: |

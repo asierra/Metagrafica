@@ -1,6 +1,7 @@
 #include "EPSDisplay.h"
 #include "markers.h"
 #include "text_parser.h"   // cmmiUnicode(): byte cmmi -> Unicode (griego vs ASCII)
+#include "version.h"       // MG_VERSION: procedencia en %%Creator
 #include <math.h>
 #include <stdlib.h>
 
@@ -9,8 +10,6 @@ using std::string;
 #include "font_lmmath_eps.h"
 
 
-string ps_creator = R"(%%Creator: MetaGrafica v4.0 2023
-"%%CreationDate: DATE)";
 
 // §4.5/§4.9 — arco o elipse bajo una matriz ARBITRARIA. En vez de reparar la
 // descomposición (radios + ángulos) en espacio de dispositivo, se le entrega la
@@ -189,7 +188,14 @@ void EPSDisplay::start() {
     fprintf(stderr, "no se pudo abrir %s\n", filename.c_str());
     exit(1);
   }
-  fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n", filename.c_str());
+  // %%Title lleva el .mg de ORIGEN, no la ruta de salida (ver source_name en
+  // EPSDisplay.h). %%Creator declara la procedencia: Ghostscript la propaga a
+  // los metadatos del PDF, así que una figura publicada dice con qué la hicieron.
+  // ⚠️ Consecuencia asumida: al llevar MG_VERSION, cada subida de versión mueve
+  // los goldens EPS (los de SVG y PDF no, que no lo emiten).
+  fprintf(file, "%%!PS-Adobe-3.0 EPSF-3.0\n%%%%Title: %s\n",
+          source_name.empty() ? "MetaGrafica figure" : source_name.c_str());
+  fprintf(file, "%%%%Creator: MetaGrafica " MG_VERSION "\n");
   fprintf(file, "%%%%BoundingBox: 0 0 %d %d\n", (int)(dvx + 0.5), (int)(dvy + 0.5));
   // §4.14: shfill es nivel 3. Se declara SOLO si hay degradado, para no mover la
   // salida de todo lo demás (que sigue siendo nivel 2) por una característica que

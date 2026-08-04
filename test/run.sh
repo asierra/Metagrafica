@@ -217,10 +217,15 @@ normalize() {
     file="$2"
     case "$fmt" in
         eps)
-            # The only volatile line in EPS output is %%Title:, which embeds
-            # the output path we asked mg to write to. Everything else is
-            # deterministic. Replace it with a fixed constant.
-            sed 's/^%%Title:.*/%%Title: (normalized)/' "$file"
+            # Deterministic since 2026-08-04. Until then %%Title: embedded the
+            # output PATH, and this hook rewrote it to a constant so goldens
+            # could be compared at all. %%Title now carries the source .mg name
+            # instead, so the file no longer depends on where it was written.
+            #
+            # ⚠️ The hook was REMOVED, not left as a no-op: while it was here it
+            # would have blessed a regression that put the path back — that line
+            # was the one thing the golden could not see. Now it can.
+            cat "$file"
             ;;
         svg)
             # SVG output is already fully deterministic (no embedded path or
@@ -230,8 +235,7 @@ normalize() {
             ;;
         pdf)
             # Also deterministic: libharu embeds neither CreationDate nor /ID,
-            # and the output does not depend on the destination path (unlike
-            # EPS, which puts it in %%Title). Binary, but diff -q handles it.
+            # and the output does not depend on the destination path.
             cat "$file"
             ;;
         *)
