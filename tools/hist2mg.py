@@ -15,10 +15,11 @@ filas salen 30 barras.
 Uso:
     hist2mg.py config.json -o datos.mg
 
-El config declara la fuente y los paneles:
+El config declara la fuente y los paneles. `source` puede ser un archivo (.csv/.xlsx)
+o un DIRECTORIO, que se recorre recursivamente y se concatena por nombre de columna:
 
     {
-      "source": "ceniza_completa.csv",
+      "source": "excel/",
       "bins": 30,
       "panels": [
         {"name": "a", "expr": "CMI_13 - CMI_15", "comment": "deltaT1"},
@@ -28,11 +29,20 @@ El config declara la fuente y los paneles:
 
 `expr` es una expresión de pandas sobre las columnas (`df.eval`), así que las columnas
 derivadas —los deltaT de brillo, que son diferencias entre bandas— no necesitan existir
-en el archivo. Por panel se emiten:
+en el archivo.
+
+`view: [lo, hi]` (opcional) recorta lo que se DIBUJA sin tocar lo que se mide: se binea
+sobre el rango completo —para no mover las barras respecto de seaborn— y luego se emiten
+solo las que caen dentro, filtrando por el CENTRO de la barra. ⚠️ Las estadísticas siguen
+siendo de la serie ENTERA, así que el min/max de la tabla puede caer fuera de la vista, y
+eso es correcto: la tabla describe el dato, no el encuadre. Existe porque `plot` NO
+recorta: una barra fuera del rango del eje se dibujaría fuera de la caja. Por panel se
+emiten:
 
     <name>_width   ancho de barra (todos los bins son iguales)
     <name>_hist    path de pares (centro, conteo)  → polybar(&<name>_hist, width=…)
     <name>_lo/_hi  extremos del rango binado
+    <name>_view_lo/_view_hi   solo si hay `view`: el rango a mostrar
     <name>_ymax    conteo máximo (para dimensionar el eje y)
     <name>_n       observaciones no nulas
     <name>_mean/_sd/_min/_max   estadísticas (§13.10 `table` no existe todavía;
@@ -45,6 +55,7 @@ decisión del `.mg`, no del binning.
 """
 
 import argparse
+import glob
 import json
 import os
 import sys
@@ -53,16 +64,48 @@ import numpy as np
 import pandas as pd
 
 
-def cargar(source):
-    """Lee CSV o XLSX. El formato sale de la extensión."""
-    if not os.path.exists(source):
-        sys.exit("hist2mg: no existe la fuente: %s" % source)
-    if source.endswith(".csv"):
+def _leer_uno(ruta):
+    """Un archivo. El formato sale de la extensión."""
+    if ruta.endswith(".csv"):
         # low_memory=False: sin él pandas infiere el tipo por trozos y avisa de
         # columnas mixtas en archivos grandes. Aquí solo se leen columnas numéricas,
         # pero el aviso confunde y la inferencia en un paso es la correcta.
-        return pd.read_csv(source, low_memory=False)
-    return pd.read_excel(source)
+        d = pd.read_csv(ruta, low_memory=False)
+    else:
+        d = pd.read_excel(ruta)
+    # Parte del corpus llama ACTPC a lo que el resto llama ACTP. La concatenación casa
+    # por NOMBRE, así que sin unificar saldrían dos columnas medio vacías en vez de una.
+    if "ACTPC" in d.columns:
+        d = d.rename(columns={"ACTPC": "ACTP"})
+    return d
+
+
+def cargar(source):
+    """Lee un CSV, un XLSX, o un DIRECTORIO de ellos (recursivo).
+
+    Que acepte un directorio no es comodidad: es lo que hace que el `.mg` sea
+    regenerable desde la FUENTE PRIMARIA. Con solo el modo archivo, en medio quedaba
+    un CSV concatenado a mano —un artefacto derivado que nadie sabe rehacer y que se
+    pudre en silencio en cuanto llegan datos nuevos—.
+
+    ⚠️ No se puede sustituir por un `cat`: las hojas no traen las columnas en el mismo
+    ORDEN (en este corpus CMI_15 y CMI_16 vienen intercambiadas en parte de los años).
+    `pd.concat` casa por nombre, que es lo correcto; concatenar texto no.
+    """
+    if not os.path.exists(source):
+        sys.exit("hist2mg: no existe la fuente: %s" % source)
+    if not os.path.isdir(source):
+        return _leer_uno(source)
+
+    rutas = sorted(glob.glob(os.path.join(source, "**", "*.xlsx"), recursive=True) +
+                   glob.glob(os.path.join(source, "**", "*.csv"), recursive=True))
+    if not rutas:
+        sys.exit("hist2mg: no hay .xlsx ni .csv bajo %s" % source)
+    print("hist2mg: %d archivo(s) bajo %s" % (len(rutas), source), file=sys.stderr)
+    # sort=False: conserva el orden de columnas del primer archivo en vez de
+    # alfabetizarlas. No cambia ningún resultado — se accede por nombre — pero deja
+    # el DataFrame legible si alguien lo inspecciona.
+    return pd.concat([_leer_uno(r) for r in rutas], ignore_index=True, sort=False)
 
 
 def serie(df, expr):
@@ -82,7 +125,7 @@ def serie(df, expr):
     return pd.to_numeric(s, errors="coerce").dropna()
 
 
-def panel_mg(name, s, bins, comment, decimals):
+def panel_mg(name, s, bins, comment, decimals, view=None):
     """Reduce una serie a las líneas .mg de su panel."""
     if len(s) == 0:
         sys.exit("hist2mg: el panel '%s' quedó sin datos" % name)
@@ -91,20 +134,33 @@ def panel_mg(name, s, bins, comment, decimals):
     centers = (edges[:-1] + edges[1:]) / 2.0
     width = edges[1] - edges[0]
 
+    # El binning es SIEMPRE sobre el rango completo (así las barras caen donde las
+    # pone seaborn); `view` decide cuáles se emiten, por el centro de la barra.
+    vis = list(range(len(centers)))
+    if view is not None:
+        vlo, vhi = float(view[0]), float(view[1])
+        vis = [i for i in vis if vlo <= centers[i] <= vhi]
+        if not vis:
+            sys.exit("hist2mg: el panel '%s' quedó sin barras dentro de view" % name)
+
     f = "%%.%df" % decimals
     out = []
     head = "%% panel %s" % name
     if comment:
         head += " — %s" % comment
-    out.append("%s  (n=%d, %d bins)" % (head, len(s), bins))
+    if view is None:
+        out.append("%s  (n=%d, %d bins)" % (head, len(s), bins))
+    else:
+        out.append("%s  (n=%d, %d bins, %d dentro de view=[%g, %g])"
+                   % (head, len(s), bins, len(vis), float(view[0]), float(view[1])))
     out.append((("%s_width = " + f) % (name, width)))
 
     # El path son pares (centro, conteo). Se parte en renglones de 4 pares para que
     # el .mg siga siendo legible y diffeable.
     out.append("path %s_hist = {" % name)
-    for i in range(0, len(centers), 4):
+    for i in range(0, len(vis), 4):
         trozo = "   ".join((f + " %d") % (centers[j], counts[j])
-                           for j in range(i, min(i + 4, len(centers))))
+                           for j in vis[i:i + 4])
         out.append("    " + trozo)
     out.append("}")
 
@@ -112,7 +168,12 @@ def panel_mg(name, s, bins, comment, decimals):
                  ("mean", s.mean()), ("sd", s.std()),
                  ("min", s.min()), ("max", s.max())):
         out.append((("%s_%s = " + f) % (name, k, v)))
-    out.append("%s_ymax = %d" % (name, counts.max()))
+    if view is not None:
+        out.append((("%s_view_lo = " + f) % (name, float(view[0]))))
+        out.append((("%s_view_hi = " + f) % (name, float(view[1]))))
+    # ymax sobre las barras VISIBLES: dimensionar el eje y con una barra que no se ve
+    # dejaría el panel con media caja vacía.
+    out.append("%s_ymax = %d" % (name, max(counts[j] for j in vis)))
     out.append("%s_n = %d" % (name, len(s)))
     out.append("")
     return out
@@ -158,7 +219,8 @@ def main():
     for p in cfg["panels"]:
         s = serie(df, p["expr"])
         lineas += panel_mg(p["name"], s, p.get("bins", bins_default),
-                           p.get("comment", p["expr"]), args.decimals)
+                           p.get("comment", p["expr"]), args.decimals,
+                           p.get("view"))
         print("hist2mg:   panel %s (%s): n=%d mean=%.3f sd=%.3f min=%.3f max=%.3f"
               % (p["name"], p["expr"], len(s), s.mean(), s.std(), s.min(), s.max()),
               file=sys.stderr)

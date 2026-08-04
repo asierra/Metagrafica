@@ -79,6 +79,16 @@ orden de la lista es la ejecución.
      dentro de un plot, punto `(x,y)` fuera—. Y **sí lleva marco**, que la leyenda no
      pudo tener: declarar `col_widths=` en pt es justo lo que hace calculable la caja
      sin medir texto.
+   - ⏳ **Cobertura: `rule` y `table` NO los compila NINGÚN ejemplo del corpus**
+     (verificado 2026-08-03). `rule` tiene una línea suelta en un bloque de
+     `docs/referencia.md` que sí pasa por `docfail`; **`table` no tiene ni eso**. Su
+     único cliente es `figure_02`, que vive en `local/` por confidencialidad. Es el
+     mismo agujero que tenía `lib/pseudo3d.mg` hasta el 2026-08-03.
+     📌 **NO se le construye un ejemplo público a propósito** (decidido con Alejandro
+     el 2026-08-03): el artículo está en **segunda revisión**, y al publicarse la
+     figura deja de ser confidencial y puede entrar al corpus tal cual, que es el
+     cliente REAL. Un ejemplo inventado solo para la compuerta sería peor prueba y
+     habría que retirarlo después.
    - ✅ **Con eso el punto 2 queda COMPLETO.**
 3. **Texto fuera de Latin-1** (§14.4) — ✅ **HECHO 2026-07-20**. Resultó que el techo
    no era la codificación sino el **repertorio de la fuente**: las base-14 SÍ tienen
