@@ -97,16 +97,42 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
 
     % ---- niveles no resueltos, hacia la disociación -----------------------
     % Se apiñan solos: E_v es cuadrática en v y su derivada se anula en vmax.
+    %
+    % Las dos cotas de abajo salen de las fórmulas de las NOTAS, no del ojo, y
+    % son las que hacen que el lazo aguante OTROS parámetros:
+    %   vmax = 1/(2·xe) − ½ es el último estado LIGADO. Pasado ese v la parábola
+    %     E(v) BAJA, así que sin la cota el lazo dibuja niveles que no existen; y
+    %     si un v cae exactamente en vmax, E = D, s = 1 y el ln(1−s) aborta la
+    %     compilación. Con xe1 = 0.040 sale vmax = 12.00 justo, o sea que el
+    %     último v del lazo daba en el blanco.
+    %   smax es la s cuyo retorno externo cae en rfin. Más allá el nivel se sale
+    %     del lienzo, porque r₊ → ∞ al acercarse a la disociación. El nivel EXISTE,
+    %     así que se dibuja CORTADO en rfin en vez de omitirse: es lo que se vería
+    %     con un recorte contra la caja del plot, y deja leer que los niveles se
+    %     apiñan contra la línea de disociación en vez de desaparecer.
+    % Con los parámetros de arriba ninguna de las dos recorta nada (el nivel más
+    % alto del lazo, v=12, da s = 0.954 contra smax = 0.970): la figura publicada
+    % es la misma. Están para el que mueva xe.
     line_width 0.15
+    vmax1 = 1/(2*xe1) - 0.5      smax1 = 1 - exp(-a1*(rfin-re1))
     for v = 7 to 12 {
-        E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
-        s = sqrt(E/D1)
-        polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+        if v < vmax1 {
+            E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
+            s = sqrt(E/D1)
+            rext = rfin
+            if s < smax1 { rext = re1 - ln(1-s)/a1 }
+            polyline { (re1 - ln(1+s)/a1)  (E)   (rext)  (E) }
+        }
     }
+    vmax2 = 1/(2*xe2) - 0.5      smax2 = 1 - exp(-a2*(rfin-re2))
     for v = 7 to 8 {
-        E = we2*(v+0.5) - we2*xe2*(v+0.5)*(v+0.5)
-        s = sqrt(E/D2)
-        polyline { (re2 - ln(1+s)/a2)  (Te+E)   (re2 - ln(1-s)/a2)  (Te+E) }
+        if v < vmax2 {
+            E = we2*(v+0.5) - we2*xe2*(v+0.5)*(v+0.5)
+            s = sqrt(E/D2)
+            rext = rfin
+            if s < smax2 { rext = re2 - ln(1-s)/a2 }
+            polyline { (re2 - ln(1+s)/a2)  (Te+E)   (rext)  (Te+E) }
+        }
     }
 
     % ---- líneas de disociación --------------------------------------------
