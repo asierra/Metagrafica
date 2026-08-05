@@ -44,6 +44,7 @@ h2:first-of-type { margin-top: 0; }
 }
 .probar h2 { font-size: 1rem; margin: 0 0 .35rem; }
 .probar p { margin: 0 0 .6rem; }
+.probar pre + p { margin-top: .9rem; }
 .probar pre {
   margin: 0; padding: .7rem .8rem; background: var(--tarjeta);
   border: 1px solid var(--borde); border-radius: 6px;
@@ -89,7 +90,11 @@ footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--bord
      <a href="https://github.com/asierra/Metagrafica#building">How to build it</a></p>
   <div class="probar">
     <h2>Try it</h2>
-    <p>You need a C++ compiler and <code>flex</code>. It builds in seconds and drags no LaTeX along.</p>
+    <p>Grab the executable for your platform from <a href="https://github.com/asierra/Metagrafica/releases">Releases</a> — Linux, macOS or Windows — and unpack it anywhere: there is no installer. The package ships the <code>lib/</code> library, the examples and the language reference. On Windows it is <code>mg.exe</code> inside the <code>.zip</code>.</p>
+    <pre>tar xzf metagrafica-linux-x86_64.tar.gz
+cd metagrafica-linux-x86_64
+./mg examples/orbita_polar.mg figure.svg</pre>
+    <p>Or build it from source: a C++ compiler and <code>make</code> are all it takes. It builds in seconds and drags no LaTeX along.</p>
     <pre>git clone https://github.com/asierra/Metagrafica
 cd Metagrafica &amp;&amp; make
 bin/mg examples/orbita_polar.mg figure.svg</pre>

@@ -350,11 +350,20 @@ T = {
                   "le pidas. No hay ratón: una figura es código fuente, así que se "
                   "versiona, se compara y se regenera.",
         "probar_h": "Pruébalo",
-        "probar_p": "Necesitas un compilador de C++ y <code>flex</code>. Compila en "
-                    "segundos y no arrastra LaTeX.",
-        "probar_code": "git clone https://github.com/asierra/Metagrafica\n"
-                       "cd Metagrafica && make\n"
-                       "bin/mg examples/orbita_polar.mg figura.svg",
+        "probar_p": "Baja el ejecutable de tu plataforma en "
+                    "<a href=\"https://github.com/asierra/Metagrafica/releases\">Releases</a> "
+                    "—Linux, macOS o Windows— y descomprímelo donde sea: no hay instalador. "
+                    "El paquete trae la biblioteca <code>lib/</code>, los ejemplos y la "
+                    "referencia del lenguaje. En Windows es <code>mg.exe</code> dentro "
+                    "del <code>.zip</code>.",
+        "probar_code": "tar xzf metagrafica-linux-x86_64.tar.gz\n"
+                       "cd metagrafica-linux-x86_64\n"
+                       "./mg examples/orbita_polar.mg figura.svg",
+        "probar_p2": "O compílalo del fuente: basta un compilador de C++ y "
+                     "<code>make</code>. Compila en segundos y no arrastra LaTeX.",
+        "probar_code2": "git clone https://github.com/asierra/Metagrafica\n"
+                        "cd Metagrafica && make\n"
+                        "bin/mg examples/orbita_polar.mg figura.svg",
         "beta": f"Versión {VERSION}: la gramática todavía puede cambiar, y cambia "
                 "cuando una figura nueva lo pide. Si escribes figuras con ella, lo "
                 "que te resulte incómodo puede acabar en el lenguaje.",
@@ -384,11 +393,20 @@ T = {
                   "extension you ask for. There is no mouse: a figure is source "
                   "code, so it can be versioned, diffed and regenerated.",
         "probar_h": "Try it",
-        "probar_p": "You need a C++ compiler and <code>flex</code>. It builds in "
-                    "seconds and drags no LaTeX along.",
-        "probar_code": "git clone https://github.com/asierra/Metagrafica\n"
-                       "cd Metagrafica && make\n"
-                       "bin/mg examples/orbita_polar.mg figure.svg",
+        "probar_p": "Grab the executable for your platform from "
+                    "<a href=\"https://github.com/asierra/Metagrafica/releases\">Releases</a> "
+                    "— Linux, macOS or Windows — and unpack it anywhere: there is no "
+                    "installer. The package ships the <code>lib/</code> library, the "
+                    "examples and the language reference. On Windows it is "
+                    "<code>mg.exe</code> inside the <code>.zip</code>.",
+        "probar_code": "tar xzf metagrafica-linux-x86_64.tar.gz\n"
+                       "cd metagrafica-linux-x86_64\n"
+                       "./mg examples/orbita_polar.mg figure.svg",
+        "probar_p2": "Or build it from source: a C++ compiler and <code>make</code> "
+                     "are all it takes. It builds in seconds and drags no LaTeX along.",
+        "probar_code2": "git clone https://github.com/asierra/Metagrafica\n"
+                        "cd Metagrafica && make\n"
+                        "bin/mg examples/orbita_polar.mg figure.svg",
         "beta": f"Version {VERSION}: the grammar can still change, and it does "
                 "change when a new figure asks for it. If you write figures with "
                 "it, whatever you find awkward may well end up in the language.",
@@ -444,6 +462,7 @@ h2:first-of-type { margin-top: 0; }
 }
 .probar h2 { font-size: 1rem; margin: 0 0 .35rem; }
 .probar p { margin: 0 0 .6rem; }
+.probar pre + p { margin-top: .9rem; }
 .probar pre {
   margin: 0; padding: .7rem .8rem; background: var(--tarjeta);
   border: 1px solid var(--borde); border-radius: 6px;
@@ -578,6 +597,8 @@ def construir(raiz, t, avisos):
     <h2>{html.escape(t["probar_h"])}</h2>
     <p>{t["probar_p"]}</p>
     <pre>{html.escape(t["probar_code"])}</pre>
+    <p>{t["probar_p2"]}</p>
+    <pre>{html.escape(t["probar_code2"])}</pre>
   </div>
   <p class="beta">{html.escape(t["beta"])}</p>
 </header>
