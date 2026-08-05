@@ -16,7 +16,7 @@ make clean
 ./bin/mg examples/primitives.mg          # → primitives.eps
 ./bin/mg examples/fig2-5.mg out.svg      # backend by extension (.eps/.svg/.pdf)
 
-bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción + bloques de doc: ok=93 … docfail=0
+bash test/run.sh check    # golden + gs + paridad + docs/img + negativas + galería + traducción + bloques de doc + citas + humo: ok=93 … humofail=0
 bash test/run.sh capture  # re-bless goldens (only after verifying changes are intended)
 bash test/run.sh images   # regenera docs/img/*.svg + la galería es/en (PUBLICADO; capture NO los toca)
 
@@ -34,7 +34,7 @@ bitácora y `plans/` **NO se instalan** (mantenedor). `uninstall` lo refleja. Ve
 **Harness golden ACTIVO (reactivado 2026-07-11; ampliado 2026-07-14/15/17).** Corre el corpus
 de `examples/` (31 `.mg` × EPS/SVG/**PDF** = 93 goldens) y compara contra la red golden
 (salida del propio renderer V3, regresión — no el oráculo V1). Tras tocar el motor:
-`make` y `bash test/run.sh check` (debe dar **ok=93 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0 docfail=0**);
+`make` y `bash test/run.sh check` (debe dar **ok=93 fail=0 error=0 psfail=0 c3fail=0 imgfail=0 errfail=0 galfail=0 trfail=0 docfail=0 citafail=0 humofail=0**);
 re-bendecir con `capture` solo tras verificar que los cambios son intencionales. Golden
 files (`test/golden/`) **no están en git** (se regeneran con `capture`).
 
@@ -46,7 +46,7 @@ un espacio suelto que dejó de emitirse con `plan_text_space`). Ninguno era un f
 traductor. **Tras tocar el motor, corre también `bash test/run_translator.sh check` y
 re-captúralo** si el cambio era intencional.
 
-**Ocho compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
+**Diez compuertas, cada una caza una clase distinta** (razonadas en `plan_plot.md`,
 "Lecciones de ingeniería"):
 - **Golden por bytes** (eps/svg/pdf) — caza *regresiones*. El PDF entró a la red el
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
@@ -149,6 +149,47 @@ re-captúralo** si el cambio era intencional.
   que el parseo —lo único que esta compuerta juzga— ya pasó. Se omite con aviso si no hay
   `python3`.
 
+- **Las CITAS de la documentación** (`citafail`, nueva 2026-08-05, `tools/citas.py`) — la
+  anterior compila lo que la documentación **enseña** y caza lo que el lenguaje RECHAZA; ésta
+  comprueba que lo que la documentación **cita** siga siendo lo que el archivo dice. ⚠️ **Son
+  fallos disjuntos, y el de aquí es INVISIBLE para `docfail`:** una cita rancia es MetaGráfica
+  perfectamente válida —solo que ya no es la del archivo—, así que **compila**, y aunque
+  `docblocks.py` cubriera los README no vería nada (verificado: sobre el README con la cita
+  podrida responde `ok compilan=5 fallos=0`). Nació del peor modo posible: al acotar el lazo de
+  niveles de `franck_condon.mg` se cambió una línea que **los dos README citaban textualmente**;
+  todo siguió compilando, las ocho compuertas siguieron en verde, y la portada quedó enseñando
+  una línea que ya no existía. **Es la única que compara la DOCUMENTACIÓN contra el ÁRBOL** —las
+  demás comparan contra un golden (bendecible) o salida contra salida—, y **no hay nada que
+  bendecir**: o la cita está en el archivo o no está. Cada bloque declara su fuente **en el
+  propio `.md`** (`<!-- mg-cita: examples/franck_condon.mg -->`), sin lista aparte.
+  ⚠️ **El marcador es explícito y NO se detecta solo, a propósito:** una cita detectada por
+  coincidir con el archivo dejaría de parecer una cita el día que se pudre, o sea que la
+  compuerta se apagaría sola justo cuando tiene que sonar. Lo que sí hay es un **aviso** (no
+  falla) para el bloque sin marcar que coincide entero con algún `.mg`. **No compara líneas**
+  —los README reformatean y tienen derecho—: exige que cada línea esté en el archivo **en
+  orden**, sobre el texto normalizado sin comentarios, lo que tolera re-indentar, **re-partir
+  una línea larga** (`quickstart` parte en dos su `entry("Experimental")`) y **saltarse líneas
+  de en medio** (el README cita `E`, `s`, `rm`, `rp` y omite el `Es`), y no tolera la cuarta.
+  Es **simétrica**: la dispara tanto editar el documento como editar el archivo citado. Se
+  omite con aviso si no hay `python3`.
+
+- **HUMO de las herramientas auxiliares** (`humofail`, nueva 2026-08-05) — las otras nueve
+  vigilan la salida, la documentación o el árbol; ninguna **corre** las herramientas de
+  `tools/` que no participan en un `check`, y ésas **se rompen solas**: dependen de la
+  interfaz de otras (`ver.sh`), de nombres del corpus y de binarios externos. La regresión
+  no se descubre al introducirla sino el día que la herramienta hace falta — que para una
+  de promoción es el día del taller. Hoy vigila una: **`tools/clip_parametrico.sh`**, el
+  clip paramétrico de `plan_promocion.md` §5, con un barrido de **dos cuadros** (~2 s):
+  comprueba que la cadena entera —sustituir el parámetro, compilar con `mg`, rasterizar por
+  `ver.sh`, armar el GIF— siga en pie, y que el archivo empiece por `GIF89a`. ⚠️ **NO
+  compara bytes, y es la única a la que eso se le prohíbe:** el GIF sale byte-idéntico entre
+  corridas (medido), pero esa determinación es de la paleta de `ffmpeg` y del rasterizador
+  de Chrome, no del compilador, y nadie fija esas versiones — un golden aquí sería verde en
+  esta máquina y rojo en la siguiente. Por la misma razón **el GIF no va en git y el script
+  sí** (§5 del plan): se genera para la ocasión. Verificada rompiendo la interfaz de
+  `ver.sh`: da `humofail=1` con las otras nueve en cero. Se omite con aviso si falta
+  `ffmpeg`, `magick` o un navegador.
+
 Las compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
 (la de `docs/img`, con el archivo rancio **real** de `e9198c0`: lo caza, y el golden sigue
 dando `ok=57` — que es justo la prueba de que el golden no puede verlo; la de la galería,
@@ -204,11 +245,11 @@ que una figura publicada diga con qué se hizo.
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar). Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`.
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de citas `citas.py` (2026-08-05: la compuerta `citafail`, lo invoca `test/run.sh`; solo biblioteca estándar). ⚠️ **`citas.py` no es Python de conveniencia: es el único que lee el ÁRBOL para juzgar la documentación**, así que si algún día se mueve un `.mg` de `examples/` o `lib/`, lo dirá. Son auxiliares **fuera del compilador** — no se ligan a `bin/mg` ni el lenguaje depende de ellas; la política de "sin preprocesadores externos" del Code style se refiere a la compilación de un `.mg`, no a preparar datos antes. ⚠️ **`geo2mg.py` es OPCIONAL y el más pesado**: requiere `geopandas`/`pyproj`/`shapely` (los otros usan solo `pandas`) y datos Natural Earth 1:110m que **NO van en el repo** (se bajan de naturalearthdata.com; el header del tool y de cada `.mg` generado dicen cómo). Los mapas de `lib/` son assets GENERADOS committeados (como `docs/img`), con su comando de regeneración en el encabezado. `test/run_translator.sh` apunta a `tools/mg1to2.py`.
 
 🤖 **El contexto para un AGENTE vive en `skills/figuras-mg/`** (2026-08-04), no en `docs/`: `SKILL.md` (reglas duras del lenguaje + geometría calculada) y `references/revisar-figura.md` (la lista de comprobación de «¿se ve bien?», que es lo que `tools/ver.sh` dice que ninguna compuerta contesta). Se reparte con `make install` bajo `$(DATADIR)/skills`, viaja en el paquete del release y lo anuncian los dos README. ⚠️ **Es la ÚNICA fuente de las reglas duras: `tools/generar_modelfile.py` las DERIVA de ahí** —antes estaban duplicadas a mano en los dos sitios— y aborta con código 1 si no encuentra una de las secciones que espera, en vez de emitir un Modelfile mutilado en silencio. Del script siguen siendo el papel del agente, el formato de respuesta y los parámetros de ollama, que no son conocimiento del lenguaje. `SKILL.md` entra a la compuerta `docfail` junto a la referencia; el skill llegó de una carpeta de curso **con una regla falsa** (decía que una flecha invade lo que señala) y eso es lo que motivó medirla. ⚠️ **`docs/modelfile_llm.txt` es el asset derivado de MÁS fuentes del repo** —la §15 de `docs/referencia.md`, los ocho ejemplos de su lista y las reglas del skill—, y **cualquiera de las tres lo deja rancio**. Se encontró así el 2026-08-04, con 7.4k bytes de atraso, porque nada lo miraba; desde entonces lo vigila `generar_modelfile.py --check`, que cuenta en **`galfail`** (misma clase de fallo que la galería: salida generada que se pudre, y no merece contador propio). Verificado por las dos vías —tocando el Modelfile y tocando el skill—. Se regenera con `python3 tools/generar_modelfile.py`, **no** con `capture`, por la misma razón que `docs/img`.
 
-👁️ **`tools/ver.sh` (2026-07-31) — la única que NO es Python y la única que no vigila nada: sirve para MIRAR.** `tools/ver.sh figura.mg` compila y rasteriza los tres formatos; `tools/ver.sh --diff a b` dice cuántos píxeles cambiaron y deja la imagen de diferencia. Existe porque las ocho compuertas cazan clases de fallo y ninguna contesta «¿se ve bien?», que es la pregunta que destapó más defectos que las compuertas en verde (bitácora 2026-07-20 y 2026-07-28). Dos cosas medidas que codifica y conviene no re-litigar: **(1) un SVG de MetaGráfica hay que rasterizarlo con un NAVEGADOR** — `rsvg-convert` e Inkscape ignoran el `@font-face` de LM Math y caen a una sans, así que mienten sobre la tipografía matemática (una ρ correcta se ve como «ø», y es facilísimo diagnosticarlo como bug del compilador); **(2) `--diff` es del MISMO formato a propósito** — entre backends el antialiasing deja 6333 px de ruido contra los 524 de un rótulo desplazado 1.4 pt, o sea que la señal queda debajo del ruido; por eso la paridad entre backends se hace contando operadores (Capa 3) y no mirando píxeles. Dentro de un formato el piso de ruido es **0 px exactos**. ⚠️ **No sustituye al golden, que es más sensible**: contesta la pregunta que el golden no puede —«los bytes cambiaron a propósito, ¿cambió el dibujo?»—, que es justo el criterio de aceptación de la Fase C de `plan_pseudo3d.md`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
+👁️ **`tools/ver.sh` (2026-07-31) — la única que NO es Python y la única que no vigila nada: sirve para MIRAR.** `tools/ver.sh figura.mg` compila y rasteriza los tres formatos; `tools/ver.sh --diff a b` dice cuántos píxeles cambiaron y deja la imagen de diferencia. Existe porque las diez compuertas cazan clases de fallo y ninguna contesta «¿se ve bien?», que es la pregunta que destapó más defectos que las compuertas en verde (bitácora 2026-07-20 y 2026-07-28). Dos cosas medidas que codifica y conviene no re-litigar: **(1) un SVG de MetaGráfica hay que rasterizarlo con un NAVEGADOR** — `rsvg-convert` e Inkscape ignoran el `@font-face` de LM Math y caen a una sans, así que mienten sobre la tipografía matemática (una ρ correcta se ve como «ø», y es facilísimo diagnosticarlo como bug del compilador); **(2) `--diff` es del MISMO formato a propósito** — entre backends el antialiasing deja 6333 px de ruido contra los 524 de un rótulo desplazado 1.4 pt, o sea que la señal queda debajo del ruido; por eso la paridad entre backends se hace contando operadores (Capa 3) y no mirando píxeles. Dentro de un formato el piso de ruido es **0 px exactos**. 🎞️ **`tools/clip_parametrico.sh` (2026-08-05) es el otro bash, y se apoya en `ver.sh` para rasterizar en vez de repetir su receta**: genera el clip de `plan_promocion.md` §5 barriendo un parámetro de un `.mg` (default: `xe1` de `franck_condon`, `0.028`→`0.045`). ⚠️ **El GIF no va en git, el script sí** — no por el peso sino porque no puede tener compuerta de bytes (su determinación es de `ffmpeg` y Chrome, no del compilador); por eso escribe en el directorio actual y **no** en `docs/img/`, y lo vigila `humofail`. Ver §5 del plan. 📌 Y la lección que dejó su primera corrida: **un barrido visita valores que el ejemplo nunca compiló** — destapó que `franck_condon.mg` abortaba en `xe1 = 0.040` y que el render publicado del `0.045` dibujaba dos niveles inexistentes, las dos cosas con las ocho compuertas de entonces en verde. ⚠️ **No sustituye al golden, que es más sensible**: contesta la pregunta que el golden no puede —«los bytes cambiaron a propósito, ¿cambió el dibujo?»—, que es justo el criterio de aceptación de la Fase C de `plan_pseudo3d.md`. Design/working notes — the `plan_*.md` files plus `audit_text_parser.md` and `notas_at_anchor.md` — live in **`docs/plans/`** (moved out of root 2026-07-17; `docs/` also holds published source PDFs). References throughout the tree cite them **by bare filename** (grep the name, e.g. `plan_plot.md`), not by path. The forward-looking spec (`especificacion_mg.md`) and the pending-work board (`PENDIENTES.md`) stay in root.
 
 **Política V1 (2026-07-15, endurecida 2026-07-20):** todo el trabajo actual es desarrollo de **V3**; **no se trackea material V1 nuevo**. Los `.mg` crudos de V1 y sus traducciones literales se quedaban en el árbol sin commitear; desde el 2026-07-20 **se borran** en cuanto el port V3 está cerrado (así se fueron `fig4-8.mg`, `exp.mg`, `fp3i2dat.mg` y el `fig4-8.eps` de 1998). No estaban en git en **ninguna** rama —`origin/v1-legacy` incluida—, así que el borrado es definitivo: antes de borrar, lo que debe sobrevivir son las **medidas**, transcritas al `.mg` o a un `plan_*.md`, no el archivo (ver el encabezado de `turning_points.mg`, que conserva cómo re-medir el PDF vectorial de Cambridge y los nodos del V(x) manual). Lo ya trackeado en `examples/v1/` (31 archivos: corpus congelado + oráculo) **se queda como está**.
 

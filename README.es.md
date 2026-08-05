@@ -19,6 +19,7 @@ figuras de ejemplo, cada una junto al código que la dibuja.
 
 Nada mejor que un ejemplo para una primera impresión del lenguaje.
 
+<!-- mg-cita: examples/quickstart.mg -->
 ```octave
 display_size 9 5.5
 font_size 9
@@ -89,6 +90,7 @@ cambiar. [`examples/franck_condon.mg`](examples/franck_condon.mg) dibuja dos pot
 Morse con sus niveles vibracionales y sus funciones de onda, y **nada en él está medido**: se
 dan cinco números por estado electrónico y el resto es forma cerrada.
 
+<!-- mg-cita: examples/franck_condon.mg -->
 ```octave
 a1  = 1.8            % alcance del potencial
 re1 = 1.15           % distancia de equilibrio
@@ -97,16 +99,20 @@ xe1 = 0.028          % anarmonicidad
 D1  = we1/(4*xe1)    % profundidad — se deduce de los dos anteriores
 ```
 
-Un nivel vibracional se traza entonces entre sus propios puntos de retorno, calculados en el
-mismo renglón a partir de su energía:
+Un nivel vibracional se traza entonces entre sus propios puntos de retorno, y esos dos
+puntos se calculan en el mismo renglón a partir de su energía:
 
+<!-- mg-cita: examples/franck_condon.mg -->
 ```octave
-E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
-s = sqrt(E/D1)
-polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+E  = we*(v+0.5) - we*xe*(v+0.5)*(v+0.5)
+s  = sqrt(E/D)
+rm = re - ln(1+s)/a
+rp = re - ln(1-s)/a
 ```
 
-Sus extremos no son coordenadas: son la fórmula.
+`rm` y `rp` no son coordenadas: son la fórmula. Y son los que fijan el ancho de la onda que
+se dibuja entre ellos, así que la función de onda hereda la geometría del nivel sin que nadie
+la mida.
 
 **La prueba es cambiar un número.** Las dos figuras de abajo salen del mismo archivo, con un
 solo carácter de diferencia entre ellas — la anarmonicidad `xe1`, de `0.028` a `0.045`:

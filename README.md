@@ -23,6 +23,7 @@ example figure, each one next to the source that draws it.
 
 Nothing beats an example for a first impression of the language.
 
+<!-- mg-cita: examples/quickstart.mg -->
 ```octave
 display_size 9 5.5
 font_size 9
@@ -100,6 +101,7 @@ number to change. [`examples/franck_condon.mg`](examples/franck_condon.mg) draws
 potentials with their vibrational levels and their wave functions, and **nothing in it is
 measured**: you give five numbers per electronic state and the rest is closed form.
 
+<!-- mg-cita: examples/franck_condon.mg -->
 ```octave
 a1  = 1.8            % range of the potential
 re1 = 1.15           % equilibrium distance
@@ -108,16 +110,20 @@ xe1 = 0.028          % anharmonicity
 D1  = we1/(4*xe1)    % depth — follows from the two above
 ```
 
-A vibrational level is then drawn between its own turning points, worked out on the same
-line from its energy:
+A vibrational level is then drawn between its own turning points, and those two points are
+worked out on the same line from its energy:
 
+<!-- mg-cita: examples/franck_condon.mg -->
 ```octave
-E = we1*(v+0.5) - we1*xe1*(v+0.5)*(v+0.5)
-s = sqrt(E/D1)
-polyline { (re1 - ln(1+s)/a1)  (E)   (re1 - ln(1-s)/a1)  (E) }
+E  = we*(v+0.5) - we*xe*(v+0.5)*(v+0.5)
+s  = sqrt(E/D)
+rm = re - ln(1+s)/a
+rp = re - ln(1-s)/a
 ```
 
-Its endpoints are not coordinates; they are the formula.
+`rm` and `rp` are not coordinates; they are the formula. They also set the width of the wave
+drawn between them, so the wavefunction inherits the level's geometry with nothing measured
+by hand.
 
 **The proof is changing one number.** Both figures below come from the same file, with a
 single character different between them — the anharmonicity `xe1`, from `0.028` to `0.045`:

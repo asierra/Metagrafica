@@ -238,12 +238,35 @@ haga, y por eso **ninguna compuerta puede vigilarlos** — si alguien los borra,
 aplicaron con `gh repo edit` (requiere el alcance `repo`) y se comprobaron **contra la API
 pública**, no contra la respuesta de `gh`: la herramienta que hace el cambio no es buen testigo
 de que el cambio se hizo.
-- **Un clip de 20 segundos del cambio de un parámetro.** `franck_condon` con `xe1` de `0.028` a
-  `0.045`: el pozo se hace menos profundo, la línea de disociación baja, los niveles se
-  reacomodan y el número de estados ligados cae de 17 a 10 — **de cambiar un carácter**. Ya está
-  en los dos README como par de imágenes; en movimiento es el argumento entero de «paramétrica,
-  no medida a ojo» sin una palabra de explicación, y sirve igual en (a), (e) y (f).
-  `tools/ver.sh` ya rasteriza, así que el costo es de edición, no de infraestructura.
+- [x] ~~**Un clip de 20 segundos del cambio de un parámetro**~~ — **HECHO 2026-08-05**, y
+  quedó en un comando: `tools/clip_parametrico.sh`. Barre `xe1` de `0.028` a `0.045` sobre
+  `franck_condon`, compila un cuadro por valor, rasteriza con la receta de `ver.sh` y arma el
+  GIF (472 K, lazo de 8 s, 19 s de generación). El pozo se hace menos profundo, la disociación
+  baja y los niveles se apiñan — **de mover un número**. Es el argumento entero de «paramétrica,
+  no medida a ojo» sin una palabra de explicación, y sirve en (a), (e) y (f).
+
+  ⚠️ **El GIF NO va en git; el script sí.** Se genera para la ocasión, como una diapositiva. No
+  es por el peso: es que **no puede tener compuerta**. Dos corridas seguidas dan un GIF byte a
+  byte idéntico (medido), pero esa determinación es prestada de la paleta de `ffmpeg` y del
+  rasterizador de Chrome, y nadie fija esas versiones — la de `docs/img/*.svg` es del propio
+  compilador y el workflow la verifica en tres sistemas. Una compuerta de bytes sería verde en
+  una máquina y roja en la siguiente. Por eso el default escribe en el directorio actual y no
+  en `docs/img/`, que es la carpeta que uno añade entera a un commit sin mirar. Lo que sí lo
+  vigila es una compuerta de **humo** (`humofail`): corre el script con dos cuadros en cada
+  `check`, para que no nos enteremos de que se rompió el día del taller.
+
+  ⚠️ **Y no sustituye al par de imágenes del README** (se consideró y se descartó el
+  2026-08-05): cambiaría vector por ráster justo en la sección que argumenta calidad
+  tipográfica, y la tabla de dos columnas deja **comparar** las seis cosas que el párrafo
+  siguiente enumera, mientras que un lazo de 8 s obliga a cazarlas al vuelo. Si algún día se
+  quiere en la portada, la forma barata es un `<details>` plegado: GitHub no baja el GIF hasta
+  que alguien lo abre.
+
+  📌 **Lo que encontró de paso**, y es el argumento para barrer parámetros en general: un
+  barrido visita valores que el ejemplo nunca compiló. Éste destapó que `franck_condon.mg`
+  **abortaba** en `xe1 = 0.040` y que el render publicado del `0.045` dibujaba dos niveles
+  inexistentes con las rayas saliéndose del papel. Las dos cosas llevaban ahí, en la portada,
+  con las ocho compuertas en verde.
 
 ⚠️ **Una FAQ o guía de resolución de problemas NO entra todavía, a propósito.** La documentación
 de errores comunes que existe (§15 de la referencia) la escribió quien ya sabe el lenguaje, y ese

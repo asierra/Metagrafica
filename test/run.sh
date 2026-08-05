@@ -8,7 +8,7 @@
 #   ./run.sh images    - regenerate docs/img/*.svg + la galería es/en (salida
 #                        PUBLICADA y versionada)
 #
-# Siete compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
+# Diez compuertas, cada una caza una clase distinta (plan_plot.md, "Lecciones"):
 #   - Golden por bytes (eps/svg/pdf): caza REGRESIONES de salida. No caza un bug
 #     preexistente: se bendice como correcto.
 #   - Ghostscript sobre el EPS (psfail): caza los bugs de PRÓLOGO, que el golden
@@ -72,7 +72,25 @@
 #     encabezado y el código de cada ejemplo. Ninguna de las otras cinco puede
 #     verlo: un cambio de comentario no mueve un byte de ningún .svg ni de ningún
 #     golden. Se regenera con `images`, no con `capture`, por la misma razón que
-#     docs/img: bendecir la cara pública es un commit consciente.
+#     docs/img: bendecir la cara pública es un commit consciente. Cuenta aquí
+#     también el Modelfile del agente (docs/modelfile_llm.txt): misma clase de
+#     fallo —asset generado que se pudre— y por eso comparte contador.
+#   - Los BLOQUES DE CÓDIGO de la documentación (docfail): las otras vigilan la
+#     SALIDA del compilador; ésta mira lo que la documentación AFIRMA. Compila los
+#     bloques ```octave de la referencia (es/en) y del skill del agente. Una
+#     afirmación falsa es un bug que el lector copia con confianza — y un modelo
+#     de lenguaje la OBEDECE. Ver el bloque de la compuerta.
+#   - Las CITAS de la documentación (citafail): la anterior caza lo que el lenguaje
+#     RECHAZA; ésta, que lo que un documento cita siga siendo lo que el archivo
+#     dice. Son disjuntas: una cita rancia compila —es MG válida, solo que ya no es
+#     la del archivo—, así que docfail la bendice. Es la única que compara la
+#     documentación contra el ÁRBOL, y no hay nada que bendecir en ella.
+#   - HUMO de las herramientas auxiliares (humofail): las otras nueve vigilan salida,
+#     documentación o árbol; ninguna CORRE las herramientas de tools/ que no
+#     participan en un check, y ésas se rompen solas —dependen de la interfaz de
+#     otras, de nombres del corpus y de binarios externos—. Hoy: el clip paramétrico
+#     de plan_promocion.md §5, con un barrido de dos cuadros. No compara bytes, y es
+#     la única que se lo prohíbe: ver el bloque de la compuerta.
 #
 set -u
 
@@ -255,6 +273,8 @@ errfail_count=0
 galfail_count=0
 trfail_count=0
 docfail_count=0
+citafail_count=0
+humofail_count=0
 err_ok=0
 
 for example in $EXAMPLES; do
@@ -509,6 +529,72 @@ else
     echo "WARN: python3 no encontrado; se omite la compuerta de bloques de documentación"
 fi
 
+# --- Compuerta 10: las CITAS de la documentación (citafail) ------------------
+# La 9 compila lo que la documentación ENSEÑA y caza lo que el lenguaje rechaza.
+# Ésta comprueba que lo que la documentación CITA siga siendo lo que el archivo
+# dice — y son fallos disjuntos: una cita rancia es MetaGráfica perfectamente
+# válida, solo que ya no es la del archivo, así que COMPILA y la 9 la bendice.
+# Verificado el 2026-08-05 reintroduciendo el caso real: docblocks.py sobre el
+# mismo README responde `ok compilan=5 fallos=0` mientras ésta falla.
+#
+# Nació ese día, y del peor modo: al arreglar un aborto de franck_condon.mg se
+# cambió una línea que los DOS README citaban textualmente. Todo siguió
+# compilando, las ocho compuertas siguieron en verde, y la portada del proyecto
+# quedó enseñando una línea que ya no existía.
+#
+# ⚠️ Es la única que compara la DOCUMENTACIÓN contra el ÁRBOL. Las demás comparan
+# contra un golden (bendecible) o salida contra salida. Aquí no hay nada que
+# bendecir: o la cita está en el archivo o no está.
+if command -v python3 >/dev/null 2>&1; then
+    if ! citaout="$(python3 "$ROOT/tools/citas.py" README.md README.es.md \
+                           docs/referencia.md docs/reference.md 2>&1)"; then
+        echo "CITAFAIL citas de la documentación:"
+        echo "$citaout" | sed 's/^/        /'
+        citafail_count=$((citafail_count + 1))
+    fi
+else
+    echo "WARN: python3 no encontrado; se omite la compuerta de citas"
+fi
+
+# --- Compuerta 11: HUMO de las herramientas auxiliares (humofail) ------------
+# Las otras nueve vigilan la salida, la documentación o el árbol. Ninguna corre las
+# herramientas de tools/ que no participan en un `check`, y ésas se rompen SOLAS:
+# dependen de la interfaz de otras (`ver.sh`), de nombres del corpus y de binarios
+# externos, y nada las ejercita. La regresión no se descubre al introducirla sino
+# el día que hacen falta.
+#
+# Hoy vigila una: tools/clip_parametrico.sh, el clip paramétrico de
+# plan_promocion.md §5. Basta con un barrido de DOS cuadros: lo que se comprueba
+# es que la cadena entera —sustituir el parámetro, compilar con mg, rasterizar por
+# ver.sh, armar el GIF— siga en pie, no cómo se ve.
+#
+# ⚠️ NO compara bytes, a propósito, y es la única que se prohíbe hacerlo: el GIF
+# sale byte-idéntico entre corridas (medido), pero esa determinación es de la
+# paleta de ffmpeg y del rasterizador de Chrome, no del compilador, y nadie fija
+# esas versiones. Un golden aquí sería verde en esta máquina y rojo en la
+# siguiente. Por eso el GIF tampoco va en git: ver plan_promocion.md §5.
+if [ -x "$MG" ] && command -v ffmpeg >/dev/null 2>&1 && command -v magick >/dev/null 2>&1 \
+   && { command -v google-chrome >/dev/null 2>&1 || command -v chromium >/dev/null 2>&1 \
+        || command -v chromium-browser >/dev/null 2>&1; }; then
+    humo_gif="$(mktemp -d)/humo.gif"
+    if humo_out="$(bash "$ROOT/tools/clip_parametrico.sh" \
+                        --de 0.028 --a 0.029 --paso 0.001 --pausa 1 \
+                        -o "$humo_gif" 2>&1)"; then
+        # Un GIF de verdad, no un archivo vacío que ffmpeg dejó al fallar a medias.
+        if [ "$(head -c 6 "$humo_gif" 2>/dev/null)" != "GIF89a" ]; then
+            echo "HUMOFAIL tools/clip_parametrico.sh terminó bien pero no dejó un GIF válido"
+            humofail_count=$((humofail_count + 1))
+        fi
+    else
+        echo "HUMOFAIL tools/clip_parametrico.sh (el clip de plan_promocion.md §5) ya no corre:"
+        echo "$humo_out" | sed 's/^/        /'
+        humofail_count=$((humofail_count + 1))
+    fi
+    rm -rf "$(dirname "$humo_gif")"
+else
+    echo "WARN: faltan mg/ffmpeg/magick/navegador; se omite la compuerta de humo"
+fi
+
 # --- Compuerta 5: pruebas NEGATIVAS (errfail) --------------------------------
 # Las otras cuatro compuertas miran salida EXITOSA, así que los ~150 caminos de
 # error del compilador (evalError/parseError/exit) no tenían una sola prueba. Y su
@@ -647,14 +733,14 @@ done
 
 echo "---"
 if [ "$MODE" = "capture" ]; then
-    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count trfail: $trfail_count docfail: $docfail_count"
-    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ] || [ "$docfail_count" -ne 0 ]; then
+    echo "capture done. errors: $error_count psfail: $psfail_count c3fail: $c3fail_count imgfail: $imgfail_count errfail: $errfail_count galfail: $galfail_count trfail: $trfail_count docfail: $docfail_count citafail: $citafail_count humofail: $humofail_count"
+    if [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ] || [ "$docfail_count" -ne 0 ] || [ "$citafail_count" -ne 0 ] || [ "$humofail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
 else
-    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count trfail=$trfail_count docfail=$docfail_count (err_ok=$err_ok)"
-    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ] || [ "$docfail_count" -ne 0 ]; then
+    echo "check summary: ok=$ok_count fail=$fail_count error=$error_count psfail=$psfail_count c3fail=$c3fail_count imgfail=$imgfail_count errfail=$errfail_count galfail=$galfail_count trfail=$trfail_count docfail=$docfail_count citafail=$citafail_count humofail=$humofail_count (err_ok=$err_ok)"
+    if [ "$fail_count" -ne 0 ] || [ "$error_count" -ne 0 ] || [ "$psfail_count" -ne 0 ] || [ "$c3fail_count" -ne 0 ] || [ "$imgfail_count" -ne 0 ] || [ "$errfail_count" -ne 0 ] || [ "$galfail_count" -ne 0 ] || [ "$trfail_count" -ne 0 ] || [ "$docfail_count" -ne 0 ] || [ "$citafail_count" -ne 0 ] || [ "$humofail_count" -ne 0 ]; then
         exit 1
     fi
     exit 0
