@@ -57,7 +57,8 @@ enum GraphicsItemType {
   GI_CONCATENATEPATH,
   GI_POLYBAR,
   GI_HATCHATTR,        // los valores nuevos van AL FINAL: hay código que depende de los ordinales
-  GI_GRADIENTATTR
+  GI_GRADIENTATTR,
+  GI_BRACE
 };
 
 enum AttributeType {
@@ -300,7 +301,38 @@ private:
   bool horizontal = false;
 };
 
-/* 
+/*
+   Llave extensible (plan_llaves.md). Cada PAR de puntos del path es un vano: la
+   llave va de uno a otro y su cúspide sobresale `depth` PUNTOS hacia el costado.
+
+   Las dos cantidades son de naturaleza distinta a propósito, y ésa es la decisión
+   de diseño de esta primitiva: el VANO es un dato del dibujo y va en coordenadas
+   de mundo; la PROFUNDIDAD es tipografía y va en pt, como `marker_size`. Una llave
+   que abarca de 24.5 % a 44 % de reflectancia crece y se encoge con la ventana; su
+   gancho, no.
+
+   El COSTADO sale de la orientación del segmento (invertir los dos puntos voltea
+   la llave): ver bracePlaced en brace.h. No hay argumento de lado.
+
+   ⚠️ Deliberadamente NO acepta un rótulo. El texto va en un `text()` aparte, porque
+   meterlo aquí obligaría a decidir alineación, separación y giro dentro de la
+   primitiva, y eso es composición de página: es del autor.
+ */
+class Brace : public GraphicsItemWithPath {
+public:
+  Brace() : GraphicsItemWithPath(GI_BRACE) { }
+
+  void draw(Display &) override;
+
+  void setDepth(double d) { depth = d; }
+  void setTip(double t)   { tip = t; }
+
+private:
+  double depth = 6.0;   // profundidad de la cúspide, en PUNTOS
+  double tip   = 0.5;   // posición de la cúspide a lo largo del vano, 0..1
+};
+
+/*
    A rectangle is defined by a pair of points: the left lower point and the right upper point.
    The number of points in the path must be even.
  */

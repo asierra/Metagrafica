@@ -1,5 +1,6 @@
 #include "EPSDisplay.h"
 #include "markers.h"
+#include "brace.h"    // braceSegments/bracePlaced: geometría de la llave, única para los tres
 #include "text_parser.h"   // cmmiUnicode(): byte cmmi -> Unicode (griego vs ASCII)
 #include "version.h"       // MG_VERSION: procedencia en %%Creator
 #include <math.h>
@@ -705,6 +706,36 @@ void EPSDisplay::marker(double x, double y, const MarkerShape &shape, double siz
     stroke();
   }
   fprintf(file, "10 setmiterlimit\n");        // default de PostScript
+  dspstate.fill = saved_fill;
+}
+
+void EPSDisplay::brace(double x0, double y0, double x1, double y1,
+                       double depth, double tip) {
+  // Los dos extremos del vano van a dispositivo y la llave se ARMA ahí (brace.h):
+  // así el gancho conserva su forma aunque la ventana estire un eje. Es el mismo
+  // trato que `marker` le da a su ancla, y por la misma razón.
+  double ax = x0, ay = y0, bx = x1, by = y1;
+  inkPoint(ax, ay);
+  inkPoint(bx, by);
+  point st;
+  std::vector<BraceSeg> segs = bracePlaced(ax, ay, bx, by, depth, tip, st);
+  if (segs.empty())
+    return;
+  // Una llave es un TRAZO, nunca un relleno: cerrarla y rellenarla daría una
+  // mancha con forma de llave. Se fuerza y se restaura, como hace `marker` con
+  // las formas no rellenables.
+  bool saved_fill = dspstate.fill;
+  dspstate.fill = false;
+  fprintf(file, "newpath\n%f %f moveto\n", st.x, st.y);
+  for (const auto &s : segs) {
+    noteInk(s.to.x, s.to.y);   // la cúspide sale del vano: sin esto, fuera del bbox
+    if (s.curve)
+      fprintf(file, "%f %f %f %f %f %f curveto\n",
+              s.c1.x, s.c1.y, s.c2.x, s.c2.y, s.to.x, s.to.y);
+    else
+      fprintf(file, "%f %f lineto\n", s.to.x, s.to.y);
+  }
+  stroke();
   dspstate.fill = saved_fill;
 }
 

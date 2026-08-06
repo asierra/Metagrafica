@@ -79,6 +79,13 @@ void Rectangle::draw(Display &g) {
   }
 }
 
+void Brace::draw(Display &g) {
+  // Los puntos van de dos en dos, como Rectangle: cada par es un vano. Un punto
+  // suelto al final se ignora — el parser ya exige paridad y avisa.
+  for (size_t i = 0; i + 1 < path.size(); i += 2)
+    g.brace(path[i].x, path[i].y, path[i+1].x, path[i+1].y, depth, tip);
+}
+
 void Polybar::draw(Display &g) {
   // Cada punto del path es el centro superior de una barra; se expande a un
   // rectángulo desde la base común (0) usando la primitiva rect() existente.

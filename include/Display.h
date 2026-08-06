@@ -116,6 +116,19 @@ public:
   // unitaria) la resuelve el llamador: builtin (markers.h) o struct del usuario (§B).
   virtual void marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) = 0;
 
+  // Llave extensible (plan_llaves.md). Los dos puntos del VANO van en mundo y los
+  // transforma el backend; `depth` es la profundidad de la cúspide en PT y `tip`
+  // (0..1) su posición a lo largo del vano.
+  //
+  // ⚠️ Es virtual —y no se compone con moveto/lineto/curveto— por la misma razón
+  // que `marker`: esas tres transforman sus argumentos por el marco, y la llave
+  // tiene que construirse YA EN DISPOSITIVO. Si el vano se estirara con la
+  // ventana, los ganchos se estirarían con él, que es justo lo que la geometría de
+  // brace.h existe para impedir. El backend transforma los dos extremos y arma los
+  // tramos ahí; la geometría es de brace.h y no se reimplementa en ninguno.
+  virtual void brace(double x0, double y0, double x1, double y1,
+                     double depth, double tip) = 0;
+
   virtual void rect(double x1, double y1, double x2, double y2)=0;
 
   // Raya horizontal para composición de fórmulas (la barra de \frac). Desde la pluma

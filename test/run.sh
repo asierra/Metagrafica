@@ -150,7 +150,12 @@ FORMATS="eps svg pdf"
 # extent vertical medido), `include` de una biblioteca (lib/satellite.mg), `rectangle`
 # centro+tamaño y el DEFAULT de marcador-hereda-color-de-línea (flechas roja/verde sin
 # marker_color). Entró al golden el 2026-07-24, cuando `\frac` quedó completo.
-EXAMPLES="angulo_solido curvas3 elevacion_solar espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita irradiancia line_patterns markers-demo multietapa onda_electromagnetica orbita_polar path_sample primitives quickstart rpstest seccion_eficaz sines symbols texto tiro_parabolico turning_points"
+# reflectancia_vegetacion es el único con `brace` (la llave extensible, §4) y el único
+# que ejercita el ESCAPE del marcado (`\{`, `\}`): sin él las dos se quedan sin prueba de
+# que dibujen lo que dicen —las negativas de test/errors solo miran stderr—. Entró el
+# 2026-08-06, con la llave misma; es la figura que motivó plan_llaves.md, porque hasta
+# entonces su llave había que sustituirla por una cota de doble flecha.
+EXAMPLES="angulo_solido curvas3 elevacion_solar espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita irradiancia line_patterns markers-demo multietapa onda_electromagnetica orbita_polar path_sample primitives quickstart reflectancia_vegetacion rpstest seccion_eficaz sines symbols texto tiro_parabolico turning_points"
 
 export LC_ALL=C
 

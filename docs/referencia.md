@@ -251,6 +251,45 @@ detrás. Figura completa en [`examples/orbita_polar.mg`](../examples/orbita_pola
 compound(fill="orange") { circle(2) { 0 0 }   circle(1) { 0 0 } }
 ```
 
+### `brace` — la llave que abarca un tramo
+
+Abarca de un punto a otro y saca su cúspide hacia el costado. Cada **par** de puntos es un
+vano, como en `rectangle`:
+
+```octave
+brace(depth=8) { 3 1   3 5 }                % vertical, cúspide a la izquierda
+brace(depth=8, tip=0.25) { 6 1   6 5 }      % cúspide a un cuarto del vano
+brace(depth=6) { 9 5   12 5 }               % en cualquier dirección
+```
+
+Las dos cantidades son de naturaleza distinta, y ahí está lo que hay que entender:
+
+| | |
+|---|---|
+| el **vano** (los dos puntos) | coordenadas de **mundo** — es un dato de la figura |
+| `depth` | **puntos**, como `marker_size` — es tipografía |
+| `tip` | fracción del vano, en (0,1); default 0.5 |
+
+Así una llave que abarca de 24.5 % a 44 % de reflectancia crece y se encoge con la ventana,
+y su gancho no. Hereda `color`, `line_width` y `dash` como cualquier primitiva.
+
+> **El costado sale del ORDEN de los dos puntos**, no de una bandera ni del signo de `depth`
+> (que debe ser positivo, y si no es un error). La cúspide cae 90° a la izquierda de la
+> dirección del vano, así que **intercambiar los dos puntos voltea la llave**.
+
+> ⚠️ **Una llave alta y delgada no es una llave escalada.** Es una llave con el vástago más
+> largo y los ganchos **del mismo tamaño**, y por eso `brace` es una primitiva y no una struct
+> de biblioteca: una struct se coloca con `fit(stretch=true)`, que le deformaría los ganchos.
+> Por la misma razón la llave no se estira bajo un `scale` anisótropo — solo se mueven sus
+> extremos.
+
+> Si el vano es demasiado corto para la profundidad pedida, el gancho **se achica solo** (hace
+> falta medio vano por encima y por debajo de la cúspide). Una llave muy corta sale poco
+> profunda, que es lo que haría un tipógrafo.
+
+> ⚠️ **No lleva rótulo**, a propósito: el texto va en un `text()` aparte. Meterlo dentro
+> obligaría a decidir alineación, separación y giro, y eso es composición de página — es tuya.
+
 ---
 
 ## 5. Estilo: dos registros

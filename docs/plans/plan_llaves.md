@@ -1,6 +1,9 @@
 # plan_llaves.md — Llaves, delimitadores extensibles y el escape que falta
 
-**Estado:** **paso 1 HECHO** (E1 + E2b, 2026-08-06); el resto, propuesta para discutir.
+**Estado:** **pasos 1, 4 y 5 HECHOS** (E1 + E2b + la primitiva `brace`, 2026-08-06). Queda
+el paso 2 (mejora tipográfica) y el 6 (delimitador de fórmula, sin pedir). El paso 3 —`lib/llave.mg`
+como puente— **se saltó**: el trazo se fijó en un banco de pruebas de usar y tirar, así que la
+biblioteca provisional nunca llegó a existir y no hay interfaz que sostener.
 Abierto el 2026-08-06 a raíz de la reconstrucción de la Fig. 1.7 de Lillesand
 (`reflectancia_vegetacion.mg`, curso ENCiT), cuya llave del margen derecho hubo que sustituir
 por una cota de doble flecha porque MG no tiene con qué dibujarla.
@@ -345,7 +348,8 @@ esto abarca un vano y tiene dos extremos. Es una `polyline`, no un `dot`.
 2. **¿`brace` o `llave`?** Los comandos del lenguaje están en inglés (`polyline`, `rectangle`)
    y los comentarios en español. `brace` es consistente. Pero la biblioteca tiene
    `lib/satellite.mg`, `lib/people.mg`… también en inglés. Voto: `brace`.
-3. **¿El caso 2 entra al corpus?** Necesitaría un ejemplo, y `reflectancia_vegetacion.mg` es
+3. ~~**¿El caso 2 entra al corpus?**~~ **RESUELTA (2026-08-06): sí, con la figura que motivó el plan.** `reflectancia_vegetacion.mg` entró al corpus con sus tres usos de llave —uno de la primitiva y dos literales del rótulo—, así que `brace` y el escape tienen cliente. Precedente: `elevacion_solar`, que ya era figura de curso en el corpus. Texto original de la pregunta:
+ Necesitaría un ejemplo, y `reflectancia_vegetacion.mg` es
    figura de curso, que por la regla vigente **no entra por default**. O se le hace un
    ejemplo propio, o la primitiva nace sin cliente en `examples/` — que es justo lo que
    `seccion_eficaz.mg` vino a cerrar para `lib/`.
@@ -363,9 +367,9 @@ esto abarca un vano y tiene dos extremos. Es una `polyline`, no un `dot`.
 |---|---|---|---|
 | 1 | ✅ **E1: escape `\<no-alfabético>`** + E2b + 4 pruebas negativas | — | HECHO 2026-08-06. Cierra `\{`, `\$`, `\\`, `\/` y el `m/s`. Cobertura de glifos en `examples/texto.mg` |
 | 2 | **U+007B/007D al subset** + paso de re-subset reproducible en `tools/` | — | **ya NO lo pide E1** (ver la caja de arriba): la llave sale de Times-Italic y mide bien. Queda como mejora tipográfica, para que no desentone junto a un `(` de LM Math |
-| 3 | **`lib/llave.mg`** (ruta C) | — | desbloquea la figura del curso; banco de pruebas del trazo |
-| 4 | **Geometría de la llave** en un header estilo `markers.h` | 3 | una fuente de verdad, tres backends |
-| 5 | **Primitiva `brace(...)`** (caso 2) | 4 | + ejemplo, + entrada en la galería |
+| 3 | ~~`lib/llave.mg` (ruta C)~~ | — | **SALTADO**: el trazo se validó en un `.mg` de usar y tirar, sin crear biblioteca. Una `lib/` es interfaz que hay que sostener después, y habría entrado sin cliente en el corpus |
+| 4 | ✅ **Geometría de la llave** en `include/brace.h`, estilo `markers.h` | — | HECHO 2026-08-06. Cuatro cuartos de círculo como cúbicas + dos rectas; se arma EN DISPOSITIVO |
+| 5 | ✅ **Primitiva `brace(depth=, tip=)`** (caso 2) | 4 | HECHO 2026-08-06, con `examples/reflectancia_vegetacion.mg` y su tarjeta de galería |
 | 6 | *(sólo si hace falta)* `penCurve` + delimitador de fórmula (caso 1) | 4 | la parte que LaTeX hace famosa y nadie ha pedido |
 
 Los pasos 1 y 3 son independientes entre sí y ninguno toca geometría: se pueden hacer en

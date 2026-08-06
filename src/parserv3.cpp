@@ -548,6 +548,7 @@ static bool isKnownPrimAttr(const std::string &k) {
     "r", "rx", "ry",                            // circle §4.3 / ellipse §4.9 / arc §4.5
     "from", "to",                               // arc §4.5
     "width", "dir",                             // polybar §4.12
+    "depth", "tip",                             // brace §4.15 (depth en PUNTOS)
     "shape", "size",                            // marker/dot §4.6
     // marcadores sobre la ruta (§B)
     "marker", "marker_at", "marker_orient", "marker_size", "marker_color", "marker_fill",
@@ -2195,6 +2196,29 @@ struct PrimStmt : Stmt {
         }
         p->setPath(path); item = std::move(p);
       }
+      else if (name == "brace") {
+        // Llave extensible (plan_llaves.md). Cada PAR de puntos es un vano, como
+        // en `rectangle`; `depth` va en PUNTOS, como `marker_size`, porque es
+        // tipografía y no un dato de la figura.
+        auto p = std::make_unique<Brace>();
+        if (path.size() < 2 || path.size() % 2 != 0)
+          evalError("brace toma PARES de puntos (cada par es un vano): el número de coordenadas no es par");
+        double depth = posOr(s, 0, namedOr(s, "depth", 6));
+        // ⚠️ Una profundidad negativa NO voltea la llave: el costado lo decide el
+        // ORDEN de los dos puntos (ver bracePlaced en brace.h). Sin esta guardia,
+        // `depth=-6` dibujaría exactamente lo mismo que `depth=6` —la geometría
+        // toma su valor absoluto— y quien lo escribiera para voltearla se quedaría
+        // mirando una llave que no se mueve, sin una sola pista de por qué.
+        if (depth <= 0)
+          evalError("brace: `depth` es una profundidad en puntos y debe ser > 0; "
+                    "para voltear la llave, invierte los dos puntos del vano");
+        p->setDepth(depth);
+        double tip = namedOr(s, "tip", 0.5);
+        if (tip <= 0 || tip >= 1)
+          evalError("brace: `tip` es la posición de la cúspide a lo largo del vano y va en (0,1)");
+        p->setTip(tip);
+        p->setPath(path); item = std::move(p);
+      }
       if (item) items.push_back(std::move(item));
     }
     if (items.empty()) return;
@@ -3836,7 +3860,7 @@ static int transformOp(const std::string &n) {
 static bool isPrim(const std::string &n) {
   return n == "polyline" || n == "polygon" || n == "circle" || n == "rectangle" ||
          n == "dot" || n == "marker" || n == "arc" || n == "ellipse" || n == "bezier" ||
-         n == "polybar" || n == "smooth";   // smooth: primitiva §9.2 Y expresión de path (como sine)
+         n == "polybar" || n == "brace" || n == "smooth";   // smooth: primitiva §9.2 Y expresión de path (como sine)
 }
 
 static StmtPtr parseBlock(Lexer &, const char *bodyOf = nullptr);   // adelantadas (mutuamente recursivas)

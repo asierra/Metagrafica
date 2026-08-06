@@ -327,7 +327,12 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       misma tabla, así que `\{` en math sale y cuadra. Queda como mejora tipográfica —hoy la
       llave es de Times junto a paréntesis de LM Math— y arrastra el que ⚠️ **el paso de subset
       no es reproducible hoy**: `plan_lmmath.md` dice «1 comando» pero no hay script en
-      `tools/` ni regla en el Makefile. **(3)** la llave alta: **dibujarla**, no tomarla de la
+      `tools/` ni regla en el Makefile. **(3) ✅ HECHO el 2026-08-06 — la primitiva `brace`.** Se dibuja en el motor
+      (`include/brace.h`, geometría única para los tres backends) y se arma EN DISPOSITIVO, así
+      que bajo `scale 4 1` sale idéntica en vez de estirarse 4× (medido). Vano en mundo,
+      `depth` en pt, costado por el orden de los puntos. Cliente en el corpus:
+      `examples/reflectancia_vegetacion.mg`. Queda **solo el delimitador de FÓRMULA** (§4.2 del
+      plan), que necesita `penCurve` y que ninguna figura ha pedido. Razonamiento original: la llave alta: **dibujarla**, no tomarla de la
       fuente (el subset no trae las piezas extensibles ni la tabla `MATH` que declara su
       ensamblado, así que la fuente daría el arte y no el comportamiento; y estirar un glifo o
       una struct deforma los ganchos = familia `plan_anisotropia.md`). Orden en §6 del plan.

@@ -7,6 +7,7 @@ MetaGrafica:  Human descriptive language to generate publication quality
 */
 #include "PDFDisplay.h"
 #include "markers.h"
+#include "brace.h"    // braceSegments/bracePlaced: geometría de la llave, única para los tres
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
 #include "text_parser.h"       // cmmiUnicode(): byte cmmi -> Unicode
 #include <math.h>
@@ -647,6 +648,34 @@ void PDFDisplay::marker(double x, double y, const MarkerShape &shape, double siz
     else        HPDF_Page_Stroke(page);
     HPDF_Page_GRestore(page);
   }
+}
+
+void PDFDisplay::brace(double x0, double y0, double x1, double y1,
+                       double depth, double tip) {
+  // Ver EPSDisplay::brace: los extremos van a dispositivo y la geometría sale de
+  // brace.h, la misma para los tres. Una llave siempre se traza, nunca se rellena.
+  double ax = x0, ay = y0, bx = x1, by = y1;
+  inkPoint(ax, ay);
+  inkPoint(bx, by);
+  point st;
+  std::vector<BraceSeg> segs = bracePlaced(ax, ay, bx, by, depth, tip, st);
+  if (segs.empty())
+    return;
+  HPDF_Page_GSave(page);
+  // Color y ancho ANTES de abrir el path: MoveTo pasa la página a PATH_OBJECT y
+  // ahí ya no se admiten (mismo orden que dot() y marker()).
+  applyStrokeColor();
+  HPDF_Page_SetLineWidth(page, dspstate.line_width_pt);
+  HPDF_Page_MoveTo(page, st.x, st.y);
+  for (const auto &s : segs) {
+    noteInk(s.to.x, s.to.y);
+    if (s.curve)
+      HPDF_Page_CurveTo(page, s.c1.x, s.c1.y, s.c2.x, s.c2.y, s.to.x, s.to.y);
+    else
+      HPDF_Page_LineTo(page, s.to.x, s.to.y);
+  }
+  HPDF_Page_Stroke(page);
+  HPDF_Page_GRestore(page);
 }
 
 /* ------------------------------------------------------------------ */

@@ -1,5 +1,6 @@
 #include "SVGDisplay.h"
 #include "markers.h"
+#include "brace.h"    // braceSegments/bracePlaced: geometría de la llave, única para los tres
 #include "text_parser.h"
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
 #include <algorithm>
@@ -619,6 +620,38 @@ void SVGDisplay::marker(double x, double y, const MarkerShape &shape, double siz
                     markerSubpathIsLoop(sub) ? " stroke-miterlimit=\"5.5\"" : "");
         }
     }
+}
+
+void SVGDisplay::brace(double x0, double y0, double x1, double y1,
+                       double depth, double tip) {
+    // Ver EPSDisplay::brace: los extremos van a dispositivo y la geometría sale de
+    // brace.h. ⚠️ Aquí NO hay nada que resolver aparte —a diferencia de los arcos,
+    // donde SVG tiene que sacar los ejes con un SVD porque su comando `A` no admite
+    // matriz—: la llave viaja como cúbicas, y una cúbica sí es cerrada bajo afín.
+    // Ésa es media razón para haberla hecho de Béziers y no de arcos.
+    double ax = x0, ay = y0, bx = x1, by = y1;
+    inkPoint(ax, ay);
+    inkPoint(bx, by);
+    point st;
+    std::vector<BraceSeg> segs = bracePlaced(ax, ay, bx, by, depth, tip, st);
+    if (segs.empty())
+        return;
+    bool saved_fill = dspstate.fill;
+    dspstate.fill = false;              // una llave se traza, no se rellena
+    std::ostringstream d;
+    d << "M " << st.x << "," << st.y;
+    for (const auto &s : segs) {
+        noteInk(s.to.x, s.to.y);
+        if (s.curve)
+            d << " C " << s.c1.x << "," << s.c1.y
+              << " "   << s.c2.x << "," << s.c2.y
+              << " "   << s.to.x << "," << s.to.y;
+        else
+            d << " L " << s.to.x << "," << s.to.y;
+    }
+    fprintf(file, "<path d=\"%s\" %s/>\n",
+            d.str().c_str(), getStyleAttributes().c_str());
+    dspstate.fill = saved_fill;
 }
 
 // -------------------------------------------------------------

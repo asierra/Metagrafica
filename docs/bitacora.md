@@ -4216,3 +4216,85 @@ bloque `{ }` apila y restaura estado gráfico — de ahí `gsave`/`grestore` de 
 idéntico. Se re-bendijo esa base **antes** de empezar, para no mezclar dos causas en el mismo
 diff. Los goldens no van en git, así que esto reaparece cada vez que un commit toca un `.mg`
 sin re-capturar.
+
+## 2026-08-06 (bis) — La llave extensible: se dibuja, y se arma en dispositivo
+
+Pasos 4 y 5 de `plan_llaves.md`. La entrega es una primitiva, `brace(depth=, tip=)`, cuyo
+vano va en coordenadas de MUNDO y cuya profundidad va en PUNTOS. Esa mezcla no es un
+descuido de diseño: es la tesis. Una llave que abarca de 24.5 % a 44 % de reflectancia tiene
+que crecer con la ventana, y su gancho no.
+
+### Lo que se decidió, y lo que se midió
+
+**La geometría se dibuja, no sale de la fuente.** El subset de LM Math no trae las piezas
+extensibles ni la tabla `MATH` que declara su ensamblado, así que la fuente daría el arte y
+no el comportamiento. Es la doctrina que `include/text.h` ya tenía escrita para `\hat`/`\vec`
+y la raya de `\frac`. Vive en `include/brace.h`, con el papel de `markers.h`: una fuente de
+verdad, tres backends.
+
+**Y se ARMA EN DISPOSITIVO**, que es lo que hace que la ruta B gane. ⚠️ Por eso
+`Display::brace` es una virtual nueva y **no** se compone con `moveto`/`lineto`/`curveto`:
+esas tres transforman sus argumentos por el marco, así que el gancho se estiraría con la
+ventana. Es el mismo trato que `marker` le da a su ancla, y por la misma razón.
+
+⚠️ **Medido, no argumentado:** bajo `scale 4 1` —un transform genuinamente anisótropo— la
+llave sale **idéntica**, 10.00 pt de ancho y 113.39 pt de alto, en vez de estirarse cuatro
+veces. Ésa es exactamente la familia de `plan_anisotropia.md`, y es lo que descarta tanto
+estirar un glifo como estirar una struct de `lib/` con `fit(stretch=true)`.
+
+**El trazo se diseñó antes de escribir C++**, dibujándolo en MetaGráfica: cuatro cuartos de
+círculo de radio R = profundidad/2 y dos rectas. Iterar la forma sin recompilar es lo que
+hacía valioso el banco de pruebas, y de paso destapó que **negar la profundidad no voltea la
+llave**: un radio negativo curva los ganchos al revés en vez de espejar. El costado acabó
+saliendo del ORDEN de los dos puntos, que es una sola forma de decirlo y no dos que se puedan
+contradecir.
+
+⚠️ **Y la primera versión de la forma estaba MAL, con los cuatro cuartos curvando en el mismo
+sentido.** Lo cazó el ojo humano, no una compuerta —las diez estaban en verde: la salida era
+byte-estable, los tres backends coincidían y la Capa 3 no tiene nada que decir sobre si una
+llave parece una llave—. Cotejada contra la llave de LaTeX: **cada brazo es una S, el gancho
+del extremo curva al REVÉS que el arco de la cúspide.** La versión ingenua, además de no
+parecer una llave, dejaba un **codo de 90° en cada unión con el vástago**, porque el gancho
+llegaba con tangente horizontal a un vástago vertical. Con la curvatura invertida las cuatro
+uniones son tangentes y el único quiebre de toda la llave es la cúspide, que es donde debe
+estar. Consecuencia útil que confirma la corrección: los dos extremos quedan con tangente
+HORIZONTAL, o sea apuntando a lo que la llave abarca — que es exactamente lo que hace el
+original de Lillesand, cuyos extremos rematan en trazos horizontales que van a tocar las dos
+bandas. Es otra entrada para la lista de «lo que ninguna compuerta contesta es *¿se ve
+bien?*» (bitácora 2026-07-20 y 2026-07-28).
+
+En el motor eso pasó a ser un error explícito, y de la clase que este proyecto persigue: sin
+la guardia, `depth=-8` dibujaba **exactamente lo mismo** que `depth=8` —`braceRadius` toma el
+valor absoluto— y quien lo escribiera esperando el espejo se quedaba mirando una llave que no
+se mueve, con salida válida y sin una pista.
+
+**Se saltó el paso 3 del plan** (`lib/llave.mg` como puente). El banco de pruebas fue un `.mg`
+de usar y tirar, no una biblioteca: una `lib/` es interfaz que hay que sostener después de que
+aterrice la primitiva, y además habría entrado sin cliente en el corpus, que es la cuenta que
+`seccion_eficaz.mg` vino a cerrar. Con la primitiva lista el mismo día, el puente nunca hizo
+falta.
+
+### Las Béziers, y por qué no arcos
+
+La llave viaja como cúbicas. No es cosmético: **una cúbica es cerrada bajo afinidad y un arco
+no**, así que SVG no tiene aquí nada que resolver aparte —a diferencia de los arcos, donde su
+comando `A` no admite matriz y hay que sacar los ejes con un SVD—. Es media razón de que los
+tres backends salgan idénticos sin un solo caso especial, y la Capa 3 lo confirma en verde.
+
+### El ejemplo, y por qué es el correcto
+
+`examples/reflectancia_vegetacion.mg` (Lillesand fig. 1.7) entra al corpus el mismo día. Es
+**la figura que motivó el plan**: su llave del margen derecho había que sustituirla por una
+cota de doble flecha. Trae los tres usos del original —uno de la primitiva y **dos literales
+dentro del rótulo**, que en el original dice «{Note range of spectral values}» con llaves de
+imprenta—, así que ejercita de una vez las dos entregas del día. El rótulo llevaba paréntesis
+hasta hoy, y llevaba paréntesis porque las llaves eran inalcanzables.
+
+⚠️ **Y esa segunda cobertura no la puede dar ninguna otra compuerta.** Las negativas de
+`test/errors` solo miran stderr y el código de salida: no ven si `\{` DIBUJA una llave o no
+dibuja nada. Sin este ejemplo, perder el escape volvería al silencio sin mover un golden.
+
+El vano de la llave no está puesto a ojo: 44.0 y 24.5 son los nodos extremos de `Dt_s` y
+`Cb_s`, o sea que la llave abarca lo que abarcan las bandas, y las sigue si se editan.
+
+`ok=96`, diez compuertas en cero, `err_ok` 62.

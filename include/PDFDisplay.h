@@ -58,6 +58,7 @@ protected:
   void arc(double x, double y, double rx, double ry, double startAng, double endAng) override;
   void dot(double x, double y, double r) override;
   void marker(double x, double y, const MarkerShape &shape, double size, double dirx, double diry) override;
+  void brace(double x0, double y0, double x1, double y1, double depth, double tip) override;
 
   void deviceTranslate(double x, double y) override;
   void deviceScale(double x, double y) override;

@@ -108,7 +108,8 @@ GRUPOS = [
       "heredan los rangos y se rotulan solos.",
       "A plot maps data units to a box in centimetres; the axes inherit the "
       "ranges and label themselves."),
-     ["quickstart", "fig6-4", "fig4-4", "fig_polybar", "fig1", "tiro_parabolico"]),
+     ["quickstart", "fig6-4", "fig4-4", "reflectancia_vegetacion", "fig_polybar", "fig1",
+      "tiro_parabolico"]),
     (("Ilustraciones y diagramas", "Illustrations and diagrams"),
      ("Diagramas de aparato y esquemas, donde mandan las estructuras, la "
       "colocación y los marcadores que se orientan solos.",
@@ -128,6 +129,14 @@ GRUPOS = [
 # lo único que hay que escribir a mano al añadir un ejemplo (y si no se escribe,
 # la tarjeta sale en español con un aviso).
 TRAD = {
+    "reflectancia_vegetacion": (
+        "Spectral reflectance — deciduous versus coniferous trees",
+        "Two reflectance BANDS (not lines) against wavelength, 0.4 to 0.9 microns: "
+        "reflectance varies from tree to tree within one species, so each is a range. "
+        "It shows why the near infrared exists in forest remote sensing — across the "
+        "whole visible range the two bands overlap almost completely, and past 0.7 µm "
+        "they separate and end up far apart. The brace in the right margin spans "
+        "exactly what the two bands span at their right end."),
     "angulo_solido": (
         "Projection of the solid angle — a wire sphere and the cap A = πr²",
         "A wire sphere in orthographic axonometry, with the circular cap that subtends a "

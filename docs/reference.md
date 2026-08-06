@@ -251,6 +251,45 @@ matter of depth, and in 2-D you have to *decide* which half is behind. Full figu
 compound(fill="orange") { circle(2) { 0 0 }   circle(1) { 0 0 } }
 ```
 
+### `brace` — the brace that spans a range
+
+It spans from one point to another and pushes its cusp out to the side. Each **pair** of
+points is one span, as in `rectangle`:
+
+```octave
+brace(depth=8) { 3 1   3 5 }                % vertical, cusp on the left
+brace(depth=8, tip=0.25) { 6 1   6 5 }      % cusp a quarter of the way along
+brace(depth=6) { 9 5   12 5 }               % in any direction
+```
+
+The two quantities are of different natures, and that is the thing to understand:
+
+| | |
+|---|---|
+| the **span** (the two points) | **world** coordinates — it is data of the figure |
+| `depth` | **points**, like `marker_size` — it is typography |
+| `tip` | fraction of the span, in (0,1); default 0.5 |
+
+So a brace spanning from 24.5 % to 44 % reflectance grows and shrinks with the window, and its
+hook does not. It inherits `color`, `line_width` and `dash` like any primitive.
+
+> **The side comes from the ORDER of the two points**, not from a flag nor from the sign of
+> `depth` (which must be positive, or it is an error). The cusp falls 90° to the left of the
+> span's direction, so **swapping the two points flips the brace**.
+
+> ⚠️ **A tall thin brace is not a scaled brace.** It is a brace with a longer stem and hooks of
+> **the same size**, and that is why `brace` is a primitive and not a library struct: a struct
+> is placed with `fit(stretch=true)`, which would deform its hooks. For the same reason the
+> brace does not stretch under an anisotropic `scale` — only its endpoints move.
+
+> If the span is too short for the requested depth, the hook **shrinks by itself** (half a span
+> is needed above and below the cusp). A very short brace comes out shallow, which is what a
+> typographer would do.
+
+> ⚠️ **It takes no label**, deliberately: the text goes in a separate `text()`. Putting it
+> inside would force decisions about alignment, spacing and rotation, and that is page
+> composition — it is yours.
+
 ---
 
 ## 5. Style: two registers
@@ -1284,4 +1323,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ c9348c9d997aacf2c0fb9bd7577bc45dcf7dfb0f -->
+<!-- translated-from: referencia.md @ bd0c899bd1a7667a67773ac30320862976bf8f13 -->
