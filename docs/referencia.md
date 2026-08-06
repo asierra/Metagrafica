@@ -890,6 +890,17 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 | rango de datos | `from`, `to` (dentro de un `plot` los hereda de `x=`/`y=`; en un `axis` suelto los pones tú) |
 | geometría y estilo | `base=`, `extend=`, `scale="log"`, `field=`, `color`, `line_width`, `dash`, `grid`, `grid_dash` |
 
+> **`extend=` alarga solo la LÍNEA del eje**, sin mover marcas ni rótulos, y va en unidades
+> de la **caja** (las mismas del bloque `{p1 p2}` del eje), **no de datos**. Escalar = los dos
+> extremos; lista `(lo hi)` = antes de `p1` / después de `p2`. Reproduce el sobrante estilo
+> libro.
+>
+> ⚠️ **En negativo ACORTA**, y eso es lo que se usa cuando la caja baja más que los datos: si
+> extendiste `y=` por debajo del cero solo para alojar rótulos, una vertical por debajo del eje
+> horizontal anunciaría una escala que ahí no significa nada. `extend=(-recorte, 0)` la corta,
+> con `recorte` calculado del mismo mapeo lineal que usa el `plot`. Lo hace
+> `examples/reflectancia_vegetacion.mg`.
+
 > **La nomenclatura, que es la que usa todo el mundo:** `label` es el **nombre del eje** (el
 > `xlabel` de matplotlib) y `tick_labels` son **los números de las marcas**. `title` queda
 > reservado para el encabezado del plot.

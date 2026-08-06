@@ -877,6 +877,16 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 | data range | `from`, `to` (inside a `plot` inherited from `x=`/`y=`; on a standalone `axis` you set them) |
 | geometry and style | `base=`, `extend=`, `scale="log"`, `field=`, `color`, `line_width`, `dash`, `grid`, `grid_dash` |
 
+> **`extend=` lengthens only the axis LINE**, without moving ticks or labels, and it is in
+> units of the **box** (the same as the axis's `{p1 p2}` block), **not of data**. A scalar =
+> both ends; a list `(lo hi)` = before `p1` / after `p2`. It reproduces the book-style overhang.
+>
+> ⚠️ **Negative values SHORTEN it**, which is what you want when the box extends further than
+> the data: if you stretched `y=` below zero only to make room for labels, a vertical below the
+> horizontal axis would announce a scale that means nothing there. `extend=(-trim, 0)` cuts it,
+> with `trim` computed from the same linear mapping the `plot` uses. This is what
+> `examples/reflectancia_vegetacion.mg` does.
+
 > **The nomenclature, which is what everyone uses:** `label` is the **axis name** (matplotlib's `xlabel`)
 > and `tick_labels` are **the numbers on the marks**. `title` is reserved for the plot's heading.
 
@@ -1323,4 +1333,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ bd0c899bd1a7667a67773ac30320862976bf8f13 -->
+<!-- translated-from: referencia.md @ a447756bb066ec4771db7b19515becc979eee77e -->

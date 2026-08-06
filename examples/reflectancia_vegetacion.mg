@@ -149,7 +149,16 @@ plot(x=(lam0,lam1), y=(ymin,ymax), box=(bx0,by0, bx1,by1)) {
     polyline(&Cb)
     dash "solid"
 
-    polygon(&Dring, fill=gray(0.87), color="black", line_width=0.6)
+    % El relleno va SIN contorno (sin `color=`) y las dos envolventes se trazan
+    % aparte, abiertas. Así la banda no lleva TAPA en el extremo derecho: el
+    % segmento de cierre existe para el relleno pero no se dibuja, que es como se
+    % ve en el original —las dos curvas terminan sueltas, no cerradas por una
+    % vertical que no significa nada—. El dato acaba en 0.90 µm porque ahí acaba la
+    % medición, no porque la banda se cierre.
+    polygon(&Dring, fill=gray(0.87))
+    line_width 0.6
+    polyline(&Dt)
+    polyline(&Db)
 
     % Rótulos de las bandas, con flecha guía hacia dentro de cada banda ya en
     % la meseta del infrarrojo cercano (0.75-0.76), donde el trazo no es tan
@@ -172,8 +181,16 @@ plot(x=(lam0,lam1), y=(ymin,ymax), box=(bx0,by0, bx1,by1)) {
     font_size 9
     text("Longitud de onda ($\mu$m)", align="center", valign="top") { 0.65 -16.7 }
 
+    % El eje y NO debe rebasar el horizontal: la caja baja hasta `ymin` solo para
+    % alojar los rótulos, y una vertical por debajo del cero anunciaría una escala
+    % que ahí no significa nada. `extend` va en unidades de la CAJA (las mismas del
+    % bloque {p1 p2} del eje), no de datos, y en negativo ACORTA — así que el
+    % recorte es la altura de caja que ocupa el tramo ymin..0, calculada con el
+    % mismo mapeo lineal que usa el plot por dentro.
+    recorte_y = (0 - ymin)/(ymax - ymin)*(by1 - by0)
     xaxis(step=0.1, decimals=1, base=0, ticks="out", tick_label_gap=3)
-    yaxis(step=10, start=0, decimals=0, label="Reflectancia (%)", label_gap=24)
+    yaxis(step=10, start=0, decimals=0, label="Reflectancia (%)", label_gap=24,
+          extend=(-recorte_y, 0))
 }
 
 % ── Corchete del margen derecho: rango de valores espectrales ──────────────

@@ -4298,3 +4298,28 @@ El vano de la llave no está puesto a ojo: 44.0 y 24.5 son los nodos extremos de
 `Cb_s`, o sea que la llave abarca lo que abarcan las bandas, y las sigue si se editan.
 
 `ok=96`, diez compuertas en cero, `err_ok` 62.
+
+### Dos remates de la figura, y una conducta de `extend` que no estaba escrita
+
+Revisando el render contra el original salieron dos cosas, ninguna del motor:
+
+**El eje y rebasaba el horizontal.** La caja de datos baja hasta `ymin = -22` solo para
+alojar el renglón de bandas espectrales y el nombre del eje x —el mismo recurso de
+`fig4-4`—, pero la línea del eje y se dibujaba en todo ese rango, o sea que asomaba por
+debajo del cero anunciando una escala que ahí no significa nada.
+
+⚠️ **Lo cierra `extend` en NEGATIVO, que ACORTA — y eso no estaba documentado.** La
+referencia decía solo «alarga la línea del eje», y el código lo confirma sin quererlo:
+`a1 = p1 − extLo·u`, así que un `extLo` negativo corre el arranque hacia adentro. Va además
+en unidades de la **caja**, no de datos, que es lo que hizo fallar el primer intento
+(`extend=(-22,0)` sobre una caja de 8.6 unidades se pasó de largo y alargó la línea 453 pt
+en vez de acortarla). El recorte se calcula en el `.mg` con el mismo mapeo lineal que usa el
+`plot` por dentro. Queda escrito en la referencia es/en: la figura depende de esa conducta,
+y sin documentarla el día que alguien acote `extend` a positivos la rompe sin saberlo.
+
+**La banda salía con TAPA.** El polígono de caducifolias se cerraba con un segmento vertical
+en 0.90 µm y se contorneaba entero, así que el extremo derecho lucía una vertical que no
+significa nada: el dato acaba ahí porque ahí acaba la medición, no porque la banda se cierre.
+Se separó el relleno del contorno —`polygon(&Dring, fill=…)` **sin `color=`**, que rellena sin
+contornear, y las dos envolventes trazadas aparte como polilíneas abiertas—. El segmento de
+cierre sigue existiendo para el relleno; simplemente no se dibuja.
