@@ -288,6 +288,13 @@ polyline { 1 1  2 0 }      % NOT red
 **Fill and outline.** `fill=` turns on the fill; `color=` is the stroke. Together = outlined fill.
 `fill="none"` turns the fill off.
 
+> ⚠️ **`fill="none"` is not valid on `polygon`, and is an error.** A polygon **fills by
+> definition** — that is precisely what distinguishes it from a closed polyline — so turning its
+> fill off contradicts the primitive. The way to ask for a **closed outline with no fill** is
+> `polyline(closed=true)`, which also does not repeat the first vertex at the end. Until
+> 2026-08-06 `polygon(fill="none")` was accepted silently and came out **filled black** (and
+> without `color=`, with no outline either).
+
 **Colors:** the **148 CSS names** (`"steelblue"`, `"orange"`…), `"#rrggbb"`, or `gray(0.4)`. No exceptions:
 `green` and `orange` are worth what they are in CSS.
 
@@ -1242,4 +1249,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 1bdb9a3fb82c9554d8013270769b3c33610eb322 -->
+<!-- translated-from: referencia.md @ 7034a2fd899a7d7f809facb88431d63ebcfb469f -->

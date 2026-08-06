@@ -21,16 +21,19 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=93 … docfail=0** (31 ejemplos × 3
-> backends; **ocho** compuertas,
-> razonadas una por una en `CLAUDE.md`; la 5ª son 53 pruebas NEGATIVAS en `test/errors/`,
+> Build/test: `make` + `bash test/run.sh check` → **ok=93 … docfail=0 citafail=0 humofail=0**
+> (31 ejemplos × 3 backends; **diez** compuertas,
+> razonadas una por una en `CLAUDE.md`; la 5ª son 55 pruebas NEGATIVAS en `test/errors/`,
 > ampliadas el 2026-07-28 a los diagnósticos NO fatales con `EXPECT_WARN`/`EXPECT_NO_WARN`;
 > la 6ª vigila que `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva
 > incrustado el código de cada ejemplo, así que **editar un comentario la desactualiza** y
 > ninguna de las otras puede verlo; la 7ª, que `docs/reference.md` no sea una traducción
-> VIEJA; y la 8ª, nueva el 2026-07-29, compila los bloques ```octave de la referencia en los
+> VIEJA; la 8ª, nueva el 2026-07-29, compila los bloques ```octave de la referencia en los
 > dos idiomas: **la documentación también puede mentir**, y a un modelo de lenguaje le miente
-> con éxito). La Capa 3 tiene **cuatro** invariantes: la 3ª, del 2026-07-27, es la
+> con éxito; la 9ª, del 2026-08-05, comprueba que lo que la documentación **cita** siga siendo
+> lo que el archivo dice —fallo disjunto del anterior: una cita rancia COMPILA—; y la 10ª
+> corre las herramientas de `tools/` que ningún `check` ejercita). La Capa 3 tiene **cuatro**
+> invariantes: la 3ª, del 2026-07-27, es la
 > paridad **geométrica** de arcos entre los tres backends (`tools/arcparity.py`) — la
 > única sin escapatoria por bendición, porque no compara contra un golden sino un backend
 > contra otro (ver `plan_anisotropia.md`); la 4ª, del 2026-07-28, cuenta los **rellenos
@@ -310,6 +313,21 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       como base WIP** (dormante, `ok=66`; EPS/PDF centran, SVG con bug acotado, inline sin
       hacer). ⚠️ **`\frac` DEPENDE de la Parte A** (usa `TextLine::width()` para dimensionar la
       fracción). Orden: Parte A → (`\frac` y/o Parte B). Detalle en ambos planes.
+- [ ] 🪢 **Llaves, delimitadores extensibles y el ESCAPE que falta** — `plan_llaves.md`
+      (abierto 2026-08-06, propuesta sin implementar; lo pidió una figura de curso a la que
+      hubo que sustituirle la llave por una cota de doble flecha). Tres cosas separables:
+      **(1)** el repertorio de marcación **no tiene escape**, y eso no solo impide escribir
+      `{`: `text("5 m/s")` sale **`5 m`** porque `/s` es cambio de cara (`font_style_codes =
+      "beigrsct$"`), y con él caen `J/g`, `cal/g`, `1/r`, `1/e`… en silencio. Propuesta:
+      `\` + no-alfabético = ese carácter literal. **(2)** `{`/`}` **no están en el subset** de
+      LM Math (medido: 237 codepoints, no 186 como dice su cabecera), así que `\{` en modo math
+      exige re-subsetear — y ⚠️ **el paso de subset no es reproducible hoy**: `plan_lmmath.md`
+      dice «1 comando» pero no hay script en `tools/` ni regla en el Makefile. **(3)** la llave
+      alta: **dibujarla**, no tomarla de la fuente (el subset no trae las piezas extensibles ni
+      la tabla `MATH` que declara su ensamblado, así que la fuente daría el arte y no el
+      comportamiento; y estirar un glifo o una struct deforma los ganchos = familia
+      `plan_anisotropia.md`). Orden sugerido en §6 del plan; cero presión del corpus, como
+      todo lo de esta sección.
 - [ ] 🔤 **La fuente math del SVG no tiene lista de respaldo, y en un visor que no cargue el
       `@font-face` cae a SANS** (hallado 2026-07-31, lo notó Alejandro: «el pi del SVG no se ve
       tan bonito como el del EPS»). El archivo está BIEN: `SVGDisplay` embebe Latin Modern Math

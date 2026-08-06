@@ -4006,3 +4006,131 @@ con lo que es: **una foto fija de esa versión**.
 derivado es una compuerta que no existe.** El repo lo tenía resuelto para `docs/img`, la galería,
 la traducción y —desde hoy— el Modelfile; lo que faltaba era no recomendarle al usuario la
 práctica que el propio proyecto evita.
+
+## 2026-08-06 — Un agente leyó el compilador y no miró la figura
+
+Sesión de revisión, no de desarrollo: Sonnet reconstruyó la Fig. 1.7 de Lillesand
+(reflectancia de caducifolias contra coníferas) para el curso ENCiT y dejó un informe
+—`reflectancia_vegetacion.md`— contestando **una pregunta que se hizo solo**: si le sirvió
+de algo meterse al código fuente de `mg`, más allá de la referencia y los ejemplos
+instalados. La figura vive fuera del repo; lo que sigue es lo que la revisión destapó.
+
+**El informe es honesto y el `.mg` es idiomático.** Encabezado con título, descripción y
+`% NOTAS`; procedencia con edición y página; la distinción «no es facsímil»; el aviso de que
+los valores son leídos a ojo y dónde tocarlos; el commit del compilador que consultó,
+fechado. Eso es cultura del corpus llegando por el skill sin que nadie la dicte. Y el
+informe se autodesmiente en uno de sus dos episodios en vez de venderlo.
+
+**La figura estaba mal, y con un error que ninguna compuerta podría haber visto.** La banda
+de caducifolias llevaba su borde inferior **+5 puntos porcentuales** de más. Medido
+decodificando el `<path>` del SVG a coordenadas de dato: donde `Db_s` dice 0.4 (λ=0.40) el
+archivo dibujaba **5.40**; donde dice ≈2.7 (λ=0.525), **7.69**; en λ=0.90, exacto.
+
+La causa es `concat(&Dt, reverse(&Db))`. **`concat` SUELDA** —§9 de la referencia lo dice con
+todas sus letras: traslada cada operando para que su primer punto continúe desde el último
+del acumulado—, así que la curva inferior subió por la diferencia entre los dos extremos que
+unía, `42.5 − 37.5 = 5.0`, y el punto duplicado dejó 119 vértices en vez de 120. Verificado
+aparte con un caso mínimo: el corrimiento es constante y sale exacto.
+
+📌 **Lo que hace este defecto interesante no es la aritmética, es que el dibujo CONTRADECÍA
+la descripción de su propio encabezado** («en todo el visible las dos bandas se traslapan
+casi por completo») y aun así compilaba limpio, sin un aviso. Es la clase de fallo que la
+bitácora del 2026-07-20 y del 2026-07-28 ya había nombrado: lo caza **mirar**, no compilar.
+
+⚠️ **Y ahí está la lección del experimento.** Los dos episodios del informe investigan **el
+compilador**; ninguno compara el resultado contra el original. El agente leyó
+`parserv3.cpp` y `primitives.cpp` con cuidado y no abrió la figura al lado del escaneo, que
+es el único paso que habría cazado el error real. Es exactamente el procedimiento de
+`skills/figuras-mg/references/revisar-figura.md`, y **no se ejecutó**. Leer el fuente no
+fue un mérito ni una carencia de la documentación: fue el síntoma de haber abandonado la
+referencia demasiado pronto —§9 documenta la soldadura, y no se leyó—.
+
+**Arreglo de la figura, sin tocar el motor.** `concat` se comporta bien en cuanto las piezas
+**ya se tocan**: interponiendo el segmento de cierre del extremo derecho
+(`{ 0.90 42.5   0.90 37.5 }`) cada soldadura es la identidad y el trayecto queda absoluto.
+Es el idioma que hay que enseñar, y por eso entró al skill (regla 13).
+
+### `polygon(fill="none")` deja de ser un manchón negro y pasa a ser un error
+
+El segundo episodio del informe sí encontró algo real, y el diagnóstico es correcto:
+
+1. `emitStyleAttr` (`parserv3.cpp`), para `fill="none"`, emite `GS_NOFILL` y **retorna sin
+   fijar `AT_FCOLOR`**: no hay color de relleno guardado para ese camino.
+2. `Polyline::draw()` (`primitives.cpp:20-23`) hace
+   `if (type==GI_POLYGON && !filled) g.setFilled(true)` **sin mirar de dónde vino ese
+   `!filled`** —si de no haberse activado nunca, o de un `fill="none"` deliberado—.
+3. La reactivación cae al color por default: **negro**. Y al terminar restaura, así que el
+   efecto es local a esa primitiva: por eso nadie lo notó en una figura con más elementos.
+
+Lo que el informe no midió y resultó peor: **sin `color=`**, el SVG sale además con
+`stroke="none"`. O sea un manchón negro sólido **sin contorno**, compilando limpio, donde se
+pidió el vacío.
+
+**Pero no es código roto, y por eso el arreglo no es tocar `Polyline::draw()`.** `polygon`
+rellena **por definición** —es justo lo que lo distingue de una polilínea cerrada, y la
+referencia lo contrasta así desde siempre—, de modo que `fill="none"` no es una opción sino
+una **contradicción**. Ahora se rechaza en `PrimStmt::exec`, antes de construir nada, con un
+mensaje que **nombra la salida**: `polyline(closed=true)`.
+
+📌 Y ésa es la otra mitad de la lección del día: **la construcción que el agente concluyó
+que no existía estaba una línea más arriba en la referencia que él mismo citó.** Su informe
+transcribe el contraste `polygon % relleno` / `polyline(closed=true) % contorno cerrado`
+para explicar la definición, y no lo reconoce como la respuesta. Verificado: emite
+`fill="none"` limpio.
+
+**Dos pruebas negativas, y la segunda importa tanto como la primera.**
+`test/errors/polygon_fill_none.mg` (`% EXPECT:`) fija el error; y
+`test/errors/polygon_contorno_cerrado.mg` (`% EXPECT_NO_WARN:`, o sea los **tres** backends)
+fija que `polyline(closed=true)` siga compilando limpio. Sin la segunda, la manera fácil de
+callar un falso positivo del error nuevo sería endurecerlo hasta que alcance a la
+construcción que el propio mensaje recomienda, y entonces el diagnóstico se quedaría sin
+salida que ofrecer. `err_ok` pasa de 53 a **55**; todo lo demás en cero.
+
+Documentado en `docs/referencia.md` §5 y en `docs/reference.md` (sello de traducción
+re-emitido), y en `skills/figuras-mg/SKILL.md` como **regla dura 12**, con la 13 para la
+soldadura de `concat`. Modelfile regenerado. **Ningún golden se movió.**
+
+### La llave que no se pudo dibujar: `plan_llaves.md`
+
+La figura de Lillesand lleva una llave en el margen derecho abarcando el rango de valores
+espectrales; el agente la sustituyó por una cota de doble flecha porque MG no tiene con qué.
+Al preguntarse Alejandro si bastaría con poner una llave **de texto** —el tamaño es
+calculable, porque `font_size` es una cantidad física en pt— salieron tres medidas que
+cambian la respuesta:
+
+- **No hay manera de escribir una llave.** `{`/`}` son agrupadores y se consumen mudos
+  (`text("{")` no emite ni un `<text>`); `\{` se come los dos caracteres (el escaneo tras
+  `\` es alfabético y no encuentra nombre); `\lbrace` y `\left` avisan «symbol name unknown».
+- ⚠️ **El agujero no es de las llaves, es del lenguaje de marcación: no tiene ESCAPE.** Y
+  tiene una víctima que nadie había visto: **`text("5 m/s")` sale `5 m`**, porque `/s` es un
+  cambio de cara (`font_style_codes = "beigrsct$"`). Con él caen `J/g`, `cal/g`, `1/r`,
+  `1/e`, `W/cm`… todas en silencio. `W/m2` sobrevive por casualidad, porque `m` no está en
+  la tabla.
+- **El subset de LM Math no sirve para lo extensible.** Medido parseando su `cmap`: 30 228
+  bytes, **237 codepoints** (su cabecera dice 186: rancia), y las tablas son
+  `GDEF OS/2 cmap gasp glyf head hhea hmtx loca maxp name post` — **sin `MATH`, `GSUB` ni
+  `GPOS`**. `(` `[` `√` `⟨` están; **`{` y `}` no**; **ninguna pieza extensible**
+  (U+23A7…23AB) tampoco. Y sin la tabla `MATH` el ensamblado hay que escribirlo igual: la
+  fuente daría el **arte**, no el **comportamiento**.
+
+El plan queda abierto para discutir, con la recomendación de **dibujarla** —que es la
+doctrina ya escrita de la casa: `include/text.h` explica por qué `\hat`/`\vec` no salen de
+la fuente y cierra con «es el mismo criterio con el que la raya de `\frac` es un trazo y no
+un glifo»— y con el argumento que decide: **una llave alta y delgada no es una llave
+escalada**, es una llave con el vástago más largo y **los ganchos del mismo tamaño**.
+Estirar un glifo, o estirar una struct de `lib/` con `fit(stretch=true)`, deforma los
+ganchos: es literalmente la familia de `plan_anisotropia.md`.
+
+Y una distinción que el plan pone primero porque es donde está la trampa: **son dos objetos**.
+El delimitador de fórmula (tamaño derivado del contenido, lo que LaTeX resuelve) y el
+mobiliario de página (tamaño derivado de la geometría del dibujo, que es el caso de
+Lillesand). **LaTeX solo tiene el primero**, y en las 31 figuras del corpus no hay una sola
+que lo necesite, mientras que el segundo apareció a la primera figura de curso que se
+intentó.
+
+### Nota de mantenimiento
+
+⚠️ **La sesión del 2026-08-05 no dejó entrada aquí** —las dos compuertas nuevas (`citafail`,
+`humofail`) y el arreglo de `franck_condon` están en `CLAUDE.md` y en los mensajes de commit,
+pero no en la bitácora—. No se rellena a posteriori: quien la vivió sabe el porqué y esto
+solo lo anota. `PENDIENTES.md` sí se puso al día (iba por «ocho compuertas» y 53 negativas).

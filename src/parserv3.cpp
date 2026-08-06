@@ -2006,6 +2006,26 @@ struct PrimStmt : Stmt {
       if (!isKnownPrimAttr(kv.first))
         evalError("atributo desconocido en la primitiva: ",
                   name + " — `" + kv.first + "=` no existe (¿mal escrito?)");
+    // §4: `polygon` RELLENA POR DEFINICIÓN —es justo lo que lo distingue de una
+    // polilínea cerrada—, así que `fill="none"` no es una opción sino una
+    // contradicción, y hasta el 2026-08-06 se aceptaba EN SILENCIO saliendo del
+    // revés: Polyline::draw() reactiva el relleno del polígono (`if
+    // (type==GI_POLYGON && !filled) g.setFilled(true)`) sin mirar si ese !filled
+    // vino de heredar el ambiente o de un fill="none" deliberado, y como el camino
+    // de "none" no deja AT_FCOLOR puesto, la reactivación cae al default: NEGRO.
+    // Sin `color=` además salía `stroke="none"`: un manchón negro sólido sin
+    // contorno, compilando limpio. Lo destapó una figura de curso ajena al corpus,
+    // que dio la vuelta a mano sin saber que la construcción que quería ya existe.
+    if (name == "polygon") {
+      auto fit = named.find("fill");
+      if (fit != named.end()) {
+        Value fv = fit->second->eval(s);
+        if (fv.type == Value::STRING && fv.str == "none")
+          evalError("polygon rellena por definición: `fill=\"none\"` se contradice con "
+                    "la primitiva — para un contorno cerrado SIN relleno usa "
+                    "polyline(closed=true)");
+      }
+    }
     // polyline/polygon/bezier admiten subtrayectos disjuntos separados por ';'
     // (§4): un item por subtrayecto, mismo estilo (distinto de compound, §9.4,
     // que combina en un solo relleno par-impar). El resto de primitivas ignora

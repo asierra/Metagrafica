@@ -96,6 +96,34 @@ Las tres primeras son las caras.
     `marker_end_shift` es la otra vía y su unidad no es obvia: **fracción del segmento del
     extremo**, con default 1. Ver §4 de la referencia.
 
+12. **`polygon` rellena por definición: no se le apaga el relleno.** `polygon(fill="none")` es
+    **error** —lo era en silencio hasta el 2026-08-06, y salía relleno de NEGRO—. Un contorno
+    cerrado sin relleno es `polyline(closed=true)`, que además no repite el primer vértice:
+
+    ```octave
+    display_size 6 5
+    world_window 0 6 0 5
+    polyline(closed=true, dash="dashed") { 1 1  5 1  5 4 }   % contorno, sin relleno
+    polygon(fill=gray(0.85), color="black") { 1 1  5 1  5 4 }  % relleno contorneado
+    ```
+
+13. **`concat` SUELDA: traslada cada pieza para que arranque donde acabó la anterior.** No
+    yuxtapone en coordenadas absolutas. Es lo que permite armar una curva larga con piezas
+    definidas en un dominio canónico, y es una trampa cuando las piezas ya vienen colocadas:
+    `concat(&arriba, reverse(&abajo))` para cerrar la banda entre dos curvas **desplaza la de
+    abajo** por la diferencia entre los dos extremos que se unen — sin aviso, y el resultado
+    compila y se ve como una curva plausible. Para que la soldadura sea la identidad, haz que
+    las piezas **ya se toquen**: interpón el segmento de cierre.
+
+    ```octave
+    display_size 8 5
+    world_window 0 8 0 5
+    path arriba = { 1 3  3 4  6 4 }
+    path abajo  = { 1 2  3 2  6 1 }
+    path cierre = { 6 4  6 1 }                        % la soldadura de aquí es un no-op
+    polygon(concat(&arriba, &cierre, reverse(&abajo)), fill=gray(0.85), color="black")
+    ```
+
 ⚠️ **No inventes argumentos ni añadas mobiliario que no se pidió** (leyendas, retículas, tablas):
 si no está en la referencia ni en `examples/`, no existe. Este fallo se midió — **darle el
 catálogo entero del lenguaje a un modelo hace que use todo lo que ve**.

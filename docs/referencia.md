@@ -289,6 +289,13 @@ polyline { 1 1  2 0 }      % NO es roja
 **Relleno y contorno.** `fill=` enciende el relleno; `color=` es el trazo. Juntos = relleno
 contorneado. `fill="none"` apaga el relleno.
 
+> ⚠️ **`fill="none"` no vale en `polygon`, y es error.** Un polígono **rellena por
+> definición** —es justamente lo que lo distingue de una polilínea cerrada—, así que
+> apagarle el relleno se contradice con la primitiva. La forma de pedir un **contorno
+> cerrado sin relleno** es `polyline(closed=true)`, que además no repite el primer
+> vértice al final. Hasta el 2026-08-06 `polygon(fill="none")` se aceptaba en silencio y
+> salía **relleno de negro** (y sin `color=`, además sin contorno).
+
 **Colores:** los **148 nombres CSS** (`"steelblue"`, `"orange"`…), `"#rrggbb"`, o
 `gray(0.4)`. Sin excepciones: `green` y `orange` valen lo que valen en CSS.
 
