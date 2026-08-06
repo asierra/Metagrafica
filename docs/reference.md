@@ -350,6 +350,7 @@ Arguments: `align` (`"left"`/`"center"`/`"right"`), `valign` (`"baseline"`/`"top
 | `\frac{a}{b}` | fraction (numerator over denominator) — inside `$…$` |
 | `\hat{n}` `\vec{v}` | accent over its base: unit vector and vector — inside `$…$` |
 | `\,` `\;` `\!` `\quad` | fine math-space adjustment (thin, thick, negative thin, 1 em) |
+| `\{` `\}` `\$` `\\` `\/` … | **escape**: the character itself, with no function |
 
 ```octave
 text("$\Delta T_1$/n(BT 10.3 - 12.3 $\mu/rm$)", align="center") { 5 1 }
@@ -360,6 +361,40 @@ any machine, with no fonts or TeX installed.
 
 > ⚠️ **It's `/n`, not `\n`.** The backslash consumes all the alphabetic text that follows —that's how
 > `\alpha` and `\nabla` are read—, so `"one\ntwo"` would look for a symbol called `ntwo`.
+
+#### The escape: how to write a character that is syntax
+
+A backslash followed by a **non-alphabetic** character means *that character, literally*. It is
+the way out for the five that the markup reserves:
+
+| you write | you get | why it was needed |
+|---|---|---|
+| `\{` `\}` | `{` `}` | unescaped they group (`{/bbold}`) |
+| `\$` | `$` | unescaped it opens and closes math mode |
+| `\\` | `\` | unescaped it starts a `\command` |
+| `\/` | `/` | unescaped it may change the type face |
+
+```octave
+text("a\{b\}c and the price \$5") { 1 2 }   % → a{b}c and the price $5
+text("5 m\/s") { 1 1 }                      % → 5 m/s
+```
+
+> ⚠️ **The slash `/` eats the letter that follows if it is one of these: `b e i g r s c t $ n`.**
+> That is the list of face codes (plus `/n`, the line break), which is why `text("5 m/s")` draws
+> **`5 m`**: `/s` reads as "sans-serif" and the `s` disappears. It hits almost every unit with a
+> slash —`m/s`, `J/g`, `cal/g`, `1/e`— while `W/m2` survives by luck, because `m` is not on the
+> list. Write `\/` and there is no ambiguity.
+>
+> `mg` **warns** when the face change lands at the end of the string, which is where it cannot be
+> wrong. In the middle (`v (m/s)`) it does not warn: there it is indistinguishable from an
+> intentional face change, so the defence is to write `\/`.
+
+Inside `$…$` an escaped `\{` is not just any character: it is a **delimiter**, and it gets the
+spacing that opening or closing earns it, just like `(` and `[`.
+
+> There is **no extensible brace** yet —the one that grows with what it encloses—. `\{` gives a
+> brace the size of the font. To span several lines or a range of the drawing, today you draw it
+> by hand.
 
 In multiline text, `valign` aligns **the whole block**, not each line.
 
@@ -1249,4 +1284,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 7034a2fd899a7d7f809facb88431d63ebcfb469f -->
+<!-- translated-from: referencia.md @ c9348c9d997aacf2c0fb9bd7577bc45dcf7dfb0f -->

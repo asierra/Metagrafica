@@ -352,6 +352,7 @@ Argumentos: `align` (`"left"`/`"center"`/`"right"`), `valign`
 | `\frac{a}{b}` | fracción (numerador sobre denominador) — dentro de `$…$` |
 | `\hat{n}` `\vec{v}` | acento sobre la base: versor y vector — dentro de `$…$` |
 | `\,` `\;` `\!` `\quad` | ajuste fino de espacio math (fino, grueso, fino negativo, 1 em) |
+| `\{` `\}` `\$` `\\` `\/` … | **escape**: el carácter tal cual, sin función |
 
 ```octave
 text("$\Delta T_1$/n(BT 10.3 - 12.3 $\mu/rm$)", align="center") { 5 1 }
@@ -362,6 +363,40 @@ figura se ve igual en cualquier máquina, sin fuentes ni TeX instalados.
 
 > ⚠️ **Va `/n` y no `\n`.** La barra invertida consume todo lo alfabético que sigue —así se
 > leen `\alpha` y `\nabla`—, así que `"uno\ndos"` buscaría un símbolo llamado `ndos`.
+
+#### El escape: cómo escribir un carácter que es sintaxis
+
+Una barra invertida seguida de un carácter **no alfabético** significa *ese carácter, literal*.
+Es la salida para los cinco que el marcado se reserva:
+
+| escribes | sale | por qué hacía falta |
+|---|---|---|
+| `\{` `\}` | `{` `}` | sin escapar agrupan (`{/bnegrita}`) |
+| `\$` | `$` | sin escapar abre y cierra el modo math |
+| `\\` | `\` | sin escapar empieza un `\comando` |
+| `\/` | `/` | sin escapar puede cambiar la cara tipográfica |
+
+```octave
+text("a\{b\}c y el precio \$5") { 1 2 }   % → a{b}c y el precio $5
+text("5 m\/s") { 1 1 }                    % → 5 m/s
+```
+
+> ⚠️ **La barra `/` se come la letra que sigue si es una de éstas: `b e i g r s c t $ n`.**
+> Es la lista de códigos de cara (más `/n`, el salto de renglón), y por eso `text("5 m/s")`
+> dibuja **`5 m`**: `/s` se lee «sans-serif» y la `s` desaparece. Toca a casi toda unidad con
+> barra —`m/s`, `J/g`, `cal/g`, `1/e`—, mientras que `W/m2` se salva de casualidad, porque `m`
+> no está en la lista. Escribe `\/` y no hay ambigüedad.
+>
+> `mg` **avisa** cuando el cambio de cara queda al final de la cadena, que es donde no puede
+> equivocarse. En medio (`v (m/s)`) no avisa: ahí es indistinguible de un cambio de cara
+> intencional, así que la defensa es escribir `\/`.
+
+Dentro de `$…$` un `\{` escapado no es un carácter cualquiera: es un **delimitador**, y recibe
+el espaciado que le toca por abrir o cerrar, igual que `(` y `[`.
+
+> Todavía **no hay llave extensible** —la que crece con lo que encierra—. `\{` da una llave del
+> tamaño de la fuente. Para abarcar varios renglones o un rango del dibujo, hoy se dibuja a
+> mano.
 
 En un texto multilínea, `valign` alinea **el bloque entero**, no cada renglón.
 

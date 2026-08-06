@@ -313,21 +313,24 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       como base WIP** (dormante, `ok=66`; EPS/PDF centran, SVG con bug acotado, inline sin
       hacer). ⚠️ **`\frac` DEPENDE de la Parte A** (usa `TextLine::width()` para dimensionar la
       fracción). Orden: Parte A → (`\frac` y/o Parte B). Detalle en ambos planes.
-- [ ] 🪢 **Llaves, delimitadores extensibles y el ESCAPE que falta** — `plan_llaves.md`
-      (abierto 2026-08-06, propuesta sin implementar; lo pidió una figura de curso a la que
-      hubo que sustituirle la llave por una cota de doble flecha). Tres cosas separables:
-      **(1)** el repertorio de marcación **no tiene escape**, y eso no solo impide escribir
-      `{`: `text("5 m/s")` sale **`5 m`** porque `/s` es cambio de cara (`font_style_codes =
-      "beigrsct$"`), y con él caen `J/g`, `cal/g`, `1/r`, `1/e`… en silencio. Propuesta:
-      `\` + no-alfabético = ese carácter literal. **(2)** `{`/`}` **no están en el subset** de
-      LM Math (medido: 237 codepoints, no 186 como dice su cabecera), así que `\{` en modo math
-      exige re-subsetear — y ⚠️ **el paso de subset no es reproducible hoy**: `plan_lmmath.md`
-      dice «1 comando» pero no hay script en `tools/` ni regla en el Makefile. **(3)** la llave
-      alta: **dibujarla**, no tomarla de la fuente (el subset no trae las piezas extensibles ni
-      la tabla `MATH` que declara su ensamblado, así que la fuente daría el arte y no el
-      comportamiento; y estirar un glifo o una struct deforma los ganchos = familia
-      `plan_anisotropia.md`). Orden sugerido en §6 del plan; cero presión del corpus, como
-      todo lo de esta sección.
+- [ ] 🪢 **Llaves y delimitadores extensibles** — `plan_llaves.md` (abierto 2026-08-06; lo pidió
+      una figura de curso a la que hubo que sustituirle la llave por una cota de doble flecha).
+      **(1) ✅ HECHO el 2026-08-06 — el ESCAPE que faltaba.** `\` + carácter no alfabético = ese
+      carácter literal (`\{ \} \$ \\ \/`), y con él se cierra el `text("5 m/s")` que salía
+      **`5 m`** porque `/s` es cambio de cara — junto con `J/g`, `cal/g`, `1/e`… todos en
+      silencio. Se añadió además un aviso para el cambio de cara al final de la cadena, la
+      única forma sin falsos positivos (medido: la heurística amplia los tiene, `$\mu/rm$` de
+      fig2-5). 4 fixtures nuevos y cobertura de glifos en `examples/texto.mg`.
+      **(2)** `{`/`}` **no están en el subset** de LM Math (medido: 237 codepoints, no 186 como
+      dice su cabecera). ⚠️ **Ya no bloquea nada**: se midió que los tres backends caen a
+      Times-Italic para un byte ausente de `cmmiUnicode()` y que `text_width` lo mide con la
+      misma tabla, así que `\{` en math sale y cuadra. Queda como mejora tipográfica —hoy la
+      llave es de Times junto a paréntesis de LM Math— y arrastra el que ⚠️ **el paso de subset
+      no es reproducible hoy**: `plan_lmmath.md` dice «1 comando» pero no hay script en
+      `tools/` ni regla en el Makefile. **(3)** la llave alta: **dibujarla**, no tomarla de la
+      fuente (el subset no trae las piezas extensibles ni la tabla `MATH` que declara su
+      ensamblado, así que la fuente daría el arte y no el comportamiento; y estirar un glifo o
+      una struct deforma los ganchos = familia `plan_anisotropia.md`). Orden en §6 del plan.
 - [ ] 🔤 **La fuente math del SVG no tiene lista de respaldo, y en un visor que no cargue el
       `@font-face` cae a SANS** (hallado 2026-07-31, lo notó Alejandro: «el pi del SVG no se ve
       tan bonito como el del EPS»). El archivo está BIEN: `SVGDisplay` embebe Latin Modern Math

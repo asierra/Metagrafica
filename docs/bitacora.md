@@ -4134,3 +4134,85 @@ intentó.
 `humofail`) y el arreglo de `franck_condon` están en `CLAUDE.md` y en los mensajes de commit,
 pero no en la bitácora—. No se rellena a posteriori: quien la vivió sabe el porqué y esto
 solo lo anota. `PENDIENTES.md` sí se puso al día (iba por «ocho compuertas» y 53 negativas).
+
+---
+
+## 2026-08-06 — El escape que le faltaba al marcado (paso 1 de `plan_llaves.md`)
+
+`plan_llaves.md` se abrió ayer con tres entregas separables. Ésta es la primera, y se
+eligió antes que la llave misma porque **no depende de ella y arregla un bug vivo**:
+`text("5 m/s")` dibujaba `5 m`. `/s` es el código de cara «sans-serif» y se llevaba la `s`
+por delante, sin una queja, con salida byte-estable y plausible. Caían igual `J/g`,
+`cal/g`, `1/e` — casi toda unidad con barra —, mientras que `W/m2` sobrevivía de
+casualidad, porque `m` no está en la tabla de caras.
+
+**E1 — la regla.** `\` seguido de un carácter **no alfabético** es ese carácter, literal.
+Cierra `\{`, `\}`, `\$`, `\\` y `\/` de un golpe. Va después de los overrides de espaciado
+math (`\,` `\;` `\!`), que son el mismo patrón —mirar el siguiente carácter antes del
+escaneo alfabético— y tienen esos tres signos tomados. En math el literal **sigue siendo un
+átomo** y toma su clase: `\{` abre y `\}` cierra, como `(` y `[`; con la clase equivocada el
+espaciado no desaparecería, saldría *mal poco*, que es lo difícil de ver.
+
+**E2b — el aviso.** El escape solo sirve si sabes que lo necesitas. Se avisa cuando el
+cambio de cara queda **al final de la cadena**, que es donde no puede ser intencional.
+⚠️ **La heurística amplia que proponía el plan —sospechar de la barra pegada a una letra— se
+midió y NO sirve:** el `$\mu/rm$` de `fig2-5` lleva la `/r` pegada a la `u` de `\mu` y es
+legítima. El `m/s` en MEDIO de una cadena (`v (m/s)`) queda fuera del aviso a propósito: es
+indistinguible de un cambio de cara querido, y su defensa es documental. Cero avisos sobre
+los 31 ejemplos.
+
+### Lo que se midió, y que cambia el plan
+
+**El paso 2 dejó de ser prerrequisito.** El plan daba por inevitable meter U+007B/007D al
+subset de LM Math para que `\{` funcionara en math, y eso arrastraba reconstruir un paso de
+build que no existe (`plan_lmmath.md` dice «re-subsetear es 1 comando», pero ese comando no
+está en el árbol). Medido antes de escribir una línea: los tres backends **ya** caen a
+Times-Italic ante un byte ausente de `cmmiUnicode()` —SVG lo deja como Latin-1, EPS y PDF
+parten el run— y `text_width` lo mide con `serifitalic_metrics_map`, la **misma** partición,
+así que la llave sale y el centrado cuadra. El paso 2 baja a mejora tipográfica: hoy la
+llave de `$\{x\}$` es de Times junto a paréntesis de LM Math, y eso se nota si conviven.
+
+### Dos cosas que E1 rompía y no eran obvias
+
+1. **`extractGroup` contaba llaves crudas.** Es quien halla los dos grupos balanceados de
+   `\frac`, así que `\frac{a\{}{b}` cortaba en el sitio equivocado — y sin una queja, porque
+   las llaves *parecen* balanceadas. Ahora salta el par escapado entero.
+
+2. ⚠️ **`tools/arcparity.py` tenía un bug PREEXISTENTE que E1 destapó**, y es el hallazgo
+   más útil de la sesión. Barría el PDF entero con una regex de operadores **sin saltar los
+   literales de cadena**, así que el rótulo `(5 m/s) Tj` se leía como `5` + `m` (moveto) y
+   reventaba con `IndexError`. Cualquier figura con un rótulo tipo «5 m» lo habría tumbado;
+   ninguna del corpus lo tenía. Con dos operandos en vez de uno no habría reventado: habría
+   **inyectado geometría falsa**, que es peor. Arreglado con `strip_pdf_strings`, que respeta
+   anidamiento y `\`, y que **acota** el literal sin cerrar a 8192 bytes: en el stream binario
+   de la fuente embebida hay bytes 0x28 sueltos, y sin la cota una fuente se tragaría toda la
+   geometría — dejando la compuerta en verde permanente, que es el modo de fallo que estas
+   compuertas tienen prohibido. Verificado que **sigue cazando** un arco deformado.
+
+   Los otros dos parsers no comparten el fallo, y por razones distintas: el de EPS ancla con
+   `.match` al principio de cada línea, y una línea de texto empieza por `(`; el de SVG solo
+   mira atributos `d=`.
+
+### Pruebas
+
+Cuatro fixtures nuevos (`err_ok` 55 → 59) y, sobre todo, **cobertura de glifos en
+`examples/texto.mg`**: dos rótulos con los escapes, uno de ellos en math. Sin ellos, perder
+E1 volvería al silencio sin mover un golden.
+
+⚠️ **Y ahí está la lección de método de esta sesión.** El primer fixture se escribió vigilando
+`symbol name unknown`, que es el aviso que *parecía* pertinente. Se corrió contra un binario
+sin el escape y **salía limpio**: el fixture habría pasado con la característica rota. Es la
+consecuencia directa de que el fallo de E1 sea silencioso — no hay diagnóstico cuya ausencia
+lo delate—. Se cambió al aviso del `\frac`, que con un binario sin E1 **sí** sale, porque la
+llave escapada desbalancea el conteo de grupos. **Un fixture no vale por parecerse al bug:
+vale si se ha comprobado que FALLA sin el arreglo**, y aquí eso hubo que medirlo, no
+suponerlo.
+
+### Nota aparte: un golden rancio de la sesión anterior
+
+Al arrancar, `check` daba `fail=2` (`franck_condon` EPS y PDF) **antes de tocar nada**. No era
+E1: el commit `84d466f` metió `if v < vmax1 { … }` dentro del lazo de niveles, y en MG un
+bloque `{ }` apila y restaura estado gráfico — de ahí `gsave`/`grestore` de más, con el dibujo
+idéntico. Se re-bendijo esa base **antes** de empezar, para no mezclar dos causas en el mismo
+diff. Los goldens no van en git, así que esto reaparece cada vez que un commit toca un `.mg`
+sin re-capturar.

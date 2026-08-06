@@ -39,6 +39,19 @@ Las tres primeras son las caras.
    text("Radiancia total/n$L_{tot} = \frac{\rho E T}{\pi} + L_p$") { 4 2.5 }
    ```
 
+   ⚠️ **Y por eso una barra que quieras VER se escribe `\/`.** La barra se come la letra que
+   sigue si es una de `b e i g r s c t $ n`, así que `text("5 m/s")` dibuja **`5 m`** —`/s` se
+   lee «sans-serif»—. Toca a casi toda unidad con barra: `m/s`, `J/g`, `cal/g`, `1/e`. La regla
+   general es que **`\` seguido de un carácter no alfabético es ese carácter, literal**, que es
+   también como se escriben `\{`, `\}`, `\$` y `\\`:
+
+   ```octave
+   display_size 8 5
+   world_window 0 8 0 5
+   text("velocidad de 5 m\/s") { 4 3 }
+   text("el conjunto \{a, b\} cuesta \$5") { 4 2 }
+   ```
+
 3. **Las griegas y los símbolos van por su NOMBRE, con barra invertida y dentro de `$…$`:**
    `$\mu$`, `$\rho$`, `$\pi$`, `$\theta$`. Pegar el glifo Unicode (µ, ρ, π) no funciona: la
    fuente no lo tiene por esa vía y el compilador lo descarta con aviso. Tampoco existe
@@ -517,6 +530,25 @@ align "center"
 valign "middle"
 text("/bdos renglones/nen negrita") { -3.2 -1.2 }
 text("con un renglon/n/nvacio en medio") { -3.2 -2.15 }
+
+% --- Escapes: `\` + caracter NO alfabetico = ese caracter, literal -----
+% Unica cobertura del escape en el corpus, y la unica compuerta que fija los
+% GLIFOS que produce: las pruebas de test/errors solo miran stderr y el codigo
+% de salida, asi que no pueden ver si `\{` dibuja una llave o no dibuja nada.
+% Sin estas dos lineas, perder el escape volveria a la conducta que tenia hasta
+% el 2026-08-06 —comerse los dos caracteres EN SILENCIO— sin mover un golden.
+%
+% La segunda va en math a proposito: ahi la llave no es solo un caracter, es un
+% DELIMITADOR, y su clase de espaciado (abre/cierra, como `(`) decide el hueco a
+% los lados. Con la clase equivocada el espaciado no desaparece, sale mal poco.
+% Ademas `{` y `}` NO estan en el subset de LM Math, asi que este par ejercita
+% la caida a Times-Italic que hacen los tres backends para un byte que la fuente
+% math no tiene —y que `text_width` mide con esa misma tabla, o el centrado se
+% iria a la deriva—.
+align "left"
+valign "bottom"
+text("Escapes: a\{b\} \$5 m\/s \\") { 1.4 -2.05 }
+text("y en math $\{x : x > 0\}$") { 1.4 -2.6 }
 ```
 
 EJEMPLO 4: Marcadores — las siete formas del catálogo, y cómo se orientan.

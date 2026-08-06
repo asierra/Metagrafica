@@ -3612,7 +3612,26 @@ text(&quot;Viñeta • daga † por mil ‰ marca ™ euro € œuvre&quot;) { -
 align &quot;center&quot;
 valign &quot;middle&quot;
 text(&quot;/bdos renglones/nen negrita&quot;) { -3.2 -1.2 }
-text(&quot;con un renglon/n/nvacio en medio&quot;) { -3.2 -2.15 }</pre></details>
+text(&quot;con un renglon/n/nvacio en medio&quot;) { -3.2 -2.15 }
+
+% --- Escapes: `\` + caracter NO alfabetico = ese caracter, literal -----
+% Unica cobertura del escape en el corpus, y la unica compuerta que fija los
+% GLIFOS que produce: las pruebas de test/errors solo miran stderr y el codigo
+% de salida, asi que no pueden ver si `\{` dibuja una llave o no dibuja nada.
+% Sin estas dos lineas, perder el escape volveria a la conducta que tenia hasta
+% el 2026-08-06 —comerse los dos caracteres EN SILENCIO— sin mover un golden.
+%
+% La segunda va en math a proposito: ahi la llave no es solo un caracter, es un
+% DELIMITADOR, y su clase de espaciado (abre/cierra, como `(`) decide el hueco a
+% los lados. Con la clase equivocada el espaciado no desaparece, sale mal poco.
+% Ademas `{` y `}` NO estan en el subset de LM Math, asi que este par ejercita
+% la caida a Times-Italic que hacen los tres backends para un byte que la fuente
+% math no tiene —y que `text_width` mide con esa misma tabla, o el centrado se
+% iria a la deriva—.
+align &quot;left&quot;
+valign &quot;bottom&quot;
+text(&quot;Escapes: a\{b\} \$5 m\/s \\&quot;) { 1.4 -2.05 }
+text(&quot;y en math $\{x : x &gt; 0\}$&quot;) { 1.4 -2.6 }</pre></details>
         </div>
       </article>
       <article class="tarjeta">

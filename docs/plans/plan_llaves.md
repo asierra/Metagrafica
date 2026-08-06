@@ -1,9 +1,33 @@
 # plan_llaves.md — Llaves, delimitadores extensibles y el escape que falta
 
-**Estado:** propuesta para discutir. Nada implementado. Abierto el 2026-08-06 a raíz de
-la reconstrucción de la Fig. 1.7 de Lillesand (`reflectancia_vegetacion.mg`, curso ENCiT),
-cuya llave del margen derecho hubo que sustituir por una cota de doble flecha porque MG no
-tiene con qué dibujarla.
+**Estado:** **paso 1 HECHO** (E1 + E2b, 2026-08-06); el resto, propuesta para discutir.
+Abierto el 2026-08-06 a raíz de la reconstrucción de la Fig. 1.7 de Lillesand
+(`reflectancia_vegetacion.mg`, curso ENCiT), cuya llave del margen derecho hubo que sustituir
+por una cota de doble flecha porque MG no tiene con qué dibujarla.
+
+> **Lo que la implementación del paso 1 MIDIÓ, y que cambia el plan** (2026-08-06):
+>
+> 1. ⚠️ **El paso 2 NO es prerrequisito del 1.** §2 daba por inevitable meter U+007B/007D al
+>    subset de LM Math para que `\{` funcionara en math. Medido: no hace falta. Los tres
+>    backends ya caen a Times-Italic ante un byte que no está en `cmmiUnicode()` —SVG lo deja
+>    como Latin-1, EPS y PDF parten el run— y `text_width` lo mide con `serifitalic_metrics_map`,
+>    la MISMA partición, así que la llave sale y el centrado cuadra. El paso 2 baja de
+>    prerrequisito a **mejora tipográfica**: hoy la llave de `$\{x\}$` es de Times y los
+>    paréntesis de al lado son de LM Math, y eso se nota si conviven.
+> 2. **Pregunta abierta 5 (E2b) — RESUELTA, y por medición.** La heurística amplia que se
+>    consideró —sospechar de la barra PEGADA a una letra— tiene falso positivo en el corpus:
+>    el `$\mu/rm$` de `fig2-5` lleva la `/r` pegada a la `u` de `\mu` y es legítima. Se
+>    implementó solo la forma sin escapatoria: **cambio de cara al FINAL de la cadena**, donde
+>    es imposible que sea intencional. Cero avisos sobre los 31 ejemplos. El `m/s` en medio
+>    (`v (m/s)`) queda fuera del aviso a propósito y su defensa es documental.
+> 3. **`extractGroup` necesitaba saltar los pares escapados**, y no era obvio: cuenta llaves
+>    para hallar el grupo balanceado de `\frac`, así que `\frac{a\{}{b}` cortaba en el sitio
+>    equivocado. Como las llaves *parecen* balanceadas, fallaba sin una queja.
+> 4. **`tools/arcparity.py` tenía un bug preexistente que E1 destapó.** Barría el archivo PDF
+>    entero con una regex de operadores, sin saltar los literales de cadena: el rótulo `5 m/s`
+>    se leía como `5` + `m` (moveto) y reventaba con `IndexError`. Cualquier figura con un
+>    rótulo tipo «5 m» lo habría tumbado; ninguna del corpus lo tenía. Arreglado con
+>    `strip_pdf_strings` (y verificado que la compuerta SIGUE cazando un arco deformado).
 
 ---
 
@@ -337,8 +361,8 @@ esto abarca un vano y tiene dos extremos. Es una `polyline`, no un `dot`.
 
 | # | Entrega | Depende de | Notas |
 |---|---|---|---|
-| 1 | **E1: escape `\<no-alfabético>`** + pruebas negativas | — | cierra `\{`, `\$`, `\\`, y el `m/s` |
-| 2 | **U+007B/007D al subset** + paso de re-subset reproducible en `tools/` | 1 | lo pide E1 en modo math; el paso de build hace falta igual |
+| 1 | ✅ **E1: escape `\<no-alfabético>`** + E2b + 4 pruebas negativas | — | HECHO 2026-08-06. Cierra `\{`, `\$`, `\\`, `\/` y el `m/s`. Cobertura de glifos en `examples/texto.mg` |
+| 2 | **U+007B/007D al subset** + paso de re-subset reproducible en `tools/` | — | **ya NO lo pide E1** (ver la caja de arriba): la llave sale de Times-Italic y mide bien. Queda como mejora tipográfica, para que no desentone junto a un `(` de LM Math |
 | 3 | **`lib/llave.mg`** (ruta C) | — | desbloquea la figura del curso; banco de pruebas del trazo |
 | 4 | **Geometría de la llave** en un header estilo `markers.h` | 3 | una fuente de verdad, tres backends |
 | 5 | **Primitiva `brace(...)`** (caso 2) | 4 | + ejemplo, + entrada en la galería |

@@ -57,6 +57,19 @@ Las tres primeras son las caras.
    text("Radiancia total/n$L_{tot} = \frac{\rho E T}{\pi} + L_p$") { 4 2.5 }
    ```
 
+   ⚠️ **Y por eso una barra que quieras VER se escribe `\/`.** La barra se come la letra que
+   sigue si es una de `b e i g r s c t $ n`, así que `text("5 m/s")` dibuja **`5 m`** —`/s` se
+   lee «sans-serif»—. Toca a casi toda unidad con barra: `m/s`, `J/g`, `cal/g`, `1/e`. La regla
+   general es que **`\` seguido de un carácter no alfabético es ese carácter, literal**, que es
+   también como se escriben `\{`, `\}`, `\$` y `\\`:
+
+   ```octave
+   display_size 8 5
+   world_window 0 8 0 5
+   text("velocidad de 5 m\/s") { 4 3 }
+   text("el conjunto \{a, b\} cuesta \$5") { 4 2 }
+   ```
+
 3. **Las griegas y los símbolos van por su NOMBRE, con barra invertida y dentro de `$…$`:**
    `$\mu$`, `$\rho$`, `$\pi$`, `$\theta$`. Pegar el glifo Unicode (µ, ρ, π) no funciona: la
    fuente no lo tiene por esa vía y el compilador lo descarta con aviso. Tampoco existe

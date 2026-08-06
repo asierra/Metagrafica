@@ -241,21 +241,81 @@ def flatten_bezier(p0, p1, p2, p3, n=None):
 
 RE_PDF_OP = re.compile(r'((?:-?[\d.]+\s+)+)(m|l|c|h)\b')
 
+# Un literal de cadena PDF más largo que esto no es un rótulo: es un `(` suelto
+# dentro del stream BINARIO de una fuente embebida. Ver strip_pdf_strings.
+MAX_PDF_STRING = 8192
+
+
+def strip_pdf_strings(data):
+    """Sustituye por un espacio los literales de cadena `(...)` del PDF.
+
+    ⚠️ Hace falta porque RE_PDF_OP barre el ARCHIVO ENTERO, y ahí dentro un RÓTULO
+    puede fabricar un operador de la nada: `text("5 m/s")` viaja al PDF como
+    `(5 m/s) Tj`, y `5 m` es exactamente la forma de un `moveto`. Con un operando
+    reventaba —`v[-2]`, IndexError— y con dos habría inyectado GEOMETRÍA FALSA, que
+    es peor, porque no se nota: un `m` espurio parte una polilínea en dos y el
+    cotejo de arcos empieza a comparar trozos.
+
+    Es un fallo PREEXISTENTE, no de los rótulos que lo destaparon (2026-08-06, al
+    entrar el escape `\\` a `examples/texto.mg`): cualquier figura con un rótulo
+    tipo «5 m» lo habría disparado, y ninguna del corpus lo tenía. Los otros dos
+    parsers no lo comparten — el de EPS ancla con `.match` al principio de cada
+    línea, y una línea de texto empieza por `(`; el de SVG solo mira atributos `d=`.
+
+    El anidamiento y el `\\` se respetan porque PDF los admite dentro de la cadena.
+    Y si un `(` no cierra dentro de MAX_PDF_STRING se deja tal cual en vez de
+    tragarse el resto del archivo: en un stream binario de fuente hay bytes 0x28
+    sueltos, y sin esa cota una fuente embebida borraría toda la geometría —lo que
+    convertiría esta compuerta en verde permanente, que es el modo de fallo que las
+    compuertas de este proyecto tienen prohibido.
+    """
+    out, i, n = [], 0, len(data)
+    while i < n:
+        k = data.find('(', i)
+        if k < 0:
+            out.append(data[i:])
+            break
+        out.append(data[i:k])
+        j, depth = k + 1, 1
+        while j < n and depth and j - k < MAX_PDF_STRING:
+            ch = data[j]
+            if ch == '\\':
+                j += 2
+                continue
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth -= 1
+            j += 1
+        if depth:                 # sin cierre: no era una cadena
+            out.append('(')
+            i = k + 1
+        else:
+            out.append(' ')       # la cadena entera se va, deja un separador
+            i = j
+    return ''.join(out)
+
 
 def polylines_from_pdf(path):
     """El PDF de libharu NO va comprimido, así que sus operadores son parseables
     directo — la misma propiedad de la que ya dependen las otras invariantes."""
-    data = open(path, 'rb').read().decode('latin-1')
+    data = strip_pdf_strings(open(path, 'rb').read().decode('latin-1'))
     polys, pts, cur, start = [], [], None, None
     for args, op in RE_PDF_OP.findall(data):
         v = [float(t) for t in args.split()]
+        # Los operandos se cuentan antes de usarlos. Con strip_pdf_strings ya no
+        # deberían llegar operadores mutilados, pero la compuerta no debe morir de
+        # IndexError ante una entrada rara: un fallo suyo tiene que ser un
+        # diagnóstico, no un traceback.
         if op == 'm':
+            if len(v) < 2:
+                continue
             if len(pts) > 1:
                 polys.append(pts)
             cur = (v[-2], v[-1])
             start = cur
             pts = [cur]
-        elif op == 'l' and cur:
+        elif op == 'l' and cur and len(v) >= 2:
             cur = (v[-2], v[-1])
             pts.append(cur)
         elif op == 'c' and cur and len(v) >= 6:

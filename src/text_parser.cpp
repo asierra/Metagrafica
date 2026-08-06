@@ -245,13 +245,17 @@ enum MathClass { MC_NONE = 0, MC_ORD, MC_OP, MC_BIN, MC_REL, MC_OPEN, MC_CLOSE, 
 static int    math_prev_class    = MC_NONE;
 static double math_pending_space = 0;   // overrides \, \; \! \quad, aditivos al auto
 
+// `{` y `}` solo llegan aquí ESCAPADOS (`\{`, E1): sin escapar son sintaxis de
+// agrupación y se atienden en sus propios `case` del bucle, que nunca caen al
+// `default`. Escapados son delimitadores como `(` y `[`, y darles MC_ORD no
+// borraría el espaciado sino que lo dejaría MAL POCO, que es lo difícil de ver.
 static int mathClassOfByte(unsigned char c) {
   switch (c) {
   case '=': case '<': case '>':  return MC_REL;
   case '+': case '-':            return MC_BIN;   // unario se reclasifica en mathAtomSpace
   case ',': case ';':            return MC_PUNCT;
-  case '(': case '[':            return MC_OPEN;
-  case ')': case ']':            return MC_CLOSE;
+  case '(': case '[': case '{':  return MC_OPEN;
+  case ')': case ']': case '}':  return MC_CLOSE;
   default:                       return MC_ORD;   // letras, dígitos, '.', '|', prima…
   }
 }
@@ -637,6 +641,11 @@ static bool extractGroup(const string &s, int n, int &pos, string &out)
   if (pos >= n || s[pos] != '{') return false;
   int depth = 0, start = pos + 1;
   for (; pos < n; pos++) {
+    // E1: una llave ESCAPADA (`\{`) es un carácter, no un delimitador de grupo. Sin
+    // esta guardia `\frac{a\{}{b}` contaría el `\{` como apertura y cortaría los dos
+    // grupos en el sitio equivocado — sin una queja, porque las llaves *parecen*
+    // balanceadas. Salta el par entero: lo que sigue a la barra no se inspecciona.
+    if (s[pos] == '\\' && pos + 1 < n) { pos++; continue; }
     if (s[pos] == '{') depth++;
     else if (s[pos] == '}') {
       if (--depth == 0) { out = s.substr(start, pos - start); pos++; return true; }
@@ -857,6 +866,23 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
       }
       std::size_t found = font_style_codes.find(input[it+1]);
       if (found!=std::string::npos) {
+        // E2(b) (2026-08-06): un cambio de cara al FINAL de la cadena no cambia
+        // nada — no queda texto al que aplicarlo. Es la firma exacta del `m/s` mal
+        // leído: la barra se quiso literal, `/s` se tomó por «sanserif» y se llevó
+        // la `s` por delante, en silencio. `5 m` es lo que salía.
+        //
+        // Se avisa SOLO en este caso porque es el único sin falsos positivos
+        // posibles: cambiar de cara y no escribir nada después siempre es inútil.
+        // La heurística más amplia que se consideró —«barra pegada a una letra»—
+        // SÍ los tiene, medido sobre el corpus: el `$\mu/rm$` de fig2-5 lleva la
+        // `/r` pegada a la `u` de `\mu` y es perfectamente legítima. Queda fuera
+        // del aviso, por tanto, el `m/s` en MEDIO de una cadena (`v (m/s)`); para
+        // ése la defensa es el escape `\/`, que la referencia ahora documenta.
+        if (it + 2 >= iend)
+          fprintf(stderr,
+                  "Aviso: «/%c» al final del texto cambia la cara tipográfica y no queda "
+                  "nada que dibujar con ella; si querías una barra literal, escribe «\\/».\n",
+                  input[it+1]);
         font_face = change_font_face(input[++it], text_state.font_face, using_fontcmmi);
         if (font_face != text_state.font_face) {
           textflush();
@@ -879,6 +905,37 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
       if (math_mode && input.compare(it+1, 4, "quad") == 0) {
         math_pending_space += 1.0;
         it += 4;
+        break;
+      }
+      // E1 (2026-08-06): `\` seguido de un carácter NO ALFABÉTICO significa ESE
+      // CARÁCTER, literal y sin función. Es el escape que le faltaba al lenguaje de
+      // marcado: hasta hoy `{`, `}`, `$`, `\` y `/` seguido de un código de cara eran
+      // INALCANZABLES en una cadena. Y no fallaban ruidosamente — el escaneo de abajo
+      // consume lo alfabético que sigue a la barra, así que ante `\{` no leía ningún
+      // nombre, no entraba al `if (v_end > it)` y se comía los DOS caracteres EN
+      // SILENCIO. La misma carencia se llevaba por delante `5 m/s`, que salía `5 m`.
+      //
+      // Va DESPUÉS de los overrides de espaciado (\, \; \!) porque son el mismo patrón
+      // —mirar el siguiente carácter antes del escaneo— y tienen esos tres signos
+      // tomados en modo math. Fuera de math no hay conflicto y `\,` es una coma.
+      if (it + 1 >= iend) {
+        // Barra colgante. Antes se descartaba sin decir nada; el aviso existe porque
+        // una cadena que termina en `\` casi siempre es un escape a medio escribir.
+        fprintf(stderr, "Aviso: «\\» al final del texto, sin nada que escapar.\n");
+        break;   // el it++ del bucle la consume
+      }
+      if (ALFABETIC.find(nx) == string::npos) {
+        it++;                       // consume el carácter escapado
+        // En math el literal SIGUE SIENDO UN ÁTOMO y toma la clase que le toca: `\{`
+        // abre (MC_OPEN) y `\}` cierra. No se descarga con add_symbol —no es un
+        // símbolo de LM Math sino un byte de la cara vigente— sino que se acumula en
+        // el run, como cualquier carácter del `default`.
+        if (math_mode) {
+          double sp = mathAtomSpace(mathClassOfByte(nx));
+          if (sp != 0) { mathSeal(); text_state.pre_space = sp; }
+        }
+        if (nx == '-') using_reencode = true;   // mismo trato que el `-` del `default`
+        accum.push_back(nx);
         break;
       }
       textflush();
