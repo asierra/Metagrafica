@@ -292,6 +292,49 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
+- [ ] 🚧 **COMPUERTA PROPUESTA: paridad de CARA tipográfica entre backends** (2026-08-19).
+      La invariante (a) de la Capa 3 cuenta operaciones de texto —`EPS(show) == SVG(<tspan>)
+      == PDF(Tj)`— y con eso caza el rótulo **en blanco**; lo que **no** compara es con qué
+      CARA se dibujó cada una. Un backend puede sacar el mismo texto, en el mismo sitio, en
+      otra fuente, y las diez compuertas siguen verdes.
+      - 🔎 **No es hipotético: es el hueco donde vivió el leak de la cara ambiente** (bitácora
+        2026-08-19). Un run `$…$` dejaba LM Math puesta para el resto del documento; **SVG
+        salía bien —por accidente, no tiene `dev_face`— y EPS/PDF mal**. Estaba **publicado**:
+        la leyenda de `quickstart` en itálica y la marca «1» del eje log de `fig6-4`. El golden
+        lo bendecía (byte-estable), la Capa 3 no lo veía y `imgfail` tampoco, porque el SVG
+        —el único formato que `docs/img` publica— era justo el que estaba bien.
+      - **Forma:** misma que `tools/arcparity.py`, que ya resuelve este problema para la
+        geometría de arcos: normalizar y comparar backend contra backend. ⚠️ Y por eso hereda
+        su mejor propiedad — **no hay nada que bendecir**: no compara contra un golden, así que
+        `capture` no puede apagarla.
+      - **El trabajo real es la normalización**, no la comparación: los tres nombran la cara de
+        forma distinta (`/Times-Italic findfont` en EPS, `font-family`/`font-style`/
+        `font-weight` en SVG, el nombre del recurso de fuente en PDF). Hay que mapearlas a un
+        vocabulario común y comparar la SECUENCIA, no un conteo.
+      - ⚠️ **Verificar que nace ROJA sobre el bug**: `git stash` del arreglo del 2026-08-19 (o
+        quitar `restoreAmbientFace`) debe ponerla a fallar en `quickstart` y `fig6-4`. Una
+        compuerta que no se prueba contra el fallo que dice cazar no está verificada — es la
+        disciplina con la que entraron las diez.
+- [ ] 🚧 **COMPUERTA PROPUESTA: los MENSAJES que cita la documentación** (propuesta 2026-07-28,
+      medida el 2026-08-19). §14 y §15 de la referencia **citan mensajes del compilador
+      textualmente**, y eso es un acoplamiento que ninguna de las diez vigila.
+      - 🔎 **Se vio en vivo el 2026-07-28**: se escribió la entrada citando un mensaje y el
+        mensaje se mejoró horas después, dejándola rancia al instante. Y la sesión del
+        2026-08-19 es el mismo argumento en negativo: se estuvo trabajando **alrededor de**
+        `ln: argumento no positivo` toda la noche, y si se hubiera cambiado el texto nada lo
+        habría dicho.
+      - **Es pariente de `citafail` pero en otro eje, y no se pueden fusionar:** aquélla
+        comprueba que lo que la doc cita de un **`.mg` del árbol** siga estando ahí; ésta, que
+        lo que la doc cita del **compilador** siga siendo lo que el compilador dice. La primera
+        lee archivos, la segunda lee la red de pruebas negativas.
+      - **Costo bajo y nace VERDE** (medido hoy): §14/§15 citan **dos** mensajes —`ln:
+        argumento no positivo` y `la figura sale EN BLANCO`— y los **dos** ya tienen fixture
+        (`test/errors/ln_no_positivo.mg`, `lienzo_en_blanco.mg`). Extraer los fragmentos
+        entrecomillados y exigir que cada uno aparezca en algún `% EXPECT*:` de `test/errors/`.
+      - 📌 **Entra verde a propósito, y es la mejor forma de entrar:** empieza a vigilar sin
+        pedir trabajo, y la primera vez que suene será por una regresión de verdad. Para
+        verificarla, cambiar a mano un mensaje citado y comprobar que falla.
+
 - [x] ~~**Texto multilínea §14.1**~~ — CERRADO 2026-07-21. `/n` rompe renglón; el motor
       gana `TextBlock` (`GI_TEXTBLOCK`), que apila renglones ya construidos con interlínea
       derivada de `font_size`. **En el motor y no en el parser** porque el tamaño de fuente
