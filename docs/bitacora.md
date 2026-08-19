@@ -4323,3 +4323,92 @@ significa nada: el dato acaba ahí porque ahí acaba la medición, no porque la 
 Se separó el relleno del contorno —`polygon(&Dring, fill=…)` **sin `color=`**, que rellena sin
 contornear, y las dos envolventes trazadas aparte como polilíneas abiertas—. El segmento de
 cierre sigue existiendo para el relleno; simplemente no se dibuja.
+
+---
+
+## 2026-08-19 — `dspstate.fontFace` hacía dos trabajos, y el segundo pisaba al primero
+
+`PENDIENTES.md` traía desde el 2026-08-01 un ítem con mala fama: **`font "italic"` como
+sentencia es un no-op mudo**, con el arreglo obvio ya probado y revertido porque daba
+`fail=30 c3fail=2 imgfail=9` — «que rompa la PARIDAD ENTRE BACKENDS es lo que más pesa».
+Resultó que ese churn no lo **causaba** el arreglo: lo **destapaba**. Y lo que destapaba era
+un defecto que nadie sabía que existía y que llevaba tiempo saliendo publicado.
+
+### El defecto de fondo
+
+`Display::dspstate.fontFace` hacía **dos trabajos a la vez**: la cara **ambiente** del
+documento —estado lógico, el que fija la sentencia `font` y el que salvan y restauran
+`gsave`/`grestore`— y la cara que **selecciona cada trozo de texto** al dibujarse. Como
+`Text::draw` escribía ahí la cara del trozo y nadie la devolvía, **un run `$…$` dejaba LM
+Math puesta para el resto del documento**.
+
+No hacía falta nada exótico para verlo. Cinco líneas, con el binario de `ad77078` sin tocar:
+
+```octave
+display_size 10 6
+world_window 0 10 0 10
+text("$x$") { 1 9 }
+plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5)) {
+  xaxis(step=5, label="tiempo")
+}
+```
+
+El eje entero —las marcas `0`, `5`, `10` **y** el rótulo— sale en LM Math itálica. En EPS son
+ocho `/LMMath findfont` y ni un solo Times-Roman.
+
+Lo sufría el corpus, no solo un repro de laboratorio: la leyenda de **`quickstart`** —la
+figura de portada— llevaba «Theoretical» y «Experimental» en itálica, heredadas del
+`$y = x^2$` del eje y; la marca **«1»** del eje log de `fig6-4` salía itálica mientras
+`.30 .35 .40` iban rectas en el mismo dibujo; y en `fill_styles` los rótulos de `numbers`
+salían a cuerpo 9 con el ambiente en 6 —el **tamaño**, no la cara: saltarse `setFontFace` se
+salta también el refresco de tamaño, que es lo que ya avisaba el comentario de `Text::draw`—.
+
+⚠️ **Y hacía DISCREPAR a los backends: SVG bien, EPS y PDF mal.** SVG se salvaba **por
+accidente**, no por diseño: no tiene `dev_face`, así que leía el `FN_NOFACE` con que
+`setRelFontSize` invalida la cara, y su `svgFontAttrs` mapea `FN_NOFACE` al `default:` =
+serif recto. La Capa 3 no podía verlo: su invariante (a) cuenta `<tspan>`, **no compara
+caras**. Es un hueco real de esa invariante y conviene tenerlo presente.
+
+### El arreglo, en dos piezas y en este orden
+
+1. **La cara del trozo no sobrevive al trozo.** `Display::restoreAmbientFace` (logical-only,
+   a propósito: el dispositivo ya quedó con la cara correcta y re-emitirla sería una
+   selección de fuente por cada texto sin nada que dibujar) y `Text::draw` la devuelve
+   después de `g.text()` — **después**, porque `SVGDisplay::text` lee `dspstate.fontFace`
+   para decidir familia, estilo y tabla de codepoints del run. Además `FN_NOFACE` se resuelve
+   por una cadena explícita **trozo → línea → documento → Times-Roman**; los dos últimos
+   eslabones son nuevos, y sin ellos un trozo heredado *fuera* de una `TextLine` —un rótulo
+   de eje sin marcado, que `parse_text` devuelve como `Text` pelón— se saltaba `setFontFace`
+   y salía con la fuente que hubiera dejado el texto anterior.
+2. **Recién entonces**, `TextStmt` hornea `FN_NOFACE` en vez de `FN_DEFAULT`. Eso es lo que
+   hace que `font` alcance a `text()`, que era el ítem original.
+
+### Lo que esto deja como método
+
+📌 **El churn que asustaba era todo el bug de abajo.** Arreglada la pieza (1), la pieza (2)
+—la que el tablero daba por peligrosa— sale con **cero churn**. El churn real de (1) fueron
+7 goldens en 5 ejemplos, y los cuatro que movieron dibujo se verificaron uno por uno con
+`tools/ver.sh --diff`: los cuatro son **correcciones**. Los otros tres dieron **0 px** —
+reordenamiento de `findfont/setfont` respecto a un `rmoveto`, que no dependen entre sí.
+
+Es exactamente la forma de los arcos del 2026-07-27: varios síntomas, una causa raíz, y el
+síntoma anotado en el tablero no era el bug. Cuando un arreglo de una línea produce un churn
+desproporcionado, la hipótesis por defecto debería ser **«está destapando algo»** y no «es
+peligroso»; la diferencia entre las dos son veinte minutos de mirar un diff.
+
+💡 **La referencia ya documentaba lo correcto.** §7.5 lista `font` entre las sentencias de
+estado, junto a `color` y `line_width`, cuya semántica el bloque de código de esa misma
+sección enseña sin ambigüedad. No hubo que corregir documentación ni re-sellar
+`reference.md`: el arreglo puso al **compilador** de acuerdo con su propia documentación, que
+llevaba razón desde antes.
+
+### La red
+
+🔒 **`examples/texto.mg`, tres líneas al final.** Es la ÚNICA red de la pieza (2), por la
+razón de siempre en este proyecto: cerrarla no movió un golden, así que perderla tampoco lo
+movería —misma situación que el bug de ámbito que guarda `seccion_eficaz`—. Las tres fijan
+cosas distintas y hay que conservar las tres: la ambiente llegando a un `text()` sin marcado,
+la ambiente **sobreviviendo** a un run math, y `font=` por-primitiva ganándole a la ambiente.
+
+Verificado reintroduciendo los dos bugs por separado: la pieza (2) da `fail=3` en los tres
+backends; la pieza (1), `fail=21 c3fail=2 imgfail=11`.

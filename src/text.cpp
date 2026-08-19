@@ -462,11 +462,24 @@ void Text::draw(Display &g) {
   // se salta setFontFace, esa re-emisión NUNCA ocurre y el dispositivo se queda con
   // la fuente del trozo anterior: la cara Y el tamaño. Por eso la prosa que sigue a
   // un sub/superíndice salía chica, y la que sigue a un `$…$` salía en LM Math.
+  // La ambiente se lee ANTES de tocar nada, y por dos razones: setRelFontSize la
+  // invalida (la pone en FN_NOFACE para forzar la re-emisión de tamaño), y el
+  // setFontFace de abajo la sobrescribiría con la cara de ESTE trozo.
+  const FontFace ambient = g.getFontFace();
+
+  // Cadena de resolución de "hereda la cara ambiente" (§7.3), de lo más local a lo
+  // más global: la cara horneada en el trozo → la ambiente de la LÍNEA (la que
+  // guardó TextLine::draw, que no es la vigente si un trozo anterior era `$…$`) → la
+  // ambiente del DOCUMENTO (la que fijó `font`) → Times-Roman si nadie fijó ninguna.
+  // Los dos últimos eslabones son nuevos: sin ellos un trozo FN_NOFACE fuera de una
+  // TextLine —un rótulo de eje sin marcado, que parse_text devuelve como Text pelón—
+  // se saltaba setFontFace y salía con la fuente que hubiera dejado el texto anterior.
   FontFace face = textstate.font_face;
   if (face == FN_NOFACE) face = g.getInheritedFace();
+  if (face == FN_NOFACE) face = ambient;
+  if (face == FN_NOFACE) face = FN_TIMES_ROMAN;
   g.setRelFontSize(textstate.font_size);
-  if (face != FN_NOFACE)
-    g.setFontFace(face);
+  g.setFontFace(face);
   // valign para texto SIMPLE (parse_text devuelve un Text pelón, sin TextLine):
   // desplaza la pluma una vez antes de emitir. En texto compuesto este Text se
   // dibuja desde TextLine::draw, que ya puso valign a 0 (aplica el desplazamiento
@@ -475,6 +488,11 @@ void Text::draw(Display &g) {
   if (g.getTextValign() > 0)
     g.rmoveto(0, g.valignShift());
   g.text(text);
+  // La cara de este trozo NO sobrevive al trozo: se devuelve la ambiente al estado
+  // lógico. Va DESPUÉS de g.text() porque SVGDisplay::text lee dspstate.fontFace para
+  // decidir familia, estilo y tabla de codepoints del run (no tiene dev_face como
+  // EPS/PDF). Ver Display::restoreAmbientFace.
+  g.restoreAmbientFace(ambient);
 }
 
 void TextLine::draw(Display &g) {

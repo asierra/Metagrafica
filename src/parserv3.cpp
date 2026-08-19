@@ -2535,11 +2535,17 @@ struct TextStmt : Stmt {
       for (auto &a : attrs) out.push_back(std::move(a));
     }
     // `font=` (cara de fuente, §14.3): no va por el estado del Display sino como
-    // cara INICIAL de parse_text (queda horneada en el Text; Text::draw la emite
-    // salvo FN_NOFACE). Default FN_DEFAULT (Times) cuando no se da o es inválida,
-    // idéntico al comportamiento previo. El markup interno del string ($…$, /i…)
-    // sigue pudiendo cambiarla desde ahí.
-    FontFace tface = FN_DEFAULT;
+    // cara INICIAL de parse_text (queda horneada en el Text; Text::draw la resuelve).
+    // El markup interno del string ($…$, /i…) sigue pudiendo cambiarla desde ahí.
+    //
+    // Sin `font=` la cara es FN_NOFACE = "hereda la ambiente", igual que los rótulos
+    // de axis/numbers/legend. Antes se horneaba FN_DEFAULT, y eso hacía que `text()`
+    // fuera la ÚNICA primitiva de texto que ignoraba la cara ambiente: `font "italic"`
+    // como sentencia surtía efecto en un rótulo de eje y NO en un `text()`, sin avisar
+    // —dos maneras de escribir lo mismo con resultados distintos, y una muda—.
+    // Coincidía por casualidad en el caso corriente porque FN_DEFAULT == FN_SERIF ==
+    // FN_TIMES_ROMAN == 0, que es justo la cara que hereda una figura sin `font`.
+    FontFace tface = FN_NOFACE;
     auto fit = named.find("font");
     if (fit != named.end()) {
       Value fv = fit->second->eval(s);

@@ -6,7 +6,7 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-08-04**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-08-19**.
 >
 > También reemplaza a **`ideas.txt`** (borrador fundacional de V3, borrado el 2026-07-22).
 > Se repasaron sus 18 puntos contra el código: 14 están superados —varios muy por encima de
@@ -21,9 +21,9 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=93 … docfail=0 citafail=0 humofail=0**
-> (31 ejemplos × 3 backends; **diez** compuertas,
-> razonadas una por una en `CLAUDE.md`; la 5ª son 55 pruebas NEGATIVAS en `test/errors/`,
+> Build/test: `make` + `bash test/run.sh check` → **ok=96 … docfail=0 citafail=0 humofail=0**
+> (32 ejemplos × 3 backends; **diez** compuertas,
+> razonadas una por una en `CLAUDE.md`; la 5ª son 62 pruebas NEGATIVAS en `test/errors/`,
 > ampliadas el 2026-07-28 a los diagnósticos NO fatales con `EXPECT_WARN`/`EXPECT_NO_WARN`;
 > la 6ª vigila que `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva
 > incrustado el código de cada ejemplo, así que **editar un comentario la desactualiza** y
@@ -336,6 +336,39 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       fuente (el subset no trae las piezas extensibles ni la tabla `MATH` que declara su
       ensamblado, así que la fuente daría el arte y no el comportamiento; y estirar un glifo o
       una struct deforma los ganchos = familia `plan_anisotropia.md`). Orden en §6 del plan.
+- [ ] 📏 **Métricas de texto en el lenguaje** — `plan_metricas_texto.md` (abierto 2026-08-08).
+      ⚠️ **SIN CLIENTE, y abierto a sabiendas:** ninguna figura del corpus lo pide hoy, y el
+      propio plan dice que **no se implemente hasta tenerlo** —una builtin sin figura que la
+      use no la compila ninguna de las diez compuertas, igual que una `lib/*.mg` sin ejemplo—.
+      El `.mg` no tiene con qué preguntar cuánto mide una cadena: las 17 builtins de
+      `include/ast.h:273-352` son aritmética + `len`/`str`/`gray`/`xyz`, y ninguna toca texto.
+      **Lo barato:** el motor YA mide bien (`text_width`, `TextLine::width`, `vExtent` — es lo
+      que sostiene `\frac`) y ⚠️ **`parse_text` YA corre en tiempo de EVALUACIÓN** (siete sitios
+      de `parserv3.cpp` dentro de `exec`), o sea que el camino cadena→objeto medible ya existe
+      donde haría falta. No es trabajo tipográfico; es plomería y semántica.
+      **Lo caro, y las dos cosas que hay que decidir ANTES de escribir código:**
+      **(1) el CUÁNDO** — el estado tipográfico ambiente se resuelve en tiempo de DIBUJO
+      (`FN_NOFACE`, `font_size` relativo), así que un `textwidth` en evaluación no sabe la cara;
+      medido: `text_width` cae a `serif_metrics_map` por `default:`, correcto por casualidad
+      bajo Times y mudo bajo negrita o sans. El plan recomienda la forma **explícita** y
+      descarta el estado en la sombra (= segunda máquina de estados que se desincroniza, la
+      familia de `plan_anisotropia.md`, sin compuerta que la cace).
+      **(2) las UNIDADES** — medido el 2026-08-08: el texto **NO escala** con la colocación de
+      una struct (misma struct a `scale=1` y `scale=3` → `font-size="12"` en las dos), y el
+      cuerpo de una struct tiene la ventana normalizada al cuadrado unitario, así que ⚠️ **ahí
+      la respuesta en unidades de mundo NO ESTÁ DEFINIDA** — y es el caso central, no un rincón.
+      Conclusión: `textwidth` devuelve **pt**, y hace falta una conversión pt→mundo explícita.
+      Es la misma pared de `plan_llaves.md` §0 un piso más arriba (vano en mundo, `depth` en pt).
+      📌 De paso destapó que el idioma de conversión que la referencia §7 ENSEÑA
+      (`retiro = 5/72*2.54 / (12/10)`) es **frágil**: supone que el eje x amarra la escala, y la
+      real es *meet* `min(W/wdx, H/wdy)` — si amarra el otro eje, la cuenta queda mal y nada
+      avisa. Es un argumento para el plan **independiente de medir texto**.
+      **Clientes plausibles, en orden de cercanía:** `legend`/`table` (ya calculan anchos por
+      dentro, `col_widths`/`sample_width`; exponerlos cierra el círculo) → recuadros y
+      anotaciones → diagramas de cajas y flechas. ⚠️ El tercero es el que abrió el plan y el
+      más honesto de descartar: le falta mucho más que medir texto (ruteo de aristas,
+      colocación de etiquetas), y **medir texto no acerca a MG a ser PlantUML, ni es el
+      objetivo**. Origen en el apéndice del plan.
 - [ ] 🔤 **La fuente math del SVG no tiene lista de respaldo, y en un visor que no cargue el
       `@font-face` cae a SANS** (hallado 2026-07-31, lo notó Alejandro: «el pi del SVG no se ve
       tan bonito como el del EPS»). El archivo está BIEN: `SVGDisplay` embebe Latin Modern Math
@@ -479,33 +512,54 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
         de `x±y` y capturaron otra tinta. El número bueno es 0.689.
       - Lo pulido se conserva en `local/simulate3d/fig2-7b-v3.mg`. Si algún día entra, entra por
         la figura, no por cobertura.
-- [ ] 🐞 **`font "italic"` como SENTENCIA es un no-op MUDO** (hallado 2026-08-01 puliendo
-      `fig2-7b`). `text(..., font="italic")` funciona; `font "italic"` no hace nada **y no
-      avisa** —`font "noexiste"` sí avisa—, así que dos maneras de escribir lo mismo dan
-      resultados distintos y una calla. Es la clase de bug que el proyecto ya cerró tres veces.
-      - **Causa exacta:** `TextStmt::exec` (`parserv3.cpp`) hornea `FN_DEFAULT` cuando no hay
-        `font=` por-primitiva, y eso GANA sobre la cara ambiente; solo se hereda con
-        `FN_NOFACE`, que es como nacen los rótulos de `axis`/`legend`. El comentario del código
-        lo justificaba como «idéntico al comportamiento previo», o sea inercia, no decisión.
-      - ⚠️ **El arreglo obvio NO es seguro, y está medido:** cambiar el default a `FN_NOFACE` da
-        **`fail=30`, `c3fail=2` e `imgfail=9`**. Y no viene de los tres ejemplos que usan la
-        sentencia (`fig4-4`, `symbols`, `turning_points` piden `roman`/`Times-Roman`, o sea el
-        default: ahí el no-op es invisible). Viene de otro lado y hay que averiguar de dónde
-        antes de tocarlo — que rompa la PARIDAD ENTRE BACKENDS es lo que más pesa.
-      - **Rodeo mientras tanto:** para símbolos, el modo matemático (`$L$`) es además lo
-        correcto —salen de LM Math, no de Times-Italic—; para prosa, `text(..., font="italic")`.
-- [ ] 🕳️ **`lib/pseudo3d.mg` sigue SIN CLIENTE en el corpus** (anotado 2026-08-01). Cuatro piezas
-      —`prisma`, `lamina`, y desde hoy `cono` y `cilindro`— committeadas, instaladas por
-      `make install` y documentadas en §12 y §13 de la referencia, y **ningún ejemplo las
-      compila** en `check`. Es la misma situación que metió a `elevacion_solar` al corpus por
+- [x] ~~🐞 **`font "italic"` como SENTENCIA es un no-op MUDO**~~ — **CERRADO 2026-08-19**, y
+      resultó que el no-op era el **síntoma**, no el bug. Eran DOS defectos con una causa
+      común: **`dspstate.fontFace` hacía dos trabajos a la vez** —la cara AMBIENTE del
+      documento (lógica, que salva/restaura `gsave`/`grestore`) y la cara que SELECCIONA cada
+      trozo de texto—, y el segundo pisaba al primero.
+      - 🐞 **El defecto de fondo, que nadie sabía que existía: un run `$…$` dejaba su cara
+        puesta para el RESTO DEL DOCUMENTO.** Repro de cinco líneas, en el binario de
+        `ad77078` sin tocar: un `text("$x$")` antes de un `plot` teñía el eje entero —marcas
+        `0`/`5`/`10` **y** rótulo— de LM Math itálica. En el corpus lo sufrían la leyenda de
+        **`quickstart`** (entradas en itálica; es la figura de portada) y la marca «1» del eje
+        log de **`fig6-4`**, más el TAMAÑO de los rótulos de `numbers` en `fill_styles`
+        (salían a 9 con el ambiente en 6: saltarse `setFontFace` se salta el refresco de
+        tamaño).
+      - ⚠️ **Y hacía DISCREPAR a los backends**: SVG salía bien y EPS/PDF mal. SVG se salvaba
+        **por accidente** —no tiene `dev_face`, así que leía el `FN_NOFACE` con que
+        `setRelFontSize` invalida la cara y su `svgFontAttrs` lo mapea a serif—. La Capa 3 no
+        podía verlo: su invariante (a) cuenta `<tspan>`, no compara CARAS.
+      - **Arreglo, en dos piezas:** (1) `Display::restoreAmbientFace` + `Text::draw` devuelve
+        la ambiente al terminar el trozo —logical-only, sin re-emitir al dispositivo— y
+        resuelve `FN_NOFACE` por una cadena explícita *trozo → línea → documento →
+        Times-Roman*; (2) recién entonces `TextStmt` hornea `FN_NOFACE` en vez de
+        `FN_DEFAULT`, que es lo que hace que `font` alcance a `text()`.
+      - 📌 **El `fail=30 c3fail=2 imgfail=9` que este ítem daba por peligroso era TODO el
+        leak.** Arreglado (1), el paso (2) sale con **cero churn**. El churn de (1) fueron 7
+        goldens en 5 ejemplos, y los cuatro que movieron dibujo se verificaron uno por uno con
+        `tools/ver.sh --diff`: los cuatro son **correcciones** (los otros tres, 0 px:
+        reordenamiento de `setfont` respecto a un `rmoveto`, que no dependen entre sí).
+      - 🔒 **Cobertura: `examples/texto.mg`, tres líneas al final.** Es la ÚNICA red, y por la
+        razón de siempre: cerrar (2) no movió un golden, así que perderlo tampoco lo movería.
+        Verificado reintroduciendo los dos bugs por separado — (2) da `fail=3` en los tres
+        backends; (1) da `fail=21 c3fail=2 imgfail=11`.
+      - 💡 **La referencia ya documentaba lo correcto**: §7.5 lista `font` entre las sentencias
+        de estado, junto a `color` y `line_width`. No hubo que corregir doc ni re-sellar
+        `reference.md` — el arreglo puso al compilador de acuerdo con su propia documentación.
+- [ ] 🕳️ **`prisma` y `lamina` (de `lib/pseudo3d.mg`) SIN CLIENTE en el corpus** (anotado
+      2026-08-01; **acotado el 2026-08-19** — decía «cuatro piezas» y ya son dos). `cono` y
+      `cilindro` los cerró **`seccion_eficaz`** el 2026-08-03; siguen sin compilar en `check`
+      `prisma` y `lamina`, committeadas, instaladas por `make install` y documentadas en §12 y
+      §13 de la referencia. Es la misma situación que metió a `elevacion_solar` al corpus por
       `lib/fulldisk_map.mg`.
-      - **Cobertura parcial conseguida hoy:** el bloque ```octave de §12 las invoca, así que
-        `docfail` verifica que **parsean y evalúan**. Lo que no verifica es el DIBUJO — para eso
-        hace falta un golden, o sea una figura.
+      - **Cobertura parcial:** el bloque ```octave de §12 las invoca, así que `docfail`
+        verifica que **parsean y evalúan**. Lo que no verifica es el DIBUJO — para eso hace
+        falta un golden, o sea una figura.
       - **Las candidatas siguen siendo dos, y una ya se descartó:** `fig2-7b` **no entra**
-        (ver el ítem de arriba, con la medición), y queda `fig18-5`, que usaría `cilindro`.
-        Ninguna es urgente. Desde hoy `prisma` acepta orientación (`ex`/`ey`/`ez`), así que la
-        biblioteca tiene una pieza más que nadie compila.
+        (ver el ítem de arriba, con la medición), y queda `fig18-5`, que usaría `cilindro`
+        —ya cubierto, así que hoy entraría por la figura y no por cobertura—. Ninguna es
+        urgente. `prisma` acepta orientación (`ex`/`ey`/`ez`) desde el 2026-08-01, y esa
+        ampliación tampoco la compila nadie.
       - ⚠️ **Y una limitación que salió al extraer:** una struct de MG **no puede devolver lo que
         calculó**. `irradiancia` necesita los puntos de tangencia para colocar el rótulo de φ, así
         que si llamara a `cono` tendría que recalcularlos — por eso se quedó con la receta inline
@@ -622,16 +676,6 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] 🐞 **Las primitivas TRAGAN argumentos nombrados desconocidos EN SILENCIO** (hallado
-      2026-07-21). `marker(rotate=90)`, `dot(tamano=5)`, `polyline(colour="red")` (typo
-      clásico), `marker(disparate=5)` — todos COMPILAN sin avisar y no hacen nada. Un typo en
-      un atributo simplemente se ignora. Es la misma clase de silencio que se cazó en las
-      sentencias de estado (`colour 0.5` → error, `emitStyleAttr` devuelve `bool`), pero el
-      atributo POR-PRIMITIVA **descarta ese retorno** (`emitPrimStyle`, `parserv3.cpp:475`).
-      Cerrar = juntar los nombres reconocidos (estilo + los propios de cada primitiva:
-      `shape`/`size`/`width`/`marker_orient`/`closed`/`from`/`to`/`hatch_gap`…) y `evalError`
-      ante uno fuera de lista. **Antes de congelar** (un typo silencioso es peor cuanto más
-      madura la gramática). Ver también el `rotate=` de abajo, que es un caso de esto.
 - [x] ~~🐞 **La invocación de struct NO comprueba la aridad de los parámetros
       escalares**~~ — **CERRADO 2026-07-22**, el mismo día que lo destapó la 5ª compuerta
       (un fixture esperaba error y el documento compiló). Era la peor variante de la

@@ -277,6 +277,15 @@ public:
 
   virtual void setFontFace(FontFace face) { dspstate.fontFace = face; }
   FontFace getFontFace() const { return dspstate.fontFace; }
+  // Devuelve la cara AMBIENTE (lógica) sin tocar el dispositivo. La cara que
+  // selecciona un trozo de texto es LOCAL AL TROZO y no debe sobrevivirlo: sin esto,
+  // un run de `$…$` dejaba `dspstate.fontFace` en LM Math para el resto del documento
+  // y el siguiente texto que heredara la ambiente —los rótulos de axis/numbers/legend,
+  // que nacen FN_NOFACE— salía en matemática. Repro: un `text("$x$")` antes de un
+  // `plot` teñía el eje entero, marcas incluidas. Es logical-only A PROPÓSITO (no pasa
+  // por setFontFace): el dispositivo ya quedó con la cara del trozo, que es correcta, y
+  // re-emitirla aquí sería una selección de fuente por cada texto sin nada que dibujar.
+  void restoreAmbientFace(FontFace f) { dspstate.fontFace = f; }
   // Cara AMBIENTE de la línea de texto en curso: la que tenía el dispositivo antes
   // de dibujar ningún trozo. TextLine::draw la fija al empezar y la limpia al
   // acabar; Text::draw la usa para resolver sus trozos FN_NOFACE ("hereda la cara

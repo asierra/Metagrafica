@@ -549,6 +549,15 @@ align "left"
 valign "bottom"
 text("Escapes: a\{b\} \$5 m\/s \\") { 1.4 -2.05 }
 text("y en math $\{x : x > 0\}$") { 1.4 -2.6 }
+
+% --- La cara de fuente AMBIENTE -------------------------------------------
+% `font` como sentencia tiñe los text() que siguen; un run math en medio no se
+% la lleva por delante; y `font=` por-primitiva la sobreescribe.
+{ font "italic"
+  text("ambiente: itálica") { 1.4 2.2 }
+  text("tras math $x$ sigue itálica") { 1.4 1.8 }
+  text("y font= la sobreescribe", font="roman") { 1.4 1.4 }
+}
 ```
 
 EJEMPLO 4: Marcadores — las siete formas del catálogo, y cómo se orientan.

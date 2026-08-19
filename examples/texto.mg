@@ -12,6 +12,15 @@
 % líneas de este archivo, el interlineado y el valign de BLOQUE quedan sin red.
 % Los tres rótulos de valign sobre la línea de la pluma ejercitan además la ruta
 % de texto SIMPLE (un solo run), distinta de la de texto compuesto.
+%
+% ⚠ Y una tercera cobertura exclusiva: las tres últimas líneas son la ÚNICA red
+% de que `font` COMO SENTENCIA alcance a un `text()`. Cerrar ese no-op no movió
+% un solo golden, así que perderlo tampoco lo movería —ninguna compuerta puede
+% verlo, igual que el bug de ámbito que guarda `seccion_eficaz`—. Las tres fijan
+% cosas distintas y hay que conservar las tres: la ambiente llegando a un text()
+% sin marcado, la ambiente SOBREVIVIENDO a un run math (un `$…$` dejaba su cara
+% puesta para el resto del documento), y `font=` por-primitiva ganándole a la
+% ambiente. Detalle en docs/bitacora.md, 2026-08-19.
 
 display_size 10 7.2
 font_size 8
@@ -103,3 +112,12 @@ align "left"
 valign "bottom"
 text("Escapes: a\{b\} \$5 m\/s \\") { 1.4 -2.05 }
 text("y en math $\{x : x > 0\}$") { 1.4 -2.6 }
+
+% --- La cara de fuente AMBIENTE -------------------------------------------
+% `font` como sentencia tiñe los text() que siguen; un run math en medio no se
+% la lleva por delante; y `font=` por-primitiva la sobreescribe.
+{ font "italic"
+  text("ambiente: itálica") { 1.4 2.2 }
+  text("tras math $x$ sigue itálica") { 1.4 1.8 }
+  text("y font= la sobreescribe", font="roman") { 1.4 1.4 }
+}
