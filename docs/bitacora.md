@@ -4412,3 +4412,71 @@ la ambiente **sobreviviendo** a un run math, y `font=` por-primitiva ganándole 
 
 Verificado reintroduciendo los dos bugs por separado: la pieza (2) da `fail=3` en los tres
 backends; la pieza (1), `fail=21 c3fail=2 imgfail=11`.
+
+---
+
+## 2026-08-19 (bis) — El lazo de las ondas nunca recibió las cotas de sus propias NOTAS
+
+`franck_condon.mg` abortaba con `xe1 ≳ 0.052`. Venía arrastrándose desde el 2026-08-05: el
+barrido paramétrico de aquel día lo destapó, se arregló **el lazo de los niveles no
+resueltos** (`84d466f`, cotas `vmax` y `smax`) y este otro quedó anotado y sin hacer, viviendo
+solo en la conversación. Al abrirlo resultó que no era un fallo sino **tres**, y que el
+diagnóstico guardado —«la colocación del rótulo»— era solo el primero.
+
+### Los tres, y por qué son el mismo
+
+El lazo de las funciones de onda (`for v = 0 to 6`) es el hermano del que se arregló en
+agosto, y **nunca recibió la guarda que aquél sí tiene**. Sus NOTAS ya traían las fórmulas
+(`vmax = 1/(2·xe) − ½`); lo que faltaba era aplicarlas aquí.
+
+1. 🐞 **El aborto reportado.** `xl = re − ln(1 − sqrt((E+elab)/D))/a` sitúa el rótulo en el
+   retorno externo de una energía **ficticia** `E + elab`. Ese punto **deja de existir**
+   cuando `E + elab ≥ D`: pasada la disociación la curva de Morse ya no vuelve. Cuadra al
+   dígito con lo que imprimía — en `0.052` falla v=6 (`1 − sqrt = −0.00322`, y el mensaje
+   decía `-0.003221`); en `0.060` falla antes v=5, con `−0.006465`, que es exactamente lo que
+   salía. **No era «el rótulo es frágil»: su construcción entera suponía un retorno que ahí
+   no hay.**
+2. 🐞 **Un segundo aborto, latente y en otra línea.** Con `xe1 = 1/13` **exacto** (`0.0769231`)
+   revienta `rp = re − ln(1−s)/a` con `ln: argumento no positivo: 0.000000`, o sea `s = 1`
+   clavado: un `v` que cae **justo** en `vmax`. Es la misma coincidencia que las NOTAS ya
+   describían para el lazo vecino (el caso `xe1 = 0.040`), en un sitio donde nadie la había
+   buscado. ⚠️ Y no es medida nula en la práctica: los dos valores que la disparan —`0.040`,
+   `1/13`— son de los que uno teclea.
+3. 🐞 **Niveles que NO EXISTEN, en silencio.** Pasado `xe ≈ 0.077` el lazo dibuja la rama
+   **descendente** de la parábola: en `xe1 = 0.090` el nivel v=6 sale **por debajo** de v=5.
+   Compila, se ve plausible y es falso — exactamente lo que motivó `84d466f`, aquí intacto.
+
+### Los arreglos
+
+(1) es el idioma que el propio archivo ya usa treinta líneas más arriba (`rext = rfin` y
+después `if s < smax1 { rext = … }`): se asigna primero la salida segura y el `if` la mejora.
+La cota lejana **no es un número inventado** — es la misma a la que lo acotan las dos líneas
+siguientes, que ya estaban ahí. (2) y (3) los cierra una sola guarda, `if v < vmaxp` con
+`vmaxp = 1/(2·xe) − ½` del pozo en curso; estricta a propósito, que es lo que excluye el `v`
+que cae justo en `vmax`.
+
+📌 **Se descartó una alternativa de diff más barato**, y conviene no re-litigarla: acotar el
+`for` con `vmaxp` en vez de envolver el cuerpo. MG **trunca** una cota fraccionaria (medido:
+`to 6.64` da v=0..6, `to 5.06` da v=0..5), así que funcionaría para (3) — pero **no para
+(2)**: con `vmax = 6.000` exacto el v=6 sigue entrando. El reindentado del cuerpo es el precio
+de cubrir el caso exacto.
+
+### Churn: ninguno, y medido
+
+**SVG byte-idéntico**, EPS y PDF movidos solo por los `gsave`/`grestore` de los dos `if`
+nuevos, y `ver.sh --diff` da **0 px en los dos**. `docs/img/franck_condon.svg` no cambió ni un
+byte. Es la misma firma que dejó `84d466f`, y por la misma razón: las guardas no recortan nada
+con los parámetros publicados (`xe1 = 0.028`) ni con los de la variante del README (`0.045`) —
+están para el que mueva `xe`, que es de lo que presume la figura.
+
+⚠️ **`citafail` en cero, y esta vez importaba**: la compuerta nació el 2026-08-05 justo porque
+el arreglo *anterior* de este mismo archivo pudrió una línea que los dos README citaban
+textualmente. Editarlo otra vez sin tocar una cita es lo que ella verifica.
+
+### Lo que deja como método
+
+**El barrido paramétrico volvió a pagar, y esta vez encontró lo que la sesión anterior no
+buscó.** Aquel barrido paró en el primer aborto y arregló el lazo que lo produjo; los otros
+dos defectos estaban a un par de valores de distancia. La lección no es «barre», que ya
+estaba: es **barre hasta que deje de fallar, no hasta que compile el valor que te importaba**.
+Aquí eso son cuatro valores más (`1/13`, `0.080`, `0.090`, `0.100`) y encontró dos bugs.
