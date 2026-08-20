@@ -135,7 +135,7 @@ wx = dx/sin(fi)   wz = dz/sin(fi)          % d^ sin su componente a lo largo de 
 rf = 1.75                                  % radio de la marca
 line_width 0.5
 { plane3d(u=[0, rf, 0], v=[rf*wx, 0, rf*wz])
-  arc(1, from=0, to=(fid),
+  arc(1, from=0, to=fid,
       marker_start="arrow", marker_end="arrow", marker_size=3.5, marker_start_orient="reverse") { 0 0 } }
 
 % --- rótulos ---

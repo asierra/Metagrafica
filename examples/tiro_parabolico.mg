@@ -34,31 +34,31 @@ y0 = 8
 y1 = 2.4615
 n  = 6
 
-path tray  = { (x0) (y0) }
-path proyx = { (x0) (y0) }     % proyección al eje IZQUIERDO (misma y)
-path proyy = { (x0) (y0) }     % proyección al borde SUPERIOR (misma x)
+path tray  = { x0 y0 }
+path proyx = { x0 y0 }     % proyección al eje IZQUIERDO (misma y)
+path proyy = { x0 y0 }     % proyección al borde SUPERIOR (misma x)
 
 % malla ajustada a los datos + acumulación de puntos, todo en el mismo lazo
 line_width 0.3   color "gray"   dash "dotted"
 for i = 1 to n {
     x = x0 + i*1.5
     y = y0 - i*i/6.5
-    path tray  += { (x) (y) }
-    path proyx += { (x0) (y) }
-    path proyy += { (x) (y0) }
-    polyline { (x) (y1)  (x) (y0) }        % vertical: piso → borde superior
-    polyline { (x0) (y)  (10) (y) }     % horizontal: eje y → borde derecho
+    path tray  += { x y }
+    path proyx += { x0 y }
+    path proyy += { x y0 }
+    polyline { x y1  x y0 }        % vertical: piso → borde superior
+    polyline { x0 y  10 y }        % horizontal: eje y → borde derecho
 }
 
 % ejes en L (eje y izquierdo + borde superior)
 dash "solid"   line_width 0.5   color "black"
-polyline { (x0) (y1) (x0) (y0)  (10) (y0) }
+polyline { x0 y1 x0 y0  10 y0 }
 
 % cañón, con la boca en (x0,y0)
 canon(at=(x0, y0))
 
 % plataforma
-rectangle(fill="lime") { -1.75 (y1) 0.75 6.75  }
+rectangle(fill="lime") { -1.75 y1 0.75 6.75  }
  
 % trayectoria y puntos, encima de todo
 line_width 1.5   color "black"   dash "dashed"   smooth(&tray)

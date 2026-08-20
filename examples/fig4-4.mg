@@ -34,7 +34,7 @@ plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
     for i = 0 to n-1 {                     % la curva sube hasta el techo: V=0.85 → x=±0.922
         p = -0.92 + i*(1.84/n)
         q = -0.92 + (i+1)*(1.84/n)
-        polyline { p  p*p   q  q*q }
+        polyline { p  (p*p)   q  (q*q) }
     }
     line_width 0
     polyline { a1 Ea  a2 Ea }              % nivel de energía
@@ -66,7 +66,7 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     for i = 0 to n-1 {
         u = btop - i*((btop-bend)/n)
         v = btop - (i+1)*((btop-bend)/n)
-        polyline { 1/u  u   1/v  v }       % coords sueltas: divisiones y variables, sin paréntesis
+        polyline { (1/u)  u   (1/v)  v }   % la expresión va entre paréntesis; la variable, desnuda
     }
     line_width 0
     polyline { b1 Eb  36 Eb }              % nivel de energía
@@ -100,9 +100,9 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     for i = 0 to n-1 {
         u = ctop - i*((ctop-cend)/n)
         v = ctop - (i+1)*((ctop-cend)/n)
-        % La resta dentro de una coord exige paréntesis; el 1/u de al lado NO
-        % (una división va suelta, y una variable con un espacio antes de `(` ya no es llamada).
-        polyline { 1/u  (u*u/2-u)   1/v  (v*v/2-v) }
+        % Una coordenada que sea un nombre o un número va desnuda; cualquier
+        % expresión, entre paréntesis (el espacio separa las coordenadas).
+        polyline { (1/u)  (u*u/2-u)   (1/v)  (v*v/2-v) }
     }
     line_width 0
     polyline { c0 Ec1  6.3 Ec1 }           % niveles de energía

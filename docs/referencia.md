@@ -562,9 +562,11 @@ if r > 2 and n < 100 { text("grande") { 0 0 } } else { text("chica") { 0 0 } }
 
 > ⚠️ **En un bloque `{ }` los valores se separan por espacios**, así que un `+` o un `-` dentro de
 > una coordenada la parte en dos: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`); lo que
-> quieres es `{ 12 (y-11) }`. **Encierra en `( )` toda coordenada que sume o reste**; productos,
-> cocientes, potencias y un menos inicial van sueltos (`x*2`, `x/n`, `x^2`, `-x`). Mezclar variables
-> sueltas con coordenadas entre paréntesis es correcto: `{ x y (x+1) (y+1) }` ([detalle](#15-errores-comunes)).
+> quieres es `{ 12 (y-11) }`. La regla: **un nombre o un número van desnudos; cualquier otra cosa
+> va entre `( )`** — `{ x y (x+1) (p*p) }`. Estrictamente solo `+` y `-` la parten (un producto, un
+> cociente, una potencia o un menos inicial aguantan sueltos: `x*2`, `x/n`, `x^2`, `-x`), pero los
+> ejemplos parentizan **toda** expresión para no tener que recordar dos reglas
+> ([detalle](#15-errores-comunes)).
 
 > ⚠️ **Una llamada a función va PEGADA al paréntesis: `f(x)`.** Con un espacio de por medio —`f (x)`—
 > el `(` es un término aparte, no una llamada; por eso en `{ x y (x+1) }` la `y` no se traga el
@@ -1249,12 +1251,13 @@ es un [`plot`](#11-gráficas), que mapea datos a una caja y estira cada eje por 
 **Un `{ }` de coordenadas se queja de un número impar, o la figura sale deformada.** Dentro
 de un bloque los valores se separan por **espacios**, así que un `+` o un `-` dentro de una
 coordenada la parte en dos: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`), no dos —
-lo que quieres es `{ 12 (y-11) }`. La regla: **encierra en `( )` toda coordenada que sume o
-reste**; productos, cocientes y potencias van sueltos (`x*2`, `x/n`, `x^2`), y las variables
-sueltas conviven con coordenadas entre paréntesis (`{ x y (x+1) (y+1) }`). El conteo impar es
-error de compilación, con línea y columna, así que al menos no falla en silencio. Y una
-**llamada a función va pegada** (`f(x)`): con un espacio, `f (x)`, el `(` es un término aparte,
-no una llamada.
+lo que quieres es `{ 12 (y-11) }`. La regla: **un nombre o un número van desnudos; cualquier
+otra cosa va entre `( )`** (`{ x y (x+1) (p*p) }`). Estrictamente solo `+` y `-` parten una
+coordenada —un producto, un cociente o una potencia aguantan sueltos (`x*2`, `x/n`, `x^2`)—,
+pero los ejemplos parentizan **toda** expresión para no tener que recordar dos reglas. El
+conteo impar es error de compilación, con línea y columna, así que al menos no falla en
+silencio. Y una **llamada a función va pegada** (`f(x)`): con un espacio, `f (x)`, el `(` es
+un término aparte, no una llamada.
 
 **`dot(2, &p)` no compila y el error habla de una expresión inesperada.** El trayecto va
 **siempre como primer argumento** y el resto nombrado detrás: `dot(&p, size=2)`,

@@ -379,7 +379,7 @@ rot_y = Py + 5.7*sin((hor+180)*d2r) + 0.22*sin(lat*d2r)
 
 % Cenit: la vertical del lugar prolongada. El satélite mira al nadir, así que va sobre
 % ella; el rayo de verano se le acerca tanto como lo permite la latitud.
-polyline(line_width=0.6) { (Px) (Py)  (Px + 7.7*cos(lat*d2r)) (Py + 7.7*sin(lat*d2r)) }
+polyline(line_width=0.6) { Px Py  (Px + 7.7*cos(lat*d2r)) (Py + 7.7*sin(lat*d2r)) }
 cen_x = Px + 4.6*cos(lat*d2r) + 0.38*cos(hor*d2r)
 cen_y = Py + 4.6*sin(lat*d2r) + 0.38*sin(hor*d2r)
 { translate cen_x cen_y   rotate lat
@@ -407,7 +407,7 @@ for k = 0 to 2 {
     % El rayo se corta en el radio LIBRE, no en el borde del disco: si llegara al
     % disco atravesaría el anillo de rayos del icono.
     polyline(color=&quot;darkorange&quot;, line_width=0.6) {
-        (Px) (Py)  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
+        Px Py  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
 
     % El icono dice «sol» solo, así que no lleva rótulo dentro.
     Sun(scale=sun_r, at=(sun_x, sy))
@@ -416,11 +416,11 @@ for k = 0 to 2 {
     text(&quot;$h$ = &quot; + str(h, 1) + &quot;°&quot;, size=8.5, color=&quot;gray&quot;) { (sun_x + sun_out + 0.35) (sy - 0.62) }
 
     arc(radio[k], from=hor, to=d, color=gray(0.35), line_width=0.6,
-        marker_start=&quot;arrow&quot;, marker_start_orient=&quot;reverse&quot;, marker_end=&quot;arrow&quot;, marker_size=3) { (Px) (Py) }
+        marker_start=&quot;arrow&quot;, marker_start_orient=&quot;reverse&quot;, marker_end=&quot;arrow&quot;, marker_size=3) { Px Py }
 }
 
 % El punto de observación: donde concurren el horizonte, el cenit y los tres rayos.
-dot(2.2) { (Px) (Py) }
+dot(2.2) { Px Py }
 
 text(&quot;Ángulos de elevación solar ($h$)&quot;, align=&quot;center&quot;, size=10) { 12.2 -4.7 }
 text(&quot;Observador a latitud $\varphi$ = &quot; + str(lat) + &quot;° N, al mediodía solar&quot;, size=9,
@@ -640,15 +640,15 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
     for i = 0 to nseg-1 {
         p = rini + i*((rfin-rini)/nseg)
         q = rini + (i+1)*((rfin-rini)/nseg)
-        polyline { (p)  (D1*(1-exp(-a1*(p-re1)))*(1-exp(-a1*(p-re1))))
-            (q)  (D1*(1-exp(-a1*(q-re1)))*(1-exp(-a1*(q-re1)))) }
+        polyline { p  (D1*(1-exp(-a1*(p-re1)))*(1-exp(-a1*(p-re1))))
+            q  (D1*(1-exp(-a1*(q-re1)))*(1-exp(-a1*(q-re1)))) }
     }
     rini = re2 - ln(1 + sqrt((ytop-Te-0.1)/D2))/a2
     for i = 0 to nseg-1 {
         p = rini + i*((rfin-rini)/nseg)
         q = rini + (i+1)*((rfin-rini)/nseg)
-        polyline { (p)  (Te + D2*(1-exp(-a2*(p-re2)))*(1-exp(-a2*(p-re2))))
-            (q)  (Te + D2*(1-exp(-a2*(q-re2)))*(1-exp(-a2*(q-re2)))) }
+        polyline { p  (Te + D2*(1-exp(-a2*(p-re2)))*(1-exp(-a2*(p-re2))))
+            q  (Te + D2*(1-exp(-a2*(q-re2)))*(1-exp(-a2*(q-re2)))) }
     }
 
     % ---- niveles no resueltos, hacia la disociación -----------------------
@@ -677,7 +677,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
             s = sqrt(E/D1)
             rext = rfin
             if s &lt; smax1 { rext = re1 - ln(1-s)/a1 }
-            polyline { (re1 - ln(1+s)/a1)  (E)   (rext)  (E) }
+            polyline { (re1 - ln(1+s)/a1)  E   rext  E }
         }
     }
     vmax2 = 1/(2*xe2) - 0.5      smax2 = 1 - exp(-a2*(rfin-re2))
@@ -687,14 +687,14 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
             s = sqrt(E/D2)
             rext = rfin
             if s &lt; smax2 { rext = re2 - ln(1-s)/a2 }
-            polyline { (re2 - ln(1+s)/a2)  (Te+E)   (rext)  (Te+E) }
+            polyline { (re2 - ln(1+s)/a2)  (Te+E)   rext  (Te+E) }
         }
     }
 
     % ---- líneas de disociación --------------------------------------------
     line_width 0.15   dash &quot;dashed&quot;
-    polyline { 0.66 (D1)  (rfin) (D1) }
-    polyline { 0.66 (Te+D2)  (rfin) (Te+D2) }
+    polyline { 0.66 D1  rfin D1 }
+    polyline { 0.66 (Te+D2)  rfin (Te+D2) }
     dash &quot;solid&quot;
 
     % ---- las ondas vibracionales ------------------------------------------
@@ -743,7 +743,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
                 % El `for` acumula los medios ciclos con `path +=`, cada uno con SU
                 % amplitud (un concat no cubre la longitud variable en v).
                 eprev = 0                              % extremo previo (arranca en la cola)
-                path w = sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tL) 0 }
+                path w = sine(half_cycles=1, phase=0, amplitude=0) { 0 0  tL 0 }
                 for k = 1 to v+1 {                     % un pico por lóbulo, en el JOIN
                     rr  = rm + (rp-rm)*k/(v+2)          % posición del pico en r
                     Vr  = D*(1-exp(-a*(rr-re)))*(1-exp(-a*(rr-re)))
@@ -760,7 +760,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
                 ph  = 270
                 if amp &lt; 0 { amp = -amp   ph = 90 }
                 path w += sine(half_cycles=1, phase=ph, amplitude=amp) { 0 0  1 0 }
-                path w += sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tR) 0 }
+                path w += sine(half_cycles=1, phase=0, amplitude=0) { 0 0  tR 0 }
 
                 % El rect del fit: en x, los retornos ensanchados por los voladizos
                 % ASIMÉTRICOS (gL interno, gR externo); en y, la energía ± una altura del
@@ -775,7 +775,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
                 if E+elab &lt; D { xl = re - ln(1 - sqrt((E+elab)/D))/a }
                 if xl &lt; rp+gR+0.05 { xl = rp+gR+0.05 }
                 if xl &gt; rp+gR+0.20 { xl = rp+gR+0.20 }
-                text(etq, font_size=7, align=&quot;left&quot;, valign=&quot;middle&quot;) { (xl) (toff+E) }
+                text(etq, font_size=7, align=&quot;left&quot;, valign=&quot;middle&quot;) { xl (toff+E) }
             }
         }
     }
@@ -794,13 +794,13 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
     E0 = we1*0.5 - we1*xe1*0.25
     Vfc = Te + D2*(1-exp(-a2*(re1-re2)))*(1-exp(-a2*(re1-re2)))
     line_width 0.5
-    polyline(marker_end=&quot;arrow&quot;) { (re1) (E0)  (re1) (Vfc) }
+    polyline(marker_end=&quot;arrow&quot;) { re1 E0  re1 Vfc }
 
     % Marca del nivel de llegada, junto a la punta (que cae en el retorno interno
     % de v&#x27;=6): hace legible &quot;0 → v&#x27;≈6&quot; sin cruzar la vista a los números de la
     % derecha. Es &quot;≈6&quot; porque Vfc=7.776 cae entre v&#x27;=6 (7.749) y v&#x27;=7 (7.934) — el
     % nivel más cercano, el que la transición puebla sobre todo.
-    text(&quot;$v&#x27;\approx6$&quot;, font_size=7, align=&quot;right&quot;, valign=&quot;middle&quot;) { (re1-0.06) (Vfc) }
+    text(&quot;$v&#x27;\approx6$&quot;, font_size=7, align=&quot;right&quot;, valign=&quot;middle&quot;) { (re1-0.06) Vfc }
 
     xaxis(from=0.66, to=rfin, label=&quot;distancia internuclear  $r$&quot;, ticks=&quot;none&quot;,
     tick_labels=false, label_at=&quot;center&quot;)
@@ -934,26 +934,26 @@ for i = 1 to NV {
     xv = xmin + i*hv
     Vv = Vr - (Vr-Vm)*exp(0 - (((xv-xm)/wr)^qr))
     if xv &lt; xm { Vv = Vl - (Vl-Vm)*exp(0 - (((xm-xv)/wl)^pl)) }
-    path curvaV += { 0 0  (hv) (Vv-Vprev) }
+    path curvaV += { 0 0  hv (Vv-Vprev) }
     Vprev = Vv
 }
 
 % ── mobiliario: niveles, asíntotas y verticales de los retornos ──────────────
 line_width 0
-polyline { (xmin) (Ea)  (xmax) (Ea) }
-polyline { (xmin) (Vl)  (xmax) (Vl) }
-polyline { (x0-0.05) (Eb)  (xmax) (Eb) }
-polyline { (x1-0.05) (Ec)  (xmax) (Ec) }
-polyline { (xmin) 3.2  (xmax) 3.2 }
+polyline { xmin Ea  xmax Ea }
+polyline { xmin Vl  xmax Vl }
+polyline { (x0-0.05) Eb  xmax Eb }
+polyline { (x1-0.05) Ec  xmax Ec }
+polyline { xmin 3.2  xmax 3.2 }
 % bases de las tres funciones de onda
 ba = 2        bb = -0.5     bc = -3
-polyline { (xmin) (ba)  (xmax) (ba) }
-polyline { (xmin) (bb)  (xmax) (bb) }
-polyline { (xmin) (bc)  (xmax) (bc) }
+polyline { xmin ba  xmax ba }
+polyline { xmin bb  xmax bb }
+polyline { xmin bc  xmax bc }
 % verticales: cada retorno hasta su propio nivel
-polyline { (x0) (bb)  (x0) (Eb) }
-polyline { (x1) -3.5  (x1) (Ec) }
-polyline { (x2) -3.5  (x2) (Ec) }
+polyline { x0 bb  x0 Eb }
+polyline { x1 -3.5  x1 Ec }
+polyline { x2 -3.5  x2 Ec }
 
 line_width 0.8
 tvx = xmin   tvy = Vini
@@ -1043,13 +1043,13 @@ for onda = 0 to 2 {
             u1 = xg + dir*L/6      u2 = xg + dir*2*L/6    u3 = xg + dir*3*L/6
             u4 = xg + dir*4*L/6    u5 = xg + dir*5*L/6    u6 = xg + dir*L
             smooth {
-                (u6) (yb + yg*exp(0-L/dd))
-                (u5) (yb + yg*exp(0-5*L/(6*dd)))
-                (u4) (yb + yg*exp(0-4*L/(6*dd)))
-                (u3) (yb + yg*exp(0-3*L/(6*dd)))
-                (u2) (yb + yg*exp(0-2*L/(6*dd)))
-                (u1) (yb + yg*exp(0-L/(6*dd)))
-                (xg) (yb + yg)
+                u6 (yb + yg*exp(0-L/dd))
+                u5 (yb + yg*exp(0-5*L/(6*dd)))
+                u4 (yb + yg*exp(0-4*L/(6*dd)))
+                u3 (yb + yg*exp(0-3*L/(6*dd)))
+                u2 (yb + yg*exp(0-2*L/(6*dd)))
+                u1 (yb + yg*exp(0-L/(6*dd)))
+                xg (yb + yg)
             }
         }
     }
@@ -1060,21 +1060,21 @@ for onda = 0 to 2 {
 % su rótulo la sigue.
 font &quot;Times-Roman&quot;
 xlab = xmax + 0.1
-text(&quot;$E_a$&quot;) { (xlab) (Ea-0.1) }
-text(&quot;$V_-$&quot;) { (xlab) (Vl-0.1) }
-text(&quot;$E_b$&quot;) { (xlab) (Eb-0.1) }
-text(&quot;$V_+$&quot;) { (xlab) (Vr-0.3) }
-text(&quot;$E_c$&quot;) { (xlab) (Ec-0.1) }
+text(&quot;$E_a$&quot;) { xlab (Ea-0.1) }
+text(&quot;$V_-$&quot;) { xlab (Vl-0.1) }
+text(&quot;$E_b$&quot;) { xlab (Eb-0.1) }
+text(&quot;$V_+$&quot;) { xlab (Vr-0.3) }
+text(&quot;$E_c$&quot;) { xlab (Ec-0.1) }
 % Las ψ van al margen, a la altura de su base: con la envolvente WKB las ondas
 % llenan su banda de lado a lado y ya no queda hueco interior donde ponerlas.
-text(&quot;$\psi_a$&quot;) { (xlab) (ba-0.1) }
-text(&quot;$\psi_b$&quot;) { (xlab) (bb-0.1) }
-text(&quot;$\psi_c$&quot;) { (xlab) (bc-0.1) }
+text(&quot;$\psi_a$&quot;) { xlab (ba-0.1) }
+text(&quot;$\psi_b$&quot;) { xlab (bb-0.1) }
+text(&quot;$\psi_c$&quot;) { xlab (bc-0.1) }
 text(&quot;$V(x)$&quot;) { -0.09 4 }
 ylab = 2.96
-text(&quot;$x_0$&quot;) { (x0+0.06) (ylab) }
-text(&quot;$x_1$&quot;) { (x1+0.07) (ylab) }
-text(&quot;$x_2$&quot;) { (x2+0.05) (ylab) }</pre></details>
+text(&quot;$x_0$&quot;) { (x0+0.06) ylab }
+text(&quot;$x_1$&quot;) { (x1+0.07) ylab }
+text(&quot;$x_2$&quot;) { (x2+0.05) ylab }</pre></details>
         </div>
       </article>
     </div>
@@ -1216,7 +1216,7 @@ for i = -1 to 2 {
     v1  = psi + 90
     {
         plane3d(u=[cos(lam), 0, sin(lam)], v=[0, 1, 0])
-        arc(1, from=(v0), to=(v1)) { 0 0 }
+        arc(1, from=v0, to=v1) { 0 0 }
     }
 }
 
@@ -1232,7 +1232,7 @@ for j = 0 to 4 {
     v1  = psi + tc
     {
         plane3d(at=[0, sin(bet), 0], u=[rp, 0, 0], v=[0, 0, rp])
-        arc(1, from=(v0), to=(v1)) { 0 0 }
+        arc(1, from=v0, to=v1) { 0 0 }
     }
 }
 
@@ -1278,8 +1278,8 @@ align &quot;right&quot;
 text(&quot;o&quot;) { -0.05 -0.05 }
 
 align &quot;center&quot;
-text(&quot;$\rho$&quot;) { (rlx) (rly) }
-text(&quot;$r$&quot;)    { (elx) (ely) }
+text(&quot;$\rho$&quot;) { rlx rly }
+text(&quot;$r$&quot;)    { elx ely }
 
 % La flecha de A = pi r^2 entra desde fuera, por arriba a la derecha.
 align &quot;left&quot;
@@ -1376,7 +1376,7 @@ rosa = &quot;#ffcdcd&quot;
     for k = 0 to (2*nl - 1) {
         a = -ampb
         if mod(k, 2) == 1 { a = ampb }
-        path b = sine(half_cycles=1, amplitude=(a)) { (k*hc) 0  (k*hc + hc) 0 }
+        path b = sine(half_cycles=1, amplitude=a) { (k*hc) 0  (k*hc + hc) 0 }
         bezier(&amp;b, fill=rosa)
     }
 }
@@ -1385,7 +1385,7 @@ rosa = &quot;#ffcdcd&quot;
     for k = 0 to (2*nl - 1) {
         a = amp
         if mod(k, 2) == 1 { a = -amp }
-        path e = sine(half_cycles=1, amplitude=(a)) { (k*hc) 0  (k*hc + hc) 0 }
+        path e = sine(half_cycles=1, amplitude=a) { (k*hc) 0  (k*hc + hc) 0 }
         bezier(&amp;e, fill=azul)
     }
 }
@@ -1404,7 +1404,7 @@ line_width 0.3
     for k = 0 to (2*nl - 1) {
         x = k*hc + hc/2
         polyline(dash=&quot;dotted&quot;, marker_end=&quot;triangle&quot;, marker_orient=&quot;auto&quot;, marker_size=3.5) {
-            (x) 0   (x) (-ampb * sin(x * pi / hc))
+            x 0   x (-ampb * sin(x * pi / hc))
         }
     }
 }
@@ -1413,7 +1413,7 @@ line_width 0.3
     for k = 0 to (2*nl - 1) {
         x = k*hc + hc/2
         polyline(dash=&quot;dotted&quot;, marker_end=&quot;triangle&quot;, marker_orient=&quot;auto&quot;, marker_size=3.5) {
-            (x) 0   (x) (amp * sin(x * pi / hc))
+            x 0   x (amp * sin(x * pi / hc))
         }
     }
 }
@@ -1422,11 +1422,11 @@ line_width 0.3
 line_width 1.1
 {
     plane3d(u=[1, 0, 0], v=[0, 0, 1])
-    sine(half_cycles=(2*nl), amplitude=(-ampb)) { 0 0  (nx) 0 }
+    sine(half_cycles=(2*nl), amplitude=(-ampb)) { 0 0  nx 0 }
 }
 {
     plane3d(u=[1, 0, 0], v=[0, 1, 0])
-    sine(half_cycles=(2*nl), amplitude=(amp)) { 0 0  (nx) 0 }
+    sine(half_cycles=(2*nl), amplitude=amp) { 0 0  nx 0 }
 }
 
 % --- la cota de lambda, de cresta a cresta del campo eléctrico ---
@@ -1436,10 +1436,10 @@ yb = amp + 0.75
 line_width 0.3
 {
     plane3d(u=[1, 0, 0], v=[0, 1, 0])
-    polyline { (x1) (amp + 0.12)   (x1) (yb + 0.12) }
-    polyline { (x2) (amp + 0.12)   (x2) (yb + 0.12) }
+    polyline { x1 (amp + 0.12)   x1 (yb + 0.12) }
+    polyline { x2 (amp + 0.12)   x2 (yb + 0.12) }
     polyline(marker_start=&quot;arrow&quot;, marker_end=&quot;arrow&quot;, marker_size=3.5, marker_start_orient=&quot;reverse&quot;) {
-        (x1) (yb)   (x2) (yb)
+        x1 yb   x2 yb
     }
 }
 
@@ -1609,7 +1609,7 @@ wx = dx/sin(fi)   wz = dz/sin(fi)          % d^ sin su componente a lo largo de 
 rf = 1.75                                  % radio de la marca
 line_width 0.5
 { plane3d(u=[0, rf, 0], v=[rf*wx, 0, rf*wz])
-  arc(1, from=0, to=(fid),
+  arc(1, from=0, to=fid,
       marker_start=&quot;arrow&quot;, marker_end=&quot;arrow&quot;, marker_size=3.5, marker_start_orient=&quot;reverse&quot;) { 0 0 } }
 
 % --- rótulos ---
@@ -1873,10 +1873,10 @@ line_width 0.5
 % θ: el plano de z^ y n^. Su segundo eje es q^, así que el barrido es θ directo.
 line_width 0.5
 { plane3d(u=[2.1*ezx, 2.1*ezy, 2.1*ezz], v=[2.1*qx, 2.1*qy, 2.1*qz])
-  arc(1, from=0, to=(thd)) { 0 0 } }
+  arc(1, from=0, to=thd) { 0 0 } }
 % φ: el plano transversal. Sus ejes son x^ e y^, así que el barrido es φ directo.
 { plane3d(u=[1.35*exx, 1.35*exy, 1.35*exz], v=[1.35*eyx, 1.35*eyy, 1.35*eyz])
-  arc(1, from=0, to=(phd)) { 0 0 } }
+  arc(1, from=0, to=phd) { 0 0 } }
 
 % --- rótulos ---
 % Los de los ángulos van en la bisectriz DE LA PÁGINA, no en la del espacio: la
@@ -2105,7 +2105,7 @@ plot(x=(-0.95, 0.95), y=(-0.1, 0.85), box=(5.5, 10, 25.5, 37)) {
     for i = 0 to n-1 {                     % la curva sube hasta el techo: V=0.85 → x=±0.922
         p = -0.92 + i*(1.84/n)
         q = -0.92 + (i+1)*(1.84/n)
-        polyline { p  p*p   q  q*q }
+        polyline { p  (p*p)   q  (q*q) }
     }
     line_width 0
     polyline { a1 Ea  a2 Ea }              % nivel de energía
@@ -2137,7 +2137,7 @@ plot(x=(0.8, 36), y=(0, btop), box=(39.8, 10, 68, 38.5)) {
     for i = 0 to n-1 {
         u = btop - i*((btop-bend)/n)
         v = btop - (i+1)*((btop-bend)/n)
-        polyline { 1/u  u   1/v  v }       % coords sueltas: divisiones y variables, sin paréntesis
+        polyline { (1/u)  u   (1/v)  v }   % la expresión va entre paréntesis; la variable, desnuda
     }
     line_width 0
     polyline { b1 Eb  36 Eb }              % nivel de energía
@@ -2171,9 +2171,9 @@ plot(x=(0.37, 6.3), y=(-0.5, 0.45), box=(80, 10, 108.6, 38.5)) {
     for i = 0 to n-1 {
         u = ctop - i*((ctop-cend)/n)
         v = ctop - (i+1)*((ctop-cend)/n)
-        % La resta dentro de una coord exige paréntesis; el 1/u de al lado NO
-        % (una división va suelta, y una variable con un espacio antes de `(` ya no es llamada).
-        polyline { 1/u  (u*u/2-u)   1/v  (v*v/2-v) }
+        % Una coordenada que sea un nombre o un número va desnuda; cualquier
+        % expresión, entre paréntesis (el espacio separa las coordenadas).
+        polyline { (1/u)  (u*u/2-u)   (1/v)  (v*v/2-v) }
     }
     line_width 0
     polyline { c0 Ec1  6.3 Ec1 }           % niveles de energía
@@ -2654,31 +2654,31 @@ y0 = 8
 y1 = 2.4615
 n  = 6
 
-path tray  = { (x0) (y0) }
-path proyx = { (x0) (y0) }     % proyección al eje IZQUIERDO (misma y)
-path proyy = { (x0) (y0) }     % proyección al borde SUPERIOR (misma x)
+path tray  = { x0 y0 }
+path proyx = { x0 y0 }     % proyección al eje IZQUIERDO (misma y)
+path proyy = { x0 y0 }     % proyección al borde SUPERIOR (misma x)
 
 % malla ajustada a los datos + acumulación de puntos, todo en el mismo lazo
 line_width 0.3   color &quot;gray&quot;   dash &quot;dotted&quot;
 for i = 1 to n {
     x = x0 + i*1.5
     y = y0 - i*i/6.5
-    path tray  += { (x) (y) }
-    path proyx += { (x0) (y) }
-    path proyy += { (x) (y0) }
-    polyline { (x) (y1)  (x) (y0) }        % vertical: piso → borde superior
-    polyline { (x0) (y)  (10) (y) }     % horizontal: eje y → borde derecho
+    path tray  += { x y }
+    path proyx += { x0 y }
+    path proyy += { x y0 }
+    polyline { x y1  x y0 }        % vertical: piso → borde superior
+    polyline { x0 y  10 y }        % horizontal: eje y → borde derecho
 }
 
 % ejes en L (eje y izquierdo + borde superior)
 dash &quot;solid&quot;   line_width 0.5   color &quot;black&quot;
-polyline { (x0) (y1) (x0) (y0)  (10) (y0) }
+polyline { x0 y1 x0 y0  10 y0 }
 
 % cañón, con la boca en (x0,y0)
 canon(at=(x0, y0))
 
 % plataforma
-rectangle(fill=&quot;lime&quot;) { -1.75 (y1) 0.75 6.75  }
+rectangle(fill=&quot;lime&quot;) { -1.75 y1 0.75 6.75  }
  
 % trayectoria y puntos, encima de todo
 line_width 1.5   color &quot;black&quot;   dash &quot;dashed&quot;   smooth(&amp;tray)
@@ -3725,9 +3725,9 @@ for i = 0 to 68 {
     x = col + 0.5
     y = 10.2 - fil
     font_size 13
-    text(simb[i]) { (x) (y) }
+    text(simb[i]) { x y }
     font_size 5.5
-    text(nom[i]) { (x) (y-0.42) }
+    text(nom[i]) { x (y-0.42) }
 }
 
 % --- Bloque 2: letras griegas (41) -------------------------------------------
@@ -3739,9 +3739,9 @@ for i = 0 to 40 {
     x = col + 0.5
     y = 3.0 - fil
     font_size 13
-    text(grsimb[i]) { (x) (y) }
+    text(grsimb[i]) { x y }
     font_size 5.5
-    text(grnom[i]) { (x) (y-0.42) }
+    text(grnom[i]) { x (y-0.42) }
 }</pre></details>
         </div>
       </article>

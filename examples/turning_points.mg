@@ -115,26 +115,26 @@ for i = 1 to NV {
     xv = xmin + i*hv
     Vv = Vr - (Vr-Vm)*exp(0 - (((xv-xm)/wr)^qr))
     if xv < xm { Vv = Vl - (Vl-Vm)*exp(0 - (((xm-xv)/wl)^pl)) }
-    path curvaV += { 0 0  (hv) (Vv-Vprev) }
+    path curvaV += { 0 0  hv (Vv-Vprev) }
     Vprev = Vv
 }
 
 % ── mobiliario: niveles, asíntotas y verticales de los retornos ──────────────
 line_width 0
-polyline { (xmin) (Ea)  (xmax) (Ea) }
-polyline { (xmin) (Vl)  (xmax) (Vl) }
-polyline { (x0-0.05) (Eb)  (xmax) (Eb) }
-polyline { (x1-0.05) (Ec)  (xmax) (Ec) }
-polyline { (xmin) 3.2  (xmax) 3.2 }
+polyline { xmin Ea  xmax Ea }
+polyline { xmin Vl  xmax Vl }
+polyline { (x0-0.05) Eb  xmax Eb }
+polyline { (x1-0.05) Ec  xmax Ec }
+polyline { xmin 3.2  xmax 3.2 }
 % bases de las tres funciones de onda
 ba = 2        bb = -0.5     bc = -3
-polyline { (xmin) (ba)  (xmax) (ba) }
-polyline { (xmin) (bb)  (xmax) (bb) }
-polyline { (xmin) (bc)  (xmax) (bc) }
+polyline { xmin ba  xmax ba }
+polyline { xmin bb  xmax bb }
+polyline { xmin bc  xmax bc }
 % verticales: cada retorno hasta su propio nivel
-polyline { (x0) (bb)  (x0) (Eb) }
-polyline { (x1) -3.5  (x1) (Ec) }
-polyline { (x2) -3.5  (x2) (Ec) }
+polyline { x0 bb  x0 Eb }
+polyline { x1 -3.5  x1 Ec }
+polyline { x2 -3.5  x2 Ec }
 
 line_width 0.8
 tvx = xmin   tvy = Vini
@@ -224,13 +224,13 @@ for onda = 0 to 2 {
             u1 = xg + dir*L/6      u2 = xg + dir*2*L/6    u3 = xg + dir*3*L/6
             u4 = xg + dir*4*L/6    u5 = xg + dir*5*L/6    u6 = xg + dir*L
             smooth {
-                (u6) (yb + yg*exp(0-L/dd))
-                (u5) (yb + yg*exp(0-5*L/(6*dd)))
-                (u4) (yb + yg*exp(0-4*L/(6*dd)))
-                (u3) (yb + yg*exp(0-3*L/(6*dd)))
-                (u2) (yb + yg*exp(0-2*L/(6*dd)))
-                (u1) (yb + yg*exp(0-L/(6*dd)))
-                (xg) (yb + yg)
+                u6 (yb + yg*exp(0-L/dd))
+                u5 (yb + yg*exp(0-5*L/(6*dd)))
+                u4 (yb + yg*exp(0-4*L/(6*dd)))
+                u3 (yb + yg*exp(0-3*L/(6*dd)))
+                u2 (yb + yg*exp(0-2*L/(6*dd)))
+                u1 (yb + yg*exp(0-L/(6*dd)))
+                xg (yb + yg)
             }
         }
     }
@@ -241,18 +241,18 @@ for onda = 0 to 2 {
 % su rótulo la sigue.
 font "Times-Roman"
 xlab = xmax + 0.1
-text("$E_a$") { (xlab) (Ea-0.1) }
-text("$V_-$") { (xlab) (Vl-0.1) }
-text("$E_b$") { (xlab) (Eb-0.1) }
-text("$V_+$") { (xlab) (Vr-0.3) }
-text("$E_c$") { (xlab) (Ec-0.1) }
+text("$E_a$") { xlab (Ea-0.1) }
+text("$V_-$") { xlab (Vl-0.1) }
+text("$E_b$") { xlab (Eb-0.1) }
+text("$V_+$") { xlab (Vr-0.3) }
+text("$E_c$") { xlab (Ec-0.1) }
 % Las ψ van al margen, a la altura de su base: con la envolvente WKB las ondas
 % llenan su banda de lado a lado y ya no queda hueco interior donde ponerlas.
-text("$\psi_a$") { (xlab) (ba-0.1) }
-text("$\psi_b$") { (xlab) (bb-0.1) }
-text("$\psi_c$") { (xlab) (bc-0.1) }
+text("$\psi_a$") { xlab (ba-0.1) }
+text("$\psi_b$") { xlab (bb-0.1) }
+text("$\psi_c$") { xlab (bc-0.1) }
 text("$V(x)$") { -0.09 4 }
 ylab = 2.96
-text("$x_0$") { (x0+0.06) (ylab) }
-text("$x_1$") { (x1+0.07) (ylab) }
-text("$x_2$") { (x2+0.05) (ylab) }
+text("$x_0$") { (x0+0.06) ylab }
+text("$x_1$") { (x1+0.07) ylab }
+text("$x_2$") { (x2+0.05) ylab }

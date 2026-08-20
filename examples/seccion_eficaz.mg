@@ -209,10 +209,10 @@ line_width 0.5
 % θ: el plano de z^ y n^. Su segundo eje es q^, así que el barrido es θ directo.
 line_width 0.5
 { plane3d(u=[2.1*ezx, 2.1*ezy, 2.1*ezz], v=[2.1*qx, 2.1*qy, 2.1*qz])
-  arc(1, from=0, to=(thd)) { 0 0 } }
+  arc(1, from=0, to=thd) { 0 0 } }
 % φ: el plano transversal. Sus ejes son x^ e y^, así que el barrido es φ directo.
 { plane3d(u=[1.35*exx, 1.35*exy, 1.35*exz], v=[1.35*eyx, 1.35*eyy, 1.35*eyz])
-  arc(1, from=0, to=(phd)) { 0 0 } }
+  arc(1, from=0, to=phd) { 0 0 } }
 
 % --- rótulos ---
 % Los de los ángulos van en la bisectriz DE LA PÁGINA, no en la del espacio: la

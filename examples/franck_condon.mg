@@ -81,15 +81,15 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
     for i = 0 to nseg-1 {
         p = rini + i*((rfin-rini)/nseg)
         q = rini + (i+1)*((rfin-rini)/nseg)
-        polyline { (p)  (D1*(1-exp(-a1*(p-re1)))*(1-exp(-a1*(p-re1))))
-            (q)  (D1*(1-exp(-a1*(q-re1)))*(1-exp(-a1*(q-re1)))) }
+        polyline { p  (D1*(1-exp(-a1*(p-re1)))*(1-exp(-a1*(p-re1))))
+            q  (D1*(1-exp(-a1*(q-re1)))*(1-exp(-a1*(q-re1)))) }
     }
     rini = re2 - ln(1 + sqrt((ytop-Te-0.1)/D2))/a2
     for i = 0 to nseg-1 {
         p = rini + i*((rfin-rini)/nseg)
         q = rini + (i+1)*((rfin-rini)/nseg)
-        polyline { (p)  (Te + D2*(1-exp(-a2*(p-re2)))*(1-exp(-a2*(p-re2))))
-            (q)  (Te + D2*(1-exp(-a2*(q-re2)))*(1-exp(-a2*(q-re2)))) }
+        polyline { p  (Te + D2*(1-exp(-a2*(p-re2)))*(1-exp(-a2*(p-re2))))
+            q  (Te + D2*(1-exp(-a2*(q-re2)))*(1-exp(-a2*(q-re2)))) }
     }
 
     % ---- niveles no resueltos, hacia la disociación -----------------------
@@ -118,7 +118,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
             s = sqrt(E/D1)
             rext = rfin
             if s < smax1 { rext = re1 - ln(1-s)/a1 }
-            polyline { (re1 - ln(1+s)/a1)  (E)   (rext)  (E) }
+            polyline { (re1 - ln(1+s)/a1)  E   rext  E }
         }
     }
     vmax2 = 1/(2*xe2) - 0.5      smax2 = 1 - exp(-a2*(rfin-re2))
@@ -128,14 +128,14 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
             s = sqrt(E/D2)
             rext = rfin
             if s < smax2 { rext = re2 - ln(1-s)/a2 }
-            polyline { (re2 - ln(1+s)/a2)  (Te+E)   (rext)  (Te+E) }
+            polyline { (re2 - ln(1+s)/a2)  (Te+E)   rext  (Te+E) }
         }
     }
 
     % ---- líneas de disociación --------------------------------------------
     line_width 0.15   dash "dashed"
-    polyline { 0.66 (D1)  (rfin) (D1) }
-    polyline { 0.66 (Te+D2)  (rfin) (Te+D2) }
+    polyline { 0.66 D1  rfin D1 }
+    polyline { 0.66 (Te+D2)  rfin (Te+D2) }
     dash "solid"
 
     % ---- las ondas vibracionales ------------------------------------------
@@ -184,7 +184,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
                 % El `for` acumula los medios ciclos con `path +=`, cada uno con SU
                 % amplitud (un concat no cubre la longitud variable en v).
                 eprev = 0                              % extremo previo (arranca en la cola)
-                path w = sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tL) 0 }
+                path w = sine(half_cycles=1, phase=0, amplitude=0) { 0 0  tL 0 }
                 for k = 1 to v+1 {                     % un pico por lóbulo, en el JOIN
                     rr  = rm + (rp-rm)*k/(v+2)          % posición del pico en r
                     Vr  = D*(1-exp(-a*(rr-re)))*(1-exp(-a*(rr-re)))
@@ -201,7 +201,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
                 ph  = 270
                 if amp < 0 { amp = -amp   ph = 90 }
                 path w += sine(half_cycles=1, phase=ph, amplitude=amp) { 0 0  1 0 }
-                path w += sine(half_cycles=1, phase=0, amplitude=0) { 0 0  (tR) 0 }
+                path w += sine(half_cycles=1, phase=0, amplitude=0) { 0 0  tR 0 }
 
                 % El rect del fit: en x, los retornos ensanchados por los voladizos
                 % ASIMÉTRICOS (gL interno, gR externo); en y, la energía ± una altura del
@@ -216,7 +216,7 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
                 if E+elab < D { xl = re - ln(1 - sqrt((E+elab)/D))/a }
                 if xl < rp+gR+0.05 { xl = rp+gR+0.05 }
                 if xl > rp+gR+0.20 { xl = rp+gR+0.20 }
-                text(etq, font_size=7, align="left", valign="middle") { (xl) (toff+E) }
+                text(etq, font_size=7, align="left", valign="middle") { xl (toff+E) }
             }
         }
     }
@@ -235,13 +235,13 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
     E0 = we1*0.5 - we1*xe1*0.25
     Vfc = Te + D2*(1-exp(-a2*(re1-re2)))*(1-exp(-a2*(re1-re2)))
     line_width 0.5
-    polyline(marker_end="arrow") { (re1) (E0)  (re1) (Vfc) }
+    polyline(marker_end="arrow") { re1 E0  re1 Vfc }
 
     % Marca del nivel de llegada, junto a la punta (que cae en el retorno interno
     % de v'=6): hace legible "0 → v'≈6" sin cruzar la vista a los números de la
     % derecha. Es "≈6" porque Vfc=7.776 cae entre v'=6 (7.749) y v'=7 (7.934) — el
     % nivel más cercano, el que la transición puebla sobre todo.
-    text("$v'\approx6$", font_size=7, align="right", valign="middle") { (re1-0.06) (Vfc) }
+    text("$v'\approx6$", font_size=7, align="right", valign="middle") { (re1-0.06) Vfc }
 
     xaxis(from=0.66, to=rfin, label="distancia internuclear  $r$", ticks="none",
     tick_labels=false, label_at="center")

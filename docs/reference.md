@@ -558,9 +558,10 @@ if r > 2 and n < 100 { text("large") { 0 0 } } else { text("small") { 0 0 } }
 
 > ⚠️ **In a `{ }` block values are separated by spaces**, so a `+` or `-` inside a coordinate splits it
 > in two: `{ 12 y-11 }` is **three** terms (`12`, `y`, `-11`); what you want is `{ 12 (y-11) }`.
-> **Parenthesize any coordinate that adds or subtracts**; products, quotients, powers and a leading minus
-> go bare (`x*2`, `x/n`, `x^2`, `-x`). Mixing bare variables with parenthesized coordinates is fine:
-> `{ x y (x+1) (y+1) }` ([details](#15-common-mistakes)).
+> The rule: **a name or a number goes bare; anything else goes in `( )`** — `{ x y (x+1) (p*p) }`.
+> Strictly, only `+` and `-` split a coordinate (a product, a quotient, a power or a leading minus hold
+> together on their own: `x*2`, `x/n`, `x^2`, `-x`), but the examples parenthesize **every** expression
+> so there is only one rule to remember ([details](#15-common-mistakes)).
 
 > ⚠️ **A function call is GLUED to its parenthesis: `f(x)`.** With a space in between —`f (x)`— the `(`
 > is a separate term, not a call; that's why in `{ x y (x+1) }` the `y` doesn't swallow the following
@@ -1217,11 +1218,12 @@ axis on its own.
 
 **A coordinate `{ }` complains about an odd number, or the figure comes out distorted.** Inside a block
 values are separated by **spaces**, so a `+` or a `-` inside a coordinate splits it in two: `{ 12 y-11 }` is
-**three** terms (`12`, `y`, `-11`), not two — what you want is `{ 12 (y-11) }`. The rule: **parenthesize any
-coordinate that adds or subtracts**; products, quotients and powers go bare (`x*2`, `x/n`, `x^2`), and bare
-variables coexist with parenthesized coordinates (`{ x y (x+1) (y+1) }`). The odd count is a compilation
-error, with line and column, so at least it doesn't fail silently. And a **function call is glued** (`f(x)`):
-with a space, `f (x)`, the `(` is a separate term, not a call.
+**three** terms (`12`, `y`, `-11`), not two — what you want is `{ 12 (y-11) }`. The rule: **a name or a
+number goes bare; anything else goes in `( )`** (`{ x y (x+1) (p*p) }`). Strictly, only `+` and `-` split a
+coordinate — a product, a quotient or a power hold together on their own (`x*2`, `x/n`, `x^2`) — but the
+examples parenthesize **every** expression so there is only one rule to remember. The odd count is a
+compilation error, with line and column, so at least it doesn't fail silently. And a **function call is
+glued** (`f(x)`): with a space, `f (x)`, the `(` is a separate term, not a call.
 
 **`dot(2, &p)` doesn't compile and the error talks about an unexpected expression.** The path goes **always
 as the first argument** and the rest named after: `dot(&p, size=2)`, `marker(&p, shape="x")`,
@@ -1333,4 +1335,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ a447756bb066ec4771db7b19515becc979eee77e -->
+<!-- translated-from: referencia.md @ 98a52b6749adea2396cccc1266e288a88a09ceb6 -->

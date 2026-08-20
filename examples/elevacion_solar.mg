@@ -82,7 +82,7 @@ rot_y = Py + 5.7*sin((hor+180)*d2r) + 0.22*sin(lat*d2r)
 
 % Cenit: la vertical del lugar prolongada. El satélite mira al nadir, así que va sobre
 % ella; el rayo de verano se le acerca tanto como lo permite la latitud.
-polyline(line_width=0.6) { (Px) (Py)  (Px + 7.7*cos(lat*d2r)) (Py + 7.7*sin(lat*d2r)) }
+polyline(line_width=0.6) { Px Py  (Px + 7.7*cos(lat*d2r)) (Py + 7.7*sin(lat*d2r)) }
 cen_x = Px + 4.6*cos(lat*d2r) + 0.38*cos(hor*d2r)
 cen_y = Py + 4.6*sin(lat*d2r) + 0.38*sin(hor*d2r)
 { translate cen_x cen_y   rotate lat
@@ -110,7 +110,7 @@ for k = 0 to 2 {
     % El rayo se corta en el radio LIBRE, no en el borde del disco: si llegara al
     % disco atravesaría el anillo de rayos del icono.
     polyline(color="darkorange", line_width=0.6) {
-        (Px) (Py)  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
+        Px Py  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
 
     % El icono dice «sol» solo, así que no lleva rótulo dentro.
     Sun(scale=sun_r, at=(sun_x, sy))
@@ -119,11 +119,11 @@ for k = 0 to 2 {
     text("$h$ = " + str(h, 1) + "°", size=8.5, color="gray") { (sun_x + sun_out + 0.35) (sy - 0.62) }
 
     arc(radio[k], from=hor, to=d, color=gray(0.35), line_width=0.6,
-        marker_start="arrow", marker_start_orient="reverse", marker_end="arrow", marker_size=3) { (Px) (Py) }
+        marker_start="arrow", marker_start_orient="reverse", marker_end="arrow", marker_size=3) { Px Py }
 }
 
 % El punto de observación: donde concurren el horizonte, el cenit y los tres rayos.
-dot(2.2) { (Px) (Py) }
+dot(2.2) { Px Py }
 
 text("Ángulos de elevación solar ($h$)", align="center", size=10) { 12.2 -4.7 }
 text("Observador a latitud $\varphi$ = " + str(lat) + "° N, al mediodía solar", size=9,

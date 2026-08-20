@@ -125,7 +125,7 @@ for i = -1 to 2 {
     v1  = psi + 90
     {
         plane3d(u=[cos(lam), 0, sin(lam)], v=[0, 1, 0])
-        arc(1, from=(v0), to=(v1)) { 0 0 }
+        arc(1, from=v0, to=v1) { 0 0 }
     }
 }
 
@@ -141,7 +141,7 @@ for j = 0 to 4 {
     v1  = psi + tc
     {
         plane3d(at=[0, sin(bet), 0], u=[rp, 0, 0], v=[0, 0, rp])
-        arc(1, from=(v0), to=(v1)) { 0 0 }
+        arc(1, from=v0, to=v1) { 0 0 }
     }
 }
 
@@ -187,8 +187,8 @@ align "right"
 text("o") { -0.05 -0.05 }
 
 align "center"
-text("$\rho$") { (rlx) (rly) }
-text("$r$")    { (elx) (ely) }
+text("$\rho$") { rlx rly }
+text("$r$")    { elx ely }
 
 % La flecha de A = pi r^2 entra desde fuera, por arriba a la derecha.
 align "left"

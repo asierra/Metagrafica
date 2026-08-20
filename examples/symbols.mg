@@ -118,9 +118,9 @@ for i = 0 to 68 {
     x = col + 0.5
     y = 10.2 - fil
     font_size 13
-    text(simb[i]) { (x) (y) }
+    text(simb[i]) { x y }
     font_size 5.5
-    text(nom[i]) { (x) (y-0.42) }
+    text(nom[i]) { x (y-0.42) }
 }
 
 % --- Bloque 2: letras griegas (41) -------------------------------------------
@@ -132,7 +132,7 @@ for i = 0 to 40 {
     x = col + 0.5
     y = 3.0 - fil
     font_size 13
-    text(grsimb[i]) { (x) (y) }
+    text(grsimb[i]) { x y }
     font_size 5.5
-    text(grnom[i]) { (x) (y-0.42) }
+    text(grnom[i]) { x (y-0.42) }
 }

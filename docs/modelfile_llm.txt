@@ -61,9 +61,12 @@ Las tres primeras son las caras.
 4. **Los comentarios empiezan con `%`.** Un `#` es un error léxico fatal. Los comentarios sí
    admiten acentos y eñes; el **código** no.
 
-5. **Dentro de un bloque `{ }` los valores se separan por espacios, sin comas,** y toda
-   coordenada que sume o reste va entre paréntesis: `{ 12 (y-11) }`, porque `{ 12 y-11 }` son
-   tres términos. Las llamadas a función van pegadas al paréntesis: `sqrt(x)`, nunca `sqrt (x)`.
+5. **Dentro de un bloque `{ }` los valores se separan por espacios, sin comas,** y cada
+   coordenada es **un nombre o un número desnudo, o una expresión entre paréntesis**:
+   `{ x y (x+1) (p*p) }`. Sin el paréntesis, un `+` o un `-` parte la coordenada en dos:
+   `{ 12 y-11 }` son tres términos (`12`, `y`, `-11`), no dos. Y al revés, **no parentices un
+   nombre suelto** —`{ (x) (y) }` compila, pero es ruido y así no están escritos los ejemplos—.
+   Las llamadas a función van pegadas al paréntesis: `sqrt(x)`, nunca `sqrt (x)`.
 
 6. **El bloque de coordenadas abre en la MISMA línea** en que acabó la cabeza de la primitiva.
    `rectangle(fill="red") { 0 0  4 3 }` ✅; bajar la `{` al renglón siguiente es un error que
@@ -188,12 +191,13 @@ es un [`plot`](#11-gráficas), que mapea datos a una caja y estira cada eje por 
 **Un `{ }` de coordenadas se queja de un número impar, o la figura sale deformada.** Dentro
 de un bloque los valores se separan por **espacios**, así que un `+` o un `-` dentro de una
 coordenada la parte en dos: `{ 12 y-11 }` son **tres** términos (`12`, `y`, `-11`), no dos —
-lo que quieres es `{ 12 (y-11) }`. La regla: **encierra en `( )` toda coordenada que sume o
-reste**; productos, cocientes y potencias van sueltos (`x*2`, `x/n`, `x^2`), y las variables
-sueltas conviven con coordenadas entre paréntesis (`{ x y (x+1) (y+1) }`). El conteo impar es
-error de compilación, con línea y columna, así que al menos no falla en silencio. Y una
-**llamada a función va pegada** (`f(x)`): con un espacio, `f (x)`, el `(` es un término aparte,
-no una llamada.
+lo que quieres es `{ 12 (y-11) }`. La regla: **un nombre o un número van desnudos; cualquier
+otra cosa va entre `( )`** (`{ x y (x+1) (p*p) }`). Estrictamente solo `+` y `-` parten una
+coordenada —un producto, un cociente o una potencia aguantan sueltos (`x*2`, `x/n`, `x^2`)—,
+pero los ejemplos parentizan **toda** expresión para no tener que recordar dos reglas. El
+conteo impar es error de compilación, con línea y columna, así que al menos no falla en
+silencio. Y una **llamada a función va pegada** (`f(x)`): con un espacio, `f (x)`, el `(` es
+un término aparte, no una llamada.
 
 **`dot(2, &p)` no compila y el error habla de una expresión inesperada.** El trayecto va
 **siempre como primer argumento** y el resto nombrado detrás: `dot(&p, size=2)`,
@@ -824,7 +828,7 @@ rot_y = Py + 5.7*sin((hor+180)*d2r) + 0.22*sin(lat*d2r)
 
 % Cenit: la vertical del lugar prolongada. El satélite mira al nadir, así que va sobre
 % ella; el rayo de verano se le acerca tanto como lo permite la latitud.
-polyline(line_width=0.6) { (Px) (Py)  (Px + 7.7*cos(lat*d2r)) (Py + 7.7*sin(lat*d2r)) }
+polyline(line_width=0.6) { Px Py  (Px + 7.7*cos(lat*d2r)) (Py + 7.7*sin(lat*d2r)) }
 cen_x = Px + 4.6*cos(lat*d2r) + 0.38*cos(hor*d2r)
 cen_y = Py + 4.6*sin(lat*d2r) + 0.38*sin(hor*d2r)
 { translate cen_x cen_y   rotate lat
@@ -852,7 +856,7 @@ for k = 0 to 2 {
     % El rayo se corta en el radio LIBRE, no en el borde del disco: si llegara al
     % disco atravesaría el anillo de rayos del icono.
     polyline(color="darkorange", line_width=0.6) {
-        (Px) (Py)  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
+        Px Py  (sun_x - sun_out*cos(d*d2r)) (sy - sun_out*sin(d*d2r)) }
 
     % El icono dice «sol» solo, así que no lleva rótulo dentro.
     Sun(scale=sun_r, at=(sun_x, sy))
@@ -861,11 +865,11 @@ for k = 0 to 2 {
     text("$h$ = " + str(h, 1) + "°", size=8.5, color="gray") { (sun_x + sun_out + 0.35) (sy - 0.62) }
 
     arc(radio[k], from=hor, to=d, color=gray(0.35), line_width=0.6,
-        marker_start="arrow", marker_start_orient="reverse", marker_end="arrow", marker_size=3) { (Px) (Py) }
+        marker_start="arrow", marker_start_orient="reverse", marker_end="arrow", marker_size=3) { Px Py }
 }
 
 % El punto de observación: donde concurren el horizonte, el cenit y los tres rayos.
-dot(2.2) { (Px) (Py) }
+dot(2.2) { Px Py }
 
 text("Ángulos de elevación solar ($h$)", align="center", size=10) { 12.2 -4.7 }
 text("Observador a latitud $\varphi$ = " + str(lat) + "° N, al mediodía solar", size=9,

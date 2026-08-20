@@ -78,7 +78,7 @@ rosa = "#ffcdcd"
     for k = 0 to (2*nl - 1) {
         a = -ampb
         if mod(k, 2) == 1 { a = ampb }
-        path b = sine(half_cycles=1, amplitude=(a)) { (k*hc) 0  (k*hc + hc) 0 }
+        path b = sine(half_cycles=1, amplitude=a) { (k*hc) 0  (k*hc + hc) 0 }
         bezier(&b, fill=rosa)
     }
 }
@@ -87,7 +87,7 @@ rosa = "#ffcdcd"
     for k = 0 to (2*nl - 1) {
         a = amp
         if mod(k, 2) == 1 { a = -amp }
-        path e = sine(half_cycles=1, amplitude=(a)) { (k*hc) 0  (k*hc + hc) 0 }
+        path e = sine(half_cycles=1, amplitude=a) { (k*hc) 0  (k*hc + hc) 0 }
         bezier(&e, fill=azul)
     }
 }
@@ -106,7 +106,7 @@ line_width 0.3
     for k = 0 to (2*nl - 1) {
         x = k*hc + hc/2
         polyline(dash="dotted", marker_end="triangle", marker_orient="auto", marker_size=3.5) {
-            (x) 0   (x) (-ampb * sin(x * pi / hc))
+            x 0   x (-ampb * sin(x * pi / hc))
         }
     }
 }
@@ -115,7 +115,7 @@ line_width 0.3
     for k = 0 to (2*nl - 1) {
         x = k*hc + hc/2
         polyline(dash="dotted", marker_end="triangle", marker_orient="auto", marker_size=3.5) {
-            (x) 0   (x) (amp * sin(x * pi / hc))
+            x 0   x (amp * sin(x * pi / hc))
         }
     }
 }
@@ -124,11 +124,11 @@ line_width 0.3
 line_width 1.1
 {
     plane3d(u=[1, 0, 0], v=[0, 0, 1])
-    sine(half_cycles=(2*nl), amplitude=(-ampb)) { 0 0  (nx) 0 }
+    sine(half_cycles=(2*nl), amplitude=(-ampb)) { 0 0  nx 0 }
 }
 {
     plane3d(u=[1, 0, 0], v=[0, 1, 0])
-    sine(half_cycles=(2*nl), amplitude=(amp)) { 0 0  (nx) 0 }
+    sine(half_cycles=(2*nl), amplitude=amp) { 0 0  nx 0 }
 }
 
 % --- la cota de lambda, de cresta a cresta del campo eléctrico ---
@@ -138,10 +138,10 @@ yb = amp + 0.75
 line_width 0.3
 {
     plane3d(u=[1, 0, 0], v=[0, 1, 0])
-    polyline { (x1) (amp + 0.12)   (x1) (yb + 0.12) }
-    polyline { (x2) (amp + 0.12)   (x2) (yb + 0.12) }
+    polyline { x1 (amp + 0.12)   x1 (yb + 0.12) }
+    polyline { x2 (amp + 0.12)   x2 (yb + 0.12) }
     polyline(marker_start="arrow", marker_end="arrow", marker_size=3.5, marker_start_orient="reverse") {
-        (x1) (yb)   (x2) (yb)
+        x1 yb   x2 yb
     }
 }
 

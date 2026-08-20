@@ -79,9 +79,12 @@ Las tres primeras son las caras.
 4. **Los comentarios empiezan con `%`.** Un `#` es un error léxico fatal. Los comentarios sí
    admiten acentos y eñes; el **código** no.
 
-5. **Dentro de un bloque `{ }` los valores se separan por espacios, sin comas,** y toda
-   coordenada que sume o reste va entre paréntesis: `{ 12 (y-11) }`, porque `{ 12 y-11 }` son
-   tres términos. Las llamadas a función van pegadas al paréntesis: `sqrt(x)`, nunca `sqrt (x)`.
+5. **Dentro de un bloque `{ }` los valores se separan por espacios, sin comas,** y cada
+   coordenada es **un nombre o un número desnudo, o una expresión entre paréntesis**:
+   `{ x y (x+1) (p*p) }`. Sin el paréntesis, un `+` o un `-` parte la coordenada en dos:
+   `{ 12 y-11 }` son tres términos (`12`, `y`, `-11`), no dos. Y al revés, **no parentices un
+   nombre suelto** —`{ (x) (y) }` compila, pero es ruido y así no están escritos los ejemplos—.
+   Las llamadas a función van pegadas al paréntesis: `sqrt(x)`, nunca `sqrt (x)`.
 
 6. **El bloque de coordenadas abre en la MISMA línea** en que acabó la cabeza de la primitiva.
    `rectangle(fill="red") { 0 0  4 3 }` ✅; bajar la `{` al renglón siguiente es un error que
