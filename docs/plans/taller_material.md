@@ -2,7 +2,9 @@
 
 > **Qué es esto.** Lo que hay que tener listo para correr el taller de `plan_promocion.md` §2a:
 > anuncio, encargos, boleto de entrada y hoja de conteo. **No es un plan** —el plan está en
-> `plan_promocion.md`— sino el instrumento con el que se toma la medida.
+> `plan_promocion.md`— sino el instrumento con el que se toma la medida. **Tampoco es el
+> horario:** el reloj minuto a minuto de la sesión va aparte, en `taller_temario.md`, para que
+> retocarlo no toque lo que se entrega.
 >
 > Creado 2026-08-04. Las fechas van en blanco a propósito: se fijan al elegir el curso.
 >

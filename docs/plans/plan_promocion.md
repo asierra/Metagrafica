@@ -71,7 +71,9 @@ Si preguntan, ahí está la lista de renombres que hay que hacer **antes** de co
 Material listo: la galería sirve de guion, y los ejemplos son copiables.
 
 📦 **El instrumento está escrito: `taller_material.md`** (2026-08-04) — anuncio, boleto de
-entrada, tres encargos de reserva, hoja de conteo y la disciplina del facilitador. Tres
+entrada, tres encargos de reserva, hoja de conteo y la disciplina del facilitador. El horario
+de la sesión —minuto a minuto, y la regla que lo gobierna: se nombra desde la pantalla solo lo
+que está *arriba* de `plot`— está en `taller_temario.md`. Tres
 decisiones de ahí que conviene no deshacer al adaptarlo:
 
 - **Dos sesiones separadas por dos semanas, no una.** La condición 4 pide *«un periodo»*, y las
