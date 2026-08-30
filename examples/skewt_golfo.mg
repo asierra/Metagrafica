@@ -7,10 +7,14 @@
 % polilíneas ya proyectadas al plano oblicuo del diagrama.
 %
 % NOTAS --------------------------------------------------------------------
-% ⚠ GENERADO, NO SE EDITA A MANO: lo escribe `skewt.py`, que lee el granule NUCAPS
-% y proyecta. El script NO está en este repo, y el .nc tampoco —como los datos de
-% Natural Earth de lib/*_map.mg—. Si tocas algo aquí, llévalo al generador o la
-% próxima corrida lo borra; este encabezado incluido.
+% ⚠ Es una INSTANTÁNEA de un archivo GENERADO: lo escribe `skewt.py`, que lee el
+% granule NUCAPS y proyecta. Ni el script ni el .nc están en este repo —como los
+% datos de Natural Earth de lib/*_map.mg—, y el generador vive en OTRO proyecto
+% (LANOT_tools), que no tiene por qué cargar con las convenciones de este corpus:
+% este encabezado —título, descripción y NOTAS, que es lo que publica la galería—
+% se le puso A MANO. Así que quien lo regenere tiene que VOLVER A PONERLO aquí; no
+% hay que tocar `skewt.py` para eso. Lo que sí es suyo, y ya está allá, es el
+% `line_width` del cromo fuera del `plot` (ver abajo).
 %
 % Datos: NUCAPS-EDR_v3r2_j01_s202608291917469_e202608291918167_c202608292359060.nc,
 % FOR 104 — NOAA-20 CrIS+ATMS, 2026-08-29 19:18Z, 20.63°N 90.48°W, Quality_Flag 0.
