@@ -6,7 +6,7 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-08-19**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-08-30**.
 >
 > También reemplaza a **`ideas.txt`** (borrador fundacional de V3, borrado el 2026-07-22).
 > Se repasaron sus 18 puntos contra el código: 14 están superados —varios muy por encima de
@@ -23,7 +23,7 @@
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
 > Build/test: `make` + `bash test/run.sh check` → **ok=96 … docfail=0 citafail=0 humofail=0**
 > (32 ejemplos × 3 backends; **diez** compuertas,
-> razonadas una por una en `CLAUDE.md`; la 5ª son 62 pruebas NEGATIVAS en `test/errors/`,
+> razonadas una por una en `CLAUDE.md`; la 5ª son 65 pruebas NEGATIVAS en `test/errors/`,
 > ampliadas el 2026-07-28 a los diagnósticos NO fatales con `EXPECT_WARN`/`EXPECT_NO_WARN`;
 > la 6ª vigila que `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva
 > incrustado el código de cada ejemplo, así que **editar un comentario la desactualiza** y
@@ -1124,6 +1124,24 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 - [ ] **#5** — el detector "línea rellena" de la Capa 3 depende del orden de atributos del
       SVG (`d="…" fill="…"`); si SVGDisplay reordena, el gate deja de cazar en silencio.
 - [ ] **#6** — `parsePlot` sobrescribe un 2º `xaxis`/`yaxis` sin avisar.
+- [ ] **Los sub/superíndices SIN LLAVES escanean `\comando` por su cuenta** (2026-08-30).
+      La rama de `_`/`^` de `text_parser.cpp` es una **segunda implementación, más pobre**,
+      del `case '\\'`. La forma CON llaves no la necesita —hace `tspush()` y vuelve al bucle
+      principal, así que la atiende el escáner bueno—, y de ahí la consecuencia: **todo lo
+      que se le añada al marcado nace roto ahí, y en silencio**. Así nacieron rotos el
+      escape E1 (`$x^\{$` se comía los dos caracteres *y* descuadraba el resto de la
+      cadena), el espaciado explícito (`$x^\,y$` dibujaba una COMA), las seis funciones
+      (`$x^\sin$` avisaba «unknown sin» mientras `$\sin x$` salía bien) y el símbolo
+      desconocido, que fue el único que alguien reportó. Los cuatro se **parcharon a mano**
+      ese día, uno por uno; la duplicación que los produce sigue en pie, y `\frac`/`\hat`
+      ahí solo se **diagnostican**, no funcionan.
+      **Arreglo de fondo:** que `^`/`_` sin llaves NO escanee — que consuma *un átomo*
+      delegando en el bucle principal, que es lo que hace TeX y lo que la forma con llaves
+      ya hace; los tres comandos con grupo saldrían gratis. Toca la máquina de
+      `tspush`/`tspop` del bucle, de lo menos cubierto del archivo: su red son el golden de
+      `examples/texto.mg` (que fija los GLIFOS) y los tres fixtures
+      `test/errors/indice_*.mg` + `simbolo_desconocido_en_indice.mg` (que fijan stderr).
+      *Cero presión mientras el parche aguante; anotado para no rediagnosticarlo desde cero.*
 - [ ] **El ORDEN de los trabajos en `release.yml` esconde la compuerta que importa** (2026-08-04).
       `smoke-macos` y `smoke-windows` comparan la salida **byte a byte entre plataformas**, que es
       la única red contra la familia «fórmula que debe dar cero y da 1e-15» —ningún golden puede

@@ -743,6 +743,20 @@ struct Stmt {
   // true solo en las sentencias de transformación local (§11.1): apilan una
   // matriz de mundo (OPMPUSH) que el bloque/struct contenedor debe desapilar.
   virtual bool isTransform() const { return false; }
+  // Estilo del cuerpo del plot que un `rule` hereda por su POSICIÓN (§11). Los
+  // notables se dibujan DESPUÉS del cuerpo —para quedar encima— y por tanto fuera
+  // de su push/pop, así que el estado no les llega solo: PlotStmt lo REPRODUCE
+  // recorriendo las sentencias que preceden a cada rule. No se reproduce el estado
+  // «tal como quedó», porque no existe: el parser no lleva una máquina de estado,
+  // emite Attributes, así que replay es la única forma disponible.
+  //
+  // Solo lo sobrescribe lo que de verdad se filtra a lo que sigue en el bloque:
+  // StateStmt (los tres de §13.8) e IncludeStmt, que empalma su programa SIN
+  // acotarlo. Los cuerpos de if/for/{ } y las structs sí acotan el estado —medido:
+  // un `color` dentro de ellos no alcanza a la sentencia siguiente—, así que el
+  // default vacío no es una omisión sino la semántica: el replay REPRODUCE el
+  // alcance léxico, no lo aproxima.
+  virtual void replayRuleStyle(Scope &, MetaGrafica &, GraphicsItemList &) {}
 };
 using StmtPtr = std::unique_ptr<Stmt>;
 
@@ -768,6 +782,17 @@ struct SArg { bool isStr = false; ExprPtr num; std::string str; };
 struct StateStmt : Stmt {
   std::string name;
   std::vector<SArg> args;
+  // Los TRES que `rule` acepta también como argumento (§13.8), y no más. La regla
+  // queda simétrica y explicable —hereda lo mismo que puede recibir— y el recorte
+  // no es de estilo: `fill` dejaría el notable RELLENO Y SIN TRAZO, un path de un
+  // solo segmento con área nula, invisible en SVG y PDF (Lección 6, la fuga que el
+  // push/pop del cuerpo existe para cerrar; la invariante (b) de la Capa 3 la caza
+  // solo si hay una figura del corpus donde mirar). `font_size` achicaría el
+  // rótulo —para eso está `label_size=`— y `hatch`/`gradient` no pintan nada sobre
+  // una línea trazada, pero sí replicarían sus definiciones.
+  void replayRuleStyle(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    if (name == "color" || name == "line_width" || name == "dash") exec(s, mg, out);
+  }
   void exec(Scope &s, MetaGrafica &, GraphicsItemList &out) override {
     if (name == "outlinefill") {              // §4.11: contornea los rellenos del bloque
       // Como siempre hay color de trazo, el contorno no puede inferirse de `color=`
@@ -895,6 +920,13 @@ struct IncludeStmt : Stmt {
   std::vector<StmtPtr> prog;
   void exec(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
     for (auto &st : prog) st->exec(s, mg, out);
+  }
+  // El ÚNICO que empalma sentencias sin push/pop, y por eso el único que hay que
+  // atravesar: un `color` en la cabeza de un `.mg` incluido sí alcanza a lo que
+  // sigue en el bloque —medido—, así que el rule tiene que verlo como lo ve el
+  // resto del cuerpo. Recursa (un include puede incluir).
+  void replayRuleStyle(Scope &s, MetaGrafica &mg, GraphicsItemList &out) override {
+    for (auto &st : prog) st->replayRuleStyle(s, mg, out);
   }
 };
 
@@ -3120,6 +3152,26 @@ struct RuleStmt : Stmt {
   double lo = 0, hi = 1;       // extensión ya mapeada, sobre el eje perpendicular
   double labelAnchor = 0;      // coord perpendicular de la LÍNEA DEL EJE (respeta base=)
   double labelGap = 4.0;       // tick_label_gap del eje al que pertenece (pt)
+  // Cuántas sentencias del cuerpo del plot preceden a este rule EN EL FUENTE. Lo
+  // fija parsePlot al interceptarlo: los rule se sacan del cuerpo a su propio
+  // vector, así que sin esto su posición —que es lo que decide qué estilo hereda—
+  // se perdería en el camino.
+  size_t bodyIndex = 0;
+  // El cuerpo mismo. Lo fija PlotStmt::exec y NO parsePlot: mientras se parsea, el
+  // vector crece y su dirección no es estable.
+  const std::vector<StmtPtr> *body = nullptr;
+
+  // El estilo que este rule HEREDA del bloque (§11). Lo emiten DOS sitios —la línea
+  // del notable y su muestra en la leyenda automática— y tiene que ser el mismo en
+  // los dos: que muestra y línea no puedan divergir es la propiedad por la que esa
+  // leyenda existe (§13.9), y sin este emisor común la muestra se quedaría con el
+  // estilo de fuera del plot mientras la línea toma el del bloque. Va ANTES de
+  // emitStyle, que son los argumentos propios y por tanto el override.
+  void emitInherited(Scope &s, MetaGrafica &mg, GraphicsItemList &out) const {
+    if (!body) return;
+    for (size_t i = 0; i < bodyIndex && i < body->size(); ++i)
+      (*body)[i]->replayRuleStyle(s, mg, out);
+  }
 
   bool toLegend(Scope &s) const {
     std::string la = namedStr(s, named, "label_at");
@@ -3278,6 +3330,7 @@ struct LegendStmt : Stmt {
         GraphicsItemList attrs;
         r->emitStyle(s, attrs);
         out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+        r->emitInherited(s, mg, out);            // lo heredado del bloque, primero
         for (auto &a : attrs) out.push_back(std::move(a));
         { auto pl = std::make_unique<Polyline>(GI_POLYLINE); Path pp;
           pp.push_back(point(sampleLeft, cy)); pp.push_back(point(sampleRight, cy));
@@ -3818,7 +3871,16 @@ struct PlotStmt : Stmt {
       r->labelAnchor = axisLine;
       AxisStmt *owner = hasX ? xaxis.get() : yaxis.get();
       r->labelGap = owner ? namedNum(s, owner->named, "tick_label_gap", 4.0) : 4.0;
+      // El estilo del bloque hasta donde está ESCRITO el rule (§5: una sentencia de
+      // estado vale desde donde aparece). Va en su propio push/pop para no filtrarse
+      // al rule siguiente, y ANTES del exec del rule, cuyo push interior emite sus
+      // argumentos: así `color=` gana sobre el `color` del bloque, que es la
+      // precedencia de los dos registros de siempre.
+      r->body = &content;
+      out.push_back(std::make_unique<GraphicsState>(GS_PUSHSTATE));
+      r->emitInherited(s, mg, out);
       r->exec(s, mg, out);
+      out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
       if (la == "legend" && legend) legend->autoRules.push_back(r.get());
     }
     if (!legend) {
@@ -4387,6 +4449,7 @@ static StmtPtr parsePlot(Lexer &lx) {
       auto r = std::make_unique<RuleStmt>();
       if (lx.accept(T_LPAREN)) { std::vector<ExprPtr> p; parseArgList(lx, p, r->named); }
       if (lx.peek().type == T_LBRACE) parseError(lx, "rule no lleva bloque { } (el valor va en x=/y=)");
+      r->bodyIndex = st->content.size();          // su sitio en el cuerpo (§11)
       st->rules.push_back(std::move(r));
       continue;
     }

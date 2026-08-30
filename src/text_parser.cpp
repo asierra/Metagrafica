@@ -756,6 +756,39 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
       if (input[it]=='{') {
         break;
       } else if (input[it]=='\\') {
+        // ⚠️ Lo que sigue es una SEGUNDA implementación, más pobre, del escáner de
+        // `\comando` del `case '\\'`. La forma CON llaves (`$x^{\frac…}$`) no la
+        // necesita —hace tspush() y vuelve al bucle principal, así que la atiende el
+        // escáner bueno—, y por eso todo lo que se le añade al marcado nace roto
+        // AQUÍ y en silencio: así se perdieron el escape E1, el espaciado explícito y
+        // las seis funciones, cada uno sin una línea por la salida de error.
+        // Unificar las dos es trabajo aparte (PENDIENTES.md); esto recupera a mano
+        // lo que faltaba.
+        if (it + 1 >= iend) {                    // barra colgante: mismo aviso que la principal
+          fprintf(stderr, "Aviso: «\\» al final del texto, sin nada que escapar.\n");
+          tspop();
+          break;
+        }
+        unsigned char nx = input[it+1];
+        // Espaciado explícito (\, \; \! \quad) como contenido ÚNICO del índice: un
+        // espacio no tiene forma, así que el índice sale vacío. Es TeX legal y no se
+        // avisa. Va ANTES del escape, como en la rama principal y por la misma razón:
+        // sin esta rama `$x^\,y$` dibujaba una COMA de superíndice.
+        if (nx == ',' || nx == ';' || nx == '!') { tspop(); it++;    break; }
+        if (input.compare(it+1, 4, "quad") == 0) { tspop(); it += 4; break; }
+        // E1 (2026-08-06): `\` + carácter NO alfabético es ESE carácter, literal.
+        // Sin esto `$x^\{$` se comía los dos caracteres sin avisar Y descuadraba el
+        // resto de la cadena —el `{` seguía abriendo grupo, medido: el texto tras el
+        // `$` salía en itálica math—, que es peor que el bug reportado, porque aquél
+        // al menos hablaba.
+        if (ALFABETIC.find(nx) == string::npos) {
+          it++;                                  // consume el carácter escapado
+          if (nx == '-') using_reencode = true;   // mismo trato que el `case '-'`
+          accum.push_back(nx);
+          textflush();
+          tspop();
+          break;
+        }
         v_end = input.find_first_not_of(ALFABETIC, ++it);
         if (v_end == (int)string::npos) // Last word in string
           v_end = iend;
@@ -765,9 +798,41 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
           if (code > 0) {
             text_state.font_face = font_face;
             accum.push_back(code);
+          } else if (std::find(math_functions, math_functions + 6, variable)
+                     != math_functions + 6) {
+            // Las seis funciones (cos cot csc sec sin tan) van en REDONDA, como en la
+            // rama principal. Se ACUMULAN en vez de llamar a add_word: add_word
+            // descarga con su propio tspush/tspop y se llevaría por delante el estado
+            // del índice (tamaño reducido y nivel); el textflush de abajo sí lo
+            // respeta. Sin esta rama, `$\sin x$` salía bien y `$x^\sin$` avisaba
+            // «unknown sin» — la misma palabra, conocida en un sitio y no en el otro.
+            text_state.font_face = FN_SERIF;
+            accum = variable;
+          } else if (variable == "frac" || variable == "hat" || variable == "vec") {
+            // Piden grupo(s) y un índice SIN LLAVES no tiene dónde ponerlos: se
+            // descarga por textflush con el estado del texto, mientras que Fraction y
+            // Accent son ítems 2-D que van a text_line y no saben del índice. La forma
+            // con llaves sí puede —la atiende el escáner principal—, y es lo que dice
+            // el aviso en vez de mentir con «unknown». Los grupos se CONSUMEN: sin eso
+            // `$x^\frac{p}{q}$` derramaba «pq» como texto suelto, que es exactamente
+            // el defecto que este archivo acaba de cerrar para el nombre.
+            fprintf(stderr, "Aviso: \\%s dentro de un sub/superíndice necesita llaves: "
+                            "escribe x^{\\%s{…}}\n", variable.c_str(), variable.c_str());
+            int j = v_end;
+            string g;
+            if (extractGroup(input, iend, j, g) && variable == "frac")
+              extractGroup(input, iend, j, g);
+            tspop();
+            it = j - 1;
+            break;
           } else {
-            fprintf(stderr, "Error: Unrecognized variable <%s>.\n", variable.c_str());
+            // Mismo aviso y misma consecuencia que la rama principal de `\comando`
+            // (§6: "avisa por la salida de error y DESCARTA el símbolo"): sin el
+            // avance de `it` los caracteres restantes del nombre se escupían como
+            // texto literal —`$^\circ$C` salía "irc C"— con código de salida 0.
+            fprintf(stderr, "Warning: symbol name unknown %s\n", variable.c_str());
             tspop();   // balancea el tspush del sub/superíndice antes de salir
+            it = v_end - 1;
             break;
           }
         }

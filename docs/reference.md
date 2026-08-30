@@ -391,6 +391,11 @@ Arguments: `align` (`"left"`/`"center"`/`"right"`), `valign` (`"baseline"`/`"top
 | `\,` `\;` `\!` `\quad` | fine math-space adjustment (thin, thick, negative thin, 1 em) |
 | `\{` `\}` `\$` `\\` `\/` … | **escape**: the character itself, with no function |
 
+> ⚠️ **The short script form (`^x`, no braces) takes ONE character or ONE symbol.**
+> `$x^2$`, `$x^\alpha$`, `$x^\sin$` and `$x^\{$` are fine; `$x^\frac{a}{b}$` and
+> `$x^\hat{n}$` are not — the compiler says so and asks for braces: write
+> `$x^{\frac{a}{b}}$`. With braces anything fits, including another script or fraction.
+
 ```octave
 text("$\Delta T_1$/n(BT 10.3 - 12.3 $\mu/rm$)", align="center") { 5 1 }
 ```
@@ -895,6 +900,16 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 the two), `to=`, `label=`, `label_at` (`"axis"`/`"legend"`), `color`, `dash`, `line_width`. **Without `to=`
 the line crosses the whole box**, which is usually what's wanted; `to=` cuts it at that data value.
 
+> ⚠️ **A `rule` inherits the style of the block where it is written; the axes and the legend do
+> not.** A `color`, `line_width` or `dash` set in the `plot` body reaches the `rule`s that come
+> **after** it (§5: a state statement holds from where it appears), and the `rule`'s own
+> arguments win over what it inherited. `xaxis`, `yaxis`, `legend` and `table` do **not**: they
+> inherit the style in effect **before** the `plot` and are adjusted with their own arguments.
+> This is not an oversight: a `rule` is **content** — a drawn line, of the same nature as the
+> curve — whereas axes and legend are the plot's **chrome**, with their own defaults. And only
+> those three are inherited: `fill`, `font_size`, `hatch` or `gradient` from the body reach no
+> child of the plot.
+
 > ⚠️ **"Nonlinear" doesn't mean "log".** The log scale is for *multiplicative* data and doesn't exist at
 > values ≤ 0; if your points are just poorly spread, what you want are guide lines, not a scale
 > ([details](#15-common-mistakes)).
@@ -1335,4 +1350,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 98a52b6749adea2396cccc1266e288a88a09ceb6 -->
+<!-- translated-from: referencia.md @ edfb8bf1d6030e9a5e76d41e71e9bf63f869f392 -->

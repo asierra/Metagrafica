@@ -554,6 +554,13 @@ valign "bottom"
 text("Escapes: a\{b\} \$5 m\/s \\") { 1.4 -2.05 }
 text("y en math $\{x : x > 0\}$") { 1.4 -2.6 }
 
+% ...y DENTRO de un sub/superindice sin llaves, que es una rama distinta del
+% parser de texto —una copia mas pobre del escaner de `\comando`— y donde el
+% escape, el espaciado explicito y las seis funciones se perdian EN SILENCIO
+% hasta el 2026-08-30. Aqui la llave tiene que salir en tamano de indice y
+% elevada, `sin` en redonda, y `\,` NO tiene que dibujar una coma.
+text("índice: $x^\{$ $x^\sin$ $x^\,y$") { 2.2 -3.05 }
+
 % --- La cara de fuente AMBIENTE -------------------------------------------
 % `font` como sentencia tiñe los text() que siguen; un run math en medio no se
 % la lleva por delante; y `font=` por-primitiva la sobreescribe.

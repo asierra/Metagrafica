@@ -4480,3 +4480,150 @@ buscó.** Aquel barrido paró en el primer aborto y arregló el lazo que lo prod
 dos defectos estaban a un par de valores de distancia. La lección no es «barre», que ya
 estaba: es **barre hasta que deje de fallar, no hasta que compile el valor que te importaba**.
 Aquí eso son cuatro valores más (`1/13`, `0.080`, `0.090`, `0.100`) y encontró dos bugs.
+
+## 2026-08-30 — Dos piezas de mobiliario que nadie ejercitaba
+
+Dos reportes de una sesión que **usa** el compilador —está construyendo un termodiagrama— y
+no lo desarrolla. Los dos resultaron de la misma familia: **cosas que se emiten fuera del
+flujo normal y que ninguna figura del corpus ejercita**, así que podían estar mal sin mover
+un byte de ningún golden.
+
+### 1. Un símbolo desconocido dentro de `$…$` dejaba basura en la figura
+
+`text("($^\circ$C)")` imprimía `Error: Unrecognized variable <circ>`, **salía con código 0** y
+dibujaba `(irc C)`. Fuera de math el mismo símbolo hace lo que documenta §6: avisa y
+descarta. La rama de `_`/`^` es una **segunda implementación, más pobre**, del escaneo de
+`\comando` —vive 240 líneas más arriba que la buena— y había divergido en las tres cosas a la
+vez: el nombre del diagnóstico, la severidad y el avance del índice. Sin `it = v_end - 1` los
+caracteres restantes del nombre se escupían como texto literal.
+
+Arreglado igualando la rama principal: `Warning: symbol name unknown circ`, y descartar de
+verdad. Ni el mensaje ni la conducta son nuevos — son los que `docs/referencia.md` §6 ya
+prometía, o sea que el código contradecía al documento y no al revés. Verificado en las siete
+variantes de la familia (`$^\circ$`, `$_\circ$`, `$^{\circ}$`, `$x^\circ y$`, con y sin
+texto después).
+
+📌 Lo que el reporte señalaba y conviene no perder: **«Error» + código 0 es el peor modo de
+fallo para una cadena automática** — el guion de arriba no puede ni fallar ni confiar.
+
+Red: `test/errors/simbolo_desconocido_en_indice.mg` (`EXPECT_WARN`), verificada
+reconstruyendo `bin/mg` desde `HEAD:src/text_parser.cpp` — con el bug dentro, falla.
+⚠️ Y lo que esa red **no** puede ver está escrito en su encabezado: la compuerta solo mira
+stderr y el código de salida, así que la mitad que de verdad dolía —los glifos sobrantes—
+le es invisible. Fijarla pediría una línea en el golden de `examples/texto.mg`, y el precio
+sería un aviso permanente en cada compilación del corpus: la única salida donde un aviso
+significa «revisa esto». La afirmación se partió a propósito.
+
+#### Y al revisarlo apareció que era una de CINCO, no una
+
+El símbolo desconocido era la única de las cinco divergencias **que hablaba**. Medidas una
+por una en la rama de `_`/`^` sin llaves, con el arreglo de arriba ya puesto:
+
+| entrada | salía | debía |
+|---|---|---|
+| `$x^\{$Z` | nada, **y la `Z` en itálica math** | `{` (escape E1) |
+| `$x^\,y$` | una **coma literal** | espacio fino |
+| `$x^\quad y$` | «unknown quad» | espacio de 1 em |
+| `$x^\sin$` | «unknown sin» | «sin» en redonda |
+| `$x^\frac{p}{q}$` | «unknown frac» + «pq» derramados | la fracción |
+
+📌 **El diagnóstico, que es lo que hay que retener:** la forma CON llaves (`$x^{\frac…}$`)
+funciona porque **no reimplementa nada** — cae en el `case '{'`, hace `tspush()` y **vuelve al
+bucle principal**, así que la atiende el escáner bueno. La forma sin llaves funciona solo
+hasta donde llega su copia. No son cinco bugs: es una duplicación, y **cada cosa nueva que se
+le añada al marcado va a nacer rota ahí, en silencio**, como nació el escape E1 el 2026-08-06
+sin que nadie lo notara en 24 días.
+
+Las cinco quedan cerradas a mano: barra colgante, espaciado explícito, E1 y las seis
+funciones de `math_functions` (que se **acumulan** en vez de llamar a `add_word` — add_word
+descarga con su propio `tspush`/`tspop` y se llevaría por delante el tamaño y el nivel del
+índice). Las tres que piden grupo (`\frac`, `\hat`, `\vec`) no se implementan sino que se
+**diagnostican**: ahí no hay dónde ponerlas —el índice se descarga por `textflush` con el
+estado del texto, mientras que `Fraction` y `Accent` son ítems 2-D que van a `text_line` y no
+saben del índice—, así que el aviso dice qué escribir (`x^{\frac{…}}`) en vez de mentir con
+«unknown», y **consume los grupos**, que si no derraman «pq» — el mismo defecto que este
+archivo acababa de cerrar para el nombre. ⚠️ Un mensaje que miente sobre la causa cuesta más
+que no decir nada: manda a buscar el símbolo que falta en vez de a poner las llaves.
+
+**La duplicación sigue en pie y está anotada en `PENDIENTES.md`.** El arreglo de fondo es que
+`^`/`_` sin llaves no escanee: que consuma *un átomo* delegando en el bucle principal, que es
+lo que hace TeX y lo que la forma con llaves ya hace; los tres comandos con grupo saldrían
+gratis. Toca la máquina de `tspush`/`tspop`, de lo menos cubierto del archivo, y hoy no hay
+figura que lo pida.
+
+Red, en dos capas porque una sola no alcanza: `test/errors/indice_grupo_sin_llaves.mg`
+(`EXPECT_WARN`) e `indice_escape_y_funcion.mg` (`EXPECT_NO_WARN`) fijan **stderr** —las dos
+verificadas contra el binario anterior—, y una línea nueva en `examples/texto.mg` fija los
+**glifos**, que es lo que ninguna prueba de `test/errors` puede ver: que la llave se dibuje a
+tamaño de índice y elevada, que `sin` salga en redonda y que `\,` **no** dibuje una coma. Va
+justo debajo de las dos líneas de escapes que ya estaban, por la misma razón que aquéllas
+existen. Mirada, además de medida: `tools/ver.sh` y la imagen ampliada.
+
+### 2. Un `rule` no obedecía al estilo de su bloque
+
+`plot { color "blue"  rule(y=2) }` salía negro. El cuerpo del plot se ejecuta dentro de un
+`GS_PUSHSTATE`/`GS_POPSTATE` —el que impide que un `fill` del contenido se fugue a los ejes—
+y los `rule` se emiten **después** de ese pop, para quedar encima del contenido; el estado
+que les llegaba era el de **fuera** del plot. Dos `rule` del mismo bloque salían idénticos
+aunque hubiera un `color` entre ellos.
+
+Ahora un `rule` hereda el estilo vigente **en el punto del bloque donde está escrito** (§5:
+una sentencia de estado vale desde donde aparece), y sus `color=`/`dash=`/`line_width=` siguen
+ganando sobre lo heredado. `RuleStmt::bodyIndex` guarda su sitio en el cuerpo —se pierde si
+no, porque los rule se sacan a su propio vector— y `PlotStmt` **reproduce** las sentencias que
+lo preceden. Replay y no captura porque el parser no lleva una máquina de estado: emite
+Attributes, así que «el estado en este punto» no existe como valor que copiar.
+
+**El filtro no es cosmético: son los TRES que `rule` acepta como argumento.** Reproducir todo
+`StateStmt` —que es lo que pedía el diseño original— hunde el cambio, porque `fill` es uno de
+ellos:
+
+```
+plot { fill "black"  …  polyline { 0 5  10 5 } }
+→ <path d="M 28.3 85.0 L 198.4 85.0" fill="#000000" stroke="none" />
+```
+
+Una polilínea con `fill` vigente sale **rellena y sin trazo**: un path de un solo segmento,
+área nula, **invisible en SVG y PDF** (EPS lo tolera). Un `rule` emite exactamente ese ítem.
+Es la Lección 6 literal, reintroducida por la puerta de atrás — y la invariante (b) de la
+Capa 3 está afinada para cazarla, pero mira el corpus, y en el corpus no hay ni un `rule`.
+Con el filtro la regla además se explica sola: **hereda lo mismo que puede recibir**. Fuera
+quedan `font_size` (para eso está `label_size=`) y `hatch`/`gradient`, que no pintan nada
+sobre una línea trazada pero replicarían sus definiciones.
+
+📌 **Una duda que se resolvió midiendo, y que cambió el juicio sobre el diseño.** Un replay
+del nivel superior del cuerpo parecía una aproximación —«funciona si el `color` está suelto,
+y en silencio no si está dentro de un `if`»—, que es la clase de regla a medias que aquí se
+paga cara. Medido: los cuerpos de `if`, `for` y `{ }` **acotan el estado** (un `color` dentro
+de ellos no alcanza a la sentencia siguiente), y una struct invocada también. O sea que el
+replay **no aproxima el alcance léxico: lo reproduce**.
+
+⚠️ Con **una** excepción, que hay que conocer antes de tocar esto: `IncludeStmt::exec`
+empalma las sentencias del archivo incluido **sin** push/pop, así que un `color` en la cabeza
+de un `.mg` incluido sí alcanza a lo que sigue —medido—. Por eso el replay lo atraviesa
+recursando en `prog`; es el único `Stmt` que lo necesita.
+
+⚠️ **Y una propiedad que el cambio estuvo a punto de romper por la espalda:** la muestra de
+la leyenda automática (§13.9) se dibuja con `RuleStmt::emitStyle`, o sea con los argumentos
+del rule y nada más. Con la herencia dentro, un `rule` que tomara su color del bloque habría
+dibujado la línea azul y su muestra negra — y esa leyenda existe justamente porque *muestra y
+línea no pueden divergir*, que es el defecto que la explícita acepta a cambio de control. Por
+eso lo heredado se emite desde **un solo sitio** (`RuleStmt::emitInherited`), al que llaman
+los dos. Verificado: con `color "blue"` en el cuerpo, línea y muestra salen las dos
+`0.6 #0000FF dotted`, y el rule con `color="green"` las dos verdes.
+
+**La asimetría con `xaxis`/`yaxis`/`legend`/`table` es deliberada** y está documentada en §11:
+un `rule` es **contenido** —una línea dibujada, de la misma naturaleza que la curva—, mientras
+que ejes y leyenda son el **cromo** del plot, con sus defaults y sus estilos propios. Sin ese
+criterio el cambio dejaría una excepción sin razón, que es peor que la regla vieja.
+
+### Lo que este par deja como pendiente
+
+**`rule` no tiene ni una golden.** Sus únicas apariciones en el árbol son
+`test/errors/rule_suelto.mg` (negativa) y los dos bloques de la referencia, que `docfail`
+solo compila. Por eso este cambio no movió un solo byte (`ok=96 … fail=0` antes y después),
+y por eso el bug pudo vivir ahí. La cobertura llega con el termodiagrama que motivó el
+reporte; cuando entre, su cuerpo tiene que llevar, además de los notables: un `color` o
+`line_width` **antes** de un `rule` (la herencia posicional), un `rule` con `color=` propio
+(la precedencia) y un `fill` **antes** de un `rule` (el filtro; si alguien lo ensancha, es la
+invariante (b) de la Capa 3 la que tiene que sonar, y para sonar necesita esta figura).

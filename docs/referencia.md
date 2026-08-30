@@ -393,6 +393,11 @@ Argumentos: `align` (`"left"`/`"center"`/`"right"`), `valign`
 | `\,` `\;` `\!` `\quad` | ajuste fino de espacio math (fino, grueso, fino negativo, 1 em) |
 | `\{` `\}` `\$` `\\` `\/` … | **escape**: el carácter tal cual, sin función |
 
+> ⚠️ **La forma corta del índice (`^x`, sin llaves) toma UN carácter o UN símbolo.**
+> `$x^2$`, `$x^\alpha$`, `$x^\sin$` y `$x^\{$` valen; `$x^\frac{a}{b}$` y `$x^\hat{n}$` no
+> —el compilador lo dice y pide las llaves—: escribe `$x^{\frac{a}{b}}$`. Con llaves cabe
+> cualquier cosa, incluidos otro índice y otra fracción.
+
 ```octave
 text("$\Delta T_1$/n(BT 10.3 - 12.3 $\mu/rm$)", align="center") { 5 1 }
 ```
@@ -911,6 +916,16 @@ plot(x=(0,10), y=(0,100), box=(0,0, 9,4.5), frame=true) {
 `x=` o `y=` (uno de los dos), `to=`, `label=`, `label_at` (`"axis"`/`"legend"`), `color`,
 `dash`, `line_width`. **Sin `to=` la línea cruza la caja entera**, que es lo que suele
 quererse; `to=` la corta en ese valor de datos.
+
+> ⚠️ **Un `rule` hereda el estilo del bloque donde está escrito; los ejes y la leyenda no.**
+> Un `color`, `line_width` o `dash` puesto en el cuerpo del `plot` alcanza a los `rule` que
+> vengan **después** de él (§5: una sentencia de estado vale desde donde aparece), y los
+> argumentos propios del `rule` ganan sobre lo heredado. `xaxis`, `yaxis`, `legend` y `table`
+> **no**: heredan el estilo vigente **antes** del `plot` y se ajustan con sus propios
+> argumentos. No es un descuido: un `rule` es **contenido** —una línea dibujada, de la misma
+> naturaleza que la curva—, mientras que ejes y leyenda son el **cromo** del plot, con sus
+> defaults propios. Y solo se heredan esos tres: `fill`, `font_size`, `hatch` o `gradient`
+> del cuerpo no alcanzan a ningún hijo del plot.
 
 > ⚠️ **«No lineal» no quiere decir «log».** La escala log es para datos *multiplicativos* y
 > no existe en valores ≤ 0; si tus puntos solo están mal repartidos, lo que quieres son
