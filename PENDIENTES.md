@@ -21,8 +21,8 @@
 >
 > **Filosofía del proyecto:** dirigido por demanda. Casi todo lo de abajo tiene *cero
 > presión del corpus*; no se construye sin una figura que lo pida (evita especular).
-> Build/test: `make` + `bash test/run.sh check` → **ok=96 … docfail=0 citafail=0 humofail=0**
-> (32 ejemplos × 3 backends; **diez** compuertas,
+> Build/test: `make` + `bash test/run.sh check` → **ok=99 … docfail=0 citafail=0 humofail=0**
+> (33 ejemplos × 3 backends; **diez** compuertas,
 > razonadas una por una en `CLAUDE.md`; la 5ª son 65 pruebas NEGATIVAS en `test/errors/`,
 > ampliadas el 2026-07-28 a los diagnósticos NO fatales con `EXPECT_WARN`/`EXPECT_NO_WARN`;
 > la 6ª vigila que `docs/galeria.html` no quede rancia — la publica GitHub Pages y lleva

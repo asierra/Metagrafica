@@ -155,7 +155,15 @@ FORMATS="eps svg pdf"
 # que dibujen lo que dicen —las negativas de test/errors solo miran stderr—. Entró el
 # 2026-08-06, con la llave misma; es la figura que motivó plan_llaves.md, porque hasta
 # entonces su llave había que sustituirla por una cota de doble flecha.
-EXAMPLES="angulo_solido curvas3 elevacion_solar espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita irradiancia line_patterns markers-demo multietapa onda_electromagnetica orbita_polar path_sample primitives quickstart reflectancia_vegetacion rpstest seccion_eficaz sines symbols texto tiro_parabolico turning_points"
+# skewt_golfo es el único usuario de `table`/`row` (§13.10) —que hasta el 2026-08-30 no
+# compilaba NADIE, con la sección entera documentada en la referencia— y, con
+# franck_condon, uno de los dos de `rule` (§13.8). Los dos cubren mitades distintas: aquí
+# los diez notables son literales y llevan rótulo (`label_at="axis"`), allá son
+# EXPRESIONES evaluadas (D1, Te+D2) y sin rótulo. Es además el primer cliente de que un
+# `rule` herede el estilo de su bloque: sus isobaras salen grises por el `color` de encima.
+# Es GENERADO (skewt.py, fuera del repo) a partir de un granule NUCAPS: si hay que
+# regenerarlo, el encabezado dice cómo.
+EXAMPLES="angulo_solido curvas3 elevacion_solar espectro fig1 fig2-1 fig2-5 fig4-1 fig4-4 fig6-4 fig_polybar fill_styles fractal_tree franck_condon gravitacion_orbita irradiancia line_patterns markers-demo multietapa onda_electromagnetica orbita_polar path_sample primitives quickstart reflectancia_vegetacion rpstest seccion_eficaz sines skewt_golfo symbols texto tiro_parabolico turning_points"
 
 export LC_ALL=C
 

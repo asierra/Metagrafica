@@ -108,8 +108,8 @@ GRUPOS = [
       "heredan los rangos y se rotulan solos.",
       "A plot maps data units to a box in centimetres; the axes inherit the "
       "ranges and label themselves."),
-     ["quickstart", "fig6-4", "fig4-4", "reflectancia_vegetacion", "fig_polybar", "fig1",
-      "tiro_parabolico"]),
+     ["quickstart", "skewt_golfo", "fig6-4", "fig4-4", "reflectancia_vegetacion",
+      "fig_polybar", "fig1", "tiro_parabolico"]),
     (("Ilustraciones y diagramas", "Illustrations and diagrams"),
      ("Diagramas de aparato y esquemas, donde mandan las estructuras, la "
       "colocación y los marcadores que se orientan solos.",
@@ -129,6 +129,14 @@ GRUPOS = [
 # lo único que hay que escribir a mano al añadir un ejemplo (y si no se escribe,
 # la tarjeta sale en español con un aviso).
 TRAD = {
+    "skewt_golfo": (
+        "Skew-T Log-P diagram — a NUCAPS sounding over the Gulf of Mexico",
+        "A real atmospheric sounding drawn with `plot`: the isobars are `rule`s — in "
+        "y = ln p they do not fall at a fixed step, so they are notable values and not "
+        "a grid —, the instability parameters go in a `table`, and the three curves are "
+        "declared in an explicit `legend`. The background (isotherms, adiabats and "
+        "saturation mixing ratio) are polylines already projected onto the skewed plane "
+        "of the diagram."),
     "reflectancia_vegetacion": (
         "Spectral reflectance — deciduous versus coniferous trees",
         "Two reflectance BANDS (not lines) against wavelength, 0.4 to 0.9 microns: "

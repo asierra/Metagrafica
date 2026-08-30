@@ -133,9 +133,13 @@ plot(x=(0.66, rfin), y=(-0.4, ytop), box=(1.5, 1.0, 8.6, 10.4)) {
     }
 
     % ---- líneas de disociación --------------------------------------------
+    % Son `rule` (§13.8) y no polilíneas: un límite de disociación es un VALOR
+    % NOTABLE —sale de la física, no de una malla—, y el `rule` lo dice. Su `y=` es
+    % la expresión, como todo lo demás aquí. Heredan del bloque el ancho y el guion,
+    % que es lo que distingue a un notable de la retícula.
     line_width 0.15   dash "dashed"
-    polyline { 0.66 D1  rfin D1 }
-    polyline { 0.66 (Te+D2)  rfin (Te+D2) }
+    rule(y=D1)
+    rule(y=(Te+D2))
     dash "solid"
 
     % ---- las ondas vibracionales ------------------------------------------

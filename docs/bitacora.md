@@ -4627,3 +4627,69 @@ reporte; cuando entre, su cuerpo tiene que llevar, además de los notables: un `
 `line_width` **antes** de un `rule` (la herencia posicional), un `rule` con `color=` propio
 (la precedencia) y un `fill` **antes** de un `rule` (el filtro; si alguien lo ensancha, es la
 invariante (b) de la Capa 3 la que tiene que sonar, y para sonar necesita esta figura).
+
+## 2026-08-30 (bis) — `rule` estrena golden, y `table` estrena el suyo
+
+El termodiagrama que motivó los dos reportes de la mañana entró al corpus, y con él se cerró
+el hueco que aquéllos habían dejado a la vista: **`rule` (§13.8) no tenía ni una figura, y
+`table`/`row` (§13.10) tampoco** — una sección entera de la referencia que no compilaba nadie.
+Las dos podían estar rotas sin mover un byte de ningún golden, que es exactamente por qué el
+bug del estilo pudo vivir ahí.
+
+### `skewt_golfo.mg` — sondeo NUCAPS del Golfo de México
+
+Es **generado** (`skewt.py`, fuera de este repo, a partir de un granule NUCAPS que tampoco
+está aquí), como los mapas de `lib/`. Antes de entrar se le corrió todo lo que se le puede
+correr a una figura que aún no es corpus: los tres backends en 25 ms, `gs` limpio sobre el
+EPS, y la Capa 3 a mano —texto `34/34/34`, cero líneas rellenas sin trazo, cero degradados—.
+
+📌 **Y tenía una sentencia muerta**, que es lo que se gana mirando y no solo compilando:
+
+```
+color "black"  line_width 0.4  dash "solid"
+xaxis(...)   yaxis(...)
+```
+
+En la salida no había **ni un trazo negro de 0.4**: los ejes y el marco salían al ancho
+ambiente. Es la asimetría que documentamos esta misma mañana —un `rule` es contenido y hereda
+del bloque; ejes, leyenda y tabla son el cromo del plot y no—, y aquí estaba en libertad, con
+los dos casos a quince líneas de distancia **en el mismo archivo**: el `color "gray"` de
+encima de las isobaras SÍ llega, el `line_width 0.4` de encima de los ejes NO.
+
+⚠️ Antes de arreglarlo se midió si convenía extender la herencia a los ejes, y el corpus dice
+que no: de las siete figuras con estado antes de un eje, **tres ya lo estilan por argumento**
+(`fig1`, `fig4-4`, `fig6-4`) —el idioma establecido— y extenderla movería `quickstart` y
+`reflectancia_vegetacion`, las dos publicadas. El arreglo es mover el ancho del cromo **fuera**
+del `plot`, que es donde el cromo lo lee, y borrar la sentencia muerta.
+
+### `franck_condon` ya dibujaba dos `rule` a mano
+
+```
+line_width 0.15   dash "dashed"
+polyline { 0.66 D1  rfin D1 }
+polyline { 0.66 (Te+D2)  rfin (Te+D2) }
+```
+
+De `0.66` a `rfin` es exactamente el rango `x=` del plot, o sea la caja entera, y lo que
+señalan son los **límites de disociación**: el valor notable de manual. Sustituidas por
+`rule(y=D1)` y `rule(y=(Te+D2))`, con la misma guardia que tuvo el renombre `fig4-5`→`fig4-4`
+—que el cambio sea PURO—: `ver.sh --diff` da **0 px** en la figura y **0 px** en su variante
+`franck_condon_anarm`, con piso de ruido 0. Los goldens sí se mueven, porque los notables se
+emiten después del contenido y cambia el ORDEN de los operadores; el dibujo no.
+
+Las dos figuras cubren mitades distintas de `rule` y hacen falta las dos: en `skewt_golfo` los
+diez notables son **literales y rotulados** (`label_at="axis"`), en `franck_condon` son
+**expresiones evaluadas** y sin rótulo. Y las dos son clientes de la herencia nueva: las
+isobaras salen grises 0.25 y las líneas de disociación punteadas 0.15 **por el estado del
+bloque**, no por argumento propio — con el binario de ayer saldrían negras de 1 pt.
+
+⚠️ **Lo que sigue sin cubrir es el FILTRO**: ninguna de las dos tiene un `fill` de nivel
+superior en el cuerpo del plot antes de un `rule`, así que si alguien ensancha el filtro y
+deja que `fill` se reproduzca, el notable saldría relleno e invisible y la invariante (b) de la
+Capa 3 no tendría dónde verlo. Se barrió el corpus: el único con un `fill` así es `fig6-4`, y
+ahí un `rule` sería decorativo —y lleva número de figura, que es promesa de fidelidad—. Queda
+pedido al generador del Skew-T, donde sale natural: **sombrear el área de CAPE**, que es la
+anotación estándar del diagrama y cuyo valor ya aparece en el `table`.
+
+`ok=96` → **`ok=99`**, y con eso se actualizaron los conteos de `CLAUDE.md` y `PENDIENTES.md`,
+que traían 32 ejemplos y 96 goldens; la galería, de paso, decía «27 tarjetas» y son **32**.
