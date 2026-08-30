@@ -13,14 +13,16 @@
 % Los tres rótulos de valign sobre la línea de la pluma ejercitan además la ruta
 % de texto SIMPLE (un solo run), distinta de la de texto compuesto.
 %
-% ⚠ Y una tercera cobertura exclusiva: las tres últimas líneas son la ÚNICA red
-% de que `font` COMO SENTENCIA alcance a un `text()`. Cerrar ese no-op no movió
-% un solo golden, así que perderlo tampoco lo movería —ninguna compuerta puede
-% verlo, igual que el bug de ámbito que guarda `seccion_eficaz`—. Las tres fijan
-% cosas distintas y hay que conservar las tres: la ambiente llegando a un text()
-% sin marcado, la ambiente SOBREVIVIENDO a un run math (un `$…$` dejaba su cara
-% puesta para el resto del documento), y `font=` por-primitiva ganándole a la
-% ambiente. Detalle en docs/bitacora.md, 2026-08-19.
+% ⚠ Y una tercera cobertura exclusiva: el bloque final es la ÚNICA red de que
+% `font` COMO SENTENCIA alcance a un `text()`. Cerrar ese no-op no movió un solo
+% golden, así que perderlo tampoco lo movería —ninguna compuerta puede verlo, igual
+% que el bug de ámbito que guarda `seccion_eficaz`—. Sus CINCO líneas fijan cosas
+% distintas y hay que conservar las cinco: la ambiente llegando a un text() sin
+% marcado, la ambiente SOBREVIVIENDO a un run math (un `$…$` dejaba su cara puesta
+% para el resto del documento), `font=` por-primitiva ganándole a la ambiente, y la
+% ambiente sobreviviendo a un cambio de tamaño por ATRIBUTO y por SENTENCIA (que la
+% borraban, y con ella la de todo el resto del documento). Detalle en
+% docs/bitacora.md, 2026-08-19 y 2026-08-30.
 
 display_size 10 7.2
 font_size 8
@@ -122,9 +124,17 @@ text("índice: $x^\{$ $x^\sin$ $x^\,y$") { 2.2 -3.05 }
 
 % --- La cara de fuente AMBIENTE -------------------------------------------
 % `font` como sentencia tiñe los text() que siguen; un run math en medio no se
-% la lleva por delante; y `font=` por-primitiva la sobreescribe.
+% la lleva por delante; `font=` por-primitiva la sobreescribe; y NO se la lleva un
+% cambio de TAMAÑO, ni por atributo ni por sentencia. Las dos últimas nacieron el
+% 2026-08-30: setFontSize ponía la cara ambiente en FN_NOFACE «para forzar el
+% setfont», así que un `font_size` la borraba y todo lo que siguiera salía en
+% Times-Roman —en EPS y en PDF; SVG salía bien, que es lo que hace invisible a esta
+% familia—. Las dos van en itálica o el arreglo se perdió.
 { font "italic"
   text("ambiente: itálica") { 1.4 2.2 }
   text("tras math $x$ sigue itálica") { 1.4 1.8 }
   text("y font= la sobreescribe", font="roman") { 1.4 1.4 }
+  text("sobrevive a size=", size=7) { 2.3 1.05 }
+  font_size 7
+  text("y a font_size") { 2.3 0.62 }
 }

@@ -4693,3 +4693,66 @@ anotación estándar del diagrama y cuyo valor ya aparece en el `table`.
 
 `ok=96` → **`ok=99`**, y con eso se actualizaron los conteos de `CLAUDE.md` y `PENDIENTES.md`,
 que traían 32 ejemplos y 96 goldens; la galería, de paso, decía «27 tarjetas» y son **32**.
+
+## 2026-08-30 (ter) — Cambiar el tamaño de la letra borraba la cara del documento
+
+Lo encontró alguien haciendo un logo, no una compuerta. En `lanot_logo.mg` quedó escrito el
+síntoma tal cual: «`font "sanserif"` no lo heredó text, será un bug?», con el arreglo a mano
+—`font=` como argumento— al lado. Sí era un bug, y **no era de `text`**.
+
+### El diagnóstico
+
+`EPSDisplay::setFontSize` y `PDFDisplay::setFontSize` hacían esto:
+
+```cpp
+  Display::setFontSize(fz);
+  dspstate.fontFace = FN_NOFACE;   // force to set font
+```
+
+O sea que usaban la cara **AMBIENTE** —el estado lógico, el que fija `font` y salvan
+`gsave`/`grestore`— como **bandera de dispositivo sucio**. Cambiar el tamaño **borraba la cara
+del documento**, y todo texto que la heredara (cualquier `text()` sin `font=`, más los rótulos
+de axis y legend) caía a Times-Roman. `Display::setRelFontSize` tenía la tercera copia del
+mismo patrón, inofensiva sólo porque su único llamador fija la cara acto seguido.
+
+Medido con `font "sanserif"` + `font_size 20` + dos `text()`:
+
+| backend | antes | ahora |
+|---|---|---|
+| SVG | Helvetica, Helvetica ✅ | igual |
+| EPS | `/Helvetica findfont 10` … `/Times-Roman findfont 20` ❌ | `/Helvetica findfont 20` |
+| PDF | referencia `/Helvetica` **y** `/Times-Roman` ❌ | sólo `/Helvetica` |
+
+📌 **Es la tercera instancia de la confusión del 2026-08-19**, con su firma completa: **EPS y
+PDF mal, SVG bien** —porque no tiene `dev_face` y resuelve la cara por elemento—, las tres
+salidas byte-estables, el golden bendiciendo y la invariante (a) de la Capa 3 sin poder verlo,
+porque cuenta operaciones de texto y **no compara caras**.
+
+⚠️ **Y peor que el caso reportado:** en el logo el tamaño iba en el propio `text(size=60)`, o
+sea dentro de su push/pop, así que el estropicio moría con él. Un `font_size` **como
+sentencia** no tiene quien lo restaure: deja la cara rota **para el resto del documento**.
+
+### El arreglo, que es borrar
+
+Las tres líneas. No hacía falta forzar nada: el guard de `EPSDisplay::setFontFace` ya compara
+contra `dev_face` **y** `dev_size` —con `relfontsize` dentro—, así que un cambio de tamaño
+re-emite solo; PDF fija fuente y tamaño en **cada** dibujo (`HPDF_Page_SetFontAndSize`); SVG
+resuelve por elemento. La invalidación correcta ya existía y va contra el estado de
+DISPOSITIVO, que es donde debe ir.
+
+### Por qué el corpus estaba ciego, y cómo deja de estarlo
+
+Los cuatro ejemplos con sentencia `font` —`fig4-4`, `reflectancia_vegetacion`, `symbols`,
+`turning_points`— piden **`"roman"`**, que es la cara por defecto: borrarla y caer a
+Times-Roman da exactamente el mismo resultado. Ninguna figura combinaba una cara ambiente
+distinta de la default con un cambio de tamaño. Por eso el arreglo **no movió un solo golden**
+(`ok=99 fail=0` antes y después), que es la prueba de que ninguna compuerta podía cazarlo.
+
+La red va donde ya vivía la de `font` como sentencia: el bloque final de `examples/texto.mg`,
+que pasa de tres líneas a **cinco** —la nueva pareja fija que la ambiente sobreviva al cambio
+de tamaño por ATRIBUTO y por SENTENCIA—. Verificada como se verifica aquí: con el bug
+reintroducido, esas dos líneas salen en `/ISOTimes-Roman` en vez de `/ISOTimes-Italic`.
+
+📌 **Y esto le da a la compuerta PROPUESTA de paridad de CARA su segundo caso real** en once
+días (`PENDIENTES.md`). El primero se descubrió publicado en la portada; éste, en un logo de
+alguien. Ninguno lo encontró una compuerta.

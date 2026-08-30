@@ -68,5 +68,7 @@
 <text x="213.865323" y="-163.174803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'MGMath'" font-style="normal" font-weight="normal">𝑥</tspan></text>
 <text x="218.441323" y="-163.174803" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000" xml:space="preserve"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="italic" font-weight="normal"> sigue itálica</tspan></text>
 <text x="181.417323" y="-151.836220" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="8.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="normal" font-weight="normal">y font= la sobreescribe</tspan></text>
+<text x="206.929134" y="-141.714961" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="7.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="italic" font-weight="normal">sobrevive a size=</tspan></text>
+<text x="206.929134" y="-129.525984" transform="scale(1, -1)" text-anchor="start" fill="#000000" font-size="7.000000"><tspan font-family="'Times New Roman', Times, 'Liberation Serif', 'Nimbus Roman', serif" font-style="italic" font-weight="normal">y a font_size</tspan></text>
 </g>
 </svg>

@@ -296,11 +296,15 @@ public:
   FontFace getInheritedFace() const { return inheritedFace; }
   virtual void setFontSize(double p) { dspstate.fontSize = p; }
   double getFontSize() const { return dspstate.fontSize; }
+  // ⚠️ Tampoco aquí se invalida la cara ambiente (era la tercera copia del mismo
+  // patrón, retirada el 2026-08-30 con las dos de setFontSize). Sobraba por partida
+  // doble: el guard de EPSDisplay::setFontFace ya incluye `relfontsize` en el tamaño
+  // que compara, PDF y SVG fijan el tamaño en cada dibujo, y el único llamador
+  // (Text::draw) fija la cara acto seguido.
   void setRelFontSize(double rfz) {
     if (rfz == relfontsize)
       return;
     relfontsize = rfz;
-    dspstate.fontFace = FN_NOFACE;
   }
 
   void setTextAlign(int a) { dspstate.text_align = a; }

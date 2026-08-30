@@ -532,11 +532,18 @@ void EPSDisplay::getTextSize(string s, double *w, double *h) {}
 
 void EPSDisplay::setFontSize(double fz)
 {
-  //printf("size %g %g\n", fz, dspstate.fontSize);
+  // ⚠️ NO toques aquí `dspstate.fontFace`. Hasta el 2026-08-30 esta función lo ponía
+  // en FN_NOFACE «para forzar el setfont», o sea que usaba la cara AMBIENTE —el estado
+  // lógico, el que fija `font`— como bandera de dispositivo sucio, y cambiar el tamaño
+  // BORRABA la cara del documento: `font "sanserif"` seguido de un `font_size` (o de un
+  // `text(size=…)`) sacaba todo lo que viniera después en Times-Roman, aquí y en PDF,
+  // mientras SVG salía bien —no tiene dev_face—. Es la tercera instancia de la misma
+  // confusión (ver el bullet de Display en CLAUDE.md y la bitácora del 2026-08-19).
+  // No hace falta forzar nada: el guard de setFontFace compara contra dev_face Y
+  // dev_size —con relfontsize dentro—, así que un cambio de tamaño re-emite solo.
   if (fz==dspstate.fontSize)
     return;
   Display::setFontSize(fz);
-  dspstate.fontFace = FN_NOFACE; // force to set font
 }
 
 void EPSDisplay::setFontFace(FontFace face) {

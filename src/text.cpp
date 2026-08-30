@@ -456,15 +456,18 @@ void Text::draw(Display &g) {
   // comportamiento viejo (no llamar a setFontFace y dejar que los guards de
   // EPSDisplay/PDFDisplay pongan Times-Roman).
   //
-  // ⚠️ El orden importa y es la mitad del bug que esto arregla: setRelFontSize
-  // INVALIDA dspstate.fontFace (lo pone en FN_NOFACE) justo para forzar que la
-  // siguiente llamada a setFontFace re-emita la fuente al tamaño nuevo. Si el trozo
-  // se salta setFontFace, esa re-emisión NUNCA ocurre y el dispositivo se queda con
-  // la fuente del trozo anterior: la cara Y el tamaño. Por eso la prosa que sigue a
-  // un sub/superíndice salía chica, y la que sigue a un `$…$` salía en LM Math.
-  // La ambiente se lee ANTES de tocar nada, y por dos razones: setRelFontSize la
-  // invalida (la pone en FN_NOFACE para forzar la re-emisión de tamaño), y el
-  // setFontFace de abajo la sobrescribiría con la cara de ESTE trozo.
+  // ⚠️ La ambiente se lee ANTES de tocar nada, porque el setFontFace de abajo la
+  // sobrescribe con la cara de ESTE trozo. (Hasta el 2026-08-30 había una segunda
+  // razón: setRelFontSize la INVALIDABA —la ponía en FN_NOFACE— para forzar que la
+  // siguiente llamada a setFontFace re-emitiera la fuente al tamaño nuevo. Eso se
+  // retiró: usaba el estado LÓGICO como bandera de dispositivo sucio, y por la misma
+  // vía `setFontSize` borraba la cara de todo el documento. Quien fuerza la
+  // re-emisión es el guard de EPSDisplay::setFontFace, que compara contra `dev_size`
+  // además de `dev_face`; PDF y SVG fijan el tamaño en cada dibujo. Ver la bitácora
+  // del 2026-08-30.) Lo que NO cambió es que este trozo llame SIEMPRE a setFontFace:
+  // saltárselo es lo que dejaba al dispositivo con la fuente del trozo anterior —la
+  // cara Y el tamaño—, y por eso la prosa que seguía a un sub/superíndice salía chica
+  // y la que seguía a un `$…$` salía en LM Math.
   const FontFace ambient = g.getFontFace();
 
   // Cadena de resolución de "hereda la cara ambiente" (§7.3), de lo más local a lo

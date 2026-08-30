@@ -303,6 +303,11 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
         la leyenda de `quickstart` en itálica y la marca «1» del eje log de `fig6-4`. El golden
         lo bendecía (byte-estable), la Capa 3 no lo veía y `imgfail` tampoco, porque el SVG
         —el único formato que `docs/img` publica— era justo el que estaba bien.
+      - 🔎 **Y un SEGUNDO caso real, del 2026-08-30**: `setFontSize` invalidaba la cara
+        ambiente para forzar el `setfont`, así que un `font_size` dejaba en Times-Roman todo
+        el texto posterior — otra vez **EPS y PDF mal, SVG bien**, y otra vez con las diez en
+        verde. No lo encontró una compuerta: lo encontró alguien haciendo un logo. Dos
+        instancias de la misma familia en once días es el argumento para construirla.
       - **Forma:** misma que `tools/arcparity.py`, que ya resuelve este problema para la
         geometría de arcos: normalizar y comparar backend contra backend. ⚠️ Y por eso hereda
         su mejor propiedad — **no hay nada que bendecir**: no compara contra un golden, así que

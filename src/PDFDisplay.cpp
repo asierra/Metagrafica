@@ -683,9 +683,13 @@ void PDFDisplay::brace(double x0, double y0, double x1, double y1,
 /* ------------------------------------------------------------------ */
 
 void PDFDisplay::setFontSize(double fz) {
+  // ⚠️ NO toques aquí `dspstate.fontFace` (ver el comentario gemelo en
+  // EPSDisplay::setFontSize): es la cara AMBIENTE, no un dirty flag del dispositivo, y
+  // borrarla dejaba en Times-Roman todo el texto posterior a un cambio de tamaño.
+  // Aquí ni siquiera hay nada que forzar: text() fija fuente y tamaño en CADA dibujo
+  // (HPDF_Page_SetFontAndSize), leyendo el tamaño vigente.
   if (fz == dspstate.fontSize) return;
   Display::setFontSize(fz);
-  dspstate.fontFace = FN_NOFACE;
 }
 
 void PDFDisplay::setFontFace(FontFace face) {
