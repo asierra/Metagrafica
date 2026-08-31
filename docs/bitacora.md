@@ -4756,3 +4756,89 @@ reintroducido, esas dos líneas salen en `/ISOTimes-Roman` en vez de `/ISOTimes-
 📌 **Y esto le da a la compuerta PROPUESTA de paridad de CARA su segundo caso real** en once
 días (`PENDIENTES.md`). El primero se descubrió publicado en la portada; éste, en un logo de
 alguien. Ninguno lo encontró una compuerta.
+
+Cerrado en la sesión del 2026-08-31 — **los mapas de `lib/` adelgazan a la mitad, y la
+decimación se integra en `geo2mg.py`**. Salió de una pregunta de uso: `lib/fulldisk_map.mg`
+se estaba usando como logo en otro proyecto, y a 2 cm de diámetro pesaba 51 KB de PDF por
+un dibujo donde la mitad de sus vértices cae bajo el píxel de la impresora.
+
+- **La medida que decidió todo fue EL PEOR PÍXEL, no cuántos cambian.** Contar píxeles
+  distintos no sirve aquí: una costa de miles de vértices mueve miles de píxeles de
+  antialiasing sin que se mueva un contorno, y el número depende además del rasterizador
+  (a `--eps 0.001` Chrome daba 0 píxeles «visibles» donde `pdftoppm` daba 1230). El peor
+  píxel sí es interpretable, porque tiene una unidad natural: un píxel que voltea de
+  tierra (`#e6d3a3`) a océano (`steelblue`) vale **93/255** en gris. Con eso, sobre
+  `elevacion_solar` a su tamaño publicado (disco de 7.37 cm, 300 dpi):
+
+  | `--simplify` | vértices (3 mapas) | peor píxel | lectura |
+  |---|---|---|---|
+  | 0 | 92 % | 4 % de un volteo | colineales y duplicados: sin pérdida |
+  | 0.0002 | 69 % | 12 % | |
+  | **0.001** | **50 %** | **27 %** | ningún contorno se mueve |
+  | 0.002 | — | 42 % | |
+  | 0.004 | — | **81 %** | la silueta SÍ se movió |
+
+  Por debajo de ~0.002 ningún píxel se acerca a voltear: todo el cambio es sombreado de
+  borde. En 0.004 el peor píxel recorre el 81 % de un volteo, y mirándolo se ve por qué —
+  se aplana Baja California y Centroamérica se vuelve angulosa. **Los dos métodos, la
+  métrica y el ojo, coincidieron**, que es la única razón para confiar en la métrica.
+
+- **Los tres mapas se regeneran con `--simplify 0.001`**: 12582 → 6260 vértices, y la
+  salida de sus tres figuras baja ~30 % (el SVG de `elevacion_solar`, de 128 a 86 KB).
+  ⚠️ **0.004 es para un LOGO de 2 cm y no para `lib/`.** Un mapa decimado sirve al tamaño
+  para el que se decimó; la variante de logo se saca con `tools/simplifica_mg.py` donde se
+  use y **no se committea**, porque committearla invitaría a usarla grande.
+
+- **Por qué la decimación acabó DENTRO de `geo2mg.py` y no solo en un tool aparte.** La
+  primera versión era `tools/simplifica_mg.py`, que decima un `.mg` ya generado. Funciona,
+  pero deja los mapas de `lib/` con una receta de **dos pasos** en su encabezado, y la
+  lección de `skewt_golfo.mg` (2026-08-30) es exactamente que un archivo generado cuyo
+  encabezado no reproduce el archivo se repone denso en la siguiente corrida, en silencio.
+  Con `--simplify` el encabezado vuelve a registrar **un** comando. El tool aparte se queda
+  para el caso que sí lo necesita —sacar la variante de logo sin geopandas ni los datos de
+  Natural Earth, que no están en el repo— y **`geo2mg.py` importa de él** el
+  Douglas-Peucker en vez de recopiarlo: dos mapas «al mismo eps» con distinta geometría
+  sería la peor forma de que esto se pudra.
+
+- ⚠️ **`--simplify` NO es la `--tolerance` que `geo2mg.py` ya tenía**, y conviene no
+  confundirlas nunca: aquélla va en **grados** y **antes** de proyectar. Lo que decide si
+  un vértice se ve es su error **después**, en fracciones del radio del disco — un grado
+  vale un tramo distinto en el centro que junto al limbo, donde ortho comprime
+  radialmente. Las dos puertas a la operación correcta difieren solo en el momento:
+  `--simplify` decima en plena precisión antes de redondear a 4 decimales (el orden
+  correcto), `--eps` sobre las ya redondeadas. Al mismo 0.001 dan 1715 y 1722 vértices.
+
+- **Dos defectos que salieron al intentar reproducir un mapa desde su propia receta**, y
+  que son la razón por la que vale la pena intentarlo: el comando registrado **no incluía
+  `--nombre`**, así que bautizaba el struct por el nombre de salida (`struct Repro_fulldisk`)
+  y ningún `include` lo encontraba; y emitía `--color-tierra #e6d3a3` **sin comillas**, o
+  sea que al pegarlo en una terminal el `#` abría un comentario y se comía el resto de la
+  línea. Los dos arreglados. Ahora los tres mapas se reproducen **verbatim** desde su
+  encabezado — verificado ejecutándolo tal cual y comparando.
+
+- **Un anillo que se decima a menos de 3 vértices se descarta con aviso.** No es un
+  polígono chico: es un relleno de **área cero**, justo lo que caza la invariante (b) de
+  la Capa 3. A 0.001 no ocurre; la guarda existe para que subir el eps no meta callado un
+  path invisible.
+
+- **`--simplify 0` no es un no-op, y por eso corre siempre**: quita colineales exactos y
+  duplicados consecutivos —13 de estos últimos traía `fulldisk_map`, o sea segmentos
+  degenerados—. Saneo sin pérdida.
+
+- **Undécima entrada de la compuerta de humo** (`humofail`): `simplifica_mg.py` no la corre
+  ninguna figura del corpus —su usuario vive fuera del repo— y depende del **formato** en
+  que `geo2mg.py` emite los bloques, que no es contrato de nadie. La compuerta decima el
+  mapa, exige que `bin/mg` compile el resultado y que de verdad haya **quitado** puntos.
+  ⚠️ Esa tercera afirmación es la que caza el fallo callado: si el regex deja de reconocer
+  los bloques, el tool copia el archivo intacto, **termina con éxito y compila igual de
+  bien**. Verificada por las dos vías (rompiendo el regex y volviendo la decimación un
+  no-op), `humofail=1` con las otras nueve en cero. El eps de la compuerta es 0.02, no el
+  0.004 de un logo, para que su margen no dependa de lo decimado que esté `lib/`.
+
+- **Aparte, un segfault del backend SVG** que apareció de paso: `bin/mg fig.mg
+  /ruta/inexistente/x.svg` salía con **rc=139** mientras EPS y PDF salían con 1 y un
+  mensaje. `SVGDisplay::start` hacía `return` tras un `fopen` fallido y seguía adelante con
+  `file` en nulo hasta el primer `fprintf`. Es la asimetría de siempre —un backend que se
+  porta distinto donde los otros dos aciertan— y **ninguna compuerta puede verla**: las
+  negativas de `test/errors` compilan a una ruta que sí existe, así que este camino no
+  tiene forma de declararse ahí.

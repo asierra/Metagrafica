@@ -8,11 +8,34 @@ Dos modos:
   --fill              continentes RELLENOS sobre un disco de océano. Fuente: polígonos
                       de tierra.
 
-Dos simplificaciones para el look icónico:
+Tres simplificaciones para el look icónico:
   1. Douglas-Peucker (`--tolerance`, grados): recovecos. A 110m casi no hace falta (0).
   2. Filtro de EXTENSIÓN (`--min-feature`, fracción del radio): elimina features enteras
      con bbox-diagonal menor al umbral (islitas). Se mide en AEQD (equidistante), no en
      ortho, para no penalizar features cerca del limbo (que ortho comprime radialmente).
+  3. Douglas-Peucker POST-PROYECCIÓN (`--simplify`, fracción del radio del disco).
+
+⚠️ (1) y (3) son el mismo algoritmo y NO son intercambiables, porque no miden lo mismo.
+(1) va en grados y ANTES de proyectar; (3) va en fracciones del radio y DESPUÉS, que es
+la unidad en la que se decide si un vértice SE VE: un grado vale un tramo distinto en el
+centro del disco que junto al limbo, donde ortho comprime radialmente. Para adelgazar un
+mapa que se va a dibujar pequeño, la que sirve es (3).
+
+Medido el 2026-08-31 sobre los tres mapas de lib/ (12582 vértices), con el peor píxel de
+`elevacion_solar` a tamaño publicado (7.37 cm, 300 dpi) contra un volteo completo de
+tierra a océano, que vale 93/255 en gris:
+
+    --simplify   vértices        peor píxel
+    0            92 %             4 %   colineales exactos y duplicados: SIN PÉRDIDA
+    0.0002       69 %            12 %
+    0.001        50 %            27 %   ningún contorno se mueve; solo sombreado de borde
+    0.004        —               81 %   la silueta SÍ se movió (aplana Baja California)
+
+Por debajo de ~0.002 ningún píxel se acerca a voltear. `--simplify 0.001` es el valor con
+el que se generan los mapas de lib/: a los 7.37 cm publicados son 0.037 mm, o sea menos de
+un píxel de impresora a 600 dpi. Para un LOGO de 2 cm la medida da 0.004, pero un mapa
+decimado sirve al tamaño para el que se decimó: esa variante se saca aparte, con
+tools/simplifica_mg.py, y no se committea.
 
 Salida: un `struct` MG PELADO (para `include`), coords normalizadas a radio 1, y-up. Se
 coloca como cualquier struct de biblioteca (ver lib/satellite.mg):
@@ -42,12 +65,18 @@ from pyproj import Transformer
 from shapely.ops import transform
 from shapely.geometry import Point, LineString, MultiLineString
 
+# ⚠️ El Douglas-Peucker NO se reimplementa aquí: es el mismo de tools/simplifica_mg.py,
+# que decima un .mg YA generado. Una copia se despegaría de la otra en silencio, y sería
+# la peor clase de divergencia —dos mapas «al mismo eps» con distinta geometría—.
+from simplifica_mg import douglas_peucker
+
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument('--lat', type=float, default=90.0, help='Latitud del centro (default 90 = polo norte)')
 ap.add_argument('--lon', type=float, default=0.0, help='Longitud del centro (default 0)')
 ap.add_argument('--fill', action='store_true', help='Modo RELLENO: continentes rellenos sobre disco de océano (usa --land). Sin esto, line-art.')
 ap.add_argument('--tolerance', type=float, default=0.0, help='Douglas-Peucker en grados (default 0; a 110m no hace falta)')
 ap.add_argument('--min-feature', type=float, default=0.05, help='Umbral de extensión (bbox en AEQD) como FRACCIÓN del radio; features menores se eliminan (default 0.05)')
+ap.add_argument('--simplify', type=float, default=0.0, help='Douglas-Peucker POST-proyección, en fracción del radio del disco (default 0 = solo quita colineales exactos y duplicados, sin pérdida). 0.001 para los mapas de lib/; ver el encabezado.')
 ap.add_argument('--grid', action=argparse.BooleanOptionalAction, default=True, help='Meridianos y paralelos (default sí)')
 ap.add_argument('--grid-paso', type=float, default=30.0, help='Paso de la retícula en grados (default 30)')
 ap.add_argument('--grid-color', type=str, default='gray', help='Color de la retícula (default gray)')
@@ -196,6 +225,10 @@ def sin_costura(coords, eps=0.01):
 
 # --- Retícula (común a ambos modos), por el mismo recorte AEQD->horizonte->ortho ---
 grid_ml = []
+# Los dos se declaran aquí aunque cada modo llene solo el suyo: la decimación de más abajo
+# recorre ambos, y el otro tiene que existir vacío.
+land_rings = []
+costas_ml = []
 if args.grid:
     def lineas_grid(paso):
         L = []
@@ -288,6 +321,41 @@ _pts = [p for c in _todos for p in c]
 R = max(max(abs(x), abs(y)) for x, y in _pts)
 
 
+# --- Decimación POST-proyección (--simplify) ---
+# Va aquí, y no antes de proyectar, porque lo que decide si un vértice se ve es su error
+# en el DISCO, no en grados. Se aplica en coordenadas de ortho crudas, con la tolerancia
+# escalada por R: es lo mismo que normalizar primero y ahorra tocar fmt()/bloque().
+#
+# ⚠️ Con --simplify 0 esto NO es un no-op, y por eso se corre siempre: Douglas-Peucker con
+# tolerancia cero quita los vértices exactamente colineales y los duplicados consecutivos
+# (13 de estos últimos traía fulldisk_map), o sea un saneo sin pérdida. Un vértice repetido
+# es un segmento degenerado: nada que un mapa quiera llevar.
+eps_ortho = args.simplify * R
+_antes = sum(len(c) for c in land_rings) + sum(len(c) for c in costas_ml) + sum(len(c) for c in grid_ml)
+
+def decima(coords, cerrado):
+    if cerrado:
+        # Se cierra el anillo para decimar y se descarta la repetición: si no, el vértice
+        # de arranque ancla una arista que el polígono no tiene.
+        return douglas_peucker(list(coords) + [coords[0]], eps_ortho)[:-1]
+    return douglas_peucker(list(coords), eps_ortho)
+
+land_rings = [decima(c, True) for c in land_rings]
+costas_ml = [decima(c, False) for c in costas_ml]
+grid_ml = [decima(c, False) for c in grid_ml]
+
+# ⚠️ Un anillo que se decima hasta 2 vértices no es un polígono chico: es un relleno de
+# ÁREA CERO, o sea justo lo que la invariante (b) de la Capa 3 caza en test/run.sh —un
+# path de un solo segmento con fill y sin trazo, invisible—. Se descarta, y se dice.
+_degenerados = [c for c in land_rings if len(c) < 3]
+if _degenerados:
+    land_rings = [c for c in land_rings if len(c) >= 3]
+    print(f"  aviso: {len(_degenerados)} polígono(s) colapsaron a menos de 3 vértices "
+          f"con --simplify {args.simplify}; descartados (serían rellenos de área cero)")
+n_costa = len(land_rings) if args.fill else len(costas_ml)
+_despues = sum(len(c) for c in land_rings) + sum(len(c) for c in costas_ml) + sum(len(c) for c in grid_ml)
+
+
 # --- Emisión ---
 def fmt(v):
     return f"{v/R:.4f}".rstrip('0').rstrip('.') or "0"
@@ -306,12 +374,21 @@ if args.fill:
     L.append(f"%     {args.nombre}(..., ocean=\"lightblue\", land=\"tan\")   % otros colores")
 L.append(f"%")
 L.append(f"% GENERADO, no editar a mano. Regenerar con (tools/geo2mg.py, requiere geopandas + datos Natural Earth 110m):")
-cmd = f"%   python3 hazmapa_mg.py --lat {lat_0} --lon {lon_0}{' --fill' if args.fill else ''} --tolerance {args.tolerance} --min-feature {args.min_feature} --grid-paso {args.grid_paso}"
+cmd = f"%   python3 tools/geo2mg.py --lat {lat_0} --lon {lon_0}{' --fill' if args.fill else ''} --tolerance {args.tolerance} --min-feature {args.min_feature} --simplify {args.simplify} --grid-paso {args.grid_paso}"
 if args.fill:
-    cmd += f" --color-ocean {args.color_ocean} --color-tierra {args.color_tierra}"
+    # Entrecomillados: un color puede ser #rrggbb, y sin comillas el shell toma el '#'
+    # como principio de comentario y se come el resto de la línea. El comando registrado
+    # tiene que poder pegarse en una terminal tal cual.
+    cmd += f" --color-ocean '{args.color_ocean}' --color-tierra '{args.color_tierra}'"
+# --nombre va SIEMPRE, aunque se haya derivado de --salida: sin él el comando registrado
+# no reproduce el archivo (bautiza el struct por el nombre de salida y el `include` deja
+# de encontrarlo). Se encontró así, intentando reproducir fulldisk_map.mg desde su propia
+# receta y obteniendo un `struct Repro_fulldisk`.
+cmd += f" --nombre {args.nombre}"
 L.append(cmd + f" --salida {args.salida}")
-L.append(f"% Simplificación: DP {args.tolerance}° + filtro de extensión bbox<{args.min_feature}·R en AEQD")
-L.append(f"%   (eliminó {cd} de {ct} features chicas). {n_costa} {'polígonos de tierra' if args.fill else 'trazos de costa'}, {len(grid_ml)} de retícula.")
+L.append(f"% Simplificación: DP {args.tolerance}° (pre-proyección) + filtro de extensión bbox<{args.min_feature}·R en AEQD")
+L.append(f"%   (eliminó {cd} de {ct} features chicas) + DP {args.simplify}·R post-proyección ({_antes} -> {_despues} vértices).")
+L.append(f"% {n_costa} {'polígonos de tierra' if args.fill else 'trazos de costa'}, {len(grid_ml)} de retícula.")
 L.append("")
 
 if args.fill:
