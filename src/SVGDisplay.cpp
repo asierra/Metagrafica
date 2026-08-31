@@ -3,6 +3,7 @@
 #include "brace.h"    // braceSegments/bracePlaced: geometría de la llave, única para los tres
 #include "text_parser.h"
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
+#include <cstdlib>   // exit() al no poder abrir la salida
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -235,8 +236,14 @@ void SVGDisplay::start() {
     // igualdad byte a byte con la salida de Unix; aquí no cambia nada).
     file = fopen(filename.c_str(), "wb");
     if (!file) {
-        fprintf(stderr, "Error: No se pudo abrir el archivo SVG %s\n", filename.c_str());
-        return;
+        // exit(1), no return: con `return` este backend seguía adelante con `file`
+        // en nulo y se estrellaba en el primer fprintf (rc=139 en vez de 1, p. ej.
+        // al escribir a un directorio que no existe). EPS y PDF ya salían con 1 y
+        // un mensaje; era la asimetría de siempre, un backend que se porta distinto
+        // donde los otros dos aciertan, y ninguna compuerta puede verla: las
+        // negativas de test/errors compilan a una ruta que sí existe.
+        fprintf(stderr, "no se pudo abrir %s\n", filename.c_str());
+        exit(1);
     }
 
     // dvx/dvy llegan en cm (ver Display::setDimension); los convertimos a
