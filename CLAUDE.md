@@ -178,7 +178,7 @@ re-captúralo** si el cambio era intencional.
   `tools/` que no participan en un `check`, y ésas **se rompen solas**: dependen de la
   interfaz de otras (`ver.sh`), de nombres del corpus y de binarios externos. La regresión
   no se descubre al introducirla sino el día que la herramienta hace falta — que para una
-  de promoción es el día del taller. Hoy vigila una: **`tools/clip_parametrico.sh`**, el
+  de promoción es el día del taller. Hoy vigila dos. La primera, **`tools/clip_parametrico.sh`**, el
   clip paramétrico de `plan_promocion.md` §5, con un barrido de **dos cuadros** (~2 s):
   comprueba que la cadena entera —sustituir el parámetro, compilar con `mg`, rasterizar por
   `ver.sh`, armar el GIF— siga en pie, y que el archivo empiece por `GIF89a`. ⚠️ **NO
@@ -188,7 +188,13 @@ re-captúralo** si el cambio era intencional.
   esta máquina y rojo en la siguiente. Por la misma razón **el GIF no va en git y el script
   sí** (§5 del plan): se genera para la ocasión. Verificada rompiendo la interfaz de
   `ver.sh`: da `humofail=1` con las otras nueve en cero. Se omite con aviso si falta
-  `ffmpeg`, `magick` o un navegador.
+  `ffmpeg`, `magick` o un navegador. La segunda, **`tools/simplifica_mg.py`**: decima el
+  mapa de `lib/`, comprueba que `bin/mg` compile el resultado y que de verdad haya QUITADO
+  vértices. ⚠️ Esa tercera afirmación es la que caza el fallo callado: si el regex deja de
+  reconocer los bloques `polygon`/`polyline` —y el formato en que `geo2mg.py` los emite no
+  es contrato de nadie—, el tool copia el archivo intacto, **termina con éxito y compila
+  igual de bien**. Su usuario vive fuera de este repo, así que ninguna figura la ejercita.
+  Solo necesita `python3`, así que va en su propio guard y corre aunque falte `ffmpeg`.
 
 Las compuertas se verificaron reintroduciendo a propósito los bugs que deben cazar
 (la de `docs/img`, con el archivo rancio **real** de `e9198c0`: lo caza, y el golden sigue

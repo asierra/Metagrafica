@@ -89,7 +89,8 @@
 #     documentación o árbol; ninguna CORRE las herramientas de tools/ que no
 #     participan en un check, y ésas se rompen solas —dependen de la interfaz de
 #     otras, de nombres del corpus y de binarios externos—. Hoy: el clip paramétrico
-#     de plan_promocion.md §5, con un barrido de dos cuadros. No compara bytes, y es
+#     de plan_promocion.md §5, con un barrido de dos cuadros, y la decimación de
+#     tools/simplifica_mg.py sobre lib/fulldisk_map.mg. No compara bytes, y es
 #     la única que se lo prohíbe: ver el bloque de la compuerta.
 #
 set -u
@@ -576,7 +577,7 @@ fi
 # externos, y nada las ejercita. La regresión no se descubre al introducirla sino
 # el día que hacen falta.
 #
-# Hoy vigila una: tools/clip_parametrico.sh, el clip paramétrico de
+# Hoy vigila dos. La primera, tools/clip_parametrico.sh, el clip paramétrico de
 # plan_promocion.md §5. Basta con un barrido de DOS cuadros: lo que se comprueba
 # es que la cadena entera —sustituir el parámetro, compilar con mg, rasterizar por
 # ver.sh, armar el GIF— siga en pie, no cómo se ve.
@@ -606,6 +607,51 @@ if [ -x "$MG" ] && command -v ffmpeg >/dev/null 2>&1 && command -v magick >/dev/
     rm -rf "$(dirname "$humo_gif")"
 else
     echo "WARN: faltan mg/ffmpeg/magick/navegador; se omite la compuerta de humo"
+fi
+
+# Y vigila una segunda: tools/simplifica_mg.py, que decima los polygon/polyline
+# literales de un .mg generado para producir la variante ligera que se usa a tamaño
+# de logo. Se rompe sola por la misma razón que la anterior —depende del FORMATO en
+# que geo2mg.py emite los mapas de lib/, que no es contrato de nadie—, y su usuario
+# vive fuera de este repo, así que aquí no hay figura que la ejercite.
+#
+# Lo que se comprueba es la cadena completa: decimar el mapa, que el resultado siga
+# siendo MetaGráfica que `mg` compila, y que de verdad haya quitado vértices. Ese
+# último es el que caza el fallo callado: si el regex deja de reconocer los bloques,
+# el tool copia el archivo intacto, termina con éxito y compila igual de bien.
+if command -v python3 >/dev/null 2>&1 && [ -x "$MG" ]; then
+    humo_dir="$(mktemp -d)"
+    # eps deliberadamente GRANDE (0.02, no el 0.004 de un logo): lo que se afirma aquí es
+    # «sigue reconociendo los bloques y quitando puntos», no una calidad visual, y con un
+    # eps del orden del de lib/ el margen quedaría a merced de lo decimado que esté el mapa.
+    if humo_out="$(python3 "$ROOT/tools/simplifica_mg.py" "$ROOT/lib/fulldisk_map.mg" \
+                       --eps 0.02 -o "$humo_dir/mapa.mg" 2>&1)"; then
+        printf 'display_size 2 2\nworld_window -1 1  -1 1\ninclude "mapa.mg"\nFullDiskMap(scale=1, at=(0,0))\n' \
+            > "$humo_dir/logo.mg"
+        if ! (cd "$humo_dir" && "$MG" logo.mg logo.svg) >/dev/null 2>&1; then
+            echo "HUMOFAIL tools/simplifica_mg.py dejó un .mg que bin/mg no compila"
+            humofail_count=$((humofail_count + 1))
+        else
+            # Se cuentan NÚMEROS, no vértices: el derivado trae además los del encabezado
+            # de procedencia. Por eso el umbral no es «bajó» sino «bajó a menos de la
+            # mitad» — a eps=0.02 el mapa queda en el 13 %, así que hay margen de sobra y
+            # la holgura del encabezado no puede colarse por él.
+            n_antes=$(grep -oE '[-0-9.]+' "$ROOT/lib/fulldisk_map.mg" | wc -l)
+            n_despues=$(grep -oE '[-0-9.]+' "$humo_dir/mapa.mg" | wc -l)
+            if [ "$n_despues" -gt $((n_antes / 2)) ]; then
+                echo "HUMOFAIL tools/simplifica_mg.py apenas decimó ($n_antes -> $n_despues números; se esperaba ~13 %):"
+                echo "        ¿dejó de reconocer los bloques polygon/polyline de lib/?"
+                humofail_count=$((humofail_count + 1))
+            fi
+        fi
+    else
+        echo "HUMOFAIL tools/simplifica_mg.py ya no corre:"
+        echo "$humo_out" | sed 's/^/        /'
+        humofail_count=$((humofail_count + 1))
+    fi
+    rm -rf "$humo_dir"
+else
+    echo "WARN: falta python3 o bin/mg; se omite el humo de simplifica_mg.py"
 fi
 
 # --- Compuerta 5: pruebas NEGATIVAS (errfail) --------------------------------
