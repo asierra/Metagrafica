@@ -203,13 +203,24 @@ cambiando el título de `sines.mg` sin regenerar: `galfail=1` con las otras cinc
 
 Toolchain: `clang++`/`g++` (C++14, `-fno-rtti -fno-exceptions`), `flex` (regenerates `src/lexv3.cpp` from `src/lexer.l`), `pandoc` (man page). Do not edit `src/lexv3.cpp` by hand (flex generates it); `include/version.h` **is** edited by hand. libharu (2.4.6) is vendored in `third_party/` for PDF.
 
-⚠️ **La copia vendorizada llegó INCOMPLETA y se completó el 2026-07-28.** Le faltaba
-`src/hpdf_shading.c` —el que define `HPDF_Shading_New`/`HPDF_Shading_AddVertexRGB`— aunque
-`hpdf.h` las declara y la mitad consumidora (`HPDF_Page_SetShading`, `HPDF_Page_GetShadingName`,
-el dict `/Shading` de `hpdf_pages.c`) sí estaba compilada: el árbol era incoherente consigo
-mismo y solo se notó al necesitar degradados. Se restauró el archivo de upstream v2.4.6 tal
-cual (misma licencia ZLIB, sin editar una línea; el `wildcard` del Makefile lo toma solo). **No
-es un parche a libharu, y la política de no parchearla sigue en pie:** si algo más falta, se
+⚠️ **EL RECORTE DEL VENDOR SE COMIÓ UNA DEPENDENCIA VIVA, y tardó 24 días en notarse**
+(corregido el 2026-09-03; este párrafo decía antes que «la copia vendorizada llegó
+INCOMPLETA», y **es falso** — conviene no volver a escribirlo). Lo que pasó, según la historia
+del archivo: `src/hpdf_shading.c` —el que define `HPDF_Shading_New`/`HPDF_Shading_AddVertexRGB`—
+**entró completo** con la copia vendorizada (`ff385e1`, 2026-06-29); lo **borró el propio
+recorte** de `plan_pdf.md` (`e630e08`, 2026-07-04), en el mismo commit que corta los encoders
+CJK: 100 607 líneas eliminadas, de las cuales éste eran 233; y se restauró el 2026-07-28
+(`1c791b0`) **byte-idéntico** al que ya estaba ahí (verificado con `cmp` entre `ff385e1` y
+`1c791b0`). O sea que upstream nunca lo omitió y el árbol no era incoherente de origen: lo
+volvió incoherente el recorte, dejando compilada la mitad consumidora
+(`HPDF_Page_SetShading`, `HPDF_Page_GetShadingName`, el dict `/Shading` de `hpdf_pages.c`) sin
+su proveedor. **La lección NO es «upstream viene incompleto» sino que recortar una dependencia
+vendorizada no tiene compuerta:** el corte fue por tamaño, no por dependencias, nada verifica
+que lo que se queda siga cerrado bajo lo que `hpdf.h` declara, y el error solo se destapó al
+necesitar degradados — ninguna de las diez compuertas podía cazarlo antes, porque hasta ese día
+ninguna figura pedía un `shfill`. **Antes de recortar más de `third_party/`, comprueba que
+nadie llame a lo que quitas.** La política de no parchear libharu sigue en pie (misma licencia
+ZLIB, sin editar una línea; el `wildcard` del Makefile lo toma solo): si algo falta, se
 restaura de upstream y se anota aquí. Lo que libharu de verdad NO implementa es el sombreado
 axial (tipo 2) ni el radial (tipo 3) — solo la malla de triángulos (tipo 4), que para un
 degradado lineal basta y para uno radial no (ver `plan_gradientes.md`).

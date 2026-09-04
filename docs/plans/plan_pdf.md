@@ -28,16 +28,33 @@ resto de libharu). Se pueden borrar sin tocar ni una línea de código ni el Mak
 cd third_party/libharu/src
 rm hpdf_encoder_cns.c hpdf_encoder_cnt.c hpdf_encoder_jp.c hpdf_encoder_kr.c \
    hpdf_encoder_utf.c \
-   hpdf_fontdef_cns.c hpdf_fontdef_cnt.c hpdf_fontdef_jp.c hpdf_fontdef_kr.c \
-   hpdf_shading.c
+   hpdf_fontdef_cns.c hpdf_fontdef_cnt.c hpdf_fontdef_jp.c hpdf_fontdef_kr.c
 ```
+
+*(El `rm` de arriba llevaba además `hpdf_shading.c`; se retiró de la lista el 2026-09-03 —el
+comando es copiable y volvería a romper el árbol—. La razón, abajo.)*
 
 | Archivo(s) | Qué son | Fuente |
 |---|---|---|
 | `hpdf_encoder_{cns,cnt,jp,kr}.c` | Tablas de codificación CJK (chino simplificado/tradicional, japonés, coreano) | ~2,1 MB |
 | `hpdf_fontdef_{cns,cnt,jp,kr}.c` | Métricas de fuentes CJK predefinidas | ~110 KB |
 | `hpdf_encoder_utf.c` | Codificadores UTF activables con `HPDF_UseUTFEncodings` (mg no lo llama) | ~9 KB |
-| `hpdf_shading.c` | Degradados (`HPDF_Shading_*`, API que mg no usa) | ~10 KB |
+| ~~`hpdf_shading.c`~~ | ⚠️ **ESTA FILA ESTABA MAL — ver el aviso de abajo** | ~10 KB |
+
+⚠️ **`hpdf_shading.c` NO debió entrar a este recorte, y el `rm` de arriba lo lleva de más**
+(anotado el 2026-09-03; **no lo vuelvas a incluir**). El criterio que lo condenó —«API que **mg**
+no usa»— era cierto y aun así insuficiente: **lo usaba la propia libharu**. El archivo define
+`HPDF_Shading_New`/`HPDF_Shading_AddVertexRGB`, que consumen `HPDF_Page_SetShading`,
+`HPDF_Page_GetShadingName` y el dict `/Shading` de `hpdf_pages.c` — todo eso se quedó compilado
+y enlazado, así que el recorte dejó la mitad consumidora sin su proveedor y el árbol incoherente
+con su propio `hpdf.h`. No explotó en el momento porque nada pedía un sombreado todavía; el error
+tardó **24 días** en destaparse, al implementar los degradados (§4.14), y se arregló restaurando
+el archivo de upstream el 2026-07-28 (`1c791b0`), byte-idéntico al que este recorte había
+borrado. **La lección para cualquier recorte futuro de `third_party/`: el criterio no es "¿lo
+llama `mg`?" sino "¿lo llama alguien de lo que se queda?"** — hay que cerrar el conjunto bajo las
+llamadas internas de la propia biblioteca, no solo bajo las nuestras. Los otros nueve archivos de
+la lista sí eran hojas (tablas de datos CJK y codificadores que nadie referencia) y siguen fuera
+con razón.
 
 Resultado medido: la fuente de libharu pasa de 3,2 MB a ~1,0 MB y el segmento de
 código del binario baja de **1005 KB a 578 KB (−42 %)**. `mg` compila sin warnings

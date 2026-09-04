@@ -153,16 +153,40 @@ Consecuencia práctica: **los tres backends consumen el MISMO eje**, `Display::g
 eso coinciden por construcción en vez de por vigilancia. En SVG eso obliga a
 `gradientUnits="userSpaceOnUse"` con coordenadas calculadas.
 
-### 7.2 La copia vendorizada de libharu estaba INCOMPLETA
+### 7.2 Nuestro propio recorte se había comido `hpdf_shading.c`
 
-§3 daba por hecho que el tipo 4 estaba disponible porque el header lo declara. No lo estaba:
-**`src/hpdf_shading.c` no se había vendorizado**, aunque sí la mitad consumidora
-(`HPDF_Page_SetShading`, `HPDF_Page_GetShadingName`, el dict `/Shading` de `hpdf_pages.c`). El
-árbol era incoherente con su propio header y nadie lo había notado porque nada usaba sombreados.
+> **Corregido el 2026-09-03.** Esta sección se tituló «La copia vendorizada de libharu estaba
+> INCOMPLETA» y decía que el archivo «no se había vendorizado». **Es falso**, y la historia del
+> archivo lo desmiente en tres commits. Se deja el título viejo aquí anotado porque la versión
+> equivocada llegó a citarse en `CLAUDE.md` y en la bitácora.
+
+§3 daba por hecho que el tipo 4 estaba disponible porque el header lo declara. No lo estaba —pero
+la culpa no era de upstream, era nuestra:
+
+| Commit | Fecha | Qué pasó |
+|---|---|---|
+| `ff385e1` | 2026-06-29 | `hpdf_shading.c` **entra** con la copia vendorizada, completo |
+| `e630e08` | 2026-07-04 | el recorte de `plan_pdf.md` lo **borra**, junto a los encoders CJK |
+| `1c791b0` | 2026-07-28 | se **restaura** de upstream, byte-idéntico al de `ff385e1` (`cmp`) |
+
+O sea que el archivo estuvo siempre en upstream y volvió exactamente igual a como se había ido.
+Lo que dejó el árbol incoherente con su propio `hpdf.h` fue el recorte, que se llevó
+`HPDF_Shading_New`/`HPDF_Shading_AddVertexRGB` y dejó compilada la mitad consumidora
+(`HPDF_Page_SetShading`, `HPDF_Page_GetShadingName`, el dict `/Shading` de `hpdf_pages.c`).
+
+⚠️ **La lección no es «upstream viene incompleto» sino que recortar una dependencia vendorizada
+no tiene compuerta.** El criterio del recorte fue «API que **mg** no usa» —cierto entonces— y le
+faltaba cerrar el conjunto bajo las llamadas **internas de la propia biblioteca**. Nada verifica
+eso: las diez compuertas miran la salida del compilador, la documentación y el árbol, y ninguna
+puede ver que un `.c` que se queda llame a un `.c` que se fue, porque el enlazado no falla
+mientras nadie ejercite ese camino. Tardó **24 días** en destaparse, y solo porque los degradados
+fueron la primera característica que lo pisa. El aviso vive ahora en `plan_pdf.md`, junto a la
+tabla que lo causó.
 
 Se restauró el archivo de upstream v2.4.6 **tal cual** —misma licencia ZLIB, sin editar una línea,
 y el `wildcard` del Makefile lo toma solo—. La política de §6 sigue en pie: eso no es parchear
-libharu, es completarla; si falta algo más, se restaura de upstream y se anota aquí.
+libharu, es restaurar lo que nunca debió salir; si falta algo más, se restaura de upstream y se
+anota aquí.
 
 La limitación REAL de libharu es la que decía §3 y se confirma: no expone los tipos 2 (axial) ni
 3 (radial). Para el lineal da igual —un tramo entre dos paradas es exactamente un cuadrilátero con

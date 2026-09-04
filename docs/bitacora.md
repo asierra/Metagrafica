@@ -2289,6 +2289,16 @@ porque es exacto, no crece con la resolución, y las franjas son justamente lo q
 escribir a mano en un `.mg`: emitirlas no añadiría nada al lenguaje. Ghostscript lo interpreta y
 `psfail` lo verifica en cada corrida.
 
+> ⚠️ **CORRECCIÓN 2026-09-03 — el diagnóstico del párrafo siguiente es FALSO.** `hpdf_shading.c`
+> sí se vendorizó: entró completo el 2026-06-29 (`ff385e1`) y lo borró **nuestro propio recorte**
+> del 2026-07-04 (`e630e08`, el que corta los encoders CJK), donde `plan_pdf.md` lo listaba como
+> «API que mg no usa». El restaurado de hoy es byte-idéntico al original (`cmp` entre `ff385e1` y
+> `1c791b0`), lo que prueba que upstream nunca lo omitió. La lección buena no es «la vendorización
+> llegó mal» sino que **recortar una dependencia vendorizada no tiene compuerta**, y que el
+> criterio debe cerrar el conjunto bajo las llamadas internas de la biblioteca, no solo bajo las
+> nuestras. Se deja el texto original abajo, sin tocar, porque es lo que se creyó ese día — pero
+> no lo cites. Detalle en `plan_gradientes.md` §7.2 y el aviso en `plan_pdf.md`.
+
 🔎 **La copia vendorizada de libharu estaba INCOMPLETA, y nadie lo sabía.** El plan daba por hecho
 que el sombreado tipo 4 estaba disponible porque `hpdf.h` lo declara. No lo estaba:
 `src/hpdf_shading.c` nunca se vendorizó, aunque sí la mitad consumidora —`HPDF_Page_SetShading`,
