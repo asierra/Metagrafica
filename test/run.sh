@@ -47,6 +47,15 @@
 #           COINCIDÍAN ENTRE SÍ y ambos estaban mal. El PDF es la tercera opinión
 #           independiente porque no decide ejes ni ángulos — transforma los puntos de
 #           control de la Bézier. Una compuerta EPS-vs-SVG habría dado verde.
+#       (e) CARA de cada trozo de texto (tools/fontparity.py, 2026-09-30): (a) cuenta
+#           los trozos, ésta compara con qué fuente se dibujó cada uno —normalizada a
+#           un vocabulario común: math, roman/sans/mono ± bold/italic—, siguiendo la
+#           fuente a través de gsave/grestore y q/Q. Caza la familia del 2026-08-19 y
+#           el 2026-08-30 (la cara ambiente pisada), que tuvo las dos veces la misma
+#           firma: EPS y PDF mal, SVG bien, las diez compuertas verdes. Verificada
+#           reintroduciendo los dos bugs: el primero la pone roja en cinco ejemplos
+#           (quickstart y fig6-4 entre ellos), el segundo en texto. Como (c), no hay
+#           nada que bendecir. Se omite con aviso si no hay python3.
 #   - docs/img al día (imgfail): caza que la salida PUBLICADA se quede RANCIA. Los
 #     .svg de docs/img están EN GIT (GitHub los muestra en la portada del README) y
 #     se regeneran a mano; nada los vigilaba, y entre 2026-07-17 y 2026-07-21 la
@@ -398,6 +407,13 @@ for example in $EXAMPLES; do
                     "$c3dir/$example.eps" "$c3dir/$example.svg" "$c3dir/$example.pdf" 2>&1)"; then
                 echo "C3FAIL $example (geometría de arcos difiere entre backends):"
                 echo "$arcout" | sed 's/^/         /'
+                c3fail_count=$((c3fail_count + 1))
+            fi
+            # Invariante (e): la CARA de cada trozo de texto, igual en los tres.
+            if ! fontout="$("$PY_BIN" "$ROOT/tools/fontparity.py" \
+                    "$c3dir/$example.eps" "$c3dir/$example.svg" "$c3dir/$example.pdf" 2>&1)"; then
+                echo "C3FAIL $example (cara tipográfica difiere entre backends):"
+                echo "$fontout" | sed 's/^/         /'
                 c3fail_count=$((c3fail_count + 1))
             fi
         fi

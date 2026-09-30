@@ -4852,3 +4852,34 @@ un dibujo donde la mitad de sus vértices cae bajo el píxel de la impresora.
   porta distinto donde los otros dos aciertan— y **ninguna compuerta puede verla**: las
   negativas de `test/errors` compilan a una ruta que sí existe, así que este camino no
   tiene forma de declararse ahí.
+
+Cerrado en la sesión del 2026-09-30 — **la compuerta de paridad de CARA tipográfica**
+(invariante (e) de la Capa 3, `tools/fontparity.py`, cuenta en `c3fail`). Estaba propuesta
+desde el 2026-08-19 y juntó su segundo caso real el 2026-08-30; las dos veces la firma fue la
+misma —EPS y PDF mal, SVG bien, las diez compuertas verdes— y a ninguna la encontró una
+compuerta.
+
+- **Cómo:** la invariante (a) ya garantiza que los tres emiten el mismo número de trozos de
+  texto y en el mismo orden, así que se alinean por posición y se compara la cara de cada
+  uno. El trabajo es la normalización: EPS nombra `/ISOTimes-Italic`, `/LMMath`,
+  `/LMMathSym`; PDF `/Fn` → `/BaseFont` (con el prefijo de subset `HPDFAA+`); SVG pone familia,
+  estilo y peso en atributos del `<tspan>`. Todo se reduce a `math` o `roman|sans|mono` ±
+  bold/italic. La fuente se sigue a través de `gsave`/`grestore` y `q`/`Q`, porque en los dos
+  formatos es parte del estado que se restaura. El `Symbol` base-14 del PDF queda como cara
+  propia: es el respaldo degradado, y verlo en un `Tj` ya es un desacuerdo.
+- **El tamaño NO entra**, a propósito: tiene otra semántica en cada backend y no es la clase
+  de fallo que la motivó.
+- **Cero falsos positivos** en el corpus: 1164 trozos roman, 888 math, 129 italic, 30 bold, 3
+  mono, en cada uno de los tres formatos.
+- **Verificada reintroduciendo los dos bugs.** La pieza (1) del arreglo del 2026-08-19
+  (`if (face != FN_NOFACE) setFontFace`, sin `restoreAmbientFace`) da C3FAIL en `fig6-4`,
+  `franck_condon`, `gravitacion_orbita`, `line_patterns` y `quickstart`. El del 2026-08-30
+  (`setFontSize` poniendo `FN_NOFACE`) da C3FAIL en `texto`, y por `run.sh` completo
+  `c3fail=1`. El golden también se pone rojo ahí (`fail=2`), pero ése se apaga con
+  `capture`; esta no tiene nada que bendecir.
+- ⚠️ **El primer intento de verificación salió VERDE, y es la lección:** quitar SOLO
+  `restoreAmbientFace` no reproduce el bug original, porque SVG también lee
+  `dspstate.fontFace` y se estropea igual que los otros dos. Tres backends que se equivocan
+  a la par no son un problema de paridad. La compuerta ve lo que un backend hace DISTINTO;
+  un error del estado lógico, aguas arriba de los tres, sigue siendo cosa del golden y de
+  `ver.sh`.

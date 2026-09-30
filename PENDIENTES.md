@@ -6,7 +6,7 @@
 > ítem y su fuente se contradicen, gana la fuente; actualiza aquí al cerrarlo.
 >
 > Reemplaza a los antiguos `PENDIENTES.md` (auditoría de backend V1, retirada en
-> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-08-30**.
+> `4b9b4d4`) y `ROADMAP.md`, ya superados. Act. **2026-09-30**.
 >
 > También reemplaza a **`ideas.txt`** (borrador fundacional de V3, borrado el 2026-07-22).
 > Se repasaron sus 18 puntos contra el código: 14 están superados —varios muy por encima de
@@ -32,12 +32,13 @@
 > dos idiomas: **la documentación también puede mentir**, y a un modelo de lenguaje le miente
 > con éxito; la 9ª, del 2026-08-05, comprueba que lo que la documentación **cita** siga siendo
 > lo que el archivo dice —fallo disjunto del anterior: una cita rancia COMPILA—; y la 10ª
-> corre las herramientas de `tools/` que ningún `check` ejercita). La Capa 3 tiene **cuatro**
+> corre las herramientas de `tools/` que ningún `check` ejercita). La Capa 3 tiene **cinco**
 > invariantes: la 3ª, del 2026-07-27, es la
 > paridad **geométrica** de arcos entre los tres backends (`tools/arcparity.py`) — la
 > única sin escapatoria por bendición, porque no compara contra un golden sino un backend
 > contra otro (ver `plan_anisotropia.md`); la 4ª, del 2026-07-28, cuenta los **rellenos
-> degradados** en los tres formatos.
+> degradados** en los tres formatos; la 5ª, del 2026-09-30, compara la **cara** tipográfica de
+> cada trozo de texto (`tools/fontparity.py`).
 > Traductor: `bash test/run_translator.sh check` → **ok=14** (`tools/mg1to2.py`).
 
 ---
@@ -84,16 +85,14 @@ orden de la lista es la ejecución.
      dentro de un plot, punto `(x,y)` fuera—. Y **sí lleva marco**, que la leyenda no
      pudo tener: declarar `col_widths=` en pt es justo lo que hace calculable la caja
      sin medir texto.
-   - ⏳ **Cobertura: `rule` y `table` NO los compila NINGÚN ejemplo del corpus**
-     (verificado 2026-08-03). `rule` tiene una línea suelta en un bloque de
-     `docs/referencia.md` que sí pasa por `docfail`; **`table` no tiene ni eso**. Su
-     único cliente es `figure_02`, que vive en `local/` por confidencialidad. Es el
-     mismo agujero que tenía `lib/pseudo3d.mg` hasta el 2026-08-03.
-     📌 **NO se le construye un ejemplo público a propósito** (decidido con Alejandro
-     el 2026-08-03): el artículo está en **segunda revisión**, y al publicarse la
-     figura deja de ser confidencial y puede entrar al corpus tal cual, que es el
-     cliente REAL. Un ejemplo inventado solo para la compuerta sería peor prueba y
-     habría que retirarlo después.
+   - [x] ~~**Cobertura: `rule` y `table` NO los compila NINGÚN ejemplo del corpus**~~ —
+     **CERRADO 2026-08-30** por un cliente real, no inventado: **`skewt_golfo.mg`** (sondeo
+     NUCAPS) entró al golden con diez `rule` literales rotulados (`label_at="axis"`) y un
+     `table` de índices (CAPE, LI…). Con `franck_condon` (`rule` con expresiones
+     evaluadas, sin rótulo) cubren las dos mitades de §13.8. La decisión del 2026-08-03
+     —no construir un ejemplo público a propósito— se sostuvo: la cobertura llegó sola.
+     `figure_02` puede entrar igual al corpus cuando se publique el artículo, pero ya no
+     hace falta para la compuerta.
    - ✅ **Con eso el punto 2 queda COMPLETO.**
 3. **Texto fuera de Latin-1** (§14.4) — ✅ **HECHO 2026-07-20**. Resultó que el techo
    no era la codificación sino el **repertorio de la fuente**: las base-14 SÍ tienen
@@ -292,7 +291,13 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
-- [ ] 🚧 **COMPUERTA PROPUESTA: paridad de CARA tipográfica entre backends** (2026-08-19).
+- [x] ~~🚧 **COMPUERTA PROPUESTA: paridad de CARA tipográfica entre backends** (2026-08-19).~~
+      ✅ **HECHA 2026-09-30**: invariante (e) de la Capa 3, `tools/fontparity.py`, cuenta en
+      `c3fail`. Cero falsos positivos en el corpus (1164 roman, 888 math, 129 italic, 30 bold,
+      3 mono). Nació ROJA sobre los dos bugs: la pieza (1) del arreglo del 2026-08-19 revertida
+      da C3FAIL en cinco ejemplos (`quickstart` y `fig6-4` entre ellos) y el del 2026-08-30 en
+      `texto`. ⚠️ Límite medido: quitar solo `restoreAmbientFace` estropea los TRES backends
+      por igual y la deja verde — un error común a los tres no es paridad. Texto original:
       La invariante (a) de la Capa 3 cuenta operaciones de texto —`EPS(show) == SVG(<tspan>)
       == PDF(Tj)`— y con eso caza el rótulo **en blanco**; lo que **no** compara es con qué
       CARA se dibujó cada una. Un backend puede sacar el mismo texto, en el mismo sitio, en
@@ -1189,6 +1194,20 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 ---
 
 ## ✅ Cerrado recientemente (contexto, no re-litigar)
+
+- **Mapas de `lib/` decimados** (2026-08-31, `b07e424` + `8a32966`) — `tools/simplifica_mg.py`
+  (Douglas-Peucker sobre un `.mg` ya generado, vigilado por `humofail`) y `geo2mg.py
+  --simplify`, que decima en origen con el mismo algoritmo. Los tres mapas se regeneraron a
+  `0.001`: 12582 → 6260 vértices, ~30 % menos de salida, y ningún contorno se mueve (peor
+  píxel 27/255). `0.004` es para un logo y no se committea. Detalle: `CLAUDE.md` (Layout) y
+  la bitácora.
+- **SVG se estrellaba al no poder abrir su archivo** (2026-08-31, `c7cd941`) — rc=139 donde
+  EPS y PDF salían con 1 y mensaje. Sin prueba negativa: `test/errors` compila a rutas que
+  existen, así que ese camino no se puede declarar ahí.
+- **Corrección sobre libharu** (2026-09-03, `89dfe5e`, solo documentación) — `hpdf_shading.c`
+  no faltaba de upstream: lo borró nuestro recorte (`e630e08`). El criterio de
+  `plan_pdf.md` pasa a «¿lo llama algo de lo que se queda?» y el archivo sale del bloque
+  `rm`. Recortar `third_party/` sigue **sin compuerta**.
 
 - **Traductor `mg1to2.py`** (2026-07-17) — CERRADO y commiteado. Los 14 fixtures traducen
   y compilan (`bash test/run_translator.sh check` → ok=14); fig4-10 resuelto (canal `mtpt`

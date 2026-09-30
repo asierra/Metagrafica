@@ -71,7 +71,14 @@ re-captúralo** si el cambio era intencional.
   `EPS(shfill) == SVG(url(#mggrad…)) == PDF(/ShN sh)` (nueva 2026-07-28, §4.14: un degradado es
   justo lo que un backend puede omitir en silencio — si SVG lo pinta y PDF sale plano, cada
   salida es byte-estable y el golden bendice las dos; verificada enmudeciendo el SVG, que da
-  `c3fail=1` mientras `capture` bendice sin protestar). Corre también en
+  `c3fail=1` mientras `capture` bendice sin protestar); **(e)** la **cara** de cada trozo de
+  texto coincide en los tres (`tools/fontparity.py`, nueva 2026-09-30): (a) cuenta los trozos,
+  ésta compara con qué fuente se dibujó cada uno, normalizada a `math`/`roman`/`sans`/`mono`
+  ± bold/italic y siguiendo la fuente por `gsave`/`grestore` y `q`/`Q`. Caza la familia de
+  la cara ambiente pisada (2026-08-19 y 2026-08-30: EPS y PDF mal, SVG bien, todo en verde);
+  verificada reintroduciendo los dos bugs. ⚠️ **No caza un error COMÚN a los tres**: quitar
+  solo `restoreAmbientFace` estropea también el SVG (lee `dspstate.fontFace`) y la deja
+  verde — la paridad entre backends solo ve lo que un backend hace distinto. Corre también en
   `capture`. Es la única capa que caza un bug preexistente; las otras dos lo bendecen.
 
   ⚠️ **(c) es la única invariante SIN ESCAPATORIA POR BENDICIÓN**, y por eso existe: las demás
@@ -262,7 +269,7 @@ que una figura publicada diga con qué se hizo.
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de citas `citas.py` (2026-08-05: la compuerta `citafail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el decimador `simplifica_mg.py` (2026-08-31: aplica Douglas-Peucker a los `polygon`/`polyline` LITERALES de un `.mg` YA generado; lo vigila `humofail`; solo biblioteca estándar).
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de citas `citas.py` (2026-08-05: la compuerta `citafail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de paridad de caras `fontparity.py` (2026-09-30: invariante (e) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el decimador `simplifica_mg.py` (2026-08-31: aplica Douglas-Peucker a los `polygon`/`polyline` LITERALES de un `.mg` YA generado; lo vigila `humofail`; solo biblioteca estándar).
 
 ⚠️ **La decimación mide en FRACCIONES DEL RADIO y DESPUÉS de proyectar, y eso NO es la `--tolerance` de `geo2mg.py`**, que va en grados y ANTES: un grado vale un tramo distinto en el centro del disco que junto al limbo, donde ortho comprime radialmente. Hay **dos puertas a la misma operación y no son intercambiables**: `geo2mg.py --simplify` decima **en origen**, en la misma corrida que proyecta, de modo que el encabezado del mapa registra **un** comando que lo reproduce; `simplifica_mg.py` decima un `.mg` ya escrito, para quien no tiene geopandas ni los datos de Natural Earth (que no están en el repo). Comparten el algoritmo —`geo2mg.py` **importa** `douglas_peucker` de `simplifica_mg.py`, no lo recopia— y difieren solo en el momento: `--simplify` trabaja en plena precisión antes de redondear a 4 decimales, que es el orden correcto. Medido: al mismo 0.001 dan 1715 y 1722 vértices.
 
