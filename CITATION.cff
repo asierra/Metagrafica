@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "MetaGráfica: a descriptive language for technical and scientific figures"
+abstract: >
+  MetaGráfica is a descriptive language for publication-quality 2D vector
+  graphics. A figure is plain-text source — points, paths, parameterized
+  structures, transformations, plots and mathematical typesetting — that the
+  mg compiler turns into EPS, SVG or PDF, so it can be versioned, diffed,
+  parameterized and regenerated. Created for the figures of scientific
+  textbooks, it has been in use since 1988.
+authors:
+  - family-names: Aguilar Sierra
+    given-names: Alejandro
+    email: asierra@unam.mx
+    orcid: "https://orcid.org/0000-0003-1018-8521"
+    affiliation: "Universidad Nacional Autónoma de México (UNAM)"
+version: 3.1.0-beta
+date-released: "2026-08-04"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/asierra/Metagrafica"
+url: "https://github.com/asierra/Metagrafica"
+keywords:
+  - vector graphics
+  - scientific figures
+  - scientific visualization
+  - plotting
+  - domain-specific language
+  - compiler
+  - PostScript
+  - EPS
+  - SVG
+  - PDF
+  - MetaPost

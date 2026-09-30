@@ -1,0 +1,53 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "MetaGráfica",
+  "description": "MetaGráfica is a descriptive language for publication-quality 2D vector graphics. A figure is plain-text source — points, paths, parameterized structures, transformations, plots and mathematical typesetting — that the mg compiler turns into EPS, SVG or PDF, so it can be versioned, diffed, parameterized and regenerated. Created for the figures of scientific textbooks, it has been in use since 1988.",
+  "license": "https://spdx.org/licenses/GPL-3.0-or-later",
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "C++",
+    "version": "C++14"
+  },
+  "runtimePlatform": ["Linux", "macOS", "Windows"],
+  "operatingSystem": ["Linux", "macOS", "Windows"],
+  "softwareRequirements": [
+    "C++14 compiler (g++ or clang++)",
+    "flex",
+    "zlib",
+    "pandoc (man page only)"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-1018-8521",
+      "givenName": "Alejandro",
+      "familyName": "Aguilar Sierra",
+      "email": "asierra@unam.mx",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Universidad Nacional Autónoma de México (UNAM)"
+      }
+    }
+  ],
+  "codeRepository": "https://github.com/asierra/Metagrafica",
+  "issueTracker": "https://github.com/asierra/Metagrafica/issues",
+  "url": "https://github.com/asierra/Metagrafica",
+  "version": "3.1.0-beta",
+  "dateCreated": "1988",
+  "datePublished": "2026-08-04",
+  "developmentStatus": "active",
+  "keywords": [
+    "vector graphics",
+    "scientific figures",
+    "scientific visualization",
+    "plotting",
+    "domain-specific language",
+    "compiler",
+    "PostScript",
+    "EPS",
+    "SVG",
+    "PDF",
+    "MetaPost"
+  ]
+}
