@@ -8,6 +8,14 @@ MetaGráfica is a 2D descriptive vector graphics language. The `mg` binary compi
 
 The forward-looking design lives in `especificacion_mg.md`: §3.1 (isometric space), §16 (nested windows), §22 (engine continuity plan), §22.6 (work order). Read §22 before large engine changes.
 
+## Git: solo Alejandro empuja
+
+🔒 **Nunca `git push`** —ni ramas, ni etiquetas, ni `--force`—, aunque el trabajo esté
+commiteado y verificado: **empujar es decisión exclusiva de Alejandro**, para conservar el
+control sobre lo que se publica. Tampoco se ofrece empujar como siguiente paso. Los commits sí
+se preparan, pero se proponen y esperan su visto bueno antes de hacerse. Ojo con las etiquetas
+en particular: empujar una `v*` dispara `release.yml` y publica un release.
+
 ## Build and test
 
 ```bash
