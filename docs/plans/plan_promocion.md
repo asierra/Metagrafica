@@ -221,8 +221,9 @@ responde sin autenticar — así que esto se vuelve a comprobar en un comando), 
   mientras las dos galerías **sí se servían** (HTTP 200): la galería llevaba publicada y
   funcionando desde el 2026-07-23 y el enlace que GitHub reserva justo para eso —arriba a la
   derecha, el primero que se ve— estaba en blanco.
-- **La imagen de vista previa social** (Settings → Social preview) — **generada 2026-08-04, falta
-  SUBIRLA**: es el único de los tres que la API no expone, así que el último paso es a mano.
+- **La imagen de vista previa social** (Settings → Social preview) — **generada 2026-08-04 y
+  SUBIDA** (comprobado el 2026-09-30: `usesCustomOpenGraphImage: true` en la API GraphQL, que es
+  el único testigo; la REST no la expone). La subida es a mano, fuera del árbol.
   `docs/img/social-preview.png` (1280×640), y `tools/social_preview.sh` la rehace. La figura es
   `seccion_eficaz` porque su lienzo es 13×5.98 = **2.17:1**, casi el 2:1 que pide el formato: llena
   el marco sin blanco muerto, donde las candidatas 16:9 dejan bandas. Lleva el nombre abajo a la
@@ -302,5 +303,5 @@ Fijar fecha para el taller (§2a). Es el único de la lista que produce la evide
 el 1.0; todo lo demás es alcance, y el alcance sin retroalimentación no mueve ninguna condición.
 
 De los tres ítems de configuración de §5 (2026-08-04): *topics* y campo *Website* quedaron
-**aplicados**, y la vista previa **generada** (`docs/img/social-preview.png`). Queda un solo gesto
-manual: **subirla** en Settings → Social preview, porque es lo único que la API no expone.
+**aplicados**, y la vista previa **generada** (`docs/img/social-preview.png`) y **subida**
+(comprobado el 2026-09-30). Los tres quedaron hechos.

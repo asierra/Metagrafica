@@ -59,22 +59,6 @@ jobs:
         if: matrix.cross != ''
         run: make CROSS=${{ matrix.cross }}
 
-      # La red de pruebas solo corre donde el binario se puede EJECUTAR. En el
-      # build cruzado no hay nada que ejecutar, así que ahí basta con que enlace:
-      # el .exe se verifica en el trabajo `smoke-windows` de abajo.
-      #
-      # `capture` corre CINCO de las seis compuertas (todas menos el golden por
-      # bytes, que necesita una red que no está en git) y sale con código ≠ 0 si
-      # alguna falla. **Bloquea en las dos plataformas nativas.** En macOS estuvo
-      # un rato como informativo, por si una diferencia de último dígito en libm
-      # movía los renders publicados; se cambió el 2026-07-27 al caer en cuenta de
-      # que **nadie del proyecto tiene ya un Mac**: si esto no bloquea, macOS deja
-      # de tener cualquier vigilancia. Y el miedo que lo justificaba lo despeja el
-      # trabajo `smoke-macos`, que compara byte a byte contra Linux.
-      - name: Pruebas (nativo, bloquea)
-        if: matrix.cross == ''
-        run: bash test/run.sh capture
-
       - name: Armar el paquete
         run: |
           set -e
@@ -127,12 +111,40 @@ jobs:
             metagrafica-*.tar.gz
             metagrafica-*.zip
 
+      # La red de pruebas solo corre donde el binario se puede EJECUTAR. En el
+      # build cruzado no hay nada que ejecutar, así que ahí basta con que enlace:
+      # el .exe se verifica en el trabajo `smoke-windows` de abajo.
+      #
+      # `capture` corre todas las compuertas menos el golden por bytes, que
+      # necesita una red que no está en git, y sale con código ≠ 0 si alguna falla.
+      # **Bloquea en las dos plataformas nativas.** En macOS estuvo un rato como
+      # informativo, por si una diferencia de último dígito en libm
+      # movía los renders publicados; se cambió el 2026-07-27 al caer en cuenta de
+      # que **nadie del proyecto tiene ya un Mac**: si esto no bloquea, macOS deja
+      # de tener cualquier vigilancia. Y el miedo que lo justificaba lo despeja el
+      # trabajo `smoke-macos`, que compara byte a byte contra Linux.
+      #
+      # ⚠️ Va AL FINAL del trabajo, después de subir los artefactos, y no antes
+      # (2026-09-30). Antes iba antes de armar el paquete: si fallaba una compuerta
+      # local no se subía nada, y los `smoke-*` —la ÚNICA red contra la familia
+      # «fórmula que debe dar cero y da 1e-15», que ningún golden ve porque se
+      # genera en una sola plataforma— ni se ejecutaban. Pasó con el ángulo de la
+      # elipse alineada: lo cazó `imgfail` en macOS, la compuerta equivocada, y de
+      # la comparación entre plataformas no se supo nada. Ahora los smoke corren
+      # aunque esto falle (`!cancelled()`), y `publicar` sigue exigiendo que todo
+      # pase: el trabajo falla igual, solo que después de dejar sus artefactos.
+      - name: Pruebas (nativo, bloquea)
+        if: matrix.cross == ''
+        run: bash test/run.sh capture
+
   # El .exe cruzado no se ejecutó en el trabajo que lo produjo. Aquí se corre DE
   # VERDAD sobre Windows y se le exige compilar una figura que ejercita el
   # camino más frágil de la plataforma: `include` de la biblioteca que viaja al
   # lado del .exe. Sin esto estaríamos publicando un binario que nadie ejecutó.
   smoke-windows:
     needs: build
+    # Corre aunque `build` falle en sus pruebas: ver el paso «Pruebas».
+    if: ${{ !cancelled() }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -220,6 +232,8 @@ jobs:
   # `make install` no hay biblioteca instalada que encontrar.
   smoke-macos:
     needs: build
+    # Corre aunque `build` falle en sus pruebas: ver el paso «Pruebas».
+    if: ${{ !cancelled() }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5

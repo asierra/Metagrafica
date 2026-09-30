@@ -1152,7 +1152,12 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       `examples/texto.mg` (que fija los GLIFOS) y los tres fixtures
       `test/errors/indice_*.mg` + `simbolo_desconocido_en_indice.mg` (que fijan stderr).
       *Cero presión mientras el parche aguante; anotado para no rediagnosticarlo desde cero.*
-- [ ] **El ORDEN de los trabajos en `release.yml` esconde la compuerta que importa** (2026-08-04).
+- [x] ~~**El ORDEN de los trabajos en `release.yml` esconde la compuerta que importa** (2026-08-04).~~
+      ✅ **ARREGLADO 2026-09-30, SIN PROBAR EN CI** (solo se prueba empujando una etiqueta): las
+      pruebas pasan al FINAL del trabajo `build`, después de subir paquetes y salidas de
+      referencia, y los `smoke-*` corren con `if: !cancelled()`. `publicar` sigue exigiendo que
+      todo pase. Revisar en el primer release que los smoke corran aunque falle una compuerta.
+      Texto original:
       `smoke-macos` y `smoke-windows` comparan la salida **byte a byte entre plataformas**, que es
       la única red contra la familia «fórmula que debe dar cero y da 1e-15» —ningún golden puede
       verla, porque el golden se genera en UNA plataforma—. Pero dependen de `build`, y `build`
