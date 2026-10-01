@@ -357,7 +357,12 @@ regla de que un ejemplo nuevo aparezca solo pesa más que la uniformidad del idi
 ⚠️ **El ORDEN es una decisión editorial, no alfabética:** abre con «Figuras que se calculan
 solas» (`orbita_polar`, `gravitacion_orbita`, `fractal_tree`…) y deja los catálogos al final.
 Antes abría con `quickstart` y las dos figuras más vistosas caían al pie, en «Más ejemplos»,
-porque no estaban en ningún grupo — que sigue siendo el destino de lo que no se liste. ⚠️ **Qué entra NO es la misma regla que `imgfail`:** la galería itera
+porque no estaban en ningún grupo — que sigue siendo el destino de lo que no se liste. 🎨 **El fuente
+sale con RESALTADO DE SINTAXIS (2026-10-01), hecho en Python al generar y no con JS:** así lo
+que compara `galfail` es lo que ve el lector. ⚠️ **El vocabulario se LEE de
+`editors/kate/mg.xml`**, que pasa a ser su fuente única: añadir una primitiva sin ponerla ahí
+la deja sin color en la página, y ponerla deja la galería rancia (`galfail`) hasta regenerar.
+Ese archivo y el de Geany se encontraron al hacerlo con 18 nombres de menos. ⚠️ **Qué entra NO es la misma regla que `imgfail`:** la galería itera
 sobre `examples/*.mg` que tengan `docs/img/X.svg`, mientras que la compuerta itera al revés
 —sobre `docs/img`— y por eso vigila además las tres variantes que existen solo para los
 ensayos (`franck_condon_anarm`, `turning_points_nodos`, `parabola_vs_arco`), que no son

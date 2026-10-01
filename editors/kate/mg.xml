@@ -19,7 +19,9 @@
 
   <highlighting>
 
-    <!-- Control de flujo, declaraciones, inclusión y configuración -->
+    <!-- Control de flujo, declaraciones, inclusión y configuración.
+         ⚠️ tools/galeria.py LEE estas listas para colorear el código de la
+         galería: son la fuente única del vocabulario resaltado. -->
     <list name="control">
       <item>struct</item>
       <item>for</item>
@@ -34,23 +36,27 @@
       <item>path</item>
       <item>display_size</item>
       <item>world_window</item>
+      <item>max_depth</item>
+      <item>exit</item>
     </list>
 
-    <!-- Sentencias de estado (§7.3) y transformaciones locales (§11.1) -->
+    <!-- Sentencias de estado (§7.3) y transformaciones locales (§11.1).
+         marker_size y transform NO van: son argumentos nombrados, no sentencias
+         (el compilador las rechaza sueltas), y como tales ya las colorea la
+         regla de «Argumento». -->
     <list name="estado">
       <item>color</item>
       <item>fill</item>
       <item>outlinefill</item>
       <item>hatch</item>
       <item>hatch_gap</item>
+      <item>gradient</item>
       <item>line_width</item>
       <item>dash</item>
       <item>font</item>
       <item>font_size</item>
       <item>align</item>
       <item>valign</item>
-      <item>marker_size</item>
-      <item>transform</item>
       <item>translate</item>
       <item>rotate</item>
       <item>scale</item>
@@ -72,9 +78,10 @@
       <item>text</item>
       <item>sine</item>
       <item>compound</item>
+      <item>brace</item>
     </list>
 
-    <!-- Generadores y ejes (§13); placements (§10, §17) -->
+    <!-- Generadores, ejes y tablas (§13); placements (§10, §17); escena 3-D -->
     <list name="generadores">
       <item>ticks</item>
       <item>numbers</item>
@@ -83,11 +90,16 @@
       <item>plot</item>
       <item>xaxis</item>
       <item>yaxis</item>
+      <item>rule</item>
       <item>legend</item>
       <item>entry</item>
+      <item>table</item>
+      <item>row</item>
       <item>place</item>
       <item>fit</item>
       <item>repeat</item>
+      <item>view3d</item>
+      <item>plane3d</item>
     </list>
 
     <!-- Álgebra de paths (§9) y funciones escalares (§5.2) -->
@@ -98,22 +110,30 @@
       <item>reverse</item>
       <item>concat</item>
       <item>smooth</item>
+      <item>sample</item>
       <item>path_width</item>
       <item>path_x_min_at_y</item>
       <item>path_x_max_at_y</item>
-      <item>path_x_bounds_at_y</item>
+      <item>point_at</item>
+      <item>angle_at</item>
       <item>sin</item>
       <item>cos</item>
       <item>tan</item>
+      <item>asin</item>
+      <item>acos</item>
+      <item>atan</item>
       <item>atan2</item>
       <item>sqrt</item>
       <item>abs</item>
       <item>mod</item>
       <item>exp</item>
       <item>ln</item>
+      <item>deg</item>
+      <item>rad</item>
       <item>str</item>
       <item>len</item>
       <item>gray</item>
+      <item>xyz</item>
     </list>
 
     <list name="constantes">

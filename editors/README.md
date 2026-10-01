@@ -4,8 +4,16 @@ Configuraciones de resaltado para archivos `.mg` (gramática **V3**). El
 vocabulario está extraído del parser real (`src/parserv3.cpp`, `src/lexer.l`),
 no de la especificación: **solo aparecen palabras que hoy compilan**. Lo que
 `especificacion_mg.md` reserva pero no está construido (`spline`, `trail`,
-`cap`, `join`, `rule`, `table`) queda **fuera** a propósito — coloreado, un
-nombre reservado se lee como implementado.
+`cap`, `join`) queda **fuera** a propósito — coloreado, un nombre reservado se
+lee como implementado.
+
+⚠️ **Las listas de `kate/mg.xml` son además la fuente del resaltado de la
+galería** (`docs/galeria.html`, `docs/gallery.html`): `tools/galeria.py` las lee
+al generar, así que una palabra que falte aquí sale sin color también en la
+página pública. Se encontraron rancias el 2026-10-01, con 18 nombres de menos
+(`rule` y `table`, que este párrafo daba por no construidos, llevaban semanas en
+el corpus) y uno que nunca existió (`path_x_bounds_at_y`, nombre de la función
+de C++, no del lenguaje).
 
 ## Geany — `geany/filetypes.MG.conf`
 
@@ -116,7 +124,8 @@ para que documento y archivo enlazado se vean igual.
 ## Mantenimiento
 
 Al añadir una primitiva, generador o función al parser, hay que tocar **las
-dos** listas. El vocabulario sale de:
+dos** listas, y después regenerar la galería (`bash test/run.sh images`): si no,
+la compuerta `galfail` la da por rancia, que es justo el aviso que se quiere. El vocabulario sale de:
 
 ```bash
 grep -oE 'name == "[a-z_0-9]+"' src/parserv3.cpp | sort -u   # sentencias

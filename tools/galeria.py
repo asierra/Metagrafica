@@ -443,20 +443,28 @@ CSS = """
 :root {
   --fondo: #ffffff; --texto: #1a1a1a; --tenue: #5b6472; --borde: #e2e5ea;
   --tarjeta: #ffffff; --acento: #2b5c8a; --codigo: #f6f7f9;
+  --hl-c: #626b75; --hl-k: #a626a4; --hl-e: #0b7285; --hl-p: #1f5fbf;
+  --hl-n: #b6400f; --hl-s: #2f7d32; --hl-m: #6a3d9a; --hl-a: #9c6500; --hl-r: #b0306a;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --fondo: #14171c; --texto: #e6e8ec; --tenue: #99a2b0; --borde: #2b3038;
     --tarjeta: #1b1f26; --acento: #7fb2e0; --codigo: #101318;
+    --hl-c: #8b949e; --hl-k: #e07ee0; --hl-e: #4fc1cf; --hl-p: #79aef2;
+    --hl-n: #f5a26b; --hl-s: #8fd18f; --hl-m: #c5a3f0; --hl-a: #e0b45e; --hl-r: #f08bb3;
   }
 }
 :root[data-theme="dark"] {
   --fondo: #14171c; --texto: #e6e8ec; --tenue: #99a2b0; --borde: #2b3038;
   --tarjeta: #1b1f26; --acento: #7fb2e0; --codigo: #101318;
+  --hl-c: #8b949e; --hl-k: #e07ee0; --hl-e: #4fc1cf; --hl-p: #79aef2;
+  --hl-n: #f5a26b; --hl-s: #8fd18f; --hl-m: #c5a3f0; --hl-a: #e0b45e; --hl-r: #f08bb3;
 }
 :root[data-theme="light"] {
   --fondo: #ffffff; --texto: #1a1a1a; --tenue: #5b6472; --borde: #e2e5ea;
   --tarjeta: #ffffff; --acento: #2b5c8a; --codigo: #f6f7f9;
+  --hl-c: #626b75; --hl-k: #a626a4; --hl-e: #0b7285; --hl-p: #1f5fbf;
+  --hl-n: #b6400f; --hl-s: #2f7d32; --hl-m: #6a3d9a; --hl-a: #9c6500; --hl-r: #b0306a;
 }
 * { box-sizing: border-box; }
 body {
@@ -509,6 +517,19 @@ details pre {
   border: 1px solid var(--borde); border-radius: 6px;
   overflow-x: auto; font-size: .78rem; line-height: 1.45; max-height: 460px;
 }
+/* Resaltado del fuente .mg: las clases las pone resaltar(). */
+pre.mg { color: var(--texto); }
+.mg .c { color: var(--hl-c); font-style: italic; }
+.mg .k { color: var(--hl-k); }
+.mg .e, .mg .f { color: var(--hl-e); }
+.mg .p { color: var(--hl-p); }
+.mg .g { color: var(--hl-p); font-weight: 600; }
+.mg .n { color: var(--hl-n); }
+.mg .s { color: var(--hl-s); }
+.mg .m { color: var(--hl-m); }
+.mg .a, .mg .x { color: var(--hl-a); }
+.mg .r { color: var(--hl-r); }
+.mg .t { font-weight: 600; }
 footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--borde);
          color: var(--tenue); font-size: .9rem; }
 """
@@ -545,6 +566,119 @@ def marcado(texto):
                    for i, p in enumerate(partes))
 
 
+# --- Resaltado de sintaxis (2026-10-01) -------------------------------------
+#
+# Se colorea AQUÍ, al generar, y no con JavaScript en el navegador: así lo que
+# compara `--check` (la compuerta `galfail`) es exactamente lo que ve el lector.
+# Ninguna biblioteca de resaltado conoce MG, y la página no carga ni un script.
+#
+# ⚠️ El VOCABULARIO no vive en este archivo: se lee de editors/kate/mg.xml, que
+# ya tenía las listas por categoría. Una copia más aquí sería la tercera (Kate,
+# Geany, galería) en desincronizarse — las de los editores ya lo estaban, con
+# 18 nombres de menos, cuando se escribió esto.
+#
+# Las reglas léxicas imitan src/lexer.l, que decide por coincidencia MÁS LARGA:
+# por eso un '%' dentro de una cadena no abre comentario (la cadena empieza
+# antes y es más larga), y una cadena no admite escapes ni cierra en fin de
+# línea (STRING = \"[^\"]*\").
+
+def _vocabulario():
+    import xml.etree.ElementTree as ET
+    xml = pathlib.Path(__file__).resolve().parent.parent / "editors" / "kate" / "mg.xml"
+    listas = {}
+    for lista in ET.parse(xml).getroot().iter("list"):
+        listas[lista.get("name")] = {i.text.strip() for i in lista.iter("item")}
+    clases = {"control": "k", "estado": "e", "primitivas": "p",
+              "generadores": "g", "funciones": "f", "constantes": "n"}
+    faltan = sorted(set(clases) - set(listas))
+    if faltan:
+        sys.exit("galeria.py: %s no trae las listas %s" % (xml, ", ".join(faltan)))
+    return {w: clases[n] for n, ws in listas.items() if n in clases for w in ws}
+
+
+VOCAB = _vocabulario()
+
+_RE_NUM = re.compile(r"[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?")
+_RE_ID = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+_RE_ARG = re.compile(r"\s*=(?!=)")            # `nombre=` pero no `nombre ==`
+_RE_STRUCT = re.compile(r"\bstruct\s+([A-Za-z_][A-Za-z_0-9]*)")
+# Dentro de una cadena: escape (\{ \$ …), comando TeX (\alpha) y código de cara
+# (/b /i …, la lista de la referencia §6). Cada uno cuenta como un solo token.
+_RE_MARCA = re.compile(r"\\[A-Za-z]+|\\.|/[beigrsctn]|\$")
+
+
+def _span(clase, texto):
+    return '<span class="%s">%s</span>' % (clase, html.escape(texto))
+
+
+def _cadena(texto, ruta=False):
+    """Colorea el interior de una cadena: el modo math $…$ y el marcado. Una
+    `ruta` (la cadena de un include) va lisa: en "../lib/sun.mg" el `/s` no es
+    un cambio de cara, y coloreado lo parecería."""
+    if ruta:
+        return _span("s", texto)
+    partes, i, en_math, ini_math = [], 0, False, 0
+    for m in _RE_MARCA.finditer(texto):
+        tok = m.group()
+        if tok == "$":
+            if en_math:
+                partes.append(_span("m", texto[ini_math:m.end()]))
+                i = m.end()
+            else:
+                partes.append(html.escape(texto[i:m.start()]))
+                ini_math = m.start()
+            en_math = not en_math
+        elif not en_math and tok[1:].isalpha():   # comando o código de cara
+            partes.append(html.escape(texto[i:m.start()]) + _span("x", tok))
+            i = m.end()
+    if en_math:                                   # $ sin pareja: math hasta el final
+        partes.append(_span("m", texto[ini_math:]))
+    else:
+        partes.append(html.escape(texto[i:]))
+    return '<span class="s">%s</span>' % "".join(partes)
+
+
+def resaltar(fuente):
+    """Devuelve el fuente .mg escapado a HTML y con <span> por clase léxica."""
+    structs = set(_RE_STRUCT.findall(fuente))
+    out, i, n = [], 0, len(fuente)
+    while i < n:
+        c = fuente[i]
+        if c == "%":
+            fin = fuente.find("\n", i)
+            fin = n if fin < 0 else fin
+            out.append(_span("c", fuente[i:fin]))
+            i = fin
+        elif c == '"':
+            fin = fuente.find('"', i + 1)
+            fin = n if fin < 0 else fin + 1
+            out.append(_cadena(fuente[i:fin],
+                               ruta=re.search(r"\binclude\s*$", fuente[max(0, i - 20):i])))
+            i = fin
+        elif c == "&" and _RE_ID.match(fuente, i + 1):
+            fin = _RE_ID.match(fuente, i + 1).end()
+            out.append(_span("r", fuente[i:fin]))
+            i = fin
+        elif (m := _RE_ID.match(fuente, i)):
+            w = m.group()
+            if _RE_ARG.match(fuente, m.end()):
+                out.append(_span("a", w))         # argumento nombrado o asignación
+            elif w in VOCAB:
+                out.append(_span(VOCAB[w], w))
+            elif w in structs or fuente.startswith("(", m.end()):
+                out.append(_span("t", w))         # struct: definición, uso o invocación
+            else:
+                out.append(html.escape(w))
+            i = m.end()
+        elif (m := _RE_NUM.match(fuente, i)):
+            out.append(_span("n", m.group()))
+            i = m.end()
+        else:
+            out.append(html.escape(c))
+            i += 1
+    return "".join(out)
+
+
 def tarjeta(raiz, nombre, t, avisos):
     fuente = (raiz / "examples" / (nombre + ".mg")).read_text(encoding="utf-8")
     titulo, desc = encabezado(fuente)
@@ -562,7 +696,7 @@ def tarjeta(raiz, nombre, t, avisos):
           <div class="pie"><code>{nombre}.mg</code>
             <a href="{REPO}{nombre}.mg">{e(t["ver_github"])}</a></div>
           <details><summary>{e(t["ver_codigo"])}</summary>
-            <pre>{e(fuente.rstrip())}</pre></details>
+            <pre class="mg">{resaltar(fuente.rstrip())}</pre></details>
         </div>
       </article>
 """
