@@ -91,7 +91,8 @@ BLOQUE = re.compile(r'\b(polygon|polyline)\b(\([^()]*\))?\s*\{([^{}]*)\}')
 
 def douglas_peucker(pts, eps):
     """Los vértices de `pts` cuyo error perpendicular supera `eps`. Iterativo: una línea
-    de costa de 941 puntos desborda la recursión por defecto de Python en el peor caso."""
+    de costa de 941 puntos desborda la recursión por defecto de Python en el peor caso.
+    Solo mira las dos primeras componentes, así que un punto puede llevar más (un índice)."""
     if len(pts) < 3:
         return list(pts)
     quedan = [False] * len(pts)
@@ -101,12 +102,12 @@ def douglas_peucker(pts, eps):
         a, b = pila.pop()
         if b <= a + 1:
             continue
-        ax, ay = pts[a]
+        ax, ay = pts[a][0], pts[a][1]
         dx, dy = pts[b][0] - ax, pts[b][1] - ay
         largo = math.hypot(dx, dy)
         peor, cual = -1.0, -1
         for i in range(a + 1, b):
-            px, py = pts[i]
+            px, py = pts[i][0], pts[i][1]
             if largo == 0.0:
                 # Extremos coincidentes: el error es la distancia al punto, no a la recta.
                 d = math.hypot(px - ax, py - ay)
@@ -127,14 +128,28 @@ def formatea(v, decimales):
     return '0' if s in ('', '-0', '-') else s
 
 
-def simplifica(fuente, eps_poligono, eps_polilinea, decimales, avisos):
+def seccion(fuente, inicio):
+    """El último comentario de línea completa antes de `inicio`: el rótulo de sección
+    que los .mg generados ponen sobre cada grupo de bloques (`% isotermas`)."""
+    for linea in reversed(fuente[:inicio].split('\n')):
+        if linea.strip().startswith('%'):
+            return linea.strip()
+    return ''
+
+
+def simplifica(fuente, eps_poligono, eps_polilinea, decimales, avisos,
+               escala=(1.0, 1.0), excluye=()):
     """Devuelve (texto nuevo, vértices antes, vértices después)."""
     salida = []
     pos = antes = despues = 0
+    sx, sy = escala
     for m in BLOQUE.finditer(fuente):
         salida.append(fuente[pos:m.start()])
         pos = m.end()
         clase, attrs, cuerpo = m.group(1), m.group(2) or '', m.group(3)
+        if excluye and any(e in seccion(fuente, m.start()) for e in excluye):
+            salida.append(m.group(0))
+            continue
         campos = cuerpo.split()
         try:
             nums = [float(c) for c in campos]
@@ -147,7 +162,9 @@ def simplifica(fuente, eps_poligono, eps_polilinea, decimales, avisos):
             salida.append(m.group(0))
             continue
 
-        pts = list(zip(nums[0::2], nums[1::2]))
+        # Se decima en el espacio ESCALADO (el del papel, si --escala lo dice), y cada
+        # punto lleva su índice para recuperar después el vértice original.
+        pts = [(x * sx, y * sy, i) for i, (x, y) in enumerate(zip(nums[0::2], nums[1::2]))]
         cerrado = (clase == 'polygon')
         eps = eps_poligono if cerrado else eps_polilinea
         if cerrado:
@@ -159,25 +176,39 @@ def simplifica(fuente, eps_poligono, eps_polilinea, decimales, avisos):
 
         antes += len(pts)
         despues += len(simple)
-        cuerpo_nuevo = '  '.join(f'{formatea(x, decimales)} {formatea(y, decimales)}'
-                                 for x, y in simple)
+        if decimales is None:
+            # Sin --decimales, el vértice que sobrevive se copia TAL CUAL: decimar quita
+            # puntos, no tiene por qué reescribir los que quedan.
+            cuerpo_nuevo = '  '.join(f'{campos[2 * i]} {campos[2 * i + 1]}'
+                                     for _, _, i in simple)
+        else:
+            cuerpo_nuevo = '  '.join(f'{formatea(nums[2 * i], decimales)} '
+                                     f'{formatea(nums[2 * i + 1], decimales)}'
+                                     for _, _, i in simple)
         salida.append(f'{clase}{attrs} {{ {cuerpo_nuevo} }}')
     salida.append(fuente[pos:])
     return ''.join(salida), antes, despues
 
 
-def procedencia(origen, eps_poligono, eps_polilinea, decimales, antes, despues):
+def procedencia(origen, eps_poligono, eps_polilinea, decimales, antes, despues,
+                escala=(1.0, 1.0), excluye=()):
     """El encabezado del archivo derivado. Los `.mg` generados de este proyecto llevan su
     comando de regeneración; uno derivado, con más razón: es el único rastro de que no es
     el mapa bueno."""
     eps = (f'--eps {eps_poligono}' if eps_poligono == eps_polilinea
            else f'--eps {eps_poligono} --eps-polyline {eps_polilinea}')
+    if decimales is not None:
+        eps += f' --decimales {decimales}'
+    if escala != (1.0, 1.0):
+        eps += f' --escala {escala[0]:g} {escala[1]:g}'
+    for e in excluye:
+        eps += f' --excluye-seccion "{e}"'
     pct = f'{100.0 * despues / antes:.0f} %' if antes else '—'
     return (
         f'% DERIVADO de {origen} por decimación Douglas-Peucker.\n'
-        f'% {antes} -> {despues} vértices ({pct}), tolerancia en unidades del archivo.\n'
+        f'% {antes} -> {despues} vértices ({pct}).\n'
         f'% GENERADO, no editar a mano. Regenerar con:\n'
-        f'%   python3 tools/simplifica_mg.py {origen} {eps} --decimales {decimales} -o <salida>\n'
+        f'%   python3 tools/simplifica_mg.py {origen} {eps} -o <salida>\n'
         f'% ⚠️ Sirve al tamaño para el que se decimó. Ampliado se le ven las aristas;\n'
         f'%    para la figura a escala completa usa {origen}.\n'
         f'%\n'
@@ -194,8 +225,15 @@ def main():
                          '(en los mapas de lib/, fracción del radio; 0.004 para un logo de 2 cm)')
     ap.add_argument('--eps-polyline', type=float, default=None,
                     help='tolerancia distinta para los polyline (default: la de --eps)')
-    ap.add_argument('--decimales', type=int, default=4,
-                    help='decimales de las coordenadas emitidas (default 4, como geo2mg.py)')
+    ap.add_argument('--decimales', type=int, default=None,
+                    help='reescribe las coordenadas con N decimales (default: los vértices '
+                         'que quedan se copian tal cual)')
+    ap.add_argument('--escala', type=float, nargs=2, metavar=('SX', 'SY'), default=(1.0, 1.0),
+                    help='mide la tolerancia tras multiplicar x por SX e y por SY; para un '
+                         'plot cuyas unidades no son isótropas (p.ej. cm de papel por unidad)')
+    ap.add_argument('--excluye-seccion', action='append', default=[], metavar='TEXTO',
+                    help='no toca los bloques cuyo comentario de sección más cercano contenga '
+                         'TEXTO (repetible)')
     ap.add_argument('--sin-encabezado', action='store_true',
                     help='no anteponer el bloque de procedencia')
     args = ap.parse_args()
@@ -208,14 +246,19 @@ def main():
         fuente = f.read()
 
     avisos = []
+    escala = tuple(args.escala)
+    if escala[0] <= 0 or escala[1] <= 0:
+        sys.exit('simplifica_mg: la escala tiene que ser positiva')
     texto, antes, despues = simplifica(fuente, args.eps, eps_polilinea,
-                                       args.decimales, avisos)
+                                       args.decimales, avisos, escala,
+                                       args.excluye_seccion)
     if antes == 0:
         sys.exit(f'simplifica_mg: {args.entrada} no tiene ningún polygon/polyline literal')
 
     if not args.sin_encabezado:
         texto = procedencia(args.entrada, args.eps, eps_polilinea,
-                            args.decimales, antes, despues) + texto
+                            args.decimales, antes, despues, escala,
+                            args.excluye_seccion) + texto
 
     if args.salida:
         with open(args.salida, 'w', encoding='utf-8') as f:
