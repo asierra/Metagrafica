@@ -276,11 +276,12 @@ TRAD = {
         "of observed values. Markers over data, with axis labels in mathematical notation."),
     "tiro_parabolico": (
         "Projectile motion — a trajectory sampled point by point",
-        "Three things at once: `path +=` builds the curve inside a `for`, and the same "
-        "coordinates feed the projections onto each axis; the grid is neither regular nor "
-        "logarithmic, but falls where the physics puts the points; and the cannon is a "
-        "struct with its MUZZLE at its local origin, placed with the same variable that "
-        "fixes the start of the trajectory, so moving y0 moves cannon and curve TOGETHER."),
+        "The origin is at the cannon's muzzle and the parabola is written as is, "
+        "y = −k·x². A `for` computes each point and `path +=` builds the curve and its "
+        "projections onto both axes; the same loop draws the grid, which is neither "
+        "regular nor logarithmic but falls where the physics puts the points. The cannon "
+        "is a struct with its muzzle at its local origin, so it is placed at (0, 0), and "
+        "`scale=` fits its size to the scale of the trajectory."),
     "fig2-5": (
         "Electron diffraction — the Davisson-Germer experiment",
         "The illustration example from the README. The detector is a struct placed at 37°; "

@@ -2825,72 +2825,71 @@ bin/mg examples/orbita_polar.mg figura.svg</pre>
         <div class="lienzo"><img src="img/tiro_parabolico.svg" alt="Tiro parabólico — una trayectoria muestreada punto a punto." loading="lazy"></div>
         <div class="cuerpo">
           <h3>Tiro parabólico — una trayectoria muestreada punto a punto.</h3>
-          <p>Tres cosas a la vez: <code>path +=</code> construye la curva dentro de un <code>for</code>, y las mismas coordenadas alimentan las proyecciones a cada eje; la malla no es regular ni logarítmica, sino que cae donde la física pone los puntos; y el cañón es una struct con la BOCA en su origen local, colocada con la misma variable que fija el origen de la trayectoria, así que mover y0 mueve el cañón y la curva JUNTOS.</p>
+          <p>El origen está en la boca del cañón y la parábola se escribe tal cual, y = −k·x². Un <code>for</code> calcula cada punto y con <code>path +=</code> arma la curva y sus proyecciones a los dos ejes; en el mismo lazo se dibuja la malla, que no es regular ni logarítmica, sino que cae donde la física pone los puntos. El cañón es una struct con la boca en su origen local, así que se coloca en (0, 0), y con <code>scale=</code> se ajusta su tamaño a la escala de la trayectoria.</p>
           <div class="pie"><code>tiro_parabolico.mg</code>
             <a href="https://github.com/asierra/Metagrafica/blob/main/examples/tiro_parabolico.mg">ver en GitHub</a></div>
           <details><summary>Ver el código que la dibuja</summary>
             <pre class="mg"><span class="c">% Tiro parabólico — una trayectoria muestreada punto a punto.</span>
 <span class="c">%</span>
-<span class="c">% Tres cosas a la vez: `path +=` construye la curva dentro de un `for`, y las</span>
-<span class="c">% mismas coordenadas alimentan las proyecciones a cada eje; la malla no es</span>
-<span class="c">% regular ni logarítmica, sino que cae donde la física pone los puntos; y el</span>
-<span class="c">% cañón es una struct con la BOCA en su origen local, colocada con la misma</span>
-<span class="c">% variable que fija el origen de la trayectoria, así que mover y0 mueve el cañón</span>
-<span class="c">% y la curva JUNTOS.</span>
+<span class="c">% El origen está en la boca del cañón y la parábola se escribe tal cual,</span>
+<span class="c">% y = −k·x². Un `for` calcula cada punto y con `path +=` arma la curva y sus</span>
+<span class="c">% proyecciones a los dos ejes; en el mismo lazo se dibuja la malla, que no es</span>
+<span class="c">% regular ni logarítmica, sino que cae donde la física pone los puntos. El cañón</span>
+<span class="c">% es una struct con la boca en su origen local, así que se coloca en (0, 0), y</span>
+<span class="c">% con `scale=` se ajusta su tamaño a la escala de la trayectoria.</span>
 <span class="c">%</span>
 <span class="c">% NOTAS --------------------------------------------------------------------</span>
-<span class="c">% Y ES UNA PARÁBOLA DE VERDAD, no la ilustración de una. La trayectoria sale de</span>
-<span class="c">% y = y0 − k·(x−x0)², así que k = (y0−y)/(x−x0)² es CONSTANTE en los siete puntos</span>
-<span class="c">% (0.06838) — verificado. La figura de referencia que inspiró este ejemplo</span>
-<span class="c">% dibujaba un arco que se PARECE a una trayectoria; medido, es un semicírculo,</span>
-<span class="c">% que se desvía unas 4 unidades de la parábola en el punto medio. No es que se</span>
-<span class="c">% parezca menos: es una curva cualitativamente distinta. Ilustrar y calcular</span>
-<span class="c">% producen curvas diferentes, y solo la calculada es correcta — la tesis de</span>
-<span class="c">% docs/calcular_en_vez_de_medir.md, en pequeño.</span>
+<span class="c">% Y ES UNA PARÁBOLA DE VERDAD, no la ilustración de una: `k` es la misma en todos</span>
+<span class="c">% los puntos porque la define el código. La figura de referencia que inspiró este</span>
+<span class="c">% ejemplo dibujaba un arco que se PARECE a una trayectoria; medido, es un</span>
+<span class="c">% semicírculo, que se desvía unos 4 cm de la parábola en el punto medio. No</span>
+<span class="c">% es que se parezca menos: es una curva cualitativamente distinta. Ilustrar y</span>
+<span class="c">% calcular producen curvas diferentes, y solo la calculada es correcta — la tesis</span>
+<span class="c">% de docs/calcular_en_vez_de_medir.md, en pequeño.</span>
 
 <span class="k">display_size</span> <span class="n">13</span> <span class="n">7</span>
-<span class="k">world_window</span> -<span class="n">2</span> <span class="n">11</span> <span class="n">2</span> <span class="n">9</span>
+<span class="k">world_window</span> -<span class="n">2</span> <span class="n">6.67</span> -<span class="n">4</span> <span class="n">0.67</span>
 
 <span class="c">% cañón esquemático: boca en el origen local (0,0), apunta a +x</span>
 <span class="k">struct</span> <span class="t">canon</span>() {
     <span class="p">compound</span>(<span class="a">fill</span>=<span class="s">&quot;black&quot;</span>) {
         <span class="p">arc</span>(<span class="n">0.5</span>, <span class="a">from</span>=<span class="n">90</span>, <span class="a">to</span>=<span class="n">270</span>) { -<span class="n">2</span> <span class="n">0</span> }
         <span class="p">polyline</span> { -<span class="n">2</span> -<span class="n">0.5</span>   -<span class="n">0.25</span> -<span class="n">0.3</span>   -<span class="n">0.25</span> <span class="n">0.3</span>  -<span class="n">2</span> <span class="n">0.5</span> }
-     }    
-    <span class="p">circle</span>(<span class="n">0.62</span>, <span class="a">fill</span>=<span class="s">&quot;#5a3a1c&quot;</span>, <span class="a">color</span>=<span class="s">&quot;black&quot;</span>) { -<span class="n">1.5</span> -<span class="n">0.6</span> }                        <span class="c">% rueda</span>
-    <span class="p">circle</span>(<span class="n">0.28</span>, <span class="a">fill</span>=<span class="s">&quot;#2a2a2a&quot;</span>) { -<span class="n">1.5</span> -<span class="n">0.6</span> }                                       <span class="c">% cubo</span>
+    }
+    <span class="p">circle</span>(<span class="n">0.62</span>, <span class="a">fill</span>=<span class="s">&quot;#5a3a1c&quot;</span>, <span class="a">color</span>=<span class="s">&quot;black&quot;</span>) { -<span class="n">1.5</span> -<span class="n">0.6</span> }     <span class="c">% rueda</span>
+    <span class="p">circle</span>(<span class="n">0.28</span>, <span class="a">fill</span>=<span class="s">&quot;#2a2a2a&quot;</span>) { -<span class="n">1.5</span> -<span class="n">0.6</span> }                    <span class="c">% cubo</span>
 }
-<span class="a">x0</span> = <span class="n">1</span>        <span class="c">% boca del cañón = origen de la trayectoria</span>
-<span class="a">y0</span> = <span class="n">8</span>
-<span class="a">y1</span> = <span class="n">2.4615</span>
-<span class="a">n</span>  = <span class="n">6</span>
 
-<span class="k">path</span> <span class="a">tray</span>  = { x0 y0 }
-<span class="k">path</span> <span class="a">proyx</span> = { x0 y0 }     <span class="c">% proyección al eje IZQUIERDO (misma y)</span>
-<span class="k">path</span> <span class="a">proyy</span> = { x0 y0 }     <span class="c">% proyección al borde SUPERIOR (misma x)</span>
+<span class="a">n</span> = <span class="n">6</span>          <span class="c">% puntos de la trayectoria</span>
+<span class="a">k</span> = <span class="n">1</span>/<span class="n">10</span>       <span class="c">% la parábola: y = −k·x²</span>
+<span class="a">piso</span> = -k*n*n  <span class="c">% donde cae el último punto</span>
+
+<span class="k">path</span> <span class="a">tray</span>  = { <span class="n">0</span> <span class="n">0</span> }
+<span class="k">path</span> <span class="a">proyx</span> = { <span class="n">0</span> <span class="n">0</span> }     <span class="c">% proyección al eje izquierdo (misma y)</span>
+<span class="k">path</span> <span class="a">proyy</span> = { <span class="n">0</span> <span class="n">0</span> }     <span class="c">% proyección al borde superior (misma x)</span>
 
 <span class="c">% malla ajustada a los datos + acumulación de puntos, todo en el mismo lazo</span>
 <span class="e">line_width</span> <span class="n">0.3</span>   <span class="e">color</span> <span class="s">&quot;gray&quot;</span>   <span class="e">dash</span> <span class="s">&quot;dotted&quot;</span>
 <span class="k">for</span> <span class="a">i</span> = <span class="n">1</span> <span class="k">to</span> n {
-    <span class="a">x</span> = x0 + i*<span class="n">1.5</span>
-    <span class="a">y</span> = y0 - i*i/<span class="n">6.5</span>
+    <span class="a">x</span> = i
+    <span class="a">y</span> = -k*x*x
     <span class="k">path</span> tray  += { x y }
-    <span class="k">path</span> proyx += { x0 y }
-    <span class="k">path</span> proyy += { x y0 }
-    <span class="p">polyline</span> { x y1  x y0 }        <span class="c">% vertical: piso → borde superior</span>
-    <span class="p">polyline</span> { x0 y  <span class="n">10</span> y }        <span class="c">% horizontal: eje y → borde derecho</span>
+    <span class="k">path</span> proyx += { <span class="n">0</span> y }
+    <span class="k">path</span> proyy += { x <span class="n">0</span> }
+    <span class="p">polyline</span> { x piso  x <span class="n">0</span> }       <span class="c">% vertical: piso → borde superior</span>
+    <span class="p">polyline</span> { <span class="n">0</span> y  n y }          <span class="c">% horizontal: eje y → borde derecho</span>
 }
 
 <span class="c">% ejes en L (eje y izquierdo + borde superior)</span>
 <span class="e">dash</span> <span class="s">&quot;solid&quot;</span>   <span class="e">line_width</span> <span class="n">0.5</span>   <span class="e">color</span> <span class="s">&quot;black&quot;</span>
-<span class="p">polyline</span> { x0 y1 x0 y0  <span class="n">10</span> y0 }
+<span class="p">polyline</span> { <span class="n">0</span> piso  <span class="n">0</span> <span class="n">0</span>  n <span class="n">0</span> }
 
-<span class="c">% cañón, con la boca en (x0,y0)</span>
-<span class="t">canon</span>(<span class="a">at</span>=(x0, y0))
+<span class="c">% El cañón está dibujado a 1 cm por unidad, pero esta ventana pone 1.5 cm por</span>
+<span class="c">% unidad (6 unidades de trayectoria en 9 cm), así que se reduce a 2/3 para que</span>
+<span class="c">% guarde su proporción; la plataforma, igual.</span>
+<span class="t">canon</span>(<span class="a">at</span>=(<span class="n">0</span>, <span class="n">0</span>), <span class="a">scale</span>=<span class="n">2</span>/<span class="n">3</span>)
+<span class="p">rectangle</span>(<span class="a">fill</span>=<span class="s">&quot;lime&quot;</span>) { -<span class="n">1.83</span> piso  -<span class="n">0.17</span> -<span class="n">0.83</span> }     <span class="c">% plataforma</span>
 
-<span class="c">% plataforma</span>
-<span class="p">rectangle</span>(<span class="a">fill</span>=<span class="s">&quot;lime&quot;</span>) { -<span class="n">1.75</span> y1 <span class="n">0.75</span> <span class="n">6.75</span>  }
- 
 <span class="c">% trayectoria y puntos, encima de todo</span>
 <span class="e">line_width</span> <span class="n">1.5</span>   <span class="e">color</span> <span class="s">&quot;black&quot;</span>   <span class="e">dash</span> <span class="s">&quot;dashed&quot;</span>   <span class="f">smooth</span>(<span class="r">&amp;tray</span>)
 <span class="e">dash</span> <span class="s">&quot;solid&quot;</span>
