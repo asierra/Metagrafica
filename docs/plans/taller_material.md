@@ -202,17 +202,21 @@ esa idea. Es el candidato a renombre con el prior más grande que vas a consegui
 la escribe», te quedas sin los dos datos y sin «periodo» —nadie aprendió el lenguaje, nadie vuelve
 a escribir una figura sola—. Que la persona siga siendo quien decide y corrige.
 
-### 🚧 Prerrequisito: hoy el asistente es INVISIBLE
+### ✅ Prerrequisito resuelto: el proyecto ya recomienda un contexto
 
-`docs/modelfile_llm.txt` existe, está construido con conteo de tokens medido
-(`tools/generar_modelfile.py`) y **no se menciona en ninguno de los dos README, ni en la
-referencia, ni en la galería; no lo instala `make install` ni viaja en el paquete del release**.
-Verificado el 2026-08-04.
+Cuando se escribió esta sección (2026-08-04, por la mañana) el único contexto para un asistente
+era `docs/modelfile_llm.txt`, que no mencionaba nadie ni viajaba en el release. **Ese mismo día
+se resolvió por otro camino** (`4d2c963`): el contexto para un agente es **`skills/figuras-mg/`**
+—reglas duras del lenguaje y la lista de «¿se ve bien?»—, lo anuncian los dos README, lo instala
+`make install` bajo `share/metagrafica/skills` y viaja en el paquete del release. El Modelfile
+sigue existiendo, pero ahora se **deriva** del skill y sirve a quien use un modelo local con
+ollama; no es lo que se anuncia.
 
-Sin resolver eso, cada participante improvisa su propio contexto — que es *interesante* como
-experimento (punto 3 de arriba) pero deja al proyecto sin poder recomendar nada. **Decidir antes
-del taller** si el asistente es algo que MetaGráfica ofrece o algo que cada quien se arma. Es una
-decisión de producto, no de material.
+Para el taller eso deja la decisión de producto tomada (el asistente **es** algo que MetaGráfica
+ofrece) y deja intacto el experimento del punto 3: **no se reparte el skill de entrada.** Cada
+quien le pega a su modelo lo que crea que necesita, y el skill se menciona **al final** del
+bloque como lo que el proyecto recomienda. Si se diera antes, el «qué contexto le pegó» dejaría
+de medir nada.
 
 ---
 

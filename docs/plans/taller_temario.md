@@ -109,9 +109,10 @@ semanas: el recordatorio de en medio y el compromiso de responder en 48 horas.
 - **El bloque de agente (`taller_material.md` §3-bis) va a la sesión 2, no a ésta.** No cabe
   junto a la hora de trabajo, y su §3-bis dice que el orden no es negociable: una vez que alguien
   vio el nombre que escribió el modelo, no se puede des-ver. Todo el §4.1 se mide antes o no se
-  mide. Además arrastra un prerrequisito abierto —`docs/modelfile_llm.txt` hoy es invisible: no
-  está en los README ni en la referencia, no lo instala `make install` ni viaja en el paquete del
-  release—, y eso hay que **decidirlo antes del taller**.
+  mide. El prerrequisito que arrastraba —qué contexto recomienda el proyecto
+  para un asistente— ya está resuelto: es `skills/figuras-mg/`, anunciado en los README y
+  repartido en el release (`taller_material.md` §3-bis). Se menciona al final del bloque, no al
+  principio.
 - **Un escriba dedicado.** Está en la disciplina del facilitador, pero aquí tiene consecuencia de
   horario: entre 0:40 y 1:40 el facilitador no puede registrar y atender a la vez.
 - **12 personas.** Con más no se alcanza a ver a nadie tropezar en esos sesenta minutos, y el
