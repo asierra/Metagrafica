@@ -297,21 +297,37 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       comprime (`HPDF_COMP_ALL`) e incrusta las cuatro Times como **Nimbus Roman**
       (`include/font_nimbus_ttf.h`, generado por `tools/fuentes_texto.py`; ver
       `docs/bitacora.md` 2026-10-19 y su «bis»). **Falta:**
-      - **EPS**: tampoco incrusta Times. La misma TTF serviría como Type42, igual que LM Math
+      - **EPS**: ⚠️ antes, arreglar los nombres: `EPSDisplay::setFontFace` pide
+        `ISOTimes-Italic-Bold`, `ISOHelvetica-Italic`, `ISOCourier`… que el prólogo no define
+        (solo recodifica cinco), y sin recodificar pide `Times-Italic-Bold`, `Helvetica-Italic`,
+        `Courier-bold`, que no existen en PostScript. Ningún ejemplo del corpus los usa, y
+        Ghostscript sustituye otra fuente sin dar error (hallado 2026-10-19). **EPS**: tampoco incrusta Times. La misma TTF serviría como Type42, igual que LM Math
         (`font_lmmath_eps.h`); verificar con `gs` y que `fontparity.py` siga viendo `roman`.
       - **Helvetica y Courier** (y Symbol, que en PDF es solo el respaldo de LM Math): Nimbus
         Sans y Nimbus Mono PS, mismo generador. Medido: Nimbus Sans difiere de la tabla de
         Helvetica de `text.cpp` exactamente en lo mismo que Nimbus Roman de la de Times —puras
         diferencias de CODIFICACIÓN, ver el ítem siguiente—, o sea que sus anchos coinciden;
         Courier no se midió. ~330 KB de binario las once caras.
-- [ ] 🔍 **Probable: `-` y `'` no son el mismo glifo en EPS que en PDF** (hallado 2026-10-19
-      midiendo anchos para lo anterior; **NO verificado** en un render). `text.cpp` mide el byte
-      0x2D con el ancho del SIGNO MENOS (564 en Times) y el 0x27 como comilla tipográfica (333):
-      es lo que dibuja el EPS, porque `ISOLatin1Encoding` de PostScript pone `/minus` y
-      `/quoteright` en esos códigos. El PDF va en WinAnsi, donde son GUION (333) y apóstrofo
-      recto (180): un «-5» saldría con menos en EPS y con guion en PDF, y el centrado del PDF
-      usaría el ancho equivocado. Anterior a Nimbus; con las base-14 era igual. Falta mirar qué
-      hace el SVG, y decidir cuál de los dos es el correcto.
+- [x] ~~🔍 **`-`, `'` y `` ` `` NO eran el mismo glifo en EPS que en PDF/SVG**~~ — **CERRADO
+      2026-10-19** (`docs/bitacora.md` 2026-10-19 «ter»): los tres significan ya lo que dice
+      Unicode —guion, apóstrofo recto, acento grave— en los tres backends, y `text.cpp` los mide
+      con esos anchos.
+- [ ] ➖ **Signo MENOS de verdad en los números que genera `mg`** (2026-10-19, la otra mitad de
+      lo anterior). Con el arreglo, un negativo de eje («-5») sale con GUION en los tres
+      formatos; antes el EPS ponía un signo menos (por herencia de V1) y PDF/SVG un guion. Lo
+      correcto tipográficamente es U+2212 en lo que `numbers`/`axis`/`plot` rotulan (ellos SABEN
+      que es un número), y guion en el texto del usuario. **Decisión pendiente** de cómo, porque
+      WinAnsi no tiene signo menos y el PDF no puede pedírselo a Times por nombre:
+      (a) tomarlo de LM Math, que ya va incrustada —pero sus dígitos son Computer Modern, así
+      que solo el signo, pegado a dígitos Times—; (b) meter U+2212 en el subset de Nimbus y
+      alcanzarlo con un alias, como el truco de la zona de uso privado de LM Math; (c) raya
+      corta (–, U+2013, sí está en WinAnsi), que es la aproximación habitual. El texto del
+      usuario tiene ya su salida: `$-5$` dibuja el menos de LM Math en los tres (verificado).
+- [ ] 🔎 **`tools/ver.sh` recorta el SVG de un lienzo muy bajo** (2026-10-19): con
+      `display_size 6 2` y letra de 40 pt, el PNG del SVG salió con solo la parte de arriba de
+      los glifos, mientras EPS y PDF salían completos. El SVG está bien (la línea base cae dentro
+      del `viewBox`) y con `display_size 6 6` sale entero, así que apunta a la captura de Chrome
+      (`--window-size`). No investigado.
       - Paliativo mientras tanto, para EPS o una cara sin incrustar:
         `gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -dEmbedAllFonts=true`.
       - De paso: poppler avisa `Invalid 'begincidrange' operator in ToUnicode CMap` en

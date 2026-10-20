@@ -4974,3 +4974,33 @@ libharu nombra la negrita `NimbusRoman-Bold,Bold`: añade la subfamilia al nombr
 Es su convención para TrueType y los visores solo la miran cuando la fuente NO va incrustada;
 se dejó así. Queda: el EPS (Type42, como LM Math) y Helvetica/Courier.
 
+## 2026-10-19 (ter) — `-`, `'` y `` ` `` significan lo mismo en los tres backends
+
+Lo destapó medir los anchos de Nimbus para el «bis»: `text.cpp` medía el byte 0x2D con el
+ancho de un SIGNO MENOS y el 0x27 como comilla curva. Verificado en codificación (preguntado a
+`gs`) y en render: el EPS partía de `ISOLatin1Encoding`, que en 45, 39 y 96 pone `/minus`,
+`/quoteright` y `/quoteleft`; PDF (WinAnsi) y SVG (Unicode) dibujaban guion, apóstrofo recto y
+acento grave. Y el `-` forzaba esa recodificación A PROPÓSITO —«Best - in Latin1», herencia de
+V1—, para sacar un menos en los números. Efecto en lo publicado: «NOAA-20» (`skewt_golfo`) y
+«por-primitiva» (`sines`) llevaban un signo menos dentro de la palabra en el EPS, y los
+negativos de los ejes llevaban menos en EPS y guion en PDF/SVG. Ningún comportamiento era
+correcto en todos los casos: guion y menos son caracteres distintos y `mg` no los distinguía.
+
+**Arreglo** (paso 1 de 2): el texto sigue el sentido Unicode en los tres. `MGTextEncoding` fija
+45/39/96 a `hyphen`/`quotesingle`/`grave`; `'` y `` ` `` fuerzan también la recodificación
+—sin ella el EPS usa StandardEncoding, donde son comillas curvas—, y las ocho tablas de
+`text.cpp` llevan los anchos de esos glifos (sacados de Nimbus, = AFM de Adobe).
+
+**Movió:** los EPS que recodifican, solo por las tres líneas nuevas del prólogo (verificado: ni
+un byte más), y `fig6-4` en los tres formatos: el rótulo `E^{-1/2}(MeV)^{-1/2}` se corre 1.29 pt
+= 5.6 pt × (564 − 333)/1000, porque en PDF/SVG estaba mal centrado por medir un menos donde se
+dibujaba un guion. Ahora EPS y PDF salen idénticos; el EPS pierde su menos en ese exponente.
+`docs/img/fig6-4.svg` regenerado.
+
+**Queda el paso 2** (`PENDIENTES.md`): un menos de verdad en lo que rotulan los generadores. El
+usuario ya tiene el suyo: `$-5$` dibuja el menos de LM Math en los tres (verificado), aunque con
+dígitos Computer Modern. De paso se vio que `EPSDisplay::setFontFace` pide nombres que el
+prólogo no define (`ISOTimes-Italic-Bold`, `ISOHelvetica-Italic`, `ISOCourier`…) y otros que no
+existen en PostScript (`Courier-bold`); ninguno lo usa el corpus, y Ghostscript los
+sustituye sin dar error (solo un aviso, que `-q` calla). Anotado para cuando se incrusten las fuentes del EPS.
+

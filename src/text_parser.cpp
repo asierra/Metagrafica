@@ -783,7 +783,7 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
         // al menos hablaba.
         if (ALFABETIC.find(nx) == string::npos) {
           it++;                                  // consume el carácter escapado
-          if (nx == '-') using_reencode = true;   // mismo trato que el `case '-'`
+          if (nx == '-' || nx == '\'' || nx == '`') using_reencode = true;   // mismo trato que el `case '-'`
           accum.push_back(nx);
           textflush();
           tspop();
@@ -882,7 +882,7 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
         textflush();
         add_symbol(map_symbol["prime"], FN_SYMBOL, sp);
       }
-      else           accum.push_back(c);
+      else { using_reencode = true; accum.push_back(c); }   // ver `case '-'`
       break;
     case '$':
       // Abrir/cerrar según la bandera math_mode que el propio `$` mantiene, NO
@@ -1079,7 +1079,12 @@ parse_text_core(const string &input, FontFace ff, bool &using_reencode, bool &us
       if (math_mode) break;
       accum.push_back(c);
       break;
-    case '-': // Best - in Latin1
+    // Estos tres fuerzan la codificación propia del EPS (MGTextEncoding), que los
+    // fija a hyphen/quotesingle/grave como PDF y SVG. Sin ella el EPS usaría
+    // StandardEncoding, donde ' y ` son comillas curvas. Hasta el 2026-10-19 el '-' la
+    // forzaba por lo contrario —«Best - in Latin1», herencia de V1—: para sacar un
+    // signo MENOS, que en una palabra con guion («NOAA-20») está mal.
+    case '-': case '`':
       using_reencode = true;
     default:
       // Modo math: el carácter es un átomo. Se calcula el espacio que va ANTES según

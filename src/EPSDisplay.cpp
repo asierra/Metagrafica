@@ -160,6 +160,12 @@ static const char *ps_reencode = R"(
 % EPSDisplay::start; aqui solo se reserva el nombre.
 /MGTextEncoding ISOLatin1Encoding 256 array copy def
 MGEXTRAS
+% ASCII con su sentido Unicode, como PDF (WinAnsi) y SVG: ISOLatin1Encoding pone
+% /minus, /quoteright y /quoteleft en 45, 39 y 96, y con eso «NOAA-20» llevaba un
+% signo menos y «it's» una comilla curva solo en el EPS (2026-10-19).
+MGTextEncoding 45 /hyphen put
+MGTextEncoding 39 /quotesingle put
+MGTextEncoding 96 /grave put
 /ISOTimes-Roman MGTextEncoding /Times-Roman REENCODEFONT
 /ISOTimes-Italic MGTextEncoding /Times-Italic REENCODEFONT
 /ISOHelvetica MGTextEncoding /Helvetica REENCODEFONT
