@@ -114,6 +114,11 @@ void PDFDisplay::start() {
   dvy = dvy * cm_to_point;
 
   pdf  = HPDF_New(hpdf_error_handler, nullptr);
+  // Flujos comprimidos (FlateDecode): contenido de página, fuente embebida y su
+  // CIDToGIDMap. Sin esto una figura pesaba ~10× más (el mapa de LM Math son
+  // 128 KB casi todo ceros). ⚠️ Antes de AddPage: la página toma el filtro al
+  // crearse. La Capa 3 de test/run.sh lee una copia inflada (tools/pdfinflate.py).
+  HPDF_SetCompressionMode(pdf, HPDF_COMP_ALL);
   page = HPDF_AddPage(pdf);
   HPDF_Page_SetWidth(page,  dvx);
   HPDF_Page_SetHeight(page, dvy);

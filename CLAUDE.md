@@ -60,7 +60,11 @@ re-captúralo** si el cambio era intencional.
   2026-07-14: la salida de libharu resultó byte-determinista (sin `CreationDate` ni
   `/ID`, independiente del path), así que se compara igual que EPS/SVG. Antes se
   "verificaba por vista" y en ese hueco vivió el bug de rótulos en blanco en PDF.
-  **No** caza un bug *preexistente*: se bendice como correcto.
+  **No** caza un bug *preexistente*: se bendice como correcto. **Desde el 2026-10-19 el PDF va
+  COMPRIMIDO** (`HPDF_COMP_ALL`, fijado antes de `HPDF_AddPage`: 3.2 MB → 388 KB en el corpus);
+  sigue siendo byte-determinista y el golden compara el comprimido, que es lo que se entrega.
+  ⚠️ Medido 33/33 idéntico Linux↔`.exe` bajo wine con zlib 1.3.1 en los dos; si el release
+  diverge en el PDF, sospecha primero de una zlib distinta.
 - **Ghostscript sobre el EPS** (`psfail`) — caza los bugs de **prólogo**, que el golden
   no puede ver: producen un EPS byte-estable que revienta al interpretarse
   (`/undefined in ellipse`; `/cshow` sin su prólogo si falta `using_textalign`). Se
@@ -68,8 +72,9 @@ re-captúralo** si el cambio era intencional.
   bendecir un EPS que no interpreta.
 - **Paridad entre backends** (`c3fail`, "Capa 3", nueva 2026-07-15) — caza bugs
   **preexistentes** que el golden bendice porque un backend omite algo en silencio. Tres
-  invariantes robustos (cero falsos positivos en el corpus; el PDF de libharu no está
-  comprimido → sus operadores son parseables directo): **(a)** nº de
+  invariantes robustos (cero falsos positivos en el corpus; el PDF se lee **inflado** por
+  `tools/pdfinflate.py`, que deja los operadores en claro —sin `python3`, el PDF sale de (a) y
+  (d) y esas comparan EPS contra SVG—): **(a)** nº de
   operaciones de texto `EPS(show) == SVG(<text>) == PDF(Tj)` (caza rótulos en blanco); **(b)**
   ningún path SVG de un solo segmento (`M..L..`) puede ir `fill=color stroke=none` = línea
   de área nula invisible (caza ejes sin trazo por fuga de fill, Lección 6); **(c)** la
@@ -277,7 +282,7 @@ que una figura publicada diga con qué se hizo.
 
 ## Layout
 
-Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de citas `citas.py` (2026-08-05: la compuerta `citafail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de paridad de caras `fontparity.py` (2026-09-30: invariante (e) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el decimador `simplifica_mg.py` (2026-08-31: aplica Douglas-Peucker a los `polygon`/`polyline` LITERALES de un `.mg` YA generado; lo vigila `humofail`; solo biblioteca estándar).
+Headers in `include/`, sources in `src/`, binary in `bin/`, regression harness in `test/`. **Herramientas Python en `tools/`** (movidas de la raíz el 2026-07-21): el traductor `mg1to2.py` (§20), el puente de datos `hist2mg.py` (CSV/XLSX → histogramas y estadísticas en `.mg` incluible), el generador de la galería `galeria.py` (2026-07-23), el puente geográfico `geo2mg.py` (2026-07-24: Natural Earth → `struct` de mapa icónico, proyección ortográfica/full-disk, line-art o relleno; generó `lib/polar_map.mg` y `lib/fulldisk_map.mg`) y el verificador de paridad geométrica `arcparity.py` (2026-07-27: invariante (c) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el compilador de bloques de documentación `docblocks.py` (2026-07-29: la compuerta `docfail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de citas `citas.py` (2026-08-05: la compuerta `citafail`, lo invoca `test/run.sh`; solo biblioteca estándar) y el verificador de paridad de caras `fontparity.py` (2026-09-30: invariante (e) de la Capa 3, lo invoca `test/run.sh`; solo biblioteca estándar) y el inflador `pdfinflate.py` (2026-10-19: deja en claro los flujos FlateDecode del PDF para que la Capa 3 lea sus operadores; su salida es para grep, no un PDF válido; solo biblioteca estándar) y el decimador `simplifica_mg.py` (2026-08-31: aplica Douglas-Peucker a los `polygon`/`polyline` LITERALES de un `.mg` YA generado; lo vigila `humofail`; solo biblioteca estándar).
 
 ⚠️ **La decimación mide en FRACCIONES DEL RADIO y DESPUÉS de proyectar, y eso NO es la `--tolerance` de `geo2mg.py`**, que va en grados y ANTES: un grado vale un tramo distinto en el centro del disco que junto al limbo, donde ortho comprime radialmente. Hay **dos puertas a la misma operación y no son intercambiables**: `geo2mg.py --simplify` decima **en origen**, en la misma corrida que proyecta, de modo que el encabezado del mapa registra **un** comando que lo reproduce; `simplifica_mg.py` decima un `.mg` ya escrito, para quien no tiene geopandas ni los datos de Natural Earth (que no están en el repo). Comparten el algoritmo —`geo2mg.py` **importa** `douglas_peucker` de `simplifica_mg.py`, no lo recopia— y difieren solo en el momento: `--simplify` trabaja en plena precisión antes de redondear a 4 decimales, que es el orden correcto. Medido: al mismo 0.001 dan 1715 y 1722 vértices.
 

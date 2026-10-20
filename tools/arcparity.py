@@ -297,8 +297,9 @@ def strip_pdf_strings(data):
 
 
 def polylines_from_pdf(path):
-    """El PDF de libharu NO va comprimido, así que sus operadores son parseables
-    directo — la misma propiedad de la que ya dependen las otras invariantes."""
+    """Espera el PDF INFLADO: `mg` lo escribe comprimido desde el 2026-10-19, y
+    test/run.sh le pasa la copia que deja tools/pdfinflate.py. Sobre el comprimido
+    no encontraría ni un operador."""
     data = strip_pdf_strings(open(path, 'rb').read().decode('latin-1'))
     polys, pts, cur, start = [], [], None, None
     for args, op in RE_PDF_OP.findall(data):

@@ -291,6 +291,19 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
+- [ ] 📰 **El PDF no incrusta Times** (2026-10-19, al entregar la Fig. 3 de ceniza a Journal of
+      Applied Volcanology; los sistemas de envío revisan que las fuentes vayan incrustadas). El
+      texto usa las base-14 `Times-Roman`/`Times-Bold` (`HPDF_GetFont` en `PDFDisplay.cpp`), que
+      libharu nunca incrusta: `pdffonts` las da `emb no`. LM Math sí va. Arreglo probable: una
+      Times libre (TeX Gyre Termes o Nimbus Roman) con `HPDF_LoadTTFontFromFile(..., HPDF_TRUE)`
+      o vendorizada como LM Math. ⚠️ Cuidar métricas (cajas de texto, que hoy salen de las AFM de
+      Times) y `fontparity.py`, que normaliza por nombre de fuente. Paliativo mientras tanto:
+      `gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -dEmbedAllFonts=true`. La otra mitad del
+      reporte —el PDF sin comprimir, 183 KB contra 16 KB— quedó **cerrada el mismo día**
+      (`docs/bitacora.md` 2026-10-19). De paso: poppler avisa `Invalid 'begincidrange' operator
+      in ToUnicode CMap` en cualquier PDF con LM Math; es **anterior** a la compresión y no
+      se ha investigado.
+
 - [x] ~~🚧 **COMPUERTA PROPUESTA: paridad de CARA tipográfica entre backends** (2026-08-19).~~
       ✅ **HECHA 2026-09-30**: invariante (e) de la Capa 3, `tools/fontparity.py`, cuenta en
       `c3fail`. Cero falsos positivos en el corpus (1164 roman, 888 math, 129 italic, 30 bold,

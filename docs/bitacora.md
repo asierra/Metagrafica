@@ -4883,3 +4883,45 @@ compuerta.
   a la par no son un problema de paridad. La compuerta ve lo que un backend hace DISTINTO;
   un error del estado lógico, aguas arriba de los tres, sigue siendo cosa del golden y de
   `ver.sh`.
+
+## 2026-10-19 — El PDF se comprime
+
+Lo destapó la Fig. 3 del artículo de ceniza (Journal of Applied Volcanology): el PDF de `mg`
+pesaba **183 KB** y pasado por Ghostscript quedaba en 16 KB, visualmente idéntico. Ningún flujo
+iba con `FlateDecode`; el 72 % del archivo era el `CIDToGIDMap` de LM Math —2 bytes × 65 535
+CID, casi todo ceros—, presente en cada figura con un solo símbolo matemático.
+
+### El arreglo es una línea, y su posición importa
+
+`HPDF_SetCompressionMode(pdf, HPDF_COMP_ALL)` en `PDFDisplay::start`, **antes** de
+`HPDF_AddPage`: libharu le pone el filtro a la página al crearla (`hpdf_doc.c`), así que puesto
+después comprimiría la fuente y no el contenido. El `CIDToGIDMap` hereda el filtro de la fuente
+(`hpdf_font_cid.c`). libharu ya venía compilado con zlib (`LIBHPDF_HAVE_ZLIB`, `-lz`); no hubo
+que tocar el vendor. Corpus: **3.2 MB → 388 KB**. Sigue siendo byte-determinista (dos corridas,
+`cmp`) y Ghostscript lo interpreta.
+
+### Lo que costó: la Capa 3 leía el PDF en claro
+
+Las invariantes (a) y (d) cuentan `Tj` y `/ShN sh` con grep, y `arcparity.py`/`fontparity.py`
+parsean operadores: todas dependían de que libharu no comprimiera. Se descartó una variable de
+entorno que apagara la compresión para las pruebas —sería probar un archivo distinto del que se
+entrega— y se escribió **`tools/pdfinflate.py`**: quita `/Filter [ /FlateDecode ]` e infla cada
+flujo, usando el `unused_data` de zlib para saber dónde termina (las `/Length` de libharu son
+referencias indirectas, y buscar `endstream` puede dar con esos bytes dentro del comprimido). El
+golden compara el comprimido; la Capa 3, la copia inflada.
+
+- **Verificación de que no se perdió nada:** los 33 PDF inflados son **byte-idénticos** a los de
+  antes del cambio, salvo los valores de `/Length` y la tabla xref. O sea que el contenido no se
+  movió; solo cambió el empaque.
+- **Verificación de que la compuerta sigue viendo:** con `HPDF_Page_ShowText` anulado, C3FAIL
+  en (a) (`8/8/0` en `angulo_solido`) y en (e). Si el inflador no reconoce el formato, **falla**
+  en vez de devolver el binario: contar sobre comprimido daría cero de todo y saldría verde.
+- **Página en blanco** (`curvas3`): libharu declara el filtro y no escribe ni la cabecera zlib.
+  Ningún lector protesta (`gs` lo abre); el inflador lo deja vacío.
+- **Linux ↔ Windows:** 33/33 idénticos con el `.exe` bajo wine. Ahora eso depende también de que
+  las dos zlib (sistema y `libz-mingw-w64-dev`, 1.3.1 ambas aquí) compriman igual; el workflow
+  de release lo seguirá vigilando.
+
+Movió los 33 goldens PDF y nada más (`ok=99`, traductor `ok=14`). Queda la otra mitad del
+reporte —Times sin incrustar—, en `PENDIENTES.md`.
+

@@ -243,7 +243,7 @@ fi
 # invariante de geometría de Capa 3, con aviso, pero el harness sigue usable.
 PY_BIN="$(command -v python3 2>/dev/null || true)"
 if [ -z "$PY_BIN" ]; then
-    echo "aviso: 'python3' no encontrado; se omite la paridad geométrica de arcos" >&2
+    echo "aviso: 'python3' no encontrado; se omite la paridad geométrica de arcos y el PDF sale de la Capa 3" >&2
 fi
 
 mkdir -p "$GOLD"
@@ -352,8 +352,11 @@ for example in $EXAMPLES; do
         fi
 
         # Capa 3: extrae las métricas de esta salida ANTES de borrar el tmpdir.
-        # Sin herramientas externas: el PDF de libharu no está comprimido, así que
-        # los operadores (Tj de texto) son grepables directo, igual que EPS/SVG.
+        # EPS y SVG se leen con grep tal cual. El PDF va COMPRIMIDO desde el
+        # 2026-10-19 (FlateDecode), así que se lee una copia INFLADA por
+        # tools/pdfinflate.py; el golden sigue comparando el archivo comprimido, que
+        # es lo que recibe el usuario. Sin python3 el PDF sale de (a) y (d) —se
+        # marcan con «-»— y esas dos comparan solo EPS contra SVG.
         case "$fmt" in
             eps) c3_text_eps=$(grep -cE '\)[[:space:]]*(show|cshow|rshow|ashow)$' "$outfile")
                  c3_grad_eps=$(grep -ao 'shfill' "$outfile" | wc -l | tr -d ' ') ;;
@@ -368,10 +371,19 @@ for example in $EXAMPLES; do
                  # misma caja comparten un <linearGradient>, así que contar defs
                  # daría 1 donde EPS emite 2 shfill.
                  c3_grad_svg=$(grep -ao 'fill="url(#mggrad' "$outfile" | wc -l | tr -d ' ') ;;
-            pdf) c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$outfile")
-                 c3_grad_pdf=$(grep -aoE '/Sh[0-9]+ sh' "$outfile" | wc -l | tr -d ' ') ;;
+            pdf) if [ -z "$PY_BIN" ]; then
+                     c3_text_pdf="-"; c3_grad_pdf="-"
+                 elif inflout="$("$PY_BIN" -I "$ROOT/tools/pdfinflate.py" "$outfile" "$c3dir/$base" 2>&1)"; then
+                     c3_text_pdf=$(grep -acE '(Tj|TJ)$' "$c3dir/$base")
+                     c3_grad_pdf=$(grep -aoE '/Sh[0-9]+ sh' "$c3dir/$base" | wc -l | tr -d ' ')
+                 else
+                     # Si no se puede inflar, contar sobre binario comprimido daría
+                     # cero de todo: falla aquí en vez de salir verde por omisión.
+                     echo "C3FAIL $example (no se pudo inflar el PDF: $inflout)"
+                     c3fail_count=$((c3fail_count + 1))
+                 fi ;;
         esac
-        cp "$outfile" "$c3dir/$base"
+        [ "$fmt" = "pdf" ] || cp "$outfile" "$c3dir/$base"
 
         rm -rf "$tmpdir"
     done
@@ -380,7 +392,7 @@ for example in $EXAMPLES; do
     # compuerta gs). Solo si los tres formatos se renderizaron (si alguno falló, ya
     # lo contó error_count). Ver el bloque de comentario del encabezado.
     if [ -n "$c3_text_eps" ] && [ -n "$c3_text_svg" ] && [ -n "$c3_text_pdf" ]; then
-        if [ "$c3_text_eps" != "$c3_text_svg" ] || [ "$c3_text_eps" != "$c3_text_pdf" ]; then
+        if [ "$c3_text_eps" != "$c3_text_svg" ] || { [ "$c3_text_pdf" != "-" ] && [ "$c3_text_eps" != "$c3_text_pdf" ]; }; then
             echo "C3FAIL $example (texto EPS/SVG/PDF = $c3_text_eps/$c3_text_svg/$c3_text_pdf: un backend omite texto)"
             c3fail_count=$((c3fail_count + 1))
         fi
@@ -394,7 +406,7 @@ for example in $EXAMPLES; do
         # coincidir. Es la clase de cosa que un backend omite EN SILENCIO: si SVG
         # dibuja el degradado y PDF sale plano, cada salida es byte-estable y el
         # golden bendice las dos. Como (a) y (b), compara backend contra backend.
-        if [ "$c3_grad_eps" != "$c3_grad_svg" ] || [ "$c3_grad_eps" != "$c3_grad_pdf" ]; then
+        if [ "$c3_grad_eps" != "$c3_grad_svg" ] || { [ "$c3_grad_pdf" != "-" ] && [ "$c3_grad_eps" != "$c3_grad_pdf" ]; }; then
             echo "C3FAIL $example (degradados EPS/SVG/PDF = $c3_grad_eps/$c3_grad_svg/$c3_grad_pdf: un backend omite el relleno)"
             c3fail_count=$((c3fail_count + 1))
         fi
