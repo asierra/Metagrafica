@@ -291,18 +291,31 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
-- [ ] 📰 **El PDF no incrusta Times** (2026-10-19, al entregar la Fig. 3 de ceniza a Journal of
-      Applied Volcanology; los sistemas de envío revisan que las fuentes vayan incrustadas). El
-      texto usa las base-14 `Times-Roman`/`Times-Bold` (`HPDF_GetFont` en `PDFDisplay.cpp`), que
-      libharu nunca incrusta: `pdffonts` las da `emb no`. LM Math sí va. Arreglo probable: una
-      Times libre (TeX Gyre Termes o Nimbus Roman) con `HPDF_LoadTTFontFromFile(..., HPDF_TRUE)`
-      o vendorizada como LM Math. ⚠️ Cuidar métricas (cajas de texto, que hoy salen de las AFM de
-      Times) y `fontparity.py`, que normaliza por nombre de fuente. Paliativo mientras tanto:
-      `gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -dEmbedAllFonts=true`. La otra mitad del
-      reporte —el PDF sin comprimir, 183 KB contra 16 KB— quedó **cerrada el mismo día**
-      (`docs/bitacora.md` 2026-10-19). De paso: poppler avisa `Invalid 'begincidrange' operator
-      in ToUnicode CMap` en cualquier PDF con LM Math; es **anterior** a la compresión y no
-      se ha investigado.
+- [ ] 📰 **Incrustar las fuentes de TEXTO: hecho para Times en PDF, falta el resto** (abierto
+      2026-10-19 al entregar la Fig. 3 de ceniza a Journal of Applied Volcanology; los sistemas
+      de envío revisan que las fuentes vayan incrustadas). **HECHO el mismo día:** el PDF
+      comprime (`HPDF_COMP_ALL`) e incrusta las cuatro Times como **Nimbus Roman**
+      (`include/font_nimbus_ttf.h`, generado por `tools/fuentes_texto.py`; ver
+      `docs/bitacora.md` 2026-10-19 y su «bis»). **Falta:**
+      - **EPS**: tampoco incrusta Times. La misma TTF serviría como Type42, igual que LM Math
+        (`font_lmmath_eps.h`); verificar con `gs` y que `fontparity.py` siga viendo `roman`.
+      - **Helvetica y Courier** (y Symbol, que en PDF es solo el respaldo de LM Math): Nimbus
+        Sans y Nimbus Mono PS, mismo generador. Medido: Nimbus Sans difiere de la tabla de
+        Helvetica de `text.cpp` exactamente en lo mismo que Nimbus Roman de la de Times —puras
+        diferencias de CODIFICACIÓN, ver el ítem siguiente—, o sea que sus anchos coinciden;
+        Courier no se midió. ~330 KB de binario las once caras.
+- [ ] 🔍 **Probable: `-` y `'` no son el mismo glifo en EPS que en PDF** (hallado 2026-10-19
+      midiendo anchos para lo anterior; **NO verificado** en un render). `text.cpp` mide el byte
+      0x2D con el ancho del SIGNO MENOS (564 en Times) y el 0x27 como comilla tipográfica (333):
+      es lo que dibuja el EPS, porque `ISOLatin1Encoding` de PostScript pone `/minus` y
+      `/quoteright` en esos códigos. El PDF va en WinAnsi, donde son GUION (333) y apóstrofo
+      recto (180): un «-5» saldría con menos en EPS y con guion en PDF, y el centrado del PDF
+      usaría el ancho equivocado. Anterior a Nimbus; con las base-14 era igual. Falta mirar qué
+      hace el SVG, y decidir cuál de los dos es el correcto.
+      - Paliativo mientras tanto, para EPS o una cara sin incrustar:
+        `gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -dEmbedAllFonts=true`.
+      - De paso: poppler avisa `Invalid 'begincidrange' operator in ToUnicode CMap` en
+        cualquier PDF con LM Math; es **anterior** a todo esto y no se ha investigado.
 
 - [x] ~~🚧 **COMPUERTA PROPUESTA: paridad de CARA tipográfica entre backends** (2026-08-19).~~
       ✅ **HECHA 2026-09-30**: invariante (e) de la Capa 3, `tools/fontparity.py`, cuenta en

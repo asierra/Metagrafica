@@ -4925,3 +4925,52 @@ golden compara el comprimido; la Capa 3, la copia inflada.
 Movió los 33 goldens PDF y nada más (`ok=99`, traductor `ok=14`). Queda la otra mitad del
 reporte —Times sin incrustar—, en `PENDIENTES.md`.
 
+## 2026-10-19 (bis) — El PDF incrusta las Times
+
+La otra mitad del reporte de la revista: el texto nombraba las base-14 `Times-*`, que libharu
+**no puede** incrustar (no trae sus programas), y `pdffonts` las daba `emb no`.
+
+### Por qué Nimbus Roman y no Liberation
+
+Se midieron los anchos de avance de las dos candidatas libres contra las tablas de
+`src/text.cpp` (las AFM de Adobe con que `mg` mide, centra y ajusta el texto). **Nimbus Roman
+coincide en todos los glifos**; Liberation Serif difiere en cinco, y justo en los de una figura
+científica: ±, µ, ·, ÷ y ¯. Con Liberation, un rótulo con ± saldría descentrado en el PDF y bien
+en el EPS. Nimbus solo viene como OTF (CFF) o Type 1, y libharu solo hace subset de TrueType:
+por la vía Type 1 nativa incrustaría la fuente entera, ~130 KB por cara y casi incompresible.
+
+### Cómo
+
+`tools/fuentes_texto.py` toma los cuatro OTF de `fonts-urw-base35`, los recorta al repertorio
+de CP1252 —todo lo que el PDF de `mg` puede pedir, porque el texto viaja en WinAnsi— y convierte
+los contornos cúbicos a cuadráticos (cu2qu, tolerancia 1/1000 em). Emite
+`include/font_nimbus_ttf.h`, ~31 KB por cara, determinista. `PDFDisplay::getFont` sustituye
+cada `Times-*` por su Nimbus, cargada al primer uso con `HPDF_LoadTTFontFromMemory`; libharu
+vuelve a recortar al guardar, así que a la figura llegan 3-6 KB por cara usada. Licencia:
+AGPL-3 con excepción explícita para incrustar en PDF/PostScript, copiada en el header.
+
+De paso se volvió **perezosa** la petición de fuente: `setFontFace` solo anota el nombre y
+`textFont()` la resuelve al armar el primer trozo. Antes `HPDF_GetFont` corría al seleccionar, y
+el prototipo lo destapó: `turning_points` llevaba un subset vacío de ~2 KB de una cara que
+nunca dibujó. Con base-14 eso costaba unos bytes y nadie lo vio; `irradiancia` y
+`turning_points` ahora pesan **menos** que antes.
+
+### Verificación
+
+- **Render:** los 33 PDF rasterizados a 150 dpi contra los del commit anterior: **0 píxeles**
+  distintos con tolerancia de 25 % de gris; el peor píxel del corpus cambia 34/255. Es
+  suavizado de borde (TrueType contra el Type 1 que poppler sustituía); no se movió un glifo.
+- **Ningún `Times-*` sin incrustar** en el corpus; solo queda Courier en `line_patterns`.
+- **Capa 3:** `fontparity.py` normalizaba por nombre y vio `?HPDFAB+NimbusRoman-Regular` —la
+  compuerta haciendo su trabajo—; se le enseñaron las familias Nimbus y vuelve a `c3fail=0`.
+- **Texto extraíble** (`pdftotext`) igual que antes, acentos incluidos.
+- **Linux ↔ Windows:** 33/33 idénticos bajo wine.
+- **La figura que lo pidió** (Fig. 3 de ceniza): tres fuentes, todas `emb yes`; 15 → 23 KB; `gs
+  -dPDFSTOPONERROR` y `qpdf --check` limpios; 0 píxeles distintos.
+- Corpus: 324 → 462 KB. Movió 29 goldens PDF (27 por la fuente, y los otros por la petición
+  perezosa).
+
+libharu nombra la negrita `NimbusRoman-Bold,Bold`: añade la subfamilia al nombre PostScript.
+Es su convención para TrueType y los visores solo la miran cuando la fuente NO va incrustada;
+se dejó así. Queda: el EPS (Type42, como LM Math) y Helvetica/Courier.
+

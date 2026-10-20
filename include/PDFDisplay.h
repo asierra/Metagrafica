@@ -96,8 +96,19 @@ private:
   // Current position in page space (tracked for rmoveto/rlineto)
   double cur_x = 0.0f, cur_y = 0.0f;
 
-  // Current font handle and dirty flag
+  // Cara que pidió setFontFace (nombre base-14 + codificación) y su HPDF_Font, que se
+  // resuelve PEREZOSAMENTE en textFont(), al armar el primer trozo que la usa. Pedirla
+  // en setFontFace creaba el objeto de fuente aunque nunca se dibujara con ella, y con
+  // fuentes incrustadas eso son ~2 KB de subset vacío por figura (turning_points).
+  const char* cur_fname = nullptr;
+  const char* cur_enc   = nullptr;
   HPDF_Font current_font = nullptr;
+  HPDF_Font textFont();
+
+  // Las cuatro Times se INCRUSTAN como Nimbus Roman (font_nimbus_ttf.h); el resto de
+  // las base-14 se sigue nombrando. Se cargan al primer uso, una vez por documento.
+  const char* nimbus_face[4] = { nullptr, nullptr, nullptr, nullptr };
+  HPDF_Font getFont(const char* fname, const char* enc);
 
   // Cara vigente en el DISPOSITIVO, gemela de `current_font` y FUERA de dspstate:
   // sobrevive a push/popDrawState, que es justo lo que la hace útil como guard.

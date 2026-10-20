@@ -68,11 +68,13 @@ def canon(name):
         return 'symbol'
     if n.startswith('iso'):                     # reencodificadas del EPS
         n = n[3:]
-    if 'times' in n:
+    # Nimbus (URW): los clones métricos de Times/Helvetica/Courier que el PDF
+    # incrusta desde 2026-10-19 en lugar de nombrar las base-14.
+    if 'times' in n or 'nimbusroman' in n:
         fam = 'roman'
-    elif 'helvetica' in n or 'arial' in n:
+    elif 'helvetica' in n or 'arial' in n or 'nimbussans' in n:
         fam = 'sans'
-    elif 'courier' in n:
+    elif 'courier' in n or 'nimbusmono' in n:
         fam = 'mono'
     else:
         return '?' + name

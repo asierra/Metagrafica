@@ -9,10 +9,12 @@ MetaGrafica:  Human descriptive language to generate publication quality
 #include "markers.h"
 #include "brace.h"    // braceSegments/bracePlaced: geometría de la llave, única para los tres
 #include "font_lmmath_ttf.h"   // Latin Modern Math subset (g_lmmath_ttf / _len)
+#include "font_nimbus_ttf.h"   // Nimbus Roman ×4 (subset CP1252), en lugar de Times-*
 #include "text_parser.h"       // cmmiUnicode(): byte cmmi -> Unicode
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 using std::string;
 
@@ -741,19 +743,47 @@ void PDFDisplay::setFontFace(FontFace face) {
   case FN_COURIER_BOLD:          fname = "Courier-Bold";          break;
   }
 
-  if (fname)
-    current_font = HPDF_GetFont(pdf, fname, encoding);
+  cur_fname    = fname;
+  cur_enc      = encoding;
+  current_font = nullptr;          // se resuelve en textFont(), si llega a usarse
+}
+
+HPDF_Font PDFDisplay::textFont() {
+  if (!current_font && cur_fname)
+    current_font = getFont(cur_fname, cur_enc);
+  return current_font;
+}
+
+// Las base-14 Times-* no se incrustan nunca (libharu no puede: no trae sus
+// programas), y las revistas exigen fuentes incrustadas. Se sustituyen por Nimbus
+// Roman, su clon métrico —mismos anchos que las AFM con que mide text.cpp, así que no
+// se mueve ninguna caja—, que libharu recorta a los glifos usados al guardar.
+HPDF_Font PDFDisplay::getFont(const char* fname, const char* enc) {
+  static const struct { const char* base14; const unsigned char* data; unsigned len; }
+  nimbus[4] = {
+    { "Times-Roman",      g_nimbus_regular_ttf,    g_nimbus_regular_ttf_len    },
+    { "Times-Italic",     g_nimbus_italic_ttf,     g_nimbus_italic_ttf_len     },
+    { "Times-Bold",       g_nimbus_bold_ttf,       g_nimbus_bold_ttf_len       },
+    { "Times-BoldItalic", g_nimbus_bolditalic_ttf, g_nimbus_bolditalic_ttf_len },
+  };
+  for (int i = 0; i < 4; i++) {
+    if (strcmp(fname, nimbus[i].base14) != 0) continue;
+    if (!nimbus_face[i])            // un fallo de carga aborta en hpdf_error_handler
+      nimbus_face[i] = HPDF_LoadTTFontFromMemory(pdf, nimbus[i].data, nimbus[i].len, HPDF_TRUE);
+    return HPDF_GetFont(pdf, nimbus_face[i], enc);
+  }
+  return HPDF_GetFont(pdf, fname, enc);
 }
 
 void PDFDisplay::text(string s) {
-  // Si aún no se fijó NINGUNA fuente (current_font null), un `show` no dibuja nada.
+  // Si aún no se fijó NINGUNA fuente (cur_fname null), un `show` no dibuja nada.
   // Pasa cuando el primer texto del documento hereda la cara ambiente (FN_NOFACE)
   // —rótulos de axis/numbers/grid— y nunca se fijó una fuente con `font`: Text::draw
   // omite setFontFace para FN_NOFACE. Fija la cara lógica vigente, o Times-Roman por
   // default (mismo remedio que el guard dev_size<0 de EPSDisplay::text).
-  if (!current_font)
+  if (!cur_fname)
     setFontFace(dspstate.fontFace != FN_NOFACE ? dspstate.fontFace : FN_TIMES_ROMAN);
-  if (!current_font) return;
+  if (!cur_fname) return;
 
   double size = dspstate.fontSize * relfontsize;
 
@@ -826,7 +856,7 @@ void PDFDisplay::text(string s) {
           u += utf8(cu.at((unsigned char)s[k]));
         segs.push_back({ HPDF_GetFont(pdf, lmmath_face, "UTF-8"), u });
       } else {
-        segs.push_back({ HPDF_GetFont(pdf, "Times-Italic", "WinAnsiEncoding"), s.substr(i, j - i) });
+        segs.push_back({ getFont("Times-Italic", "WinAnsiEncoding"), s.substr(i, j - i) });
       }
       i = j;
     }
@@ -843,7 +873,7 @@ void PDFDisplay::text(string s) {
       const ExtraGlyph *e = extraGlyphForSlot(c);
       t[k] = e && e->winansi ? (char)e->winansi : ' ';
     }
-    segs.push_back({ current_font, t });
+    segs.push_back({ textFont(), t });
   }
 
   // El texto debe usar el color de trazo (linecolor), no el fill color de shapes.
