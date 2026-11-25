@@ -436,6 +436,28 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool
 }
 
 
+const PSTextFace kPSTextFaces[] = {
+    { FN_SERIF,                "Times-Roman"           },
+    { FN_SERIF_ITALIC,         "Times-Italic"          },
+    { FN_SERIF_BOLD,           "Times-Bold"            },
+    { FN_SERIF_ITALIC_BOLD,    "Times-BoldItalic"      },
+    { FN_SANSERIF,             "Helvetica"             },
+    { FN_SANSERIF_ITALIC,      "Helvetica-Oblique"     },
+    { FN_SANSERIF_BOLD,        "Helvetica-Bold"        },
+    { FN_SANSERIF_ITALIC_BOLD, "Helvetica-BoldOblique" },
+    { FN_COURIER,              "Courier"               },
+    { FN_COURIER_ITALIC,       "Courier-Oblique"       },
+    { FN_COURIER_BOLD,         "Courier-Bold"          },
+    { FN_COURIER_ITALIC_BOLD,  "Courier-BoldOblique"   },
+};
+const int kNumPSTextFaces = (int)(sizeof(kPSTextFaces)/sizeof(kPSTextFaces[0]));
+
+const char *psFontName(FontFace face) {
+    for (int i = 0; i < kNumPSTextFaces; i++)
+        if (kPSTextFaces[i].face == face) return kPSTextFaces[i].psname;
+    return nullptr;
+}
+
 FontFace get_font_face_from_string(string s, bool& using_fontcmmi) {
   string out;
   FontFace font_face = FN_DEFAULT;

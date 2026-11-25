@@ -29,6 +29,7 @@ class EPSDisplay: public Display {
   EPSDisplay(std::string);
 
   MGFlags flags;
+  std::string textFontName(FontFace face) const;
 
   // Nombre del .mg de origen, para %%Title. Lo pone main.cpp, como flags.
   // ⚠️ El origen y NO la ruta de salida, que es lo que iba antes (2026-08-04):

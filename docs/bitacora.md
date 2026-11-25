@@ -5037,3 +5037,32 @@ inflando—; y `skewt_golfo` en los tres formatos, único del corpus con rótulo
 Rasterizado con `ver.sh`, los tres iguales. `pdftotext` devuelve `−40` (U+2212): la extracción
 funciona pese al aviso de poppler `begincidrange`, que ya salía con LM Math y sigue sin
 investigar.
+
+## 2026-11-24 (bis) — Las doce caras de texto, con nombre correcto y recodificadas, en EPS y PDF
+
+`EPSDisplay::setFontFace` armaba el nombre a mano y pedía caras que no existían:
+`Times-Italic-Bold`, `Helvetica-Italic`, `Helvetica-Italic-Bold`, `Courier-Italic`,
+`Courier-bold` (los de PostScript son `Times-BoldItalic`, `Helvetica-Oblique`,
+`Helvetica-BoldOblique`, `Courier-Oblique`, `Courier-Bold`), y el prólogo solo recodificaba
+cinco caras. Ghostscript no da error: sustituye la más parecida, **pero sin recodificar**, así
+que todo lo que no es ASCII sale con StandardEncoding. Medido: `font "bold italic"` +
+`text("Negrita itálica á")` → pasado por `gs` a PDF, «Negrita itÆlica Æ». Además EPS y PDF
+olvidaban `FN_COURIER_ITALIC_BOLD` (alcanzable con `font "courier bold italic"`) y la sacaban
+en Times-Roman, y `text.cpp` medía con ancho fijo solo la Courier redonda (las otras tres, con
+la tabla de Times).
+
+**Arreglo:** tabla única `kPSTextFaces` (`text_parser.cpp`, accesor `psFontName`) con las doce
+caras de texto y su nombre base-14, que usan el `setFontFace` de EPS y el de PDF. El prólogo
+del EPS genera desde ella las doce recodificaciones, con el prefijo **`/MG`** en vez de
+`/ISO` (decisión de Alejandro: el prefijo venía de cuando la codificación era ISO Latin-1; lo
+que la cara lleva hoy es `MGTextEncoding`). `fontparity.py` normaliza el prefijo nuevo.
+
+**Verificado:** las doce caras con `á ñ — “x”` en EPS (vía `gs`, sin una sola sustitución) y
+en PDF, texto extraído correcto y render de las doce a la vista. **Movió** los 17 EPS que
+recodifican: solo el prólogo (siete líneas más) y `/ISO…`→`/MG…` en sus `findfont`; verificado
+que, deshaciendo el renombre, no queda ni un byte distinto. SVG y PDF, intactos.
+
+**Cobertura:** ningún ejemplo usaba esas caras, y por eso el bug vivió hasta hoy. Se añadió
+un bloque al final de `examples/texto.mg` con las siete que estaban rotas, cada una con un
+acento. Va con `font=` por-primitiva porque, escribiéndolo, apareció otro bug: el marcado `/b`
+y `/e` sobre la cara AMBIENTE cae a Times, en los tres backends (en `PENDIENTES.md`).

@@ -166,11 +166,12 @@ MGEXTRAS
 MGTextEncoding 45 /hyphen put
 MGTextEncoding 39 /quotesingle put
 MGTextEncoding 96 /grave put
-/ISOTimes-Roman MGTextEncoding /Times-Roman REENCODEFONT
-/ISOTimes-Italic MGTextEncoding /Times-Italic REENCODEFONT
-/ISOHelvetica MGTextEncoding /Helvetica REENCODEFONT
-/ISOTimes-Bold MGTextEncoding /Times-Bold REENCODEFONT
-/ISOHelvetica-Bold MGTextEncoding /Helvetica-Bold REENCODEFONT
+% Las doce caras de texto, recodificadas como /MG<nombre base-14>. Las emite
+% EPSDisplay::start desde kPSTextFaces (text_parser.cpp), la misma tabla que usa
+% setFontFace: hasta el 2026-11-24 aqui habia cinco escritas a mano y setFontFace
+% pedia otros nombres, y la cara que faltaba la sustituia Ghostscript SIN recodificar
+% (una a salia como AE).
+MGFACES
 )";
 
 EPSDisplay::EPSDisplay(string f) {
@@ -230,6 +231,15 @@ void EPSDisplay::start() {
     }
     size_t at = pro.find("MGEXTRAS\n");
     if (at != std::string::npos) pro.replace(at, 9, extras);
+    std::string faces;
+    for (int i = 0; i < kNumPSTextFaces; i++) {
+      char buf[120];
+      snprintf(buf, sizeof buf, "/MG%s MGTextEncoding /%s REENCODEFONT\n",
+               kPSTextFaces[i].psname, kPSTextFaces[i].psname);
+      faces += buf;
+    }
+    at = pro.find("MGFACES\n");
+    if (at != std::string::npos) pro.replace(at, 8, faces);
     fprintf(file, "%s", pro.c_str());
   }
   if (flags.using_fontcmmi) {
@@ -515,14 +525,13 @@ void EPSDisplay::text(string s) {
   // run mixto queda por-segmento (limitación pre-existente del multi-run, rara).
   if (dspstate.fontFace == FN_TEX_CMMI) {
     const std::map<unsigned char, unsigned int> &gm = cmmiUnicode();
-    string prefix = flags.using_reencode ? "/ISO" : "/";
     size_t i = 0, n = s.size();
     while (i < n) {
       bool greek = gm.count((unsigned char)s[i]) > 0;
       size_t j = i;
       while (j < n && (gm.count((unsigned char)s[j]) > 0) == greek) j++;
       if (greek) fprintf(file, "/LMMath findfont %g scalefont setfont\n", dev_size);
-      else       fprintf(file, "%sTimes-Italic findfont %g scalefont setfont\n", prefix.c_str(), dev_size);
+      else       fprintf(file, "%s findfont %g scalefont setfont\n", textFontName(FN_SERIF_ITALIC).c_str(), dev_size);
       emitSeg(s.substr(i, j - i));
       i = j;
     }
@@ -552,6 +561,15 @@ void EPSDisplay::setFontSize(double fz)
   Display::setFontSize(fz);
 }
 
+// Nombre con que se pide en el EPS una cara de TEXTO: la base-14 de psFontName, y con
+// prefijo /MG cuando el documento recodifica (la copia con MGTextEncoding que define el
+// prólogo para las doce caras). Una cara que no es de texto cae a Times-Roman.
+string EPSDisplay::textFontName(FontFace face) const {
+  const char *ps = psFontName(face);
+  if (!ps) ps = "Times-Roman";
+  return string(flags.using_reencode ? "/MG" : "/") + ps;
+}
+
 void EPSDisplay::setFontFace(FontFace face) {
   //printf("face %d %d\n", face, dspstate.fontFace);
   Display::setFontFace(face);   // estado lógico (lo restaura push/popDrawState)
@@ -567,53 +585,16 @@ void EPSDisplay::setFontFace(FontFace face) {
   dev_size = size;
 
   string font;
-  string prefix = "/";
-  if (flags.using_reencode)
-    prefix += "ISO";
-  switch (face) {
-  default:
-  case FN_TIMES_ROMAN:
-    font = prefix+"Times-Roman";
-    break;
-  case FN_TIMES_ITALIC:
-    font = prefix+"Times-Italic";
-    break;
-  case FN_TIMES_ROMAN_BOLD:
-    font = prefix+"Times-Bold";
-    break;
-  case FN_TIMES_ITALIC_BOLD:
-    font = prefix+"Times-Italic-Bold";
-    break;
-  case FN_SYMBOL:
+  if (face == FN_SYMBOL) {
     // §14/P1: los símbolos salen de LM Math, no del Symbol base-14. Es la segunda
     // fuente lógica del mismo Type42 (font_lmmath_eps.h): mismo programa de glifos,
     // /Encoding en las posiciones de byte de map_symbol. Hacen falta las dos porque
     // 30 bytes colisionan con las de map_tex_cmmi.
     font = "/LMMathSym";
-    break;
-  case FN_TEX_CMMI:
+  } else if (face == FN_TEX_CMMI) {
     font = "/LMMath";
-    break;
-  case FN_SANSERIF:
-    font = prefix+"Helvetica";
-    break;
-  case FN_SANSERIF_ITALIC:
-    font = prefix+"Helvetica-Italic";
-    break;
-  case FN_SANSERIF_BOLD:
-    font = prefix+"Helvetica-Bold";
-    break;
-  case FN_SANSERIF_ITALIC_BOLD:
-    font = prefix+"Helvetica-Italic-Bold";
-    break;
-  case FN_COURIER:
-    font = prefix+"Courier";
-    break;
-  case FN_COURIER_ITALIC:
-    font = prefix+"Courier-Italic";
-    break;
-  case FN_COURIER_BOLD:
-    font = prefix+"Courier-bold";
+  } else {
+    font = textFontName(face);
   }
   //printf("font size %g %g %g\n", fontSize, getFontSize(), relfontsize);
   fprintf(file, "%s findfont %g scalefont setfont\n", font.c_str(),

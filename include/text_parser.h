@@ -33,6 +33,16 @@ FontFace change_font_face(unsigned char code_font_face, FontFace font_face, bool
 
 FontFace get_font_face_from_string(std::string s, bool& using_fontcmmi);
 
+// Nombre PostScript (= base-14 del PDF) de una cara de TEXTO, o nullptr para las caras
+// math (FN_SYMBOL, FN_TEX_CMMI), que no son base-14. Fuente única para EPS y PDF
+// (2026-11-24): cada backend tenía su propio switch, y el del EPS pedía nombres que no
+// existen en PostScript (Times-Italic-Bold, Helvetica-Italic, Courier-bold) mientras
+// los dos olvidaban la Courier negrita itálica.
+const char *psFontName(FontFace face);
+struct PSTextFace { FontFace face; const char *psname; };
+extern const PSTextFace kPSTextFaces[];
+extern const int kNumPSTextFaces;
+
 
 // Caracteres de texto fuera de Latin-1 que las base-14 SI tienen (§14.4). Ver la
 // tabla en text_parser.cpp: por que existen las ranuras y como las traduce cada

@@ -397,7 +397,8 @@ FontMetricsMap cmmi_metrics_map = {
     {196, 277}, {199, 576}};
 
 double text_width(TextState ts, string s) {
-  if (ts.font_face==FN_COURIER)
+  if (ts.font_face == FN_COURIER || ts.font_face == FN_COURIER_ITALIC ||
+      ts.font_face == FN_COURIER_BOLD || ts.font_face == FN_COURIER_ITALIC_BOLD)
     return s.length() * 600 * ts.font_size / 1000;
 
   // Un run FN_TEX_CMMI se DIBUJA partido: el griego (∈ cmmiUnicode) va en LM Math y

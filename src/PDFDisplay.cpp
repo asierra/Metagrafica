@@ -720,27 +720,19 @@ void PDFDisplay::setFontFace(FontFace face) {
   const char* encoding = "WinAnsiEncoding";
 
   switch (face) {
-  default:
-  case FN_TIMES_ROMAN:       fname = "Times-Roman";          break;
-  case FN_TIMES_ITALIC:      fname = "Times-Italic";         break;
-  case FN_TIMES_ROMAN_BOLD:  fname = "Times-Bold";           break;
-  case FN_TIMES_ITALIC_BOLD: fname = "Times-BoldItalic";     break;
   // FN_SYMBOL: los glifos salen de LM Math por la ruta UTF-8 en text() (P1). Esto
   // es solo el RESPALDO degradado: si el subset vendorizado no cargó (aviso en
   // start()), al menos sale algo con el Symbol base-14 en vez de nada.
   case FN_SYMBOL:            fname = "Symbol";  encoding = nullptr; break;
   case FN_TEX_CMMI:
     // Base latina del math itálico; el griego se resuelve por Unicode en text().
-    fname    = "Times-Italic";
-    encoding = "WinAnsiEncoding";
+    fname = "Times-Italic";
     break;
-  case FN_SANSERIF:              fname = "Helvetica";             break;
-  case FN_SANSERIF_ITALIC:       fname = "Helvetica-Oblique";     break;
-  case FN_SANSERIF_BOLD:         fname = "Helvetica-Bold";        break;
-  case FN_SANSERIF_ITALIC_BOLD:  fname = "Helvetica-BoldOblique"; break;
-  case FN_COURIER:               fname = "Courier";               break;
-  case FN_COURIER_ITALIC:        fname = "Courier-Oblique";       break;
-  case FN_COURIER_BOLD:          fname = "Courier-Bold";          break;
+  default:
+    // Caras de texto: la tabla compartida con EPS (psFontName). Antes este switch
+    // olvidaba la Courier negrita itálica, que caía a Times-Roman.
+    fname = psFontName(face);
+    if (!fname) fname = "Times-Roman";
   }
 
   cur_fname    = fname;

@@ -4102,6 +4102,25 @@ bin/mg examples/orbita_polar.mg figure.svg</pre>
   <span class="p">text</span>(<span class="s">&quot;sobrevive a size=&quot;</span>, <span class="a">size</span>=<span class="n">7</span>) { <span class="n">2.3</span> <span class="n">1.05</span> }
   <span class="e">font_size</span> <span class="n">7</span>
   <span class="p">text</span>(<span class="s">&quot;y a font_size&quot;</span>) { <span class="n">2.3</span> <span class="n">0.62</span> }
+}
+
+<span class="c">% --- Las caras de texto que el resto del corpus no usa ---------------------</span>
+<span class="c">% Negrita itálica, las dos oblicuas de Helvetica y las cuatro Courier, cada una</span>
+<span class="c">% con una letra acentuada. Hasta el 2026-11-24 el EPS pedía nombres que no</span>
+<span class="c">% existen en PostScript (Times-Italic-Bold, Helvetica-Italic, Courier-bold) y</span>
+<span class="c">% recodificaba solo cinco caras: Ghostscript ponía otra SIN recodificar y la «á»</span>
+<span class="c">% salía como «Æ». EPS y PDF sacaban además la Courier negrita itálica en</span>
+<span class="c">% Times-Roman. Nada lo veía porque ningún ejemplo usaba estas caras.</span>
+<span class="c">% Van con `font=` por-primitiva y no con la sentencia `font`: el marcado /b y /e</span>
+<span class="c">% sobre una cara AMBIENTE cae a Times (ver PENDIENTES.md), y aquí lo que se</span>
+<span class="c">% prueba es la tabla de caras, no ese otro bug.</span>
+{ <span class="e">align</span> <span class="s">&quot;left&quot;</span>
+  <span class="e">valign</span> <span class="s">&quot;bottom&quot;</span>
+  <span class="e">font_size</span> <span class="n">7</span>
+  <span class="p">text</span>(<span class="s">&quot;negrita itálica á&quot;</span>, <span class="a">font</span>=<span class="s">&quot;bold italic&quot;</span>) { -<span class="n">4.8</span> <span class="n">1.45</span> }
+  <span class="p">text</span>(<span class="s">&quot;oblicua é {<span class="x">/b</span>negra ñ}&quot;</span>, <span class="a">font</span>=<span class="s">&quot;sanserif italic&quot;</span>) { -<span class="n">4.8</span> <span class="n">1.1</span> }
+  <span class="p">text</span>(<span class="s">&quot;mono í {<span class="x">/e</span>itál ó}&quot;</span>, <span class="a">font</span>=<span class="s">&quot;courier&quot;</span>) { -<span class="n">4.8</span> <span class="n">0.75</span> }
+  <span class="p">text</span>(<span class="s">&quot;{<span class="x">/b</span>negra ú} {<span class="x">/b</span><span class="x">/e</span>ambas ü}&quot;</span>, <span class="a">font</span>=<span class="s">&quot;courier&quot;</span>) { -<span class="n">4.8</span> <span class="n">0.4</span> }
 }</pre></details>
         </div>
       </article>

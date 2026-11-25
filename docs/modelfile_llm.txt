@@ -577,6 +577,25 @@ text("índice: $x^\{$ $x^\sin$ $x^\,y$") { 2.2 -3.05 }
   font_size 7
   text("y a font_size") { 2.3 0.62 }
 }
+
+% --- Las caras de texto que el resto del corpus no usa ---------------------
+% Negrita itálica, las dos oblicuas de Helvetica y las cuatro Courier, cada una
+% con una letra acentuada. Hasta el 2026-11-24 el EPS pedía nombres que no
+% existen en PostScript (Times-Italic-Bold, Helvetica-Italic, Courier-bold) y
+% recodificaba solo cinco caras: Ghostscript ponía otra SIN recodificar y la «á»
+% salía como «Æ». EPS y PDF sacaban además la Courier negrita itálica en
+% Times-Roman. Nada lo veía porque ningún ejemplo usaba estas caras.
+% Van con `font=` por-primitiva y no con la sentencia `font`: el marcado /b y /e
+% sobre una cara AMBIENTE cae a Times (ver PENDIENTES.md), y aquí lo que se
+% prueba es la tabla de caras, no ese otro bug.
+{ align "left"
+  valign "bottom"
+  font_size 7
+  text("negrita itálica á", font="bold italic") { -4.8 1.45 }
+  text("oblicua é {/bnegra ñ}", font="sanserif italic") { -4.8 1.1 }
+  text("mono í {/eitál ó}", font="courier") { -4.8 0.75 }
+  text("{/bnegra ú} {/b/eambas ü}", font="courier") { -4.8 0.4 }
+}
 ```
 
 EJEMPLO 4: Marcadores — las siete formas del catálogo, y cómo se orientan.

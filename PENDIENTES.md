@@ -297,17 +297,31 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       comprime (`HPDF_COMP_ALL`) e incrusta las cuatro Times como **Nimbus Roman**
       (`include/font_nimbus_ttf.h`, generado por `tools/fuentes_texto.py`; ver
       `docs/bitacora.md` 2026-10-19 y su «bis»). **Falta:**
-      - **EPS**: ⚠️ antes, arreglar los nombres: `EPSDisplay::setFontFace` pide
-        `ISOTimes-Italic-Bold`, `ISOHelvetica-Italic`, `ISOCourier`… que el prólogo no define
-        (solo recodifica cinco), y sin recodificar pide `Times-Italic-Bold`, `Helvetica-Italic`,
-        `Courier-bold`, que no existen en PostScript. Ningún ejemplo del corpus los usa, y
-        Ghostscript sustituye otra fuente sin dar error (hallado 2026-10-19). **EPS**: tampoco incrusta Times. La misma TTF serviría como Type42, igual que LM Math
+      - ~~**EPS: nombres de cara rotos**~~ — **ARREGLADO 2026-11-24**: una sola tabla de
+        las doce caras de texto (`kPSTextFaces`, `text_parser.cpp`) para EPS y PDF; el prólogo
+        recodifica las doce como `/MG<base-14>`. Ver `docs/bitacora.md` 2026-11-24 «bis».
+        Cobertura: el último bloque de `examples/texto.mg` (las siete caras que estaban rotas,
+        cada una con un acento).
+      - **EPS**: no incrusta Times. La misma TTF serviría como Type42, igual que LM Math
         (`font_lmmath_eps.h`); verificar con `gs` y que `fontparity.py` siga viendo `roman`.
       - **Helvetica y Courier** (y Symbol, que en PDF es solo el respaldo de LM Math): Nimbus
         Sans y Nimbus Mono PS, mismo generador. Medido: Nimbus Sans difiere de la tabla de
         Helvetica de `text.cpp` exactamente en lo mismo que Nimbus Roman de la de Times —puras
         diferencias de CODIFICACIÓN, ver el ítem siguiente—, o sea que sus anchos coinciden;
         Courier no se midió. ~330 KB de binario las once caras.
+- [ ] 🐞 **El marcado `/b` y `/e` sobre la cara AMBIENTE cae a Times** (2026-11-24, hallado
+      preparando la cobertura de caras en `texto.mg`). `font "sanserif"` seguido de
+      `text("sans {/bnegrita}")` dibuja «negrita» en **Times-Bold**, en los tres backends; con
+      `text(..., font="sanserif")` sale bien en Helvetica-Bold. Causa: `parse_text` resuelve el
+      marcado AL COMPILAR, y un text() que hereda la ambiente parte de `FN_NOFACE`, que no sabe
+      la familia; `/b` y `/e` caen a la serif. Igual en los tres, así que la Capa 3 no puede
+      verlo. Arreglarlo es de diseño: el run tendría que llevar «negrita/itálica RELATIVA a la
+      ambiente» y resolverse en `Text::draw`, que es donde se conoce la ambiente.
+- [ ] 🐞 **`world_window` degenerado no es error** (2026-11-24): `world_window 0 0 10 13`
+      —escrito con el orden `x0 y0 x1 y1` de SVG/PostScript en vez de `xmin xmax ymin ymax`—
+      da xmin = xmax y compila, con solo el aviso «la figura sale EN BLANCO». Debería ser
+      `evalError` si xmin ≥ xmax o ymin ≥ ymax, sugiriendo el orden. Lo tropezó el agente
+      escribiendo una prueba de memoria; la referencia lo documenta bien (§1).
 - [x] ~~🔍 **`-`, `'` y `` ` `` NO eran el mismo glifo en EPS que en PDF/SVG**~~ — **CERRADO
       2026-10-19** (`docs/bitacora.md` 2026-10-19 «ter»): los tres significan ya lo que dice
       Unicode —guion, apóstrofo recto, acento grave— en los tres backends, y `text.cpp` los mide

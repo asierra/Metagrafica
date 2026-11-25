@@ -66,8 +66,8 @@ def canon(name):
         return 'math'
     if n.startswith('symbol'):
         return 'symbol'
-    if n.startswith('iso'):                     # reencodificadas del EPS
-        n = n[3:]
+    if n.startswith('mg'):                      # recodificadas del EPS (/MGTimes-Roman)
+        n = n[2:]
     # Nimbus (URW): los clones métricos de Times/Helvetica/Courier que el PDF
     # incrusta desde 2026-10-19 en lugar de nombrar las base-14.
     if 'times' in n or 'nimbusroman' in n:
