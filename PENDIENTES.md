@@ -912,6 +912,46 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
+- [ ] 🐞 **Tres silencios que dan una figura distinta de la pedida** (destapados el
+      2026-11-25 al escribir `test/errors/name_collision.mg`; **nada implementado**: Alejandro
+      lo decide con calma). Es la misma familia que la aridad de structs (abajo, cerrada el
+      2026-07-22): exit 0, sin una palabra, y una salida que no es la que el usuario escribió.
+      1. **Una struct con nombre de primitiva queda oculta para siempre.** `parseStructDef`
+         (`src/parserv3.cpp`, ~4475) acepta cualquier nombre, pero al invocar se pregunta
+         `isPrim(name)` (~4072) ANTES de buscar structs, así que la primitiva siempre gana.
+         `struct circle(r) { rectangle { -r -r  r r } }` seguido de `circle(r=4) { 0 0 }`
+         dibuja un CÍRCULO de radio 4 en vez del cuadrado. La struct no tiene ningún uso
+         legítimo (nunca se puede invocar) → propuesta: **error fatal** al definirla, con
+         `isPrim` y las demás palabras que el parser despacha antes que una struct (`text`,
+         `plot`, `place`, `fit`, `repeat`, `sine`…; revisar la lista entera en
+         `parseStatement`). Fixture: `EXPECT_AT` en la columna del nombre (la 8 en
+         `struct circle(r) {`).
+      2. **Una primitiva de coordenadas SIN bloque no dibuja nada.** El `{ coords }` es opcional
+         en la rama `isPrim` (`if (lx.accept(T_LBRACE))`), así que `circle(4)`, `polyline` y
+         `rectangle(w=2)` (sin `at`) compilan con exit 0 y dejan la figura en blanco. Ojo
+         antes de cerrarlo: `rectangle(w,h,at)` y la forma con trayecto `polyline(&p)` sí son
+         legítimas sin bloque. Por decidir: error o aviso (`EXPECT_WARN`).
+      3. **`text("…")` sin bloque (o con `{ }` vacío) tampoco dibuja** — cero `<text>` en el
+         SVG, exit 0. Aquí la especificación promete otra cosa (punto siguiente).
+      - **La pluma (§12) NO está implementada** (verificado: `moveto(1,1)` → `struct no
+        definida: moveto`). §12 ya lo dice en su aviso del 2026-07-15. Se planteó que una
+        primitiva sin coordenadas se dibujara en la pluma: eso sería **semántica NUEVA**, ni
+        de V1 ni del diseño de §12 — en V1 (`git show origin/v1-legacy:src/Parser.cpp`) la
+        pluma `pp`/`mtpp` la usaban solo `DT` (texto, ~787), `RPST` (repetir struct, ~472) y
+        los generadores `TICKS`/`RPNUM`; las primitivas geométricas siempre llevaron sus
+        coordenadas. **Hacer error hoy el bloque faltante NO cierra la puerta a la pluma**:
+        error → válido es compatible; en blanco → dibuja cambiaría la salida en silencio.
+        Recomendación (Claude): error ahora y pluma cuando una figura la pida.
+      - **Tres frases de la especificación que hoy son falsas** (sin corregir):
+        `especificacion_mg.md:383` promete que `text("...")` sin bloque dibuja en la pluma y
+        no remite al aviso de §12; el ejemplo de §12.1 usa `text { "…" }`, que no es sintaxis
+        V3; y la intro de §13 dice que los generadores parten de la pluma, cuando son
+        autocontenidos (`at=`/`advance=`).
+      - ⚠️ **`test/errors/name_collision.mg` está en el árbol SIN `% EXPECT:`** (sin
+        commitear): mientras siga así, `bash test/run.sh check` da `errfail=1`. Hoy no puede
+        llevar `EXPECT`, porque no existe el diagnóstico que esperaría; o se termina con el
+        punto 1, o se aparta mientras tanto.
+
 - [x] ~~🐞 **La invocación de struct NO comprueba la aridad de los parámetros
       escalares**~~ — **CERRADO 2026-07-22**, el mismo día que lo destapó la 5ª compuerta
       (un fixture esperaba error y el documento compiló). Era la peor variante de la
