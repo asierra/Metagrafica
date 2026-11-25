@@ -866,6 +866,50 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ---
 
+## 📓 Del diario de desarrollo 2023–2024 (repasado el 2026-11-24)
+
+Ideas del diario de Alejandro (`~/Dropbox/metagrafica/notas.txt`: PRIVADO, no está en el
+repo, entradas fechadas del 2023-03-29 al 2024-12-17) que no estaban en ningún tablero. Lo que
+el diario pedía y V3 ya cumplió no se lista: `-h`/`-v`, números de línea, `\frac`, deps de
+headers en el Makefile, variables, loops, structs parametrizadas, gramática en inglés,
+PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
+
+- [ ] 🐞 **Un nombre de usuario puede chocar con una primitiva o función, y se ignora EN
+      SILENCIO** (diario, 2024-05-25: «Prevenir colisiones de estructuras o trayectos con
+      nombres reservados»). Verificado el 2026-11-24: `struct circle(r) { … }` compila sin
+      aviso y `circle(1)` dibuja el círculo PRIMITIVO, sin rastro de la struct; `sin = 2`
+      también se acepta. Debería ser `evalError` («`circle` es una primitiva; elige otro
+      nombre») al definir una struct, un path o una variable con nombre reservado, con su
+      prueba negativa en `test/errors/`. Barato. Es el más urgente de esta lista.
+- [ ] 🎨 **Logo del proyecto** (diario, 2024-05-27: «Agregar un logo significativo»).
+      Conviene tenerlo antes de JOSS: README, galería y release. Lo natural es hacerlo EN
+      MetaGráfica y que el `.mg` viva en el repo.
+- [ ] 📜 **Registro ante INDAUTOR** (diario, 2023-04-19: «Debe salir al menos un artículo
+      técnico y un registro de propiedad intelectual»). El artículo es el de JOSS (arriba).
+      El registro, **decisión de Alejandro**: el de hpsatviews se tramitó en 2026 y sigue sin
+      respuesta. hpsatviews encaja en su laboratorio; MetaGráfica es de uso general, y será
+      más difícil que la dirección del Instituto de Geografía apoye el trámite.
+- [ ] 🔍 **Mensajes de depuración** (`-d` / `--verbose`). El diario lo pide tres veces
+      (2024-02-07 «Falta logging», 2024-05-09 «hay que poner y borrar muchos printf en cada
+      caso», 2024-08-01 «una versión práctica de mensajes de debug»). Sin figura que lo pida.
+- [ ] 🔤 **Fuente por defecto desde la línea de comandos**, romana o matemática (diario,
+      2023-12-07: «y así no se tienen que modificar los mgs»). Sin figura que lo pida.
+- [ ] 📐 **Catálogo de curvas** (diario, 2024-05-28: senoidales, cuadráticas, «cuadrado con
+      otro cuadrado inserto»). Sería una biblioteca de `lib/`; hoy `lib/` tiene iconos y
+      mapas, no curvas. Necesita un cliente en el corpus, como las demás.
+- [ ] 🧮 **Recuadro con LaTeX** (diario, 2023-11-30: «un inset que literalmente contenga
+      LaTeX, que lo compile en SVG y lo embarre en la gráfica»). **Probablemente ya no hace
+      falta** (Alejandro, 2026-11-24): el texto matemático mejoró muchísimo (LM Math,
+      `\frac`, espaciado TeX). Se reabre solo si una figura pide algo que el marcado no da.
+- [ ] 🖱️ **Seleccionar objetos con el cursor en el editor interactivo** (diario, 2024-08-20:
+      apuntar, ver propiedades, desplazar). **Sin prioridad** (Alejandro, 2026-11-24), igual
+      que el editor entero (`plan_interactivo.md`, que no contempla la selección).
+- [x] ~~🖼️ **Salida PNG directa** (diario, 2023-04-05)~~ — **DECIDIDO EN CONTRA**: solo
+      formatos vectoriales; rasterizar es un paso posterior (`tools/ver.sh`, o cualquier
+      visor). Anotado para no re-litigarlo.
+
+---
+
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
 - [x] ~~🐞 **La invocación de struct NO comprueba la aridad de los parámetros
