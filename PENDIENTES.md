@@ -884,6 +884,22 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
 - [ ] 🎨 **Logo del proyecto** (diario, 2024-05-27: «Agregar un logo significativo»).
       Conviene tenerlo antes de JOSS: README, galería y release. Lo natural es hacerlo EN
       MetaGráfica y que el `.mg` viva en el repo.
+      - **Requisitos:** hecho EN MetaGráfica, con su `.mg` en el repo; podría entrar a la
+        galería como un ejemplo más. Legible a 16 px (favicon de la galería, avatar de
+        GitHub), lo que descarta el texto fino y el detalle. Que funcione en un solo color
+        (impresión, README en modo oscuro, portada del artículo).
+      - **Tres conceptos** (propuestos el 2026-11-24):
+        1. **El árbol fractal de 1991** (`fractal_tree.mg`, reconstruido del artículo de V0
+           en *Ciencias* 21): cuenta la historia y luce la figura que se calcula sola. A
+           tamaño pequeño hay que podarlo a 4–5 niveles.
+        2. **Una «M» de curvas de Bézier con los puntos de control a la vista** (línea de
+           control punteada, nodos marcados): el lenguaje viéndose por dentro. Es el que mejor
+           aguanta a 16 px. Variante: las ramas de la M terminan bifurcándose como el árbol.
+        3. **La ℏ**: el carácter que MG tuvo que inventarse en 2023 (una cmmi modificada con la
+           hbarra de msbm10) y el puente con el libro de Cetto y de la Peña. Riesgo: dice
+           «mecánica cuántica» más que «gráficas», y MG es de uso general.
+        Recomendación: la 2, quizá con el guiño de la 1. Pero bocetar las tres en MG y
+        mirarlas a 16 px y a 200 px antes de decidir.
 - [ ] 📜 **Registro ante INDAUTOR** (diario, 2023-04-19: «Debe salir al menos un artículo
       técnico y un registro de propiedad intelectual»). El artículo es el de JOSS (arriba).
       El registro, **decisión de Alejandro**: el de hpsatviews se tramitó en 2026 y sigue sin
