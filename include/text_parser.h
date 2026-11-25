@@ -38,7 +38,7 @@ FontFace get_font_face_from_string(std::string s, bool& using_fontcmmi);
 // tabla en text_parser.cpp: por que existen las ranuras y como las traduce cada
 // backend.
 struct ExtraGlyph {
-    unsigned char slot;        // 1..27, posicion interna (control C0, nunca en texto)
+    unsigned char slot;        // 1..28, posicion interna (control C0, nunca en texto)
     unsigned int  codepoint;   // Unicode
     const char   *psname;      // nombre de glifo PostScript (para el /Encoding de EPS)
     unsigned char winansi;     // byte en CP1252, o 0 si no esta

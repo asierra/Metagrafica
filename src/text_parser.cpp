@@ -106,14 +106,15 @@ static const std::map<std::string, unsigned int> kNameToUnicode = {
 // Lo unico que faltaba era DARLES POSICION: ISOLatin1Encoding no las tiene, asi
 // que se descartaban aunque el glifo estuviera ahi.
 //
-// Se les asignan las ranuras 1..27, que en texto corrido no aparecen nunca (son
+// Se les asignan las ranuras 1..28, que en texto corrido no aparecen nunca (son
 // controles C0). La ranura 0 queda libre a proposito: es el terminador de las
 // cadenas C y el motor usa .c_str() en varios sitios.
 //
 // Cada backend traduce la ranura a lo suyo, que es lo que pide §14.4 ("el texto
 // debe viajar y que cada uno resuelva"):
 //   EPS -> nombre de glifo, en un /Encoding propio derivado de ISOLatin1
-//   PDF -> su byte en WinAnsiEncoding (CP1252 tiene casi todos)
+//   PDF -> su byte en WinAnsiEncoding (CP1252 tiene casi todos); los que no,
+//          por la ruta UTF-8 de la Nimbus incrustada (Times), o un respaldo
 //   SVG -> el codepoint, en UTF-8
 //
 // Lo que sigue sin caber es lo que la fuente NO tiene (griego en texto corrido,
@@ -147,6 +148,10 @@ const ExtraGlyph kExtraTextGlyphs[] = {
     {25, 0x0131, "dotlessi",       0    },
     {26, 0x0141, "Lslash",         0    },
     {27, 0x0142, "lslash",         0    },
+    // Signo MENOS (2026-11-24). Lo emiten los generadores (numbers/axis/plot/table)
+    // en sus rótulos negativos, que SABEN que son números; el `-` del usuario sigue
+    // siendo guion. Las base-14 de texto lo traen (/minus, mismo ancho que `+`).
+    {28, 0x2212, "minus",          0    },
 };
 const int kNumExtraTextGlyphs = (int)(sizeof(kExtraTextGlyphs)/sizeof(kExtraTextGlyphs[0]));
 

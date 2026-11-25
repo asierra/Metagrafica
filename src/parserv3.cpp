@@ -2523,6 +2523,9 @@ struct PrimStmt : Stmt {
 // Texto (§4.8): text("s") { p1 p2 … } estampa la cadena en cada coordenada.
 // El contenido pasa por parse_text (mismo markup que V1); una llamada por punto
 // porque el GraphicsItem resultante es no-copiable (siembra múltiple, §4).
+static void formatLabel(char *out, size_t n, const char *fmt, double v);
+static std::string conMenos(const char *num);
+
 struct TextStmt : Stmt {
   ExprPtr content;
   std::map<std::string, ExprPtr> named;   // §7.5: estilo por-primitiva (font_size/size, font, align, valign, color)
@@ -2549,7 +2552,7 @@ struct TextStmt : Stmt {
     Value c = content->eval(s);
     std::string str;
     if (c.type == Value::STRING) str = c.str;
-    else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", c.num); str = buf; }
+    else { char buf[64]; formatLabel(buf, sizeof buf, "%g", c.num); str = conMenos(buf); }
 
     // Estilo por-primitiva (§7.5), acotado a este text() con push/pop de estado
     // (como PrimStmt); sin esto los parámetros nombrados se parsean pero se
@@ -2643,6 +2646,16 @@ static void formatLabel(char *out, size_t n, const char *fmt, double v) {
   std::memmove(out, out + 1, std::strlen(out));  // era -0, -0.0, -0.00…
 }
 
+// Un número que FORMATEA `mg` lleva signo MENOS (U+2212), no guion (2026-11-24). El
+// generador sabe que es un número; el texto del usuario no se toca (su `-` es guion,
+// y `$-5$` da el menos de LM Math). parse_text lo lleva a la ranura de `minus`.
+// Solo el signo inicial: un "1e-05" de `%g` es un exponente, pero lo escribe snprintf
+// y no aparece en rótulos de eje (que van con `%.Nf`).
+static std::string conMenos(const char *num) {
+  if (num[0] != '-') return num;
+  return std::string("\xE2\x88\x92") + (num + 1);
+}
+
 // Decimales por default de un eje: los que hacen falta para que el PASO se
 // distinga. Con step=0.5 y el default viejo (0), dos marcas vecinas se rotulaban
 // IGUAL —«-1 -1 -0 0 1 1»: seis marcas, tres parejas repetidas—. Solo se aplica
@@ -2676,7 +2689,7 @@ struct NumbersStmt : Stmt {
     for (int i = 0; i < count; i++) {
       char num[64];
       formatLabel(num, sizeof num, fmt, from + i * by);
-      std::string label = prefix + num + suffix;
+      std::string label = prefix + conMenos(num) + suffix;
       auto gs = std::make_unique<GraphicsState>();
       gs->setPosition(point(at.x + i * adv.x, at.y + i * adv.y));
       out.push_back(std::move(gs));
@@ -3046,7 +3059,7 @@ struct AxisStmt : Stmt {
         }
         auto gs = std::make_unique<GraphicsState>(); gs->setPosition(point(q.x + g.x, q.y + g.y));
         out.push_back(std::move(gs));
-        out.push_back(parse_text(num, lff, g_flags.using_reencode, g_flags.using_fontcmmi));  // label_font, o FN_NOFACE=ambiente
+        out.push_back(parse_text(conMenos(num), lff, g_flags.using_reencode, g_flags.using_fontcmmi));  // label_font, o FN_NOFACE=ambiente
       }
       out.push_back(std::make_unique<GraphicsState>(GS_POPSTATE));
     }
@@ -3351,7 +3364,7 @@ struct LegendStmt : Stmt {
 
         Value lv = e.label->eval(s);
         if (lv.type == Value::STRING) str = lv.str;
-        else { char buf[64]; std::snprintf(buf, sizeof buf, "%g", lv.num); str = buf; }
+        else { char buf[64]; formatLabel(buf, sizeof buf, "%g", lv.num); str = conMenos(buf); }
       }
 
       // Texto de la entrada (hereda align/valign/font_size del push de arriba).
@@ -3530,7 +3543,7 @@ struct TableStmt : Stmt {
         Value v = rows[r].cells[c]->eval(s);
         std::string str;
         if (v.type == Value::STRING) str = v.str;
-        else { char buf[64]; std::snprintf(buf, sizeof buf, fmt, v.num); str = buf; }
+        else { char buf[64]; formatLabel(buf, sizeof buf, fmt, v.num); str = conMenos(buf); }
         // La cara de la 1ª columna se ACOTA con push/pop: `parse_text` la hornea en el
         // Text y `Text::draw` la deja puesta en el dispositivo, así que sin esto un
         // label_font="bold" se fugaría a las celdas de valor de la misma fila (que van

@@ -155,7 +155,7 @@ static const char *ps_reencode = R"(
 
 % MGTextEncoding = ISOLatin1 mas los glifos de texto que la fuente SI tiene pero
 % Latin-1 no sabe nombrar (comillas tipograficas, rayas, puntos suspensivos...).
-% Van en las ranuras 1..27, controles C0 que en texto nunca aparecen. La tabla
+% Van en las ranuras 1..28, controles C0 que en texto nunca aparecen. La tabla
 % que las asigna vive en text_parser.cpp (kExtraTextGlyphs) y la emite
 % EPSDisplay::start; aqui solo se reserva el nombre.
 /MGTextEncoding ISOLatin1Encoding 256 array copy def

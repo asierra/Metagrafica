@@ -12,7 +12,9 @@ candidata libre, difiere justo en ±, µ, ·, ÷ y ¯.
 
 Qué hace con cada cara:
   1. subset al repertorio de CP1252, que es todo lo que el PDF de `mg` puede pedir (el
-     texto viaja con WinAnsiEncoding; las ranuras 1..27 se traducen a CP1252 antes);
+     texto viaja con WinAnsiEncoding; las ranuras 1..28 se traducen a CP1252 antes),
+     más las cinco ranuras que CP1252 no tiene (menos, fraction, dotlessi, Lslash,
+     lslash), que el PDF pide por la ruta UTF-8;
   2. convierte los contornos CFF (cúbicos) a glyf (cuadráticos) con cu2qu, tolerancia
      1/1000 em: libharu solo carga y recorta TrueType;
   3. emite un arreglo C por cara. libharu vuelve a recortar al guardar, así que a la
@@ -58,6 +60,9 @@ def repertorio():
             cps.add(ord(bytes([b]).decode('cp1252')))
         except UnicodeDecodeError:      # 0x81, 0x8D, 0x8F, 0x90, 0x9D: sin asignar
             pass
+    # Las ranuras de kExtraTextGlyphs (src/text_parser.cpp) que CP1252 no tiene: el
+    # PDF las pide por la ruta UTF-8 de esta misma fuente (2026-11-24).
+    cps |= {0x2212, 0x2044, 0x0131, 0x0141, 0x0142}
     return cps
 
 

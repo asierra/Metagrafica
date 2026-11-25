@@ -312,17 +312,10 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       2026-10-19** (`docs/bitacora.md` 2026-10-19 «ter»): los tres significan ya lo que dice
       Unicode —guion, apóstrofo recto, acento grave— en los tres backends, y `text.cpp` los mide
       con esos anchos.
-- [ ] ➖ **Signo MENOS de verdad en los números que genera `mg`** (2026-10-19, la otra mitad de
-      lo anterior). Con el arreglo, un negativo de eje («-5») sale con GUION en los tres
-      formatos; antes el EPS ponía un signo menos (por herencia de V1) y PDF/SVG un guion. Lo
-      correcto tipográficamente es U+2212 en lo que `numbers`/`axis`/`plot` rotulan (ellos SABEN
-      que es un número), y guion en el texto del usuario. **Decisión pendiente** de cómo, porque
-      WinAnsi no tiene signo menos y el PDF no puede pedírselo a Times por nombre:
-      (a) tomarlo de LM Math, que ya va incrustada —pero sus dígitos son Computer Modern, así
-      que solo el signo, pegado a dígitos Times—; (b) meter U+2212 en el subset de Nimbus y
-      alcanzarlo con un alias, como el truco de la zona de uso privado de LM Math; (c) raya
-      corta (–, U+2013, sí está en WinAnsi), que es la aproximación habitual. El texto del
-      usuario tiene ya su salida: `$-5$` dibuja el menos de LM Math en los tres (verificado).
+- [x] ~~➖ **Signo MENOS de verdad en los números que genera `mg`**~~ — **CERRADO 2026-11-24**
+      con la opción (b): ranura 28 = `minus` de la propia fuente de texto; en PDF, por la ruta
+      UTF-8 de la Nimbus incrustada. Con Helvetica/Courier en PDF cae a la raya corta hasta
+      que se incrusten (ítem de arriba). Ver `docs/bitacora.md` 2026-11-24.
 - [ ] 🔎 **`tools/ver.sh` recorta el SVG de un lienzo muy bajo** (2026-10-19): con
       `display_size 6 2` y letra de 40 pt, el PNG del SVG salió con solo la parte de arriba de
       los glifos, mientras EPS y PDF salían completos. El SVG está bien (la línea base cae dentro

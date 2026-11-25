@@ -109,6 +109,10 @@ private:
   // las base-14 se sigue nombrando. Se cargan al primer uso, una vez por documento.
   const char* nimbus_face[4] = { nullptr, nullptr, nullptr, nullptr };
   HPDF_Font getFont(const char* fname, const char* enc);
+  // La misma Nimbus pedida en UTF-8, para los glifos que WinAnsi no sabe nombrar
+  // (el signo menos y las ranuras sin byte CP1252); nullptr si la cara vigente no es
+  // una Times incrustada.
+  HPDF_Font nimbusUTF8();
 
   // Cara vigente en el DISPOSITIVO, gemela de `current_font` y FUERA de dspstate:
   // sobrevive a push/popDrawState, que es justo lo que la hace útil como guard.

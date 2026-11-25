@@ -2219,21 +2219,28 @@ viñetas, dagas, ‰, ™, €, œ… Hasta el 2026-07-20 todo eso se **descarta
 aviso**, no porque faltara el glifo sino porque `ISOLatin1Encoding` no sabía
 nombrarlo.
 
-**Resuelto** dándoles posición propia. Los 27 caracteres de esa lista viajan en
-**ranuras 1..27** (controles C0, que en texto corrido no aparecen nunca; la 0 se
+**Resuelto** dándoles posición propia. Los 28 caracteres de esa lista viajan en
+**ranuras 1..28** (controles C0, que en texto corrido no aparecen nunca; la 0 se
 deja libre porque es el terminador de las cadenas C), y **cada backend traduce la
 ranura a lo suyo**, que es justo lo que este apartado pedía:
 
 | backend | traducción |
 |---|---|
 | EPS | nombre de glifo, en un `/MGTextEncoding` derivado de `ISOLatin1Encoding` |
-| PDF | su byte en `WinAnsiEncoding` (CP1252 tiene 24 de los 27) |
+| PDF | su byte en `WinAnsiEncoding` (CP1252 tiene 23 de los 28); con Times, un run que lleve alguno de los otros cinco va entero por la ruta UTF-8 de la Nimbus incrustada |
 | SVG | el codepoint Unicode, en UTF-8 nativo |
 
 La tabla vive en **un solo sitio** (`kExtraTextGlyphs`, `text_parser.cpp`) con el
 codepoint, el nombre PostScript y el byte CP1252; EPS genera su `/Encoding` desde
 ella. Los anchos de avance salen de los **AFM** de las base-14, así que la
 alineación y el avance son exactos, no estimados. Cobertura: `examples/texto.mg`.
+
+La ranura 28 es el **signo menos** (U+2212, 2026-11-24). No la pide casi nunca el
+usuario: la emiten los generadores (`numbers`, las marcas de `axis`/`plot`, las celdas
+numéricas de `table`, un número pasado a `text()` o a una entrada de leyenda), que saben
+que lo que rotulan es un número. El `-` escrito en una cadena sigue siendo guion, y
+`$-5$` da el menos de LM Math. Con Helvetica y Courier, que el PDF aún nombra sin
+incrustar, WinAnsi no tiene cómo pedirlo y cae a la raya corta.
 
 **Lo que sigue sin caber es lo que la fuente NO tiene:** griego en texto corrido
 (en modo math sí, §14), cirílico, CJK. Eso no es cuestión de codificación —

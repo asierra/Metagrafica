@@ -775,6 +775,14 @@ HPDF_Font PDFDisplay::getFont(const char* fname, const char* enc) {
   return HPDF_GetFont(pdf, fname, enc);
 }
 
+// La Nimbus vigente con la codificación UTF-8 de libharu (la misma que ya usa LM Math):
+// es otro objeto de fuente (Type0, con su propio subset), así que solo se crea si un
+// texto lo pide. Devuelve nullptr para Helvetica/Courier, que aún no se incrustan.
+HPDF_Font PDFDisplay::nimbusUTF8() {
+  if (!cur_fname || strncmp(cur_fname, "Times-", 6) != 0) return nullptr;
+  return getFont(cur_fname, "UTF-8");
+}
+
 void PDFDisplay::text(string s) {
   // Si aún no se fijó NINGUNA fuente (cur_fname null), un `show` no dibuja nada.
   // Pasa cuando el primer texto del documento hereda la cara ambiente (FN_NOFACE)
@@ -861,19 +869,38 @@ void PDFDisplay::text(string s) {
       i = j;
     }
   } else {
-    // Texto corrido: las RANURAS 1..27 de kExtraTextGlyphs se traducen a su byte
+    // Texto corrido: las RANURAS 1..28 de kExtraTextGlyphs se traducen a su byte
     // en WinAnsiEncoding, que es la codificacion con la que se piden las base-14
     // aqui. CP1252 tiene casi todos esos glifos (comillas, rayas, puntos
-    // suspensivos...); los tres que no —fraction, dotlessi, Lslash/lslash— se
-    // dejan caer, es el limite de esta codificacion, no del pipeline (§14.4).
-    string t = s;
-    for (size_t k = 0; k < t.size(); k++) {
-      unsigned char c = (unsigned char)t[k];
+    // suspensivos...). Los que no —el signo menos, fraction, dotlessi,
+    // Lslash/lslash— van, con las Times, por la ruta UTF-8 de la MISMA Nimbus
+    // incrustada, que sí los trae (2026-11-24). Con Helvetica/Courier,
+    // que aún se nombran sin incrustar, no hay cómo pedirlos: el menos cae a la raya
+    // corta (aprox. habitual, 556 contra 584 de ancho medido) y el resto a espacio.
+    // El run va ENTERO por esa ruta, no partido: un trozo aparte sería otro `Tj` y
+    // otro BT/ET por cada signo, y el texto dejaría de contarse igual que en EPS y SVG
+    // (Capa 3, invariante (a)).
+    bool fueraWinAnsi = false;
+    for (unsigned char c : s) {
       if (c == 0 || c >= 32) continue;
       const ExtraGlyph *e = extraGlyphForSlot(c);
-      t[k] = e && e->winansi ? (char)e->winansi : ' ';
+      if (e && !e->winansi) { fueraWinAnsi = true; break; }
     }
-    segs.push_back({ textFont(), t });
+    HPDF_Font utf = fueraWinAnsi ? nimbusUTF8() : nullptr;
+    string t;
+    for (unsigned char c : s) {
+      const ExtraGlyph *e = (c > 0 && c < 32) ? extraGlyphForSlot(c) : nullptr;
+      if (utf) {
+        // Latin-1 (incluidos los acentos, bytes >= 0xA0) es su propio codepoint.
+        t += utf8(e ? e->codepoint : (c > 0 && c < 32 ? ' ' : c));
+      } else if (c > 0 && c < 32) {
+        t += e && e->winansi ? (char)e->winansi
+           : (e && e->codepoint == 0x2212) ? (char)0x96 : ' ';
+      } else {
+        t += (char)c;
+      }
+    }
+    segs.push_back({ utf ? utf : textFont(), t });
   }
 
   // El texto debe usar el color de trazo (linecolor), no el fill color de shapes.

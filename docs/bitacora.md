@@ -5004,3 +5004,36 @@ prólogo no define (`ISOTimes-Italic-Bold`, `ISOHelvetica-Italic`, `ISOCourier`�
 existen en PostScript (`Courier-bold`); ninguno lo usa el corpus, y Ghostscript los
 sustituye sin dar error (solo un aviso, que `-q` calla). Anotado para cuando se incrusten las fuentes del EPS.
 
+
+## 2026-11-24 — Signo menos de verdad en los números que rotula `mg`
+
+El paso 2 del «ter». Opción elegida: **(b)**, el glifo `minus` de la propia fuente de texto, no
+el de LM Math (dígitos Computer Modern junto a un menos de otra cara) ni la raya corta (otro
+ancho —500 contra 564— y otra altura de trazo).
+
+- **Ranura 28** = U+2212 `minus` en `kExtraTextGlyphs`, sin byte CP1252. Anchos de las AFM
+  (Times 564/675/570/606, Helvetica 584), verificados contra Nimbus glifo por glifo.
+- **Quién la emite:** `conMenos()` en `parserv3.cpp`, sobre el signo inicial de lo que
+  FORMATEA `mg` —`numbers`, marcas de `axis`/`plot`, celdas numéricas de `table`, un número
+  pasado a `text()` o a una entrada de `legend`—. El `-` de una cadena del usuario sigue
+  siendo guion. Las tres últimas vías pasan además por `formatLabel`, así que también pierden
+  el «-0».
+- **EPS:** gratis — el prólogo genera `MGTextEncoding 28 /minus put` desde la tabla, y la
+  Times residente trae el glifo. **SVG:** gratis, emite el codepoint.
+- **PDF:** WinAnsi no tiene menos. Con las Times, un run que lleve una ranura sin byte CP1252
+  va **entero** por la ruta UTF-8 de la misma Nimbus (`nimbusUTF8()`, Type0/Identity-H con su
+  propio subset). Entero y no partido: el primer intento lo partía en trozos y la Capa 3 lo
+  cazó en el acto (`skewt_golfo`: Tj 34/34/38). `tools/fuentes_texto.py` mete en el subset los
+  cinco glifos que CP1252 no tiene. Con Helvetica/Courier, sin incrustar, el menos cae a la
+  raya corta (556 dibujado contra 584 medido: 0.03 em de descuadre, aceptado hasta que se
+  incrusten).
+- **De paso, en PDF con Times:** `⁄`, `ı`, `Ł`, `ł` dejaban un ESPACIO (el límite «24 de 27» de
+  §14.4); ahora salen. Y un U+2212 escrito por el usuario ya no se descarta con aviso.
+
+**Movió:** los EPS que recodifican, solo por la línea nueva del prólogo (y el comentario
+1..27→1..28; verificado: ni un byte más salvo en `skewt_golfo`); los PDF por el subset nuevo
+de Nimbus —con los operadores de texto idénticos en los 33 salvo `skewt_golfo`, verificado
+inflando—; y `skewt_golfo` en los tres formatos, único del corpus con rótulos negativos.
+Rasterizado con `ver.sh`, los tres iguales. `pdftotext` devuelve `−40` (U+2212): la extracción
+funciona pese al aviso de poppler `begincidrange`, que ya salía con LM Math y sigue sin
+investigar.
