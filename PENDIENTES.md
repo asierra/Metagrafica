@@ -291,6 +291,96 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
+- [ ] 📄 **Publicar MetaGráfica en JOSS** (abierto 2026-11-24; NO bloquea 1.0, pero se apoya en
+      la condición 4). Lo motivó el rechazo de hpsatviews en JOSS por falta de una referencia
+      publicada de uso científico. Hoy JOSS filtra ANTES de revisar con cuatro compuertas
+      (docs «Pre-review screening criteria» + blog de enero de 2026 sobre IA generativa), y la que
+      tumbó a hpsatviews es la 2: *«There must be evidence that the software is being used for
+      research»*; las promesas de uso futuro no cuentan.
+      - **A favor:**
+        - *Quantum Mechanics*, Cetto y de la Peña (Cambridge UP, 2025,
+          DOI 10.1017/9781009679633), cuyos agradecimientos dicen *«… Alejandro Aguilar Sierra,
+          who generously shared his Metagráfica program to draw the figures»*. Es adopción
+          EXTERNA. Se hizo con V1, pero V1 es este mismo repo (`v1-legacy`), y el corpus
+          reproduce figuras de esa edición con su número.
+        - Repo público desde 2024-02, licencia, `CONTRIBUTING.md`, versiones etiquetadas, doc
+          bilingüe y diez compuertas de pruebas.
+      - **Huecos, en este orden:**
+        1. **CI en cada push**: `.github/workflows/` solo tiene `release.yml`, que corre al
+           etiquetar. Para un proyecto de un solo autor JOSS pide «tests and CI»: un workflow
+           con `make` + `test/run.sh check` (golden: `capture` primero, porque no van en git).
+        2. **Uso e issues de gente de fuera**: cero issues y cero PR en GitHub. No es causa de
+           rechazo para un solo autor, pero es la «señal positiva fuerte». El taller puede dar
+           los primeros.
+        3. **El libro es DOCENTE, no un artículo de investigación**: es la objeción previsible.
+           La desarma la Fig. 3 de ceniza, un artículo de investigación con figuras hechas en
+           V3. ✅ **ACEPTADO en *Journal of Applied Volcanology*** (avisó Alejandro el
+           2026-11-24), aún sin fecha ni DOI. Ya se puede citar como *in press*; JOSS acepta
+           «published papers or preprints» y, para lo que aún no es público, que se
+           «demonstrate[d] to the editorial team» (la carta de aceptación). Mejor con DOI: un
+           revisor puede comprobarlo él mismo. ⚠️ Los datos de esa figura siguen
+           CONFIDENCIALES hasta que se publique: el `paper.md` cita el artículo, no muestra la
+           figura.
+        4. **Declaración de uso de IA**: OBLIGATORIA, y omitirla «may be considered an ethical
+           breach». 321 de 480 commits llevan `Co-Authored-By: Claude`, así que hay que declarar
+           herramientas, alcance y que el diseño es humano. La defensa es fuerte (V0 1991, V1
+           1999–2024, y `docs/bitacora.md` documenta las decisiones), y el blog de JOSS de enero
+           de 2026 pone el acento justo ahí, en el diseño y la creatividad humanos.
+      - **El artículo** (`paper.md` + `.bib` en el repo). Plantilla de estructura: el de
+        svgdigitizer que Alejandro revisó (`../svgdigitizer`, rama `paper`, ~1650 palabras):
+        *Summary*, *Statement of Need*, *State of the Field* (frente a MetaPost, Asymptote,
+        TikZ y matplotlib: lenguaje descriptivo, figuras paramétricas que se recalculan solas,
+        tres backends idénticos byte a byte entre plataformas), *Software Design*, *Research
+        Impact Statement*, *AI Usage Disclosure*, *Acknowledgements*. Mantener la decisión del
+        README: no venderlo como «amigable para IA».
+      - JOSS no excluye lenguajes ni compiladores de figuras; excluye «minor utilities» y
+        paquetes de una sola función.
+      - **Borrador de la *AI Usage Disclosure*** (acordado con Alejandro el 2026-11-24; el
+        `paper.md` lo redacta él, en español o en inglés sencillo, y se traduce juntos). Datos
+        verificados en el historial: el primer commit con `Co-Authored-By: Claude` es del
+        2026-06-28 (vacaciones de la UNAM); 321 de 480 commits llevan el trailer; el grueso
+        es julio de 2026 (254 de 332). Hasta junio de 2026 no se usó IA, tampoco en el
+        refactor de diciembre de 2025. La traducción al inglés de la referencia y la galería
+        se hizo con IA. No se revisó línea por línea cada diff, y el texto lo dice.
+        **Evidencia del diseño humano previo:** `~/Dropbox/metagrafica/notas.txt`, un diario
+        con entradas fechadas del 2023-03-29 al 2024-12-17 (parser nuevo a mano, loops,
+        structs parametrizadas, tramado de una línea). Es PRIVADO, de tono personal: se le
+        muestra al editor si pregunta, no se publica. La evidencia pública son los 64 commits
+        de 2024 y `v2024.37-beta`. ⚠️ **NO** usar `ideas.txt` como prueba: entró a git el
+        2026-07-02, cuatro días DESPUÉS del primer commit con IA, y no hay copia anterior.
+
+        > **Tools.** From late June 2026 onward, development used Claude Code (Anthropic) with
+        > the models Claude Opus 4.8, Opus 5 and Opus 5.5, and occasionally Sonnet 4.6,
+        > Sonnet 5 and Fable 5. Every commit produced with AI assistance carries a
+        > `Co-Authored-By` trailer naming the model: 321 of the repository's 480 commits.
+        > Earlier history, including the December 2025 refactoring, was developed without
+        > generative AI. That covers MetaGráfica V0 (1991), V1 (1999–2024) and the figures of
+        > the textbook cited above.
+        >
+        > **Nature and scope.** The V3 redesign carries out ideas the author recorded in a
+        > dated development diary from March 2023 to December 2024 (a new hand-written parser,
+        > loops, parametrized structures, single-line hatch fills), part of which was already
+        > implemented without AI in the 2024 public history (64 commits, release
+        > `v2024.37-beta`). Because of the scale of the redesign, the author chose to carry it
+        > out with AI assistance from late June 2026. Several proposals were later revised or
+        > rejected on the author's decision, as recorded in the development log
+        > (`docs/bitacora.md`). AI assistance was used to implement, refactor and debug the V3
+        > compiler and its EPS, SVG and PDF backends, to build the regression-test gates and
+        > auxiliary tools, and to draft documentation. It was also used to translate the
+        > English reference manual and gallery from the Spanish originals, and to translate
+        > this paper from a draft written by the author. The language design is the
+        > author's: the V3 grammar, its semantics and every design decision.
+        >
+        > **Human review.** The author directed all work and approved every change before
+        > committing it, and made all commits and releases. Changes were verified by ten
+        > automated test gates rather than line-by-line review of every diff. The gates
+        > include cross-backend parity checks that compare the three outputs against each
+        > other rather than against blessed results. Rendered figures were inspected
+        > visually, and the example figures were compared against their published originals.
+
+        Los números (321/480) hay que RECONTARLOS al enviar:
+        `git log --format=%B | grep -c 'Co-Authored-By: Claude'` y `git rev-list --count HEAD`.
+
 - [ ] 📰 **Incrustar las fuentes de TEXTO: hecho para Times en PDF, falta el resto** (abierto
       2026-10-19 al entregar la Fig. 3 de ceniza a Journal of Applied Volcanology; los sistemas
       de envío revisan que las fuentes vayan incrustadas). **HECHO el mismo día:** el PDF
