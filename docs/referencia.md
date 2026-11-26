@@ -1236,7 +1236,9 @@ salta es `ln: argumento no positivo`.
 
 **Compilar por partes.** `exit`, en una línea al **nivel superior** del archivo, detiene ahí
 la lectura: lo que sigue se ignora, incluidos sus errores de sintaxis. Sirve para levantar
-una figura por etapas sin comentar el resto ni mantener copias.
+una figura por etapas sin comentar el resto ni mantener copias. Cada vez que corta, el
+compilador avisa en qué línea (y de qué archivo, si es uno incluido), para que un `exit`
+olvidado no deje una figura incompleta sin que lo notes.
 
 ```octave
 polyline { 0 0  1 1 }

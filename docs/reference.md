@@ -1206,7 +1206,9 @@ its turning point cease to exist, and what pops up is `ln: non-positive argument
 
 **Compile in parts.** `exit`, on a line at the **top level** of the file, stops reading there: what follows
 is ignored, including its syntax errors. It serves to raise a figure in stages without commenting out the
-rest or keeping copies.
+rest or keeping copies. Every time it stops, the compiler warns you at which line (and of which
+file, if it is an included one), so a forgotten `exit` doesn't leave an incomplete figure without
+you noticing.
 
 ```octave
 polyline { 0 0  1 1 }
@@ -1367,4 +1369,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ 2ccfdc890494ca5aef1e4e8027261cf44825917e -->
+<!-- translated-from: referencia.md @ 35de6bb3d270fc4854f688a3e2fe185c6ddb3cef -->

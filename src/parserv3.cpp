@@ -41,6 +41,8 @@ View3D g_view3d;
 // --- Interfaz al scanner generado por Flex (src/lexer.l) ---------------------
 extern int   yylex();
 extern char *yytext;
+extern int   yylineno;
+extern int   yycolumn;           // definida en lexer.l
 struct yy_buffer_state;
 typedef yy_buffer_state *YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(const char *);
@@ -59,6 +61,10 @@ struct Lexer {
   size_t pos = 0;
 
   void tokenize(const char *src) {
+    // Los contadores de flex son globales y yy_scan_string no los reinicia: sin
+    // esto, las líneas de un `include` seguirían contando desde el principal.
+    yylineno = 1;
+    yycolumn = 1;
     YY_BUFFER_STATE buf = yy_scan_string(src);
     int t;
     while ((t = yylex()) != 0) {
@@ -4944,7 +4950,8 @@ static StmtPtr parseInvoke(Lexer &lx, const std::string &name) {
 }
 
 // Parsea un flujo ya tokenizado en una lista de sentencias (sin ejecutar).
-static std::vector<StmtPtr> parseProgram(Lexer &lx) {
+// `incluido` es la ruta cuando se lee un `include`; vacía para el principal.
+static std::vector<StmtPtr> parseProgram(Lexer &lx, const std::string &incluido = "") {
   std::vector<StmtPtr> prog;
   while (lx.peek().type != T_EOF) {
     if (lx.accept(T_NEWLINE)) continue;          // saltar líneas en blanco/separadores
@@ -4958,7 +4965,12 @@ static std::vector<StmtPtr> parseProgram(Lexer &lx) {
     // parseProgram lo usan tanto el documento principal como cada `include`, de modo
     // que un `exit` en un incluido corta ESE archivo y el principal sigue, que es lo
     // que dice la spec («detiene el procesamiento del archivo»).
-    if (lx.peek().type == T_IDENTIFIER && lx.peek().str == "exit") break;
+    if (lx.peek().type == T_IDENTIFIER && lx.peek().str == "exit") {
+      warn("con 'exit' se compila hasta la línea ",
+           std::to_string(lx.peek().line) +
+           (incluido.empty() ? "" : " de " + incluido));
+      break;
+    }
     prog.push_back(parseStatement(lx));
   }
   return prog;
@@ -4981,7 +4993,7 @@ static std::vector<StmtPtr> parseFile(const std::string &path) {
   ss << in.rdbuf();
   Lexer lx;
   lx.tokenize(ss.str().c_str());
-  return parseProgram(lx);
+  return parseProgram(lx, path);
 }
 
 static bool fileReadable(const std::string &p) {
