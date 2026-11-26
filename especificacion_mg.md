@@ -18,7 +18,7 @@
 | Caso (case) | **Todo en minúsculas**; `snake_case` para compuestos inevitables (`world_window`, `tick_size`). Se **recomienda Capitalizar** los nombres de structs del usuario (`Flecha`, `Tick`) para distinguirlas de los comandos |
 | Paths | Secuencias de pares `x y`; primitivas multi-punto aplican la operación en cada punto |
 | Transformaciones | Sentencias de estado `translate`/`rotate`/`scale`/`shear`, con ámbito de bloque `{ }`, ver §7/§11 |
-| Posición de pluma | `moveto(x,y)` fija el punto actual; `step(...)` define el avance entre elementos, ver §12 |
+| Posición de pluma | **Descartada** (2026-11-25): no hay punto actual; la posición va siempre explícita, en el bloque `{ }` o con `at=`/`advance=` en la llamada, ver §12 |
 | Condicionales | `if cond { } else { }` con comparadores y `and`/`or`, ver §6.1 |
 | Recursión | Las structs pueden autoinvocarse; paro con `if`, límite con `max_depth`, ver §8.1 |
 | Aspect ratio | Espacio isométrico por construcción: escala uniforme (*meet*) + margen; deformación solo con `stretch=true`, ver §3.1 |
@@ -53,7 +53,6 @@ Statement   ::= ConfigStmt
               | Block
               | CompoundStmt
               | RepeatStmt
-              | PenStmt
               | Generator
               | Placement
               | Primitive
@@ -79,15 +78,13 @@ Import      ::= "include" STRING
 
 CompoundStmt  ::= "compound" "(" [ArgList] ")" "{" (Primitive | Placement)* "}"
 RepeatStmt    ::= "repeat" "(" ID "," ArgList ")"
-PenStmt       ::= "moveto" "(" Expression "," Expression ")"
-              | "step"   "(" ArgList ")"
 Generator     ::= "ticks"   "(" ArgList ")"
               | "numbers" "(" ArgList ")"
               | "axis"    "(" ArgList ")" "{" PointList "}"
               | "grid"    "(" ArgList ")" "{" PointList "}"
 
 Primitive   ::= PrimName "(" [ArgList] ")" "{" PointList "}"
-TextStmt    ::= "text" "(" STRING ["," ArgList] ")" [ "{" PointList "}" ]
+TextStmt    ::= "text" "(" STRING ["," ArgList] ")" "{" PointList "}"   % bloque obligatorio (§12)
 
 Placement   ::= "place" "(" ID [ "," ArgList ] ")" "{" Locus "}"
               | "fit"   "(" ID ")" "{" PointList "}"
@@ -380,7 +377,7 @@ text("$\alpha + \beta = \gamma$", align="center", valign="middle") { x y }
 text("etiqueta") { 0 0  5 5  10 0 }   % la misma cadena en varios puntos
 ```
 
-Los atributos por-primitiva de `text()` son `font_size` (alias `size`), `font` (cara: `"roman"`/`"italic"`/`"bold"`/`"sanserif"`/`"courier"`…, §14.3), `color`, `align` y `valign`; todos combinan entre sí y con el markup interno del string. El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). La forma sin bloque (o con bloque vacío), `text("...")`, dibuja en la posición de pluma (§12.1). El markup interno del string se documenta en §14.
+Los atributos por-primitiva de `text()` son `font_size` (alias `size`), `font` (cara: `"roman"`/`"italic"`/`"bold"`/`"sanserif"`/`"courier"`…, §14.3), `color`, `align` y `valign`; todos combinan entre sí y con el markup interno del string. El argumento `align` (horizontal) puede ser `"left"` (default), `"center"`, `"right"`; `valign` (vertical) puede ser `"baseline"` (default), `"top"`, `"middle"`, `"bottom"`. Son ortogonales: se combinan y se fijan por separado, también como estado (§7.3). El bloque es **obligatorio y no vacío**: no hay posición de pluma de la que tomar el punto (§12). El markup interno del string se documenta en §14.
 
 ### 4.9 ellipse — elipse completa
 
@@ -1189,7 +1186,7 @@ Por default preserva la proporción de la struct: escala uniforme al mayor tama�
 | `RPPT name n` | `path x = tile(&name, times=n)` | Repetir path (álgebra) |
 | `CTPT name` + ... `CLPT` | `path x = concat(...)` | Concatenar paths |
 
-> **Resuelto:** el repetidor V1 `RPST n` se mapea a `repeat(...)` (§17), que avanza la posición con `step` (§12) y acumula una transformación sobre la struct. Cuando no hay acumulación, un `for` loop es equivalente.
+> **Resuelto:** el repetidor V1 `RPST n` se mapea a `repeat(...)` (§17), que avanza la posición con `advance=` y acumula una transformación sobre la struct. Cuando no hay acumulación, un `for` loop es equivalente.
 
 ---
 
@@ -1201,7 +1198,7 @@ MetaGráfica transforma cada coordenada a través de una pila de matrices homog�
 |---|---|---|
 | **Local** (MTLC) | Transformación local a un bloque | sentencias `translate`/`rotate`/`scale`/`shear` (§11.1) |
 | **Structure** (MTST) | Rotación/escala de una struct colocada | placements (automático, §10) o `transform` alrededor de la llamada (§11.2) |
-| **Plume** (MTPP) | Avance de la pluma entre elementos generados | `step(...)` (§12) |
+| **Plume** (MTPP) | Avance de la pluma entre elementos generados | **sin superficie** (§12): `at=`/`advance=` en cada generador y en `repeat` |
 | **Path** (MTPT) | Se aplica al reutilizar un path nombrado | álgebra de paths (§9), normalmente implícito |
 | **Repeat** (MTRS) | Transformación acumulada en repeticiones de struct | `repeat(...)` (§17) |
 
@@ -1256,44 +1253,35 @@ No se necesita sintaxis adicional: MTST se deriva de la composición léxica de 
 
 ---
 
-## 12. Posición de pluma y dibujo relativo
+## 12. Posición de pluma — DESCARTADA (2026-11-25)
 
-> ⚠️ **No implementado en V3 (verificado 2026-07-15).** `moveto`/`step` no existen en el parser (`moveto(0,0)` falla como "struct no definida") y un bloque de posición vacío no dibuja: `text("x") { }` no estampa nada, en vez de usar el punto actual. Los generadores §13 y `repeat` §17 se hicieron **autocontenidos** (`at=`/`advance=`) y ningún ejemplo del corpus lo necesita, así que la sección describe un diseño **pendiente**, no el estado del compilador. Mientras tanto, la posición va siempre explícita en el bloque `{ }`.
+V1 tenía una **posición de pluma**: un punto `pp` (fijado con `XYPP x y`) y una matriz de avance `MTPP` (`TLPP`, `RTPP`…). Cuatro comandos la leían y la avanzaban: `DT` (texto), `TICKS`, `GNNUM` y `RPST`. Hasta esta fecha esta sección describía su heredera V3 —`moveto(x, y)` y `step(translate=, rotate=, scale=)`, con `text("…")` sin bloque dibujando en la pluma— como diseño **pendiente**; nunca se implementó (`moveto(0,0)` falla como «struct no definida»).
 
-Además de las coordenadas absolutas, MetaGráfica mantiene una **posición de pluma** (el *punto actual*). Sirve para (a) secuencias de texto, (b) los generadores (§13) y (c) el dibujo incremental.
+**Decisión: V3 no tiene pluma.** La posición de cada elemento va siempre explícita: en el bloque `{ }` o con `at=`/`advance=` en la propia llamada. Se revisaron el corpus V1 y el V3 preguntando si revivirla haría más sencillo escribir algún ejemplo como se escribía antes de los lazos, y la respuesta fue no:
 
-- **`moveto(x, y)`** — fija la posición de pluma en coordenadas de usuario. *(V1: `XYPP x y`.)*
-- **`step(translate=(dx,dy), rotate=deg, scale=(sx,sy))`** — define la **transformación de avance**: cómo se mueve la pluma de un elemento al siguiente en los generadores y en el texto secuencial. *(V1: la matriz `MTPP`, p. ej. `TLPP dx dy`, `RTPP a`.)*
+| Uso en V1 | Archivos V1 | En V3 |
+|---|---|---|
+| `TICKS n dx dy` | fig2-3, fig2-6, fig6-10 | `ticks(…, at=, advance=)` (§13.1) o `axis` (§13.5) |
+| `GNNUM` | fig2-3, fill_styles | `numbers(…, at=, advance=)` (§13.2) o `axis` |
+| `RPST n` | rpstest | `repeat(…, at=, advance=, transform=)` (§17) |
+| `DT` en secuencia | fig6-1, fig2-3 | `text` con coordenadas explícitas; los renglones apilados, texto multilínea |
 
-La transformación de `step` se **acumula**: en cada avance se aplica al punto actual. Como puede incluir rotación y escala, permite disposiciones radiales o en espiral, no solo lineales.
+- **Ningún lazo `for` del corpus V3 es de forma de pluma.** Hay en 15 ejemplos, y todos calculan curvas, indexan listas paralelas (`styles[i]`, `simb[i]`) o acomodan en rejilla con `mod`: cosas que un punto que avanza por un paso fijo no hace.
+- **Las secuencias de texto a paso fijo son pocas y cortas**: 6 corridas de 3–4 textos (`espectro`, `reflectancia_vegetacion`, `texto`), que con coordenadas explícitas se leen bien.
+- **El traductor V1→V3 ya resuelve la pluma en estático** (`tools/mg1to2.py` la sigue mientras traduce y emite posiciones explícitas), así que la compatibilidad no la necesita.
+- **Es estado global implícito**, justo lo que hizo frágil la recursión en V1 (§8.1), y obligaría a decidir si el cuerpo de una struct ve y avanza la pluma del llamador, contra la barrera de ámbito de las escrituras.
 
-> El comando de pluma `step(...)` (una llamada) no debe confundirse con la palabra clave `step` del `for` loop (§6, infija) ni con el argumento `step=` de `axis` (§13.5, intervalo de valor). El contexto los distingue.
+**Consecuencia: una primitiva de coordenadas o un `text` sin bloque es un error** (o un aviso; por decidir), no una figura en blanco. ⚠️ **Hoy el parser los acepta en silencio**: compilan con exit 0 y no dibujan nada (ver `PENDIENTES.md`, «Tres silencios»). Siguen siendo legítimas sin bloque las formas que llevan su posición en los argumentos: `rectangle(w, h, at=)` y la de trayecto `polyline(&p)`.
 
-### 12.1 Texto secuencial
-
-`text("...")` (sin bloque) dibuja en la posición de pluma y la avanza un `step`. Es la forma relativa de `text("...") { x y }`, que es absoluto. *(V1: `DT`.)*
-
-```text
-moveto(0, 0)
-step(translate=(0, -0.6))
-text { "Primera línea" }
-text { "Segunda línea" }     % colocada un step más abajo
-text { "Tercera línea" }
-```
-
-### 12.2 Relación con los generadores
-
-Los generadores (§13) toman `moveto` como punto de partida y `step` como avance entre elementos. Definir la pluma y el avance una vez evita repetir coordenadas en cada marca, número o repetición.
-
-> **Principio de diseño.** `moveto`/`step` son el mecanismo de *bajo nivel* heredado del motor (la matriz de pluma). Para las tareas comunes —ejes y retículas— se recomiendan las construcciones declarativas `axis` y `grid` (§13.5–§13.6), que esconden por completo la pluma. Además, los generadores (§13) aceptan `at=(x,y)` y `advance=(dx,dy)` en la propia llamada, evitando el trío `moveto`/`step`/generador cuando basta un avance por traslación. La meta de V3 es que el modelo de pluma sea un detalle de implementación, no la API que el usuario maneja a diario.
+**La puerta no queda cerrada.** Pasar de error a válido es compatible, y por eso se hace error ahora; lo contrario —que un bloque faltante pasara de no dibujar a dibujar en la pluma— cambiaría la salida en silencio. Si alguna figura llega a pedir las secuencias de texto, la forma preferida no es la pluma sino un `text` **autocontenido** como `numbers`: una lista de cadenas con `at=`/`advance=` en la llamada, sin estado que se filtre de una sentencia a otra.
 
 ---
 
 ## 13. Generadores y ejes
 
-Los generadores producen series de elementos repetidos a partir de la posición de pluma (§12) y la transformación de avance `step`. Son la base para construir ejes, retículas y escalas sin escribir cada coordenada a mano.
+Los generadores producen series de elementos repetidos a partir de una posición inicial `at=(x,y)` y un avance `advance=(dx,dy)` en la propia llamada; son autocontenidos y no comparten estado entre sí (no hay pluma, §12). Son la base para construir ejes, retículas y escalas sin escribir cada coordenada a mano.
 
-**Dos niveles.** `ticks`, `numbers` y `trail` (§13.1–§13.4) son los generadores *de bajo nivel*: exponen la pluma y el `step` directamente, y dan control total. Por encima de ellos, `axis` y `grid` (§13.5–§13.6) son construcciones *declarativas* que orquestan la pluma internamente: un humano describe el rango y la decoración, no la mecánica de avance. **Para ejes y retículas comunes, usa `axis`/`grid`; recurre a los generadores de bajo nivel solo para casos no estándar.**
+**Dos niveles.** `ticks`, `numbers` y `trail` (§13.1–§13.4) son los generadores *de bajo nivel*: exponen la posición inicial y el avance directamente, y dan control total. Por encima de ellos, `axis` y `grid` (§13.5–§13.6) son construcciones *declarativas* que calculan posiciones y avance internamente: un humano describe el rango y la decoración, no la mecánica de avance. **Para ejes y retículas comunes, usa `axis`/`grid`; recurre a los generadores de bajo nivel solo para casos no estándar.**
 
 ### 13.0 Anatomía de una gráfica: nomenclatura
 
@@ -1394,40 +1382,30 @@ fig_polybar). El default es `"center"`: es lo que espera quien llega de matplotl
 ### 13.1 ticks — marcas de eje
 
 ```text
-moveto(0, 0)
-step(translate=(2, 0))
-ticks(6, mark=(0, 0.3))
-
-% forma compacta equivalente: posición y avance en la propia llamada
 ticks(6, mark=(0, 0.3), at=(0, 0), advance=(2, 0))
 ```
 
-Genera `count` marcas; cada marca es un segmento dado por el vector `mark=(dx,dy)`, dibujado en la posición de pluma, que avanza con `step` en cada repetición. *(V1: `TICKS n dx dy`, con la pluma y `MTPP`.)*
+Genera `count` marcas; cada marca es un segmento dado por el vector `mark=(dx,dy)`, dibujado a partir de `at` y desplazado `advance` en cada repetición. *(V1: `TICKS n dx dy`, con la pluma y `MTPP`.)*
 
 - `count` — número de marcas (posicional).
 - `mark=(dx,dy)` — vector que define longitud y dirección de cada marca.
-- `at=(x,y)` / `advance=(dx,dy)` — opcionales: fijan la posición inicial y el avance en la propia llamada, en lugar de `moveto`/`step`. `advance` es la traslación de posición entre marcas (equivale a `step(translate=…)`).
+- `at=(x,y)` / `advance=(dx,dy)` — posición inicial y traslación entre marcas.
 
 ### 13.2 numbers — etiquetas numéricas
 
 ```text
-moveto(0, -0.5)
-step(translate=(2, 0))
-numbers(from=0, by=2, count=6, decimals=0)   % 0  2  4  6  8  10
-
-% forma compacta equivalente (posición y avance en la llamada):
-numbers(from=0, by=2, count=6, decimals=0, at=(0, -0.5), advance=(2, 0))
+numbers(from=0, by=2, count=6, decimals=0, at=(0, -0.5), advance=(2, 0))   % 0  2  4 … 10
 
 % con decoración textual literal (envuelve al número ya formateado por decimals):
 numbers(from=1, by=1, count=5, decimals=0, prefix="Pattern ")   % Pattern 1 … Pattern 5
 numbers(from=10, by=10, count=5, decimals=0, suffix=" K")       % 10 K  20 K … 50 K
 ```
 
-Genera `count` etiquetas numéricas, empezando en `from` e incrementando `by` en cada paso, con `decimals` decimales, en el estilo de texto actual (§14), posicionadas en la pluma y avanzando con `step`. Opcionalmente, `at=(x,y)` y `advance=(dx,dy)` fijan la posición inicial y el avance en la propia llamada, sin `moveto`/`step`. *(V1: `GNNUM i0 inc n decimals`.)*
+Genera `count` etiquetas numéricas, empezando en `from` e incrementando `by` en cada paso, con `decimals` decimales, en el estilo de texto actual (§14), a partir de `at=(x,y)` y desplazadas `advance=(dx,dy)` entre una y otra. *(V1: `GNNUM i0 inc n decimals`.)*
 
 Los argumentos opcionales `prefix` y `suffix` son cadenas **literales** que se anteponen y posponen al número ya formateado por `decimals` (`prefix="Pattern "` → `Pattern 3`; `suffix=" K"` → `20 K`). No son un lenguaje de formato: el número lo sigue gobernando `decimals`, y prefix/suffix solo lo envuelven —ejes ortogonales que componen sin conflicto. Con ellos, una etiqueta que *contiene* un número (un rótulo `Pattern n`, una marca con unidades) deja de necesitar una `text` por elemento. `axis` (§13.5) los propaga a sus `numbers` internos, para rotular marcas con unidades.
 
-> Nota: hay dos ejes independientes. `by` es el incremento del **valor numérico** impreso; `advance` (o `step`) es la traslación de la **posición** entre etiquetas. Se usa `advance` —no `step`— en la llamada, precisamente para no confundirlos.
+> Nota: hay dos ejes independientes. `by` es el incremento del **valor numérico** impreso; `advance` es la traslación de la **posición** entre etiquetas. Se llama `advance` —no `step`— para no confundirlo con la palabra clave del `for` (§6) ni con el `step=` de `axis` (§13.5).
 
 ### 13.3 Eje completo, a bajo nivel (ejemplo)
 
@@ -1436,13 +1414,8 @@ Combinando una polilínea con `ticks` y `numbers` se obtiene un eje X de 0 a 10 
 ```text
 polyline { 0 0  10 0 }                       % línea del eje
 
-moveto(0, 0)
-step(translate=(2, 0))
-ticks(6, mark=(0, -0.3))                     % marcas hacia abajo
-
-moveto(0, -0.7)
-step(translate=(2, 0))
-numbers(from=0, by=2, count=6, decimals=0)   % etiquetas
+ticks(6, mark=(0, -0.3), at=(0, 0), advance=(2, 0))                     % marcas hacia abajo
+numbers(from=0, by=2, count=6, decimals=0, at=(0, -0.7), advance=(2, 0))   % etiquetas
 ```
 
 ### 13.4 trail — generar un path por avance
@@ -1457,7 +1430,7 @@ Genera un path nombrado con `count` puntos, empezando en `start` y aplicando la 
 
 ### 13.5 axis — eje declarativo
 
-`axis` describe un eje completo (línea + marcas + rótulos + nombre del eje opcional) en una sola sentencia. El bloque `{ }` da los dos extremos físicos del eje; los argumentos describen el rango numérico y la decoración. Internamente es un `place` a lo largo de una línea (§10.1) que coloca marcas y etiquetas calculadas desde el rango — la pluma y el `step` se orquestan solos.
+`axis` describe un eje completo (línea + marcas + rótulos + nombre del eje opcional) en una sola sentencia. El bloque `{ }` da los dos extremos físicos del eje; los argumentos describen el rango numérico y la decoración. Internamente es un `place` a lo largo de una línea (§10.1) que coloca marcas y etiquetas calculadas desde el rango — posiciones y avance se calculan solos.
 
 > **Nomenclatura: §13.0.** `label` es el **nombre del eje** (el `xlabel`/`ylabel` de matplotlib),
 > **no** el encabezado del plot — ese nombre (`title`) está reservado para `plot`. Los rótulos de
@@ -1540,7 +1513,7 @@ decisión de página y ningún anclaje da. Seguirían a mano. Súmale que haría
 proyecto: no especular sin ejemplo). Si ese día se elige la caja, revisar que no mueva fig2-3 /
 fig6-4 / fig_polybar, donde eje y borde coinciden y no debe cambiar un píxel.
 
-La orientación de marcas y etiquetas se deriva de la dirección de la línea (la lógica de tangente del motor de placements), así que un eje horizontal, vertical o inclinado se escriben igual, cambiando solo los extremos del bloque. Aquí `step` es el **intervalo de valor** (como en el `for` loop, §6), no el `step` de avance de pluma (§12).
+La orientación de marcas y etiquetas se deriva de la dirección de la línea (la lógica de tangente del motor de placements), así que un eje horizontal, vertical o inclinado se escriben igual, cambiando solo los extremos del bloque. Aquí `step` es el **intervalo de valor** (como en el `for` loop, §6), no un avance de posición (eso es `advance=`, §13.1).
 
 *(V1: combinación manual de `TICKS` + `GNNUM` + `LNST`/`PL`; ver el desglose de bajo nivel en §13.3.)*
 
@@ -2297,7 +2270,7 @@ La ventana anidada se mapea **isométricamente** a su región, igual que la glob
 
 ## 17. Repetición de estructuras (repeat)
 
-`repeat` coloca la struct indicada `count` veces, avanzando la posición con `step` (§12) y, opcionalmente, **acumulando** una transformación sobre la struct en cada repetición. Esto es lo que permite espirales, patrones de crecimiento y disposiciones cuasi-fractales que un `for` loop expresa de forma menos compacta.
+`repeat` coloca la struct indicada `count` veces, avanzando la posición con `advance=` y, opcionalmente, **acumulando** una transformación sobre la struct en cada repetición. Esto es lo que permite espirales, patrones de crecimiento y disposiciones cuasi-fractales que un `for` loop expresa de forma menos compacta.
 
 ```text
 repeat(Hoja, count=8, transform=scale(0.85), at=(0, 0), advance=(1.5, 0))
@@ -2306,7 +2279,7 @@ repeat(Hoja, count=8, transform=scale(0.85), at=(0, 0), advance=(1.5, 0))
 
 - `count` — número de repeticiones (nombrado).
 - `scale=s` / `scale=(sx,sy)` y `rotate=deg` — tamaño y giro **fijos** de cada instancia (matriz de estructura MTST), idénticos a los modificadores de `place` y de la invocación directa (§8/§10): se aplican **por igual** a todas las copias, **no** se acumulan.
-- `at=(x,y)` / `advance=(dx,dy)` — posición inicial y avance entre instancias, en la propia llamada (misma convención que los generadores, §13.2): evitan el par `moveto`/`step` previo y hacen cada `repeat` **autocontenido** —sin estado de pluma compartido que se filtre entre repeticiones. `advance` es una **traslación pura**; para un avance de pluma que además rote o escale (disposiciones radiales/espirales) se usa el comando `step(...)` (§12). Sin `at`/`advance` (ni `moveto`/`step`) se parte de la pluma vigente sin avanzar.
+- `at=(x,y)` / `advance=(dx,dy)` — posición inicial y avance entre instancias, en la propia llamada (misma convención que los generadores, §13.2): hacen cada `repeat` **autocontenido**, sin estado compartido que se filtre entre repeticiones (no hay pluma, §12). `advance` es una **traslación pura**: el giro o la escala acumulados sobre la copia van en `transform=`; una disposición cuyas **posiciones** describan un arco o una espiral se escribe con un `for` y `cos`/`sin`. Sin `advance`, todas las copias caen en `at`.
 - `transform=` — transformación acumulada sobre la struct: la instancia *k* recibe `transform` elevada a la *k* (composición sucesiva). Equivale a la matriz `MTRS` de V1. Acepta una composición de llamadas — p. ej. `transform=rotate(30) scale(0.95)` — que se multiplica como una sola matriz antes de acumularse:
 
 ```text
@@ -2471,11 +2444,11 @@ Auditoría completa de cada palabra clave del léxico V1 (`keyword_map` en `MGLe
 | `TLLC`/`RTLC`/`SCLC`/`SHLC` | `translate`/`rotate`/`scale`/`shear` (sentencias) | ✓ | §7 / §11 |
 | `IDLC` | (cierre del bloque `{ }`) | ✓ | §7.1 |
 | `··ST` (MTST) | `transform` sobre la llamada | ✓ | §11.2 |
-| `··PP` (MTPP) | `step(...)` | ✓ | §12 |
+| `··PP` (MTPP) | `advance=` en la llamada (sin pluma) | ✓ | §12 |
 | `··PT` (MTPT) | álgebra de paths | ✓ | §9 |
 | `··RS` (MTRS) | `repeat(transform=...)` | ✓ | §17 |
-| `XYPP` | `moveto` | ✓ | §12 |
-| `DT` | `text("s")` (en la pluma) | ✓ | §12.1 |
+| `XYPP` | `at=` en la llamada (sin pluma) | ✓ | §12 |
+| `DT` | `text("s") { x y }`, posición resuelta por el traductor | ✓ | §12 |
 | `XYDT` | `text("s") { x y }` | ✓ | §4.8 |
 | `TICKS` | `ticks` / `axis` | ✓ | §13.1 / §13.5 |
 | `GNNUM` | `numbers` | ✓ | §13.2 |

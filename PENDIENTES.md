@@ -949,20 +949,15 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
          legítimas sin bloque. Por decidir: error o aviso (`EXPECT_WARN`).
       3. **`text("…")` sin bloque (o con `{ }` vacío) tampoco dibuja** — cero `<text>` en el
          SVG, exit 0. Aquí la especificación promete otra cosa (punto siguiente).
-      - **La pluma (§12) NO está implementada** (verificado: `moveto(1,1)` → `struct no
-        definida: moveto`). §12 ya lo dice en su aviso del 2026-07-15. Se planteó que una
-        primitiva sin coordenadas se dibujara en la pluma: eso sería **semántica NUEVA**, ni
-        de V1 ni del diseño de §12 — en V1 (`git show origin/v1-legacy:src/Parser.cpp`) la
-        pluma `pp`/`mtpp` la usaban solo `DT` (texto, ~787), `RPST` (repetir struct, ~472) y
-        los generadores `TICKS`/`RPNUM`; las primitivas geométricas siempre llevaron sus
-        coordenadas. **Hacer error hoy el bloque faltante NO cierra la puerta a la pluma**:
-        error → válido es compatible; en blanco → dibuja cambiaría la salida en silencio.
-        Recomendación (Claude): error ahora y pluma cuando una figura la pida.
-      - **Tres frases de la especificación que hoy son falsas** (sin corregir):
-        `especificacion_mg.md:383` promete que `text("...")` sin bloque dibuja en la pluma y
-        no remite al aviso de §12; el ejemplo de §12.1 usa `text { "…" }`, que no es sintaxis
-        V3; y la intro de §13 dice que los generadores parten de la pluma, cuando son
-        autocontenidos (`at=`/`advance=`).
+      - ✅ **La pluma (§12): DESCARTADA el 2026-11-25** (decisión de Alejandro). Se revisaron
+        los dos corpus: en V1 solo la leían `DT`, `TICKS`, `GNNUM` y `RPST`, y V3 ya cubre los
+        tres últimos con `at=`/`advance=`; ningún `for` de V3 tiene forma de pluma, y las
+        secuencias de `text` a paso fijo son 6 corridas de 3–4. La especificación ya lo dice
+        (§12 reescrita; gramática, §4.8, §13, §17 y tablas V1→V3 alineadas, y con eso quedan
+        corregidas las tres frases falsas que se anotaban aquí). Para los puntos 2 y 3 queda
+        decidido el **qué** —un bloque faltante no dibuja en la pluma— y falta el **cómo**:
+        error o aviso. Si algún día hacen falta secuencias de texto, la vía es un `text`
+        autocontenido (lista de cadenas + `at=`/`advance=`), no la pluma.
       - ⚠️ **`test/errors/name_collision.mg` está en el árbol SIN `% EXPECT:`** (sin
         commitear): mientras siga así, `bash test/run.sh check` da `errfail=1`. Hoy no puede
         llevar `EXPECT`, porque no existe el diagnóstico que esperaría; o se termina con el
