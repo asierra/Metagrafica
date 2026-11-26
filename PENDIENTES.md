@@ -407,11 +407,15 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
       la familia; `/b` y `/e` caen a la serif. Igual en los tres, así que la Capa 3 no puede
       verlo. Arreglarlo es de diseño: el run tendría que llevar «negrita/itálica RELATIVA a la
       ambiente» y resolverse en `Text::draw`, que es donde se conoce la ambiente.
-- [ ] 🐞 **`world_window` degenerado no es error** (2026-11-24): `world_window 0 0 10 13`
-      —escrito con el orden `x0 y0 x1 y1` de SVG/PostScript en vez de `xmin xmax ymin ymax`—
-      da xmin = xmax y compila, con solo el aviso «la figura sale EN BLANCO». Debería ser
-      `evalError` si xmin ≥ xmax o ymin ≥ ymax, sugiriendo el orden. Lo tropezó el agente
-      escribiendo una prueba de memoria; la referencia lo documenta bien (§1).
+- [x] ~~🐞 **`world_window` degenerado no es error**~~ (2026-11-24) — **CERRADO 2026-11-25**
+      (`checkWindow`). Ahora es error si xmin ≥ xmax o ymin ≥ ymax, y si reordenar como
+      x0 y0 x1 y1 da una ventana válida, la sugiere (`0 0 10 13` → `0 10 0 13`). Destapó que
+      la **INVERTIDA** también estaba rota y sin aviso: no refleja el eje, GIRA la figura 180°
+      (escala uniforme negativa; `10 0 0 10` y `0 10 10 0` dan la misma salida), así que
+      también es error. ⚠️ **La ventana LOCAL de una struct, no:** se normaliza por eje y ahí
+      invertir SÍ refleja un eje, y solo a él (medido), así que dentro de una struct solo se
+      rechaza la degenerada. Fixtures: `world_window_orden_svg.mg`,
+      `world_window_invertida.mg` y `ventana_local_invertida.mg` (`EXPECT_NO_WARN`).
 - [x] ~~🔍 **`-`, `'` y `` ` `` NO eran el mismo glifo en EPS que en PDF/SVG**~~ — **CERRADO
       2026-10-19** (`docs/bitacora.md` 2026-10-19 «ter»): los tres significan ya lo que dice
       Unicode —guion, apóstrofo recto, acento grave— en los tres backends, y `text.cpp` los mide
@@ -874,13 +878,18 @@ el diario pedía y V3 ya cumplió no se lista: `-h`/`-v`, números de línea, `\
 headers en el Makefile, variables, loops, structs parametrizadas, gramática en inglés,
 PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
 
-- [ ] 🐞 **Un nombre de usuario puede chocar con una primitiva o función, y se ignora EN
-      SILENCIO** (diario, 2024-05-25: «Prevenir colisiones de estructuras o trayectos con
-      nombres reservados»). Verificado el 2026-11-24: `struct circle(r) { … }` compila sin
-      aviso y `circle(1)` dibuja el círculo PRIMITIVO, sin rastro de la struct; `sin = 2`
-      también se acepta. Debería ser `evalError` («`circle` es una primitiva; elige otro
-      nombre») al definir una struct, un path o una variable con nombre reservado, con su
-      prueba negativa en `test/errors/`. Barato. Es el más urgente de esta lista.
+- [x] ~~🐞 **Un nombre de usuario puede chocar con una primitiva o función, y se ignora EN
+      SILENCIO**~~ (diario, 2024-05-25: «Prevenir colisiones de estructuras o trayectos con
+      nombres reservados») — **CERRADO 2026-11-25**, y la entrada exageraba. Medido: variables,
+      funciones, comandos y paths viven en espacios de nombres SEPARADOS, así que `sin = 2`,
+      `circle = 2` y `path circle = …` no chocan (`sin(0.5)` sigue dando 0.479, `polyline(&circle)`
+      dibuja), y prohibirlos sería restringir sin ganar nada. Los dos choques reales se cerraron
+      como error fatal: una **struct** con nombre de comando (`shadowsStruct`, `e57ce30`) y
+      **ligar una constante** —`pi`, `true`, `false`, que `IdentExpr` resuelve antes que las
+      variables, así que `pi = 3.1416` se ignoraba y `pi` seguía valiendo 3.14159…—
+      (`rejectConstantName`: asignación, variable del `for` y parámetro de struct; un path
+      `&pi` sí es legítimo). Fixtures: `name_collision.mg`, `asignar_constante.mg` y
+      `ventana_local_invertida.mg` (casos legítimos).
 - [ ] 🎨 **Logo del proyecto** (diario, 2024-05-27: «Agregar un logo significativo»).
       Conviene tenerlo antes de JOSS: README, galería y release. Lo natural es hacerlo EN
       MetaGráfica y que el `.mg` viva en el repo.

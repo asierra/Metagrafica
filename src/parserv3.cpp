@@ -891,6 +891,37 @@ struct AssignStmt : Stmt {
 static int g_maxDepth = 32;
 static int g_structDepth = 0;
 
+// Una ventana con xmin >= xmax o ymin >= ymax no tiene uso: la DEGENERADA (ancho o alto
+// cero) deja todo fuera del lienzo, y la INVERTIDA no refleja un eje sino que GIRA la
+// figura 180° —la escala uniforme sale negativa y voltea los dos a la vez; medido el
+// 2026-11-25: `10 0 0 10` y `0 10 10 0` dan la misma salida—. El tropiezo típico es el
+// orden x0 y0 x1 y1 de SVG/PostScript, así que si reordenar da una ventana válida, se
+// sugiere. Hasta el 2026-11-25 solo avisaba «la figura sale EN BLANCO» (y la invertida,
+// ni eso).
+//
+// ⚠️ La ventana LOCAL de una struct es otra cosa: se normaliza POR EJE a la caja unidad,
+// y ahí invertir un eje SÍ lo refleja, y solo a él (medido: `1 0 0 1` refleja x, `0 1 1 0`
+// refleja y). Por eso para ella se rechaza solo la degenerada (`allowInverted`), que
+// dividiría entre cero.
+static void checkWindow(double a, double b, double c, double d, const char *where,
+                        bool allowInverted = false) {
+  if (allowInverted) {
+    if (a == b || c == d)
+      evalError((std::string(where) + " tiene ancho o alto cero (xmin == xmax o ymin == "
+                 "ymax): no hay caja que normalizar.").c_str());
+    return;
+  }
+  if (a < b && c < d) return;
+  char buf[512];
+  int n = std::snprintf(buf, sizeof buf, "%s %g %g %g %g: el orden es xmin xmax ymin ymax, y "
+                        "hace falta xmin < xmax y ymin < ymax (un eje invertido no lo "
+                        "refleja: gira la figura 180°).", where, a, b, c, d);
+  if (a < c && b < d && n > 0 && (size_t)n < sizeof buf)
+    std::snprintf(buf + n, sizeof buf - n, " Si lo escribiste como x0 y0 x1 y1, es: "
+                  "%s %g %g %g %g", where, a, c, b, d);
+  evalError(buf);
+}
+
 struct ConfigStmt : Stmt {
   std::string which;
   std::vector<ExprPtr> args;
@@ -904,6 +935,7 @@ struct ConfigStmt : Stmt {
       g_maxDepth = d;
     }
     else if (which == "world_window") {
+      checkWindow(n(0), n(1), n(2), n(3), "world_window");
       mg.setWindow(n(0), n(2), n(1) - n(0), n(3) - n(2));
       mg.setStretch(stretchE && stretchE->eval(s).num != 0.0);    // §13.7 marco de datos
     }
@@ -968,6 +1000,8 @@ static Box structBox(Scope &s, const StructDef *def) {
   if (def->localWindow.size() == 4) {
     double a = def->localWindow[0]->eval(s).num, b = def->localWindow[1]->eval(s).num;
     double c = def->localWindow[2]->eval(s).num, d = def->localWindow[3]->eval(s).num;
+    checkWindow(a, b, c, d, ("world_window de la struct " + def->name).c_str(),
+                /*allowInverted=*/true);
     return Box{a, c, b - a, d - c};
   }
   return Box{0, 0, 1, 1};
@@ -3944,6 +3978,19 @@ static bool isPrim(const std::string &n) {
          n == "dot" || n == "marker" || n == "arc" || n == "ellipse" || n == "bezier" ||
          n == "polybar" || n == "brace" || n == "smooth";   // smooth: primitiva §9.2 Y expresión de path (como sine)
 }
+// `pi`, `true` y `false` los resuelve IdentExpr ANTES de mirar las variables
+// (include/ast.h), así que ligarlos no tenía efecto: `pi = 3` compilaba y `pi` seguía
+// valiendo 3.14159, sin una palabra (hallado 2026-11-25). Lo mismo con la variable de un
+// for o el parámetro de una struct. Se señala el nombre. (Los paths, `&pi`, viven en
+// otro espacio de nombres y no chocan.)
+static void rejectConstantName(int line, int col, const std::string &n, const char *what) {
+  if (n != "pi" && n != "true" && n != "false") return;
+  std::fprintf(stderr, "Error de sintaxis en %d:%d: '%s' es una constante del lenguaje y no "
+               "se puede usar como %s: se ignoraría y '%s' seguiría valiendo lo de siempre. "
+               "Usa otro nombre.\n", line, col, n.c_str(), what, n.c_str());
+  std::exit(1);
+}
+
 // Nombres que parseStatement despacha ANTES de llegar a parseInvoke: una struct que se
 // llame así no se puede invocar nunca —el comando gana siempre—, y sin este control
 // `struct circle(r) {…}` + `circle(r=4) {…}` dibujaba un círculo sin decir nada.
@@ -4079,6 +4126,7 @@ static StmtPtr parseStatement(Lexer &lx) {
   const int nameLine = t.line, nameCol = t.col;   // para señalar AL NOMBRE, no a lo que le sigue
 
   if (lx.peek(1).type == T_ASSIGN) {          // asignación: ID = Expr
+    rejectConstantName(nameLine, nameCol, name, "variable");
     lx.next(); lx.next();
     auto st = std::make_unique<AssignStmt>();
     st->name = name;
@@ -4545,6 +4593,7 @@ static StmtPtr parseStructDef(Lexer &lx) {
     do {
       bool isPath = lx.accept(T_AMP);
       if (lx.peek().type != T_IDENTIFIER) parseError(lx, "un nombre de parámetro");
+      if (!isPath) rejectConstantName(lx.peek().line, lx.peek().col, lx.peek().str, "parámetro");
       def->params.push_back(lx.next().str);
       def->paramIsPath.push_back(isPath);
       def->defaults.push_back(lx.accept(T_ASSIGN) ? parseExpression(lx) : nullptr);
@@ -4575,6 +4624,7 @@ static StmtPtr parseFor(Lexer &lx) {
   lx.next();                                   // 'for'
   if (lx.peek().type != T_IDENTIFIER) parseError(lx, "la variable del for");
   auto st = std::make_unique<ForStmt>();
+  rejectConstantName(lx.peek().line, lx.peek().col, lx.peek().str, "variable del for");
   st->var = lx.next().str;
   if (!lx.accept(T_ASSIGN)) parseError(lx, "'=' en el for");
   st->start = parseExpression(lx);
