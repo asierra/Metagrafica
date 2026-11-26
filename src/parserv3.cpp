@@ -4041,6 +4041,32 @@ static void parseMixedArgList(Lexer &lx, std::vector<Arg> &pos,
   if (!lx.accept(T_RPAREN)) parseError(lx, "')'");
 }
 
+// Una primitiva o un text SIN coordenadas (sin bloque, o con `{ }` vacío) compilaba con
+// exit 0 y no dibujaba nada: `circle(4)`, `text("hola")`. V3 no tiene posición de pluma
+// de la que tomar el punto (§12, descartada 2026-11-25), así que es un error. Se señala
+// al NOMBRE, que es donde empieza la sentencia incompleta. Pasar de error a válido es
+// compatible si algún día hiciera falta; lo contrario cambiaría figuras en silencio.
+// El bloque BAJADO a la línea siguiente (`rectangle(fill="red")` + `{ 0 0 4 3 }` abajo)
+// tiene su propio diagnóstico, más preciso, en parseBlock («este '{' abre un bloque de
+// ámbito»). Si lo que sigue, saltando renglones, es un '{', se le cede el paso.
+static bool braceOnNextLines(const Lexer &lx) {
+  int k = 0;
+  while (lx.peek(k).type == T_NEWLINE) k++;
+  return k > 0 && lx.peek(k).type == T_LBRACE;
+}
+
+[[noreturn]] static void missingCoords(int line, int col, const std::string &name, bool hadBlock) {
+  std::string hint;
+  if (name == "text")           hint = "text(\"…\") { x y }";
+  else if (name == "rectangle") hint = "rectangle { x1 y1  x2 y2 }, o rectangle(w=, h=, at=)";
+  else                          hint = name + "(…) { x y … }, o un trayecto: " + name + "(&p)";
+  std::fprintf(stderr, "Error de sintaxis en %d:%d: '%s' %s, así que no dibujaría nada. "
+               "Forma: %s\n", line, col, name.c_str(),
+               hadBlock ? "tiene el bloque de coordenadas vacío" : "no tiene bloque de coordenadas",
+               hint.c_str());
+  std::exit(1);
+}
+
 static StmtPtr parseStatement(Lexer &lx) {
   const Tok &t = lx.peek();
   if (t.type == T_LBRACE) return parseBlock(lx);      // bloque anónimo (§7.1)
@@ -4102,7 +4128,9 @@ static StmtPtr parseStatement(Lexer &lx) {
         parseArgList(lx, st->pos, st->named);   // args (Expression)
       }
     }
+    bool hadBlock = false;
     if (lx.accept(T_LBRACE)) {                  // { coords }  (Term; ';' abre subtrayecto §4; newline se salta)
+      hadBlock = true;
       while (lx.peek().type != T_RBRACE && lx.peek().type != T_EOF) {
         if (lx.accept(T_SEMICOLON)) { st->breaks.push_back(st->coords.size()); continue; }
         if (lx.accept(T_NEWLINE)) continue;
@@ -4116,6 +4144,12 @@ static StmtPtr parseStatement(Lexer &lx) {
       if (name == "bezier") checkBezierControlCount(lx, st->coords, st->breaks);
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
     }
+    // Sin trayecto ni coordenadas no hay nada que dibujar. La única forma legítima así
+    // es rectangle(w=, h=, at=), que lleva su posición en los argumentos (§4.4).
+    bool atForm = name == "rectangle" &&
+                  (st->named.count("w") || st->named.count("h") || st->named.count("at"));
+    if (!st->pathArg && st->coords.empty() && !atForm && (hadBlock || !braceOnNextLines(lx)))
+      missingCoords(nameLine, nameCol, name, hadBlock);
     return st;
   }
   if (name == "repeat") return parseRepeat(lx);   // repeat(Struct, count=…, …) (§17)
@@ -4136,9 +4170,12 @@ static StmtPtr parseStatement(Lexer &lx) {
       }
       // allowsPoints=true: una coordenada puede ser un punto [x,y] (xyz, point_at),
       // que vale por dos siendo un término, así que la paridad se difiere al
-      // eval-time de TextStmt, que sí conoce el tipo. (Bloque vacío = pluma, §12.1.)
+      // eval-time de TextStmt, que sí conoce el tipo.
       checkCoordPairs(lx, "text", st->coords, {}, /*allowsPoints=*/true);
       if (!lx.accept(T_RBRACE)) parseError(lx, "'}'");
+      if (st->coords.empty()) missingCoords(nameLine, nameCol, "text", true);
+    } else if (!braceOnNextLines(lx)) {
+      missingCoords(nameLine, nameCol, "text", false);
     }
     return st;
   }

@@ -1271,7 +1271,7 @@ V1 tenía una **posición de pluma**: un punto `pp` (fijado con `XYPP x y`) y un
 - **El traductor V1→V3 ya resuelve la pluma en estático** (`tools/mg1to2.py` la sigue mientras traduce y emite posiciones explícitas), así que la compatibilidad no la necesita.
 - **Es estado global implícito**, justo lo que hizo frágil la recursión en V1 (§8.1), y obligaría a decidir si el cuerpo de una struct ve y avanza la pluma del llamador, contra la barrera de ámbito de las escrituras.
 
-**Consecuencia: una primitiva de coordenadas o un `text` sin bloque es un error** (o un aviso; por decidir), no una figura en blanco. ⚠️ **Hoy el parser los acepta en silencio**: compilan con exit 0 y no dibujan nada (ver `PENDIENTES.md`, «Tres silencios»). Siguen siendo legítimas sin bloque las formas que llevan su posición en los argumentos: `rectangle(w, h, at=)` y la de trayecto `polyline(&p)`.
+**Consecuencia: una primitiva de coordenadas o un `text` sin bloque —o con el bloque vacío— es un error fatal** (desde 2026-11-25; antes compilaban con exit 0 y no dibujaban nada). Siguen siendo legítimas sin bloque las formas que llevan su posición en los argumentos: `rectangle(w, h, at=)` y la de trayecto `polyline(&p)`.
 
 **La puerta no queda cerrada.** Pasar de error a válido es compatible, y por eso se hace error ahora; lo contrario —que un bloque faltante pasara de no dibujar a dibujar en la pluma— cambiaría la salida en silencio. Si alguna figura llega a pedir las secuencias de texto, la forma preferida no es la pluma sino un `text` **autocontenido** como `numbers`: una lista de cadenas con `at=`/`advance=` en la llamada, sin estado que se filtre de una sentencia a otra.
 

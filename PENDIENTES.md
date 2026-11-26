@@ -928,9 +928,8 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
 
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
-- [ ] 🐞 **Tres silencios que dan una figura distinta de la pedida** (destapados el
-      2026-11-25 al escribir `test/errors/name_collision.mg`; el 1 **cerrado**; el 2 y el 3, por
-      decidir si error o aviso). Es la misma familia que la aridad de structs (abajo, cerrada el
+- [x] 🐞 **Tres silencios que dan una figura distinta de la pedida** (destapados el
+      2026-11-25 al escribir `test/errors/name_collision.mg`; **los tres CERRADOS** el mismo día). Es la misma familia que la aridad de structs (abajo, cerrada el
       2026-07-22): exit 0, sin una palabra, y una salida que no es la que el usuario escribió.
       1. ✅ ~~**Una struct con nombre de primitiva queda oculta para siempre.**~~ —
          **CERRADO 2026-11-25.** `parseStructDef` aborta si el nombre es uno de los que
@@ -940,21 +939,24 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
          `(` sí llegan a la struct. ⚠️ `shadowsStruct` tiene que seguir a `parseStatement`:
          un comando nuevo despachado por nombre va también ahí. Fixture:
          `test/errors/name_collision.mg`. Ningún `.mg` del árbol usaba un nombre así.
-      2. **Una primitiva de coordenadas SIN bloque no dibuja nada.** El `{ coords }` es opcional
-         en la rama `isPrim` (`if (lx.accept(T_LBRACE))`), así que `circle(4)`, `polyline` y
-         `rectangle(w=2)` (sin `at`) compilan con exit 0 y dejan la figura en blanco. Ojo
-         antes de cerrarlo: `rectangle(w,h,at)` y la forma con trayecto `polyline(&p)` sí son
-         legítimas sin bloque. Por decidir: error o aviso (`EXPECT_WARN`).
-      3. **`text("…")` sin bloque (o con `{ }` vacío) tampoco dibuja** — cero `<text>` en el
-         SVG, exit 0. La especificación ya pide el bloque (§4.8, §12).
+      2. ✅ ~~**Una primitiva de coordenadas SIN bloque no dibuja nada.**~~ y
+      3. ✅ ~~**`text("…")` sin bloque (o con `{ }` vacío) tampoco dibuja.**~~ — **CERRADOS
+         2026-11-25, error fatal** (decisión de Alejandro). `missingCoords` en
+         `parseStatement` señala el nombre y da la forma correcta; el bloque vacío también es
+         error. Legítimas sin bloque: `rectangle(w=, h=, at=)` y la de trayecto
+         (`polyline(&p)`). ⚠️ Lo que se anotaba aquí de `rectangle(w=2)` era falso: es la
+         forma `at` con el centro en el origen, y dibuja. Si el `{` está en la línea
+         siguiente se cede el paso al diagnóstico del bloque bajado (`parseBlock`), que es más
+         preciso. Destapó una línea muerta en `examples/texto.mg` —`text("") { }`, de
+         `2f12d4c`—: se quitó y los goldens salieron byte-idénticos. Fixtures:
+         `primitiva_sin_bloque.mg`, `text_bloque_vacio.mg` y `primitiva_sin_bloque_legitima.mg`
+         (`EXPECT_NO_WARN`, en los tres backends).
       - ✅ **La pluma (§12): DESCARTADA el 2026-11-25** (decisión de Alejandro). Se revisaron
         los dos corpus: en V1 solo la leían `DT`, `TICKS`, `GNNUM` y `RPST`, y V3 ya cubre los
         tres últimos con `at=`/`advance=`; ningún `for` de V3 tiene forma de pluma, y las
         secuencias de `text` a paso fijo son 6 corridas de 3–4. La especificación ya lo dice
         (§12 reescrita; gramática, §4.8, §13, §17 y tablas V1→V3 alineadas, y con eso quedan
-        corregidas las tres frases falsas que se anotaban aquí). Para los puntos 2 y 3 queda
-        decidido el **qué** —un bloque faltante no dibuja en la pluma— y falta el **cómo**:
-        error o aviso. Si algún día hacen falta secuencias de texto, la vía es un `text`
+        corregidas las tres frases falsas que se anotaban aquí). Si algún día hacen falta secuencias de texto, la vía es un `text`
         autocontenido (lista de cadenas + `at=`/`advance=`), no la pluma.
 
 - [x] ~~🐞 **La invocación de struct NO comprueba la aridad de los parámetros
