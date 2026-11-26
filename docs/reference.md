@@ -43,6 +43,12 @@ font_size 9                    % body text size in typographic points
 `display_size` is the size of the box the figure occupies when embedded in another document —not that of a
 page—, in centimeters.
 
+The order of `world_window` is **xmin xmax ymin ymax**, not the `x0 y0 x1 y1` of SVG or
+PostScript, and it needs xmin < xmax and ymin < ymax: a window with zero width or height, or
+an inverted one, is an error. Inverting it would not mirror the axis; it would rotate the whole
+figure. (Inside a `struct` it is different: there, inverting an axis of its local window does
+mirror it, and that is allowed.)
+
 **Two classes of quantity, and they don't mix:**
 
 | class | unit | what it is | examples |
@@ -112,7 +118,11 @@ lives apart, in §10: it is not needed to start.
 
 ## 4. Primitives
 
-Each primitive carries its **coordinates in `{ }`** and its **arguments in `( )`**:
+Each primitive carries its **coordinates in `{ }`** and its **arguments in `( )`**. The
+block is **mandatory and cannot be empty**, and the same goes for `text`: there is no "current
+point" to take the position from, so a bare `circle(2)` or `text("hello")` is an error. The
+only forms without a block are the ones that carry their position in the arguments:
+`rectangle(w=, h=, at=)` and the path form, `polyline(&p)` ([§10](#10-path-algebra)).
 
 ```octave
 polyline { 0 0  1 2  3 1 }                 % open polyline
@@ -530,7 +540,9 @@ first = xs[0]
 
 **Functions:** `sin` `cos` `tan` `asin` `acos` `atan` `atan2(y,x)` `sqrt` `abs` `exp` `ln`
 `mod(a,b)` `deg(radians)` `rad(degrees)` `len(list)` `str(x)` `str(x,decimals)` `gray(g)`.
-Constants: `pi`, `true`, `false`.
+Constants: `pi`, `true`, `false`. They cannot be reassigned or used as the name of a
+variable, a `for` variable or a parameter: `pi = 3.1416` is an error (it used to be ignored,
+and `pi` kept its usual value).
 
 The trigonometric functions work in **radians**, while the angles of the primitives (`arc`,
 `rotate`, `view3d`…) are in **degrees**: `deg` and `rad` are the bridge, and it is worth using
@@ -630,6 +642,11 @@ for i = 0 to 11 { Frame(rotate=i*7.5, scale=1+i*0.35) }
 ```
 
 Placement arguments: `at=(x,y)`, `scale=`, `rotate=` (degrees), `transform=`.
+
+A `struct` **cannot be named after a command** (`circle`, `text`, `plot`, `grid`…): the
+command would always win and the struct could never be invoked, so defining it is an error.
+The convention of **Capitalizing** names (`Frame`, `Circle`) avoids it in passing, and also
+tells them apart from commands at a glance.
 
 **Path-typed parameters** — marked with `&` in the declaration:
 
@@ -1350,4 +1367,4 @@ generators `sine` `smooth` · reductions `path_width` `path_x_min_at_y` `path_x_
 `deg` `rad` `len` `str` `gray` `xyz` · constants `pi`
 `true` `false`
 
-<!-- translated-from: referencia.md @ edfb8bf1d6030e9a5e76d41e71e9bf63f869f392 -->
+<!-- translated-from: referencia.md @ 2ccfdc890494ca5aef1e4e8027261cf44825917e -->

@@ -40,6 +40,11 @@ font_size 9                    % cuerpo de letra en puntos tipográficos
 `display_size` es el tamaño del recuadro que ocupa la figura al embeberla en otro documento
 —no el de una página—, en centímetros.
 
+El orden de `world_window` es **xmin xmax ymin ymax**, no el `x0 y0 x1 y1` de SVG o
+PostScript, y hace falta xmin < xmax y ymin < ymax: una ventana con ancho o alto cero, o
+invertida, es error. Invertirla no reflejaría el eje; giraría la figura entera. (Dentro de un
+`struct` es distinto: ahí invertir un eje de su ventana local sí lo refleja, y vale.)
+
 **Dos clases de cantidad, y no se mezclan:**
 
 | clase | unidad | qué es | ejemplos |
@@ -111,7 +116,11 @@ suavizar, muestrear— y eso vive aparte, en §10: no hace falta para empezar.
 
 ## 4. Primitivas
 
-Cada primitiva lleva sus **coordenadas entre `{ }`** y sus **argumentos entre `( )`**:
+Cada primitiva lleva sus **coordenadas entre `{ }`** y sus **argumentos entre `( )`**. El
+bloque es **obligatorio y no puede ir vacío**, y lo mismo vale para `text`: no hay un «punto
+actual» del que tomar la posición, así que `circle(2)` o `text("hola")` solos son error. Las
+únicas formas sin bloque son las que llevan su posición en los argumentos: `rectangle(w=, h=,
+at=)` y la de trayecto, `polyline(&p)` ([§10](#10-álgebra-de-trayectos)).
 
 ```octave
 polyline { 0 0  1 2  3 1 }                 % polilínea abierta
@@ -535,7 +544,9 @@ primero = xs[0]
 
 **Funciones:** `sin` `cos` `tan` `asin` `acos` `atan` `atan2(y,x)` `sqrt` `abs` `exp` `ln`
 `mod(a,b)` `deg(radianes)` `rad(grados)` `len(lista)` `str(x)` `str(x,decimales)` `gray(g)`.
-Constantes: `pi`, `true`, `false`.
+Constantes: `pi`, `true`, `false`. No se pueden reasignar ni usar como nombre de variable,
+de variable de un `for` o de parámetro: `pi = 3.1416` es error (antes se ignoraba y `pi`
+seguía valiendo lo de siempre).
 
 Las trigonométricas trabajan en **radianes**, y los ángulos de las primitivas (`arc`, `rotate`,
 `view3d`…) en **grados**: `deg` y `rad` son el puente, y conviene usarlas en vez de multiplicar
@@ -638,6 +649,11 @@ for i = 0 to 11 { Cuadro(rotate=i*7.5, scale=1+i*0.35) }
 ```
 
 Argumentos de colocación: `at=(x,y)`, `scale=`, `rotate=` (grados), `transform=`.
+
+Un `struct` **no puede llamarse como un comando** (`circle`, `text`, `plot`, `grid`…): el
+comando ganaría siempre y el struct no se podría invocar nunca, así que definirlo es error.
+La convención de **Capitalizar** los nombres (`Cuadro`, `Circulo`) lo evita de paso, y además
+los distingue a la vista de los comandos.
 
 **Parámetros de tipo trayecto** — se marcan con `&` en la declaración:
 
