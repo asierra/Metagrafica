@@ -917,6 +917,7 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
 - [ ] 🔍 **Mensajes de depuración** (`-d` / `--verbose`). El diario lo pide tres veces
       (2024-02-07 «Falta logging», 2024-05-09 «hay que poner y borrar muchos printf en cada
       caso», 2024-08-01 «una versión práctica de mensajes de debug»). Sin figura que lo pida.
+      **Plan en BORRADOR: `plan_verbose.md`** (2026-11-25), con cinco decisiones abiertas.
 - [ ] 🔤 **Fuente por defecto desde la línea de comandos**, romana o matemática (diario,
       2023-12-07: «y así no se tienen que modificar los mgs»). Sin figura que lo pida.
 - [ ] 📐 **Catálogo de curvas** (diario, 2024-05-28: senoidales, cuadráticas, «cuadrado con
