@@ -27,6 +27,43 @@ rama v1-legacy (git show v1-legacy:src/Parser.cpp).
 #include "parserv3.h"
 #include "version.h"
 
+// Ayuda de uso. Recibe el FILE* porque va a stdout cuando la piden (-h) y a
+// stderr cuando es un error de uso (sin argumentos): un mensaje de error no
+// debe ensuciar la salida que un script captura.
+//
+// El texto va COMPLETO y en un solo bloque, a propósito: es el único lugar
+// donde vive, así que el día que haya un man en español la traducción es un
+// segundo bloque y no una cacería de printf por todo main().
+//
+// ⚠️ En INGLÉS, igual que man/mg.1.md: la ayuda remite al manual y las dos
+// piezas son una sola —una ayuda en español que manda a un texto en inglés
+// miente sobre lo que el lector va a encontrar—. Los errores y avisos del
+// compilador siguen en español (Code style). El nombre lleva acento, como el
+// resto de los mensajes (ver parserv3.cpp, "es un comando de MetaGráfica");
+// sin acento se escribe solo donde es identificador o formato de máquina:
+// %%Creator del EPS, la clase MetaGrafica, el nombre del paquete.
+static void usage(FILE *out) {
+  std::fprintf(out,
+    "MetaGráfica %s — compiler for scientific figures: EPS, SVG and PDF.\n"
+    "\n"
+    "Usage:  mg [options] <figure.mg> [output]\n"
+    "\n"
+    "  mg figure.mg            compiles to figure.eps\n"
+    "  mg figure.mg fig.svg    the output EXTENSION chooses the format:\n"
+    "  mg figure.mg fig.pdf    .eps (the default), .svg or .pdf\n"
+    "\n"
+    "Options:\n"
+    "  -h, --help      this help\n"
+    "  -v, --version   version\n"
+    "\n"
+    "The language itself is documented elsewhere:\n"
+    "  man mg                 the reference manual\n"
+    "  share/doc/metagrafica  reference (es/en), gallery and examples, as installed\n"
+    "  https://asierra.github.io/Metagrafica/docs/gallery.html\n"
+    "                         the gallery: every figure with its source\n",
+    MG_VERSION);
+}
+
 int main(int argc, char **argv) {
   // Los tres backends emiten números con printf ("%f"/"%g"), y printf respeta
   // LC_NUMERIC: en un locale de coma decimal, cada coordenada saldría «12,5» y
@@ -46,17 +83,20 @@ int main(int argc, char **argv) {
   std::string outfmt;   // extensión de salida solicitada por el usuario
 
   if (argc >= 2) {
-    if (!std::strcmp(argv[1], "-h")) {
-      std::printf("Please consult the man page \"man mg\"\n");
+    if (!std::strcmp(argv[1], "-h") || !std::strcmp(argv[1], "--help")) {
+      usage(stdout);
       return 0;
-    } else if (!std::strcmp(argv[1], "-v")) {
-      std::printf("Metagrafica version %s\n", MG_VERSION);
+    } else if (!std::strcmp(argv[1], "-v") || !std::strcmp(argv[1], "--version")) {
+      std::printf("MetaGráfica %s\n", MG_VERSION);
       return 0;
     } else {
       inname = argv[1];
     }
   } else {
-    std::fprintf(stderr, "Usanza:  mg [-h|-v] <archivo.mg> [salida.eps|salida.pdf|salida.svg]\n");
+    // Quien teclea `mg` a secas es justo el público nuevo: recibe la ayuda
+    // entera, no una línea de sintaxis. Por stderr y con exit 1, porque sigue
+    // siendo un error de uso.
+    usage(stderr);
     return 1;
   }
 

@@ -490,3 +490,16 @@ inspiración pero describía mal lo que el código hace):
   miembro en clase.
 - Idioma de comentarios y mensajes: **español**. Las características nuevas van **en el
   compilador** (nada de preprocesadores externos).
+- **El nombre oficial es `MetaGráfica`, CON ACENTO** (regla asentada el 2026-11-26), y es un
+  guiño a **MetaPost**, que inspiró el proyecto hace cuarenta años. Se escribe así en prosa
+  (los dos README, el man, la galería, la referencia) y en los **mensajes** del compilador,
+  que ya lo hacen —`parserv3.cpp:4584` dice «es un comando de MetaGráfica» y **esa cadena la
+  afirma una prueba negativa**, `test/errors/name_collision.mg`—, la ayuda de `mg -h` y
+  `mg -v` incluidos. Sin acento **solo** donde el nombre es un identificador o va en un
+  formato que lee una máquina: la clase C++ `MetaGrafica`, el `%%Creator: MetaGrafica` del EPS
+  (en los 33 goldens), el nombre del paquete y las rutas (`share/doc/metagrafica`), el repo
+  `asierra/Metagrafica`, el modo de Kate. ⚠️ **No lo «internacionalices» quitándole el
+  acento:** el usuario nunca escribe el nombre —teclea `mg`, clona el repo, lee el man—, así
+  que el acento no es una barrera que exista; y los libros publicados (Cambridge 2025, FCE)
+  dicen MetaGráfica y no se pueden retirar, así que divergir crearía una discrepancia con el
+  registro publicado — que es justo lo que un paper de JOSS tendría que citar.

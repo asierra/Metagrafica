@@ -1,5 +1,7 @@
 # plan_verbose.md — Mensajes de depuración (`--verbose` / `--debug`)
 
+Refuerza el objetivo de hacer más usable el programa para el público en general, dando pistas claras de qué falla en un archivo mg y cómo corregirlo.
+
 **Estado:** BORRADOR (abierto el 2026-11-25). Nada implementado. Las decisiones abiertas están
 al final y son de Alejandro.
 
@@ -101,8 +103,24 @@ estar comentados: así los compila cada `make` y no se pudren.
 
 ## 4. Pasos
 
-1. Análisis de opciones en `main.cpp` (`--verbose`, `--debug=`, `-h`, `-v`) y la función
-   `dbg`. Actualizar `man/mg.1.md` y la ayuda de `-h`, que hoy solo remite al man.
+1. Análisis de opciones en `main.cpp` y la función `dbg`. Va en **dos mitades**, y la
+   primera ya está:
+   - ✅ **HECHO el 2026-11-26** (sin relación con `--verbose`, se adelantó para que `-h`
+     sirviera de algo): `usage(FILE*)` con la ayuda completa en **un solo bloque**,
+     `-h`/`--help` a stdout, `-v`/`--version`, y sin argumentos la ayuda entera por `stderr`
+     con exit 1 (se fue la línea «Usanza:»). `man/mg.1.md` al día. La ayuda va **en inglés a
+     propósito**: remite a `man mg`, que está en inglés, y las dos piezas son una sola.
+   - ⬜ **Queda**: el análisis de opciones **general**. Hoy los flags solo valen en `argv[1]`
+     y cualquier otro argumento se toma como nombre de archivo, así que `mg -o x fig.mg`
+     responde «no se pudo abrir -o». Sin eso no cabe `--verbose figura.mg salida.svg`, que es
+     la interfaz de §3.1. Hecho a mano, sin `getopt` (§3.1).
+   - ⚠️ **`pandoc` convierte `--` en guión corto** (extensión *smart*): en `man/mg.1.md` hay
+     que escribir `\-\-verbose` y `\-\-debug`, o el man publica «–verbose», un flag que no se
+     puede copiar. Pasó con `--help` el 2026-11-26 y **se repite con cada flag largo nuevo**.
+   - 📋 **Al tocar esta mitad, decidir si la CLI entra a `humofail`**: hoy **ninguna compuerta
+     mira `stdout` ni `stderr` de una corrida EXITOSA** —los goldens comparan los bytes del
+     archivo y las negativas abortan antes de que exista un backend—, así que un `-h` que se
+     rompa mañana no lo caza nadie. Es el mismo hueco que este plan va a llenar de mensajes.
 2. La compuerta de §3.3.1, **antes** de la primera categoría: así ningún mensaje entra sin
    estar vigilado.
 3. Categorías de autor: `canvas` e `ink` primero (son el tropiezo nº 1), luego `include` y

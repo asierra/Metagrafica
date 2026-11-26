@@ -291,6 +291,28 @@ más»); bitácora 2026-07-27, (bis), (ter) y sus dos addenda.
 
 ## 📌 Importa, pero NO bloquea 1.0
 
+- [ ] 🚪 **La puerta de entrada (CLI): dos silencios y un residuo** (abierto el 2026-11-26, al
+      arreglar la ayuda de `-h`). El tercer paso de esa pasada —el análisis de opciones
+      general— vive en `plan_verbose.md` §4 porque lo necesita `--verbose`; estos dos son
+      huérfanos y se quedan aquí.
+      - **Extensión de salida desconocida, EN SILENCIO.** `mg fig.mg out.sgv` (dedos cruzados
+        en «svg») escribe un **EPS** llamado `out.sgv` y anuncia `render -> out.sgv`. El
+        backend se elige comparando los últimos 4 caracteres contra `.pdf` y `.svg`, y
+        cualquier otra cosa cae al `else` de EPS (`src/main.cpp`). Es el único de los tres con
+        consecuencia real para el usuario: se lleva un archivo que su visor no abre y nada le
+        dijo por qué. Lo natural es error fatal con las tres extensiones listadas.
+      - **`Closing %s` en inglés por `stderr`** en `src/EPSDisplay.cpp:256` y
+        `src/PDFDisplay.cpp:141`, que **SVG no tiene** (`SVGDisplay::end()` solo cierra el
+        archivo): una corrida normal a EPS o PDF suelta una línea que nadie pidió, y encima
+        incoherente entre backends. Es material de la categoría `canvas` de `plan_verbose.md`,
+        no de la salida normal.
+      - ⚠️ **Por qué sobrevivieron años, y la lección:** **ninguna de las diez compuertas mira
+        `stdout` ni `stderr` de una corrida EXITOSA.** Los goldens comparan los **bytes del
+        archivo** —un mensaje en la terminal les es invisible— y las pruebas negativas sí leen
+        `stderr`, pero abortan en el parser, antes de que exista un backend que llame a
+        `end()`. Es un hueco de clase, no un olvido, y es el mismo que `plan_verbose.md` va a
+        llenar de mensajes nuevos: ahí está la decisión de si la CLI entra a `humofail`.
+
 - [ ] 📄 **Publicar MetaGráfica en JOSS** (abierto 2026-11-24; NO bloquea 1.0, pero se apoya en
       la condición 4). Lo motivó el rechazo de hpsatviews en JOSS por falta de una referencia
       publicada de uso científico. Hoy JOSS filtra ANTES de revisar con cuatro compuertas

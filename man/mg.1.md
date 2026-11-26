@@ -12,14 +12,16 @@ mg - MetaGráfica, a descriptive language for technical and scientific figures.
 
 # SYNOPSIS
 
-**mg** [**-h**|**-v**] *figure.mg* [*output*]
+**mg** [**-h**|**\-\-help**|**-v**|**\-\-version**] *figure.mg* [*output*]
 
 # OPTIONS
 
-**-h**
-:   Display a friendly help message.
+**-h**, **\-\-help**
+:   Print basic usage — how to invoke **mg** and how the output format is chosen —
+    and where the language itself is documented. Run with no arguments at all,
+    **mg** prints the same help on standard error and exits with status 1.
 
-**-v**
+**-v**, **\-\-version**
 :   Display the current version.
 
 The **output format is chosen by the extension** of the output file: `.eps`
