@@ -929,26 +929,24 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
 ## 🔧 Abiertos en spec §19 (definición o bajo costo; cero presión del corpus)
 
 - [ ] 🐞 **Tres silencios que dan una figura distinta de la pedida** (destapados el
-      2026-11-25 al escribir `test/errors/name_collision.mg`; **nada implementado**: Alejandro
-      lo decide con calma). Es la misma familia que la aridad de structs (abajo, cerrada el
+      2026-11-25 al escribir `test/errors/name_collision.mg`; el 1 **cerrado**; el 2 y el 3, por
+      decidir si error o aviso). Es la misma familia que la aridad de structs (abajo, cerrada el
       2026-07-22): exit 0, sin una palabra, y una salida que no es la que el usuario escribió.
-      1. **Una struct con nombre de primitiva queda oculta para siempre.** `parseStructDef`
-         (`src/parserv3.cpp`, ~4475) acepta cualquier nombre, pero al invocar se pregunta
-         `isPrim(name)` (~4072) ANTES de buscar structs, así que la primitiva siempre gana.
-         `struct circle(r) { rectangle { -r -r  r r } }` seguido de `circle(r=4) { 0 0 }`
-         dibuja un CÍRCULO de radio 4 en vez del cuadrado. La struct no tiene ningún uso
-         legítimo (nunca se puede invocar) → propuesta: **error fatal** al definirla, con
-         `isPrim` y las demás palabras que el parser despacha antes que una struct (`text`,
-         `plot`, `place`, `fit`, `repeat`, `sine`…; revisar la lista entera en
-         `parseStatement`). Fixture: `EXPECT_AT` en la columna del nombre (la 8 en
-         `struct circle(r) {`).
+      1. ✅ ~~**Una struct con nombre de primitiva queda oculta para siempre.**~~ —
+         **CERRADO 2026-11-25.** `parseStructDef` aborta si el nombre es uno de los que
+         `parseStatement` despacha antes de `parseInvoke` (`shadowsStruct`: `isConfig`,
+         `isPrim` y la lista de comandos), señalando la columna del nombre y sugiriendo la
+         versión Capitalizada. Los transforms (`rotate`…) quedan fuera a propósito: seguidos de
+         `(` sí llegan a la struct. ⚠️ `shadowsStruct` tiene que seguir a `parseStatement`:
+         un comando nuevo despachado por nombre va también ahí. Fixture:
+         `test/errors/name_collision.mg`. Ningún `.mg` del árbol usaba un nombre así.
       2. **Una primitiva de coordenadas SIN bloque no dibuja nada.** El `{ coords }` es opcional
          en la rama `isPrim` (`if (lx.accept(T_LBRACE))`), así que `circle(4)`, `polyline` y
          `rectangle(w=2)` (sin `at`) compilan con exit 0 y dejan la figura en blanco. Ojo
          antes de cerrarlo: `rectangle(w,h,at)` y la forma con trayecto `polyline(&p)` sí son
          legítimas sin bloque. Por decidir: error o aviso (`EXPECT_WARN`).
       3. **`text("…")` sin bloque (o con `{ }` vacío) tampoco dibuja** — cero `<text>` en el
-         SVG, exit 0. Aquí la especificación promete otra cosa (punto siguiente).
+         SVG, exit 0. La especificación ya pide el bloque (§4.8, §12).
       - ✅ **La pluma (§12): DESCARTADA el 2026-11-25** (decisión de Alejandro). Se revisaron
         los dos corpus: en V1 solo la leían `DT`, `TICKS`, `GNNUM` y `RPST`, y V3 ya cubre los
         tres últimos con `at=`/`advance=`; ningún `for` de V3 tiene forma de pluma, y las
@@ -958,10 +956,6 @@ PDF/SVG propios, Windows, `\prime`, Unicode, `make install`.
         decidido el **qué** —un bloque faltante no dibuja en la pluma— y falta el **cómo**:
         error o aviso. Si algún día hacen falta secuencias de texto, la vía es un `text`
         autocontenido (lista de cadenas + `at=`/`advance=`), no la pluma.
-      - ⚠️ **`test/errors/name_collision.mg` está en el árbol SIN `% EXPECT:`** (sin
-        commitear): mientras siga así, `bash test/run.sh check` da `errfail=1`. Hoy no puede
-        llevar `EXPECT`, porque no existe el diagnóstico que esperaría; o se termina con el
-        punto 1, o se aparta mientras tanto.
 
 - [x] ~~🐞 **La invocación de struct NO comprueba la aridad de los parámetros
       escalares**~~ — **CERRADO 2026-07-22**, el mismo día que lo destapó la 5ª compuerta

@@ -4,6 +4,7 @@
 // build). El entry point (main()) vive en src/main.cpp; este archivo expone
 // buildFromSource()/g_baseDir/g_flags vía include/parserv3.h.
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -3943,6 +3944,21 @@ static bool isPrim(const std::string &n) {
          n == "dot" || n == "marker" || n == "arc" || n == "ellipse" || n == "bezier" ||
          n == "polybar" || n == "brace" || n == "smooth";   // smooth: primitiva §9.2 Y expresión de path (como sine)
 }
+// Nombres que parseStatement despacha ANTES de llegar a parseInvoke: una struct que se
+// llame así no se puede invocar nunca —el comando gana siempre—, y sin este control
+// `struct circle(r) {…}` + `circle(r=4) {…}` dibujaba un círculo sin decir nada.
+// ⚠️ Tiene que seguir a parseStatement: un comando nuevo despachado por nombre antes
+// de la invocación va también aquí. Los transforms (`rotate`…) NO: seguidos de '('
+// caen en parseInvoke, así que una struct con ese nombre sí se puede invocar.
+static bool shadowsStruct(const std::string &n) {
+  static const char *const kCmds[] = {
+    "path", "repeat", "fit", "place", "sine", "text", "numbers", "ticks", "compound",
+    "axis", "view3d", "plane3d", "plot", "table", "grid", "exit", "rule", "row",
+  };
+  if (isConfig(n) || isPrim(n)) return true;
+  for (const char *c : kCmds) if (n == c) return true;
+  return false;
+}
 
 static StmtPtr parseBlock(Lexer &, const char *bodyOf = nullptr);   // adelantadas (mutuamente recursivas)
 static StmtPtr parseStructDef(Lexer &);
@@ -4476,6 +4492,16 @@ static StmtPtr parseStructDef(Lexer &lx) {
   lx.next();                                   // 'struct'
   if (lx.peek().type != T_IDENTIFIER) parseError(lx, "el nombre de la struct");
   auto def = std::make_unique<StructDef>();
+  const Tok &nameTok = lx.peek();
+  if (shadowsStruct(nameTok.str)) {
+    std::string sug = nameTok.str;
+    sug[0] = (char)std::toupper((unsigned char)sug[0]);
+    std::fprintf(stderr, "Error de sintaxis en %d:%d: '%s' es un comando de MetaGráfica; "
+                 "una struct con ese nombre no se podría invocar nunca (el comando gana "
+                 "siempre). Usa otro nombre, p. ej. '%s'.\n",
+                 nameTok.line, nameTok.col, nameTok.str.c_str(), sug.c_str());
+    std::exit(1);
+  }
   def->name = lx.next().str;
   if (!lx.accept(T_LPAREN)) parseError(lx, "'(' tras el nombre de la struct");
   if (lx.peek().type != T_RPAREN) {            // parámetros: [&]ID [= default]  (§8.x: & = tipo path)

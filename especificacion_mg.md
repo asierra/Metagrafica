@@ -852,7 +852,7 @@ La forma con paréntesis (`polyline(color="green") { … }`, §4) sigue disponib
 
 ## 8. Structs
 
-Una struct encapsula un bloque reutilizable. No dibuja nada hasta que se invoca. Recibe parámetros como una función. Hereda el sistema de coordenadas del punto de invocación. Por convención, los nombres de structs se **Capitalizan** para distinguirlos de los comandos (§1).
+Una struct encapsula un bloque reutilizable. No dibuja nada hasta que se invoca. Recibe parámetros como una función. Hereda el sistema de coordenadas del punto de invocación. Por convención, los nombres de structs se **Capitalizan** para distinguirlos de los comandos (§1). Una struct **no puede llamarse como un comando** que el parser despacha por nombre (`circle`, `text`, `plot`, `grid`…): nunca se podría invocar, porque el comando gana siempre, y definirla es un error (desde 2026-11-25; antes se aceptaba en silencio y la invocación dibujaba el comando).
 
 ```text
 struct Flecha(lx, ly, size=0.2) {
